@@ -5,6 +5,7 @@ const cssAssets = [
   "shell",
   "controls",
   "body-map",
+  "body-index",
   "portal",
   "detail",
   "responsive",

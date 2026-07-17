@@ -8,6 +8,7 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
     "/shell.css",
     "/controls.css",
     "/body-map.css",
+    "/body-index.css",
     "/portal.css",
     "/detail.css",
     "/responsive.css",

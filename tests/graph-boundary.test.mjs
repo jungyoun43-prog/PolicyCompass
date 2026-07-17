@@ -22,13 +22,18 @@ test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", as
   assert.doesNotMatch(html, /관리 가지/);
 });
 
-test("Health Map은 활성·비활성 신체 부위를 텍스트로 구분한다", async () => {
+test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분한다", async () => {
   const html = await readFile("src/index.html", "utf8");
 
   assert.match(html, /class="human-figure__image"/);
   assert.match(html, /src="\/assets\/body-atlas-v4\.webp"/);
   assert.doesNotMatch(html, /class="human-figure__svg"/);
-  assert.equal((html.match(/<button class="body-hotspot /g) ?? []).length, 5);
+  assert.equal((html.match(/<button class="body-hotspot /g) ?? []).length, 12);
+  assert.match(html, /신경과/);
+  assert.match(html, /정신건강의학과/);
+  assert.match(html, /순환기내과/);
+  assert.match(html, /신장내과/);
+  assert.match(html, /류마티스내과/);
   assert.match(html, /기록과 연결됨/);
   assert.match(html, /현재 기록에 없음/);
 });

@@ -1,5 +1,5 @@
 import { CONDITIONS, relationsFor } from "/data.js";
-import { createExplorerScene, settleExplorerScene } from "/explorer-model.js";
+import { createExplorerScene, selectExplorerNode, settleExplorerScene } from "/explorer-model.js";
 import { createDetailModel } from "/view-model.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
@@ -245,35 +245,32 @@ function nodeGroup(node) {
   group.append(
     svgElement("circle", { class: "node-halo", r: node.radius + 16 }),
     svgElement("circle", { class: "node-core", r: node.radius }),
-    svgElement("circle", { class: "node-orbit", r: node.radius - 9 }),
+    svgElement("circle", { class: "node-orbit", r: 5 }),
   );
-  const system = svgElement("text", {
-    class: "node-system",
-    y: 4,
-    "text-anchor": "middle",
-    "dominant-baseline": "middle",
-  });
-  system.textContent = node.subtitle;
   const title = svgElement("text", {
     class: "node-title",
-    y: node.radius + 30,
+    y: node.radius + 28,
     "text-anchor": "middle",
   });
   title.textContent = node.label;
   const subtitle = svgElement("text", {
     class: "node-subtitle",
-    y: node.radius + 52,
+    y: node.radius + 50,
     "text-anchor": "middle",
   });
-  subtitle.textContent = isStandalone ? "직접 연결 없음" : `${node.relationCount}개 관계`;
-  group.append(system, title, subtitle);
+  subtitle.textContent = isStandalone
+    ? `${node.subtitle} · 직접 연결 없음`
+    : `${node.subtitle} · ${node.relationCount}개 관계`;
+  group.append(title, subtitle);
 
   const select = () => {
     if (state.drag?.moved) return;
     state.selectedNodeId = node.id;
-    state.activeId = node.id;
+    state.scene = selectExplorerNode(state.scene, node.id);
+    state.activeId = state.scene.activeId;
     saveSession();
-    renderGraph();
+    renderSceneElements();
+    renderConditionDetail(node.id);
   };
   group.addEventListener("click", select);
   group.addEventListener("keydown", (event) => {

@@ -14,7 +14,7 @@
   max-width: 15ch;
   margin: var(--space-3) 0 var(--space-5);
   font-size: clamp(3.25rem, 6vw, 5.85rem);
-  line-height: 0.96;
+  line-height: 1.06;
 }
 
 .landing-hero h1 em {
@@ -87,9 +87,9 @@
 }
 
 .hero-orbit .orbit-node__ring {
-  fill: none;
-  stroke: color-mix(in srgb, var(--node-tone) 42%, transparent);
-  stroke-width: 1.5;
+  fill: var(--node-tone);
+  stroke: var(--surface);
+  stroke-width: 2;
 }
 
 .hero-orbit .orbit-node--main {
@@ -105,23 +105,15 @@
   stroke-width: 1.5;
 }
 
-.hero-orbit .orbit-node__type,
 .hero-orbit .orbit-node__caption,
 .hero-orbit .orbit-label {
   font-family: var(--font-sans);
   text-anchor: middle;
 }
 
-.hero-orbit .orbit-node__type {
-  fill: color-mix(in srgb, var(--node-tone) 84%, var(--ink));
-  font-size: 17px;
-  font-weight: 780;
-  dominant-baseline: central;
-}
-
 .hero-orbit .orbit-node__caption {
   fill: var(--ink);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 760;
   paint-order: stroke;
   stroke: var(--surface);
@@ -213,7 +205,7 @@
   margin: var(--space-3) 0;
   font-size: clamp(2.25rem, 4.4vw, 4rem);
   letter-spacing: -0.055em;
-  line-height: 1.05;
+  line-height: 1.12;
   text-wrap: balance;
   word-break: keep-all;
 }
@@ -321,10 +313,9 @@
 }
 
 .preview-network__node-type {
-  fill: color-mix(in srgb, var(--node-tone) 84%, var(--ink));
-  font-size: 11px;
-  font-weight: 760;
-  dominant-baseline: central;
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
 }
 
 .preview-network__node-label {
@@ -478,7 +469,7 @@
   .landing-hero h1 {
     max-width: none;
     font-size: clamp(2.65rem, 12vw, 3.7rem);
-    line-height: 1.03;
+    line-height: 1.1;
   }
 
   .product-rail,
@@ -512,7 +503,7 @@
   }
 
   .preview-network__node-type {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .preview-network__node-label {

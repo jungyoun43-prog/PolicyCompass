@@ -1,7 +1,7 @@
 .journey-page { background: radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--data-violet) 13%, transparent), transparent 28%), var(--surface-soft); }
 .journey-shell { width: min(100% - var(--space-10), 1320px); margin: auto; padding: var(--space-10) 0 var(--space-12); }
 .journey-intro { display: grid; grid-template-columns: 1.2fr .8fr; align-items: end; gap: var(--space-12); margin-bottom: var(--space-10); }
-.journey-intro h1 { margin: 0; font-size: clamp(3rem, 7vw, 6.5rem); letter-spacing: -.075em; line-height: .94; }
+.journey-intro h1 { margin: 0; font-size: clamp(3rem, 7vw, 6.5rem); letter-spacing: -.075em; line-height: 1.06; }
 .journey-intro > p { max-width: 34rem; margin: 0 0 var(--space-2); color: var(--muted); font-size: 1.0625rem; }
 .journey-workspace, .journey-comparison { border-radius: var(--radius-panel); background: var(--surface); box-shadow: var(--shadow-panel); padding: var(--space-8); }
 .journey-heading { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); }
@@ -56,7 +56,7 @@
   gap: var(--space-12);
   margin: 0 0 var(--hero-bottom);
 }
-.journey-page .journey-intro h1 { max-width: 18ch; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: 1.02; }
+.journey-page .journey-intro h1 { max-width: 18ch; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: 1.1; }
 .journey-page .journey-intro > p { margin-bottom: 0; }
 @media (max-width: 800px) {
   .journey-page .explorer-topbar, .journey-page .journey-shell { width: min(100% - var(--page-gutter), var(--page-width)); }

@@ -9,22 +9,23 @@ export function normalizeActiveId(visibleIds, activeId) {
 }
 
 export function selectBodyArea(visibleIds, area) {
-  return visibleIds.find((id) => conditionFor(id)?.area === area) ?? "";
+  return visibleIds.find((id) => conditionFor(id)?.departments?.includes(area)) ?? "";
 }
 
 export function createBodyModel(visibleIds, activeId) {
   const areas = {};
   for (const id of visibleIds) {
-    const area = conditionFor(id)?.area;
-    if (!area) continue;
-    areas[area] = [...(areas[area] ?? []), id];
+    const departments = conditionFor(id)?.departments ?? [];
+    for (const department of departments) {
+      areas[department] = [...(areas[department] ?? []), id];
+    }
   }
 
   const active = conditionFor(activeId);
   const activeAreaCount = Object.keys(areas).length;
   return {
     areas,
-    statusText: visibleIds.length === 0 ? "분석 대기" : `${activeAreaCount}개 영역 · ${visibleIds.length}개 신호`,
+    statusText: visibleIds.length === 0 ? "분석 대기" : `${activeAreaCount}개 진료과 · ${visibleIds.length}개 신호`,
     ready: visibleIds.length > 0,
     keyTone: active?.tone ?? "",
     keyText: active

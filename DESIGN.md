@@ -31,14 +31,14 @@ Coral is the sole interaction accent. Cyan, lime, violet, and amber are reserved
 
 | Level | Size | Weight | Line Height | Usage |
 |---|---|---|---|---|
-| Display | `clamp(2.25rem, 4vw, 4.5rem)` | 760 | 1.02 | Product statement |
-| H1 | `2rem` | 740 | 1.15 | Panel headline |
-| H2 | `1.375rem` | 700 | 1.25 | Section title |
-| H3 | `1rem` | 680 | 1.4 | Card title |
-| Body/lg | `1.0625rem` | 480 | 1.65 | Introductory copy |
-| Body | `0.9375rem` | 450 | 1.6 | Default content |
-| Body/sm | `0.8125rem` | 500 | 1.5 | Supporting detail |
-| Caption | `0.75rem` | 650 | 1.4 | Labels and metadata |
+| Display | `clamp(2.25rem, 4vw, 4.5rem)` | 760 | 1.08 | Product statement |
+| H1 | `2rem` | 740 | 1.22 | Panel headline |
+| H2 | `1.375rem` | 700 | 1.35 | Section title |
+| H3 | `1rem` | 680 | 1.5 | Card title |
+| Body/lg | `1.0625rem` | 480 | 1.72 | Introductory copy |
+| Body | `0.9375rem` | 450 | 1.68 | Default content |
+| Body/sm | `0.8125rem` | 500 | 1.6 | Supporting detail |
+| Caption | `0.75rem` | 650 | 1.5 | Labels and metadata |
 
 Primary stack: `Pretendard Variable, Noto Sans KR, ui-sans-serif, system-ui, sans-serif`. Noto Sans KR is loaded with `font-display: swap` so Korean labels remain legible in minimal Linux and cloud environments as well as on local devices.
 Mono stack: `ui-monospace, SFMono-Regular, Consolas, monospace`.
@@ -63,10 +63,10 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - States: default, hover, pressed, focus, disabled.
 
 ### Graph node
-- Structure: an SVG group with one circular condition orb, an in-orb system label, and persistent title plus relationship count below. Care guidance never becomes a graph node.
-- Hierarchy: the selected condition is a solid semantic-color orb; directly related conditions remain vivid; unrelated or standalone signals are visibly quieter but keep readable labels. Node color expresses the body system, while size reflects relationship density.
+- Structure: an SVG group with one compact, unlabeled condition dot and a persistent disease title plus system/relationship metadata below. Care guidance never becomes a graph node.
+- Hierarchy: all condition dots use the same 44px diameter so density never masquerades as severity. The selected condition uses a halo and solid fill; directly related conditions remain vivid; unrelated or standalone signals are quieter but keep readable external labels.
 - Geometry: collision bounds include both the orb and its text footprint. Each edge starts and ends at the orb boundary, curves slightly to avoid a mechanical diagram look, and carries a readable relationship pill separate from node labels.
-- Layout: position is computed from condition-to-condition relationship forces rather than rows, columns, or cards. The selected condition receives a soft center anchor; standalone conditions settle on a quiet outer band.
+- Layout: position is computed once from condition-to-condition relationship forces rather than rows, columns, or cards. Selecting a node must never recalculate coordinates; only an explicit reset, breakpoint change, or drag may move nodes.
 - States: default, related, selected, standalone, dragged, and keyboard focus.
 - Accessibility: each group is keyboard selectable with `aria-pressed`; the current state is described in its accessible name and every selection is mirrored in the detail rail.
 
@@ -78,7 +78,8 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - Accessibility: graph groups are keyboard selectable, visible focus is mandatory, and every selection is mirrored in text.
 
 ### Body atlas
-- Structure: a generated, transparent WebP medical mannequin with fixed dimensions, five native-button anatomical markers, and text callouts. The image is a visual base only; every patient-specific state remains a semantic HTML/CSS overlay.
+- Structure: a generated, transparent WebP medical mannequin with fixed dimensions, twelve native-button specialty markers, and a readable department index. The image is a visual base only; every patient-specific state remains a semantic HTML/CSS overlay.
+- Coverage: neurology, psychiatry, ophthalmology/ENT, cardiology, pulmonology, gastroenterology, endocrinology, nephrology, gynecology/urology, orthopedics/rehabilitation, rheumatology, and dermatology/allergy are always visible even when no current record maps to them.
 - Image direction: centered front-facing androgynous adult, pearl-white translucent material, no organs or embedded labels, and no diagnosis-like marks baked into the asset.
 - States: an active marker is solid and paired with a named condition caption; an inactive marker remains hollow and explicitly says that the current record has no connection there.
 - Accessibility: inactive regions are disabled, active regions have descriptive labels, and the selected area is reflected with `aria-pressed` and in the detail panel.

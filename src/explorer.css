@@ -11,7 +11,7 @@
 .explorer-intro h1 {
   max-width: 13ch;
   font-size: clamp(2.7rem, 4.9vw, 4.8rem);
-  line-height: 1.03;
+  line-height: 1.1;
 }
 
 .scene-status {
@@ -223,21 +223,17 @@
 }
 
 .scene-hint {
-  position: absolute;
-  right: var(--space-4);
-  bottom: var(--space-4);
+  position: relative;
   z-index: 3;
-  max-width: 25rem;
   margin: 0;
-  border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  padding: var(--space-3) var(--space-4);
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 560;
-  line-height: 1.5;
-  text-align: right;
-  backdrop-filter: blur(10px);
+  line-height: 1.6;
+  text-align: center;
 }
 
 .scene-edge {
@@ -253,9 +249,12 @@
   stroke: color-mix(in srgb, var(--accent) 72%, var(--ink));
 }
 
-.scene-edge.is-muted,
+.scene-edge.is-muted {
+  opacity: 0.3;
+}
+
 .edge-caption.is-muted {
-  opacity: 0.34;
+  opacity: 0;
 }
 
 .edge-caption {
@@ -329,7 +328,6 @@
   transition: opacity 160ms ease-out, transform 160ms ease-out;
 }
 
-.node-system,
 .node-title,
 .node-subtitle {
   pointer-events: none;
@@ -339,27 +337,19 @@
   stroke-linejoin: round;
 }
 
-.node-system {
-  fill: color-mix(in srgb, var(--node-tone) 80%, var(--ink));
-  font-size: 14px;
-  font-weight: 780;
-  letter-spacing: 0.03em;
-  stroke-width: 4px;
-}
-
 .node-title {
   fill: var(--ink);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: -0.055em;
-  stroke-width: 9px;
+  letter-spacing: -0.035em;
+  stroke-width: 8px;
 }
 
 .node-subtitle {
   fill: var(--muted);
-  font-size: 16px;
-  font-weight: 680;
-  stroke-width: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  stroke-width: 7px;
 }
 
 .network-node.is-related .node-core {
@@ -385,11 +375,6 @@
 .network-node.is-selected .node-orbit {
   stroke: color-mix(in srgb, var(--surface) 76%, transparent);
   stroke-width: 2;
-}
-
-.network-node.is-selected .node-system {
-  fill: var(--surface);
-  stroke: color-mix(in srgb, var(--node-tone) 60%, transparent);
 }
 
 .network-node:hover .node-core,
@@ -580,16 +565,12 @@
     display: none;
   }
 
-  .node-system {
-    font-size: 18px;
-  }
-
   .node-title {
-    font-size: 30px;
+    font-size: 24px;
   }
 
   .node-subtitle {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .edge-caption {

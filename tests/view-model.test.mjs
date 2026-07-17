@@ -8,19 +8,21 @@ import {
   selectBodyArea,
 } from "../src/view-model.js";
 
-test("질환 신호를 전신 부위별 활성 상태로 투영한다", () => {
+test("질환 신호를 진료과별 활성 상태로 중복 투영한다", () => {
   const model = createBodyModel(["hypertension", "dyslipidemia"], "dyslipidemia");
 
-  assert.deepEqual(model.areas.heart, ["hypertension", "dyslipidemia"]);
-  assert.equal(model.statusText, "1개 영역 · 2개 신호");
+  assert.deepEqual(model.areas.cardio, ["hypertension", "dyslipidemia"]);
+  assert.deepEqual(model.areas.renal, ["hypertension"]);
+  assert.deepEqual(model.areas.endocrine, ["dyslipidemia"]);
+  assert.equal(model.statusText, "3개 진료과 · 2개 신호");
   assert.equal(model.keyTone, "cyan");
 });
 
-test("신체 부위 선택은 현재 표시된 질환만 활성화한다", () => {
+test("진료과 선택은 현재 표시된 질환만 활성화한다", () => {
   const visible = ["migraine", "mood"];
 
-  assert.equal(selectBodyArea(visible, "head"), "migraine");
-  assert.equal(selectBodyArea(visible, "lungs"), "");
+  assert.equal(selectBodyArea(visible, "neuro"), "migraine");
+  assert.equal(selectBodyArea(visible, "respiratory"), "");
 });
 
 test("재분석과 상세 패널이 같은 활성 질환을 유지한다", () => {

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/body-map.css" />
+    <link rel="stylesheet" href="/body-index.css" />
     <link rel="stylesheet" href="/portal.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/responsive.css" />
@@ -140,27 +141,6 @@
           </div>
 
           <div class="body-stage" aria-describedby="bodyKeyText">
-            <div class="body-caption body-caption-head" data-area="head">
-              <span class="body-caption__title">머리·신경</span>
-              <span class="body-caption__status">현재 기록에 없음</span>
-            </div>
-            <div class="body-caption body-caption-heart" data-area="heart">
-              <span class="body-caption__title">심장·혈관</span>
-              <span class="body-caption__status">현재 기록에 없음</span>
-            </div>
-            <div class="body-caption body-caption-lungs body-caption--right" data-area="lungs">
-              <span class="body-caption__title">폐·호흡</span>
-              <span class="body-caption__status">현재 기록에 없음</span>
-            </div>
-            <div class="body-caption body-caption-abdomen" data-area="abdomen">
-              <span class="body-caption__title">소화·대사</span>
-              <span class="body-caption__status">현재 기록에 없음</span>
-            </div>
-            <div class="body-caption body-caption-joints body-caption--right" data-area="joints">
-              <span class="body-caption__title">관절·움직임</span>
-              <span class="body-caption__status">현재 기록에 없음</span>
-            </div>
-
             <div class="human-figure" aria-label="신체 부위별 건강 신호">
               <img
                 class="human-figure__image"
@@ -173,27 +153,70 @@
                 fetchpriority="high"
               />
 
-              <button class="body-hotspot hotspot-head" data-area="head" type="button" aria-pressed="false">
+              <button class="body-hotspot hotspot-neuro" data-area="neuro" type="button" aria-pressed="false">
                 <span class="body-hotspot__core" aria-hidden="true"></span>
-                <span class="visually-hidden">머리와 신경: 현재 기록에 연결된 신호 없음</span>
+                <span class="visually-hidden">신경과: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-heart" data-area="heart" type="button" aria-pressed="false">
+              <button class="body-hotspot hotspot-mental" data-area="mental" type="button" aria-pressed="false">
                 <span class="body-hotspot__core" aria-hidden="true"></span>
-                <span class="visually-hidden">심장과 혈관: 현재 기록에 연결된 신호 없음</span>
+                <span class="visually-hidden">정신건강의학과: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-lungs" data-area="lungs" type="button" aria-pressed="false">
+              <button class="body-hotspot hotspot-sensory" data-area="sensory" type="button" aria-pressed="false">
                 <span class="body-hotspot__core" aria-hidden="true"></span>
-                <span class="visually-hidden">폐와 호흡기: 현재 기록에 연결된 신호 없음</span>
+                <span class="visually-hidden">안과와 이비인후과: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-abdomen" data-area="abdomen" type="button" aria-pressed="false">
+              <button class="body-hotspot hotspot-cardio" data-area="cardio" type="button" aria-pressed="false">
                 <span class="body-hotspot__core" aria-hidden="true"></span>
-                <span class="visually-hidden">복부와 대사: 현재 기록에 연결된 신호 없음</span>
+                <span class="visually-hidden">순환기내과: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-joints" data-area="joints" type="button" aria-pressed="false">
+              <button class="body-hotspot hotspot-respiratory" data-area="respiratory" type="button" aria-pressed="false">
                 <span class="body-hotspot__core" aria-hidden="true"></span>
-                <span class="visually-hidden">관절과 움직임: 현재 기록에 연결된 신호 없음</span>
+                <span class="visually-hidden">호흡기내과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-digestive" data-area="digestive" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">소화기내과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-endocrine" data-area="endocrine" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">내분비내과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-renal" data-area="renal" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">신장내과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-pelvic" data-area="pelvic" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">산부인과와 비뇨의학과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-musculoskeletal" data-area="musculoskeletal" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">정형외과와 재활의학과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-rheumatology" data-area="rheumatology" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">류마티스내과: 현재 기록에 연결된 신호 없음</span>
+              </button>
+              <button class="body-hotspot hotspot-dermatology" data-area="dermatology" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">피부과와 알레르기내과: 현재 기록에 연결된 신호 없음</span>
               </button>
             </div>
+          </div>
+
+          <div class="department-index" aria-label="진료과별 연결 상태">
+            <div class="body-caption" data-area="neuro"><span class="body-caption__title">뇌·신경</span><span class="body-caption__department">신경과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="mental"><span class="body-caption__title">마음·수면</span><span class="body-caption__department">정신건강의학과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="sensory"><span class="body-caption__title">눈·귀·코</span><span class="body-caption__department">안과·이비인후과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="cardio"><span class="body-caption__title">심장·혈관</span><span class="body-caption__department">순환기내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="respiratory"><span class="body-caption__title">폐·호흡</span><span class="body-caption__department">호흡기내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="digestive"><span class="body-caption__title">위·장·간</span><span class="body-caption__department">소화기내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="endocrine"><span class="body-caption__title">대사·호르몬</span><span class="body-caption__department">내분비내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="renal"><span class="body-caption__title">신장·수분</span><span class="body-caption__department">신장내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="pelvic"><span class="body-caption__title">골반·비뇨</span><span class="body-caption__department">산부인과·비뇨의학과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="musculoskeletal"><span class="body-caption__title">뼈·관절</span><span class="body-caption__department">정형외과·재활의학과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="rheumatology"><span class="body-caption__title">면역·관절</span><span class="body-caption__department">류마티스내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
+            <div class="body-caption" data-area="dermatology"><span class="body-caption__title">피부·알레르기</span><span class="body-caption__department">피부과·알레르기내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
           </div>
 
           <div class="body-key" aria-live="polite">
@@ -226,24 +249,24 @@
               <path d="M227 92 C247 148 286 184 353 218" />
               <path d="M92 198 C177 231 270 232 353 218" />
               <g class="preview-node tone-one">
-                <circle cx="92" cy="198" r="31" />
-                <text class="preview-node__type" x="92" y="202">심혈관</text>
-                <text class="preview-node__label" x="92" y="246">고혈압</text>
+                <circle cx="92" cy="198" r="18" />
+                <text class="preview-node__label" x="92" y="232">고혈압</text>
+                <text class="preview-node__type" x="92" y="251">심혈관</text>
               </g>
               <g class="preview-node tone-two">
-                <circle cx="227" cy="92" r="37" />
-                <text class="preview-node__type" x="227" y="96">대사</text>
-                <text class="preview-node__label" x="227" y="144">당뇨병</text>
+                <circle cx="227" cy="92" r="18" />
+                <text class="preview-node__label" x="227" y="126">당뇨병</text>
+                <text class="preview-node__type" x="227" y="145">대사</text>
               </g>
               <g class="preview-node tone-three">
-                <circle cx="353" cy="218" r="29" />
-                <text class="preview-node__type" x="353" y="222">신경</text>
-                <text class="preview-node__label" x="353" y="264">편두통</text>
+                <circle cx="353" cy="218" r="18" />
+                <text class="preview-node__label" x="353" y="252">편두통</text>
+                <text class="preview-node__type" x="353" y="271">신경</text>
               </g>
               <g class="preview-node tone-four">
-                <circle cx="417" cy="137" r="33" />
-                <text class="preview-node__type" x="417" y="141">심혈관</text>
-                <text class="preview-node__label" x="417" y="186">이상지질혈증</text>
+                <circle cx="417" cy="137" r="18" />
+                <text class="preview-node__label" x="417" y="171">이상지질혈증</text>
+                <text class="preview-node__type" x="417" y="190">심혈관</text>
               </g>
             </svg>
           </div>

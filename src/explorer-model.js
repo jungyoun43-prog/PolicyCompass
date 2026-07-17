@@ -22,18 +22,18 @@ function seededUnit(seed) {
 }
 
 function labelWidth(label, subtitle) {
-  const titleWidth = label.length * 22 + 42;
-  const subtitleWidth = subtitle.length * 15 + 38;
-  return clamp(Math.max(titleWidth, subtitleWidth), 132, 190);
+  const titleWidth = label.length * 21 + 34;
+  const subtitleWidth = subtitle.length * 14 + 54;
+  return clamp(Math.max(titleWidth, subtitleWidth), 116, 176);
 }
 
-function initialConditionNode(id, index, relationCount, isActive) {
+function initialConditionNode(id, index, relationCount) {
   const condition = CONDITIONS[id];
   const seed = hash(id);
   const angle = seededUnit(seed) * Math.PI * 2 + index * 0.47;
   const radiusX = 250 + seededUnit(seed + 11) * 250;
   const radiusY = 145 + seededUnit(seed + 29) * 130;
-  const radius = relationCount > 1 ? 52 : relationCount === 1 ? 48 : 44;
+  const radius = 22;
   const textWidth = labelWidth(condition.label, condition.system);
 
   return {
@@ -46,12 +46,12 @@ function initialConditionNode(id, index, relationCount, isActive) {
     relationCount,
     radius,
     labelWidth: textWidth,
-    labelHeight: 58,
-    // The circular collision area includes the label's lower reach so Korean
-    // labels remain readable even as the force layout settles.
-    collisionRadius: Math.max(108, Math.ceil(textWidth * 0.62)),
-    x: isActive ? baseWidth * 0.47 : baseWidth / 2 + Math.cos(angle) * radiusX,
-    y: isActive ? baseHeight * 0.46 : baseHeight / 2 + Math.sin(angle) * radiusY,
+    labelHeight: 48,
+    // The visible dot stays compact; collision bounds reserve room for the
+    // persistent title and metadata underneath it.
+    collisionRadius: Math.max(82, Math.ceil(textWidth * 0.52)),
+    x: baseWidth / 2 + Math.cos(angle) * radiusX,
+    y: baseHeight / 2 + Math.sin(angle) * radiusY,
   };
 }
 
@@ -81,7 +81,6 @@ export function createExplorerScene(visibleIds, activeId) {
       id,
       index,
       relationCounts.get(id) ?? 0,
-      id === activeId,
     ));
   const active = CONDITIONS[activeId];
 
@@ -103,7 +102,7 @@ function applyPairForces(nodes, forces) {
       const distance = Math.max(1, Math.hypot(dx, dy));
       const minimum = first.collisionRadius + second.collisionRadius;
       const overlapForce = distance < minimum ? (minimum - distance) * 0.12 : 0;
-      const repelForce = Math.min(2.8, 2200 / (distance * distance));
+      const repelForce = Math.min(3.4, 4200 / (distance * distance));
       const force = overlapForce + repelForce;
       const unitX = dx / distance;
       const unitY = dy / distance;
@@ -126,7 +125,7 @@ function applyEdgeForces(nodes, edges, forces) {
     const dx = target.x - source.x;
     const dy = target.y - source.y;
     const distance = Math.max(1, Math.hypot(dx, dy));
-    const preferredDistance = source.radius + target.radius + 158;
+    const preferredDistance = source.radius + target.radius + 330;
     const force = (distance - preferredDistance) * 0.011;
     const forceX = (dx / distance) * force;
     const forceY = (dy / distance) * force;
@@ -137,15 +136,8 @@ function applyEdgeForces(nodes, edges, forces) {
   }
 }
 
-function applyFocusAnchors(nodes, scene, forces, width, height) {
-  const activeIndex = nodes.findIndex(({ id }) => id === scene.activeId);
-  if (activeIndex === -1) return;
-
-  const active = nodes[activeIndex];
-  forces[activeIndex].x += (width * 0.47 - active.x) * 0.006;
-  forces[activeIndex].y += (height * 0.46 - active.y) * 0.006;
-
-  const standalone = nodes.filter((node) => node.relationCount === 0 && node.id !== active.id);
+function applyLayoutAnchors(nodes, forces, width, height) {
+  const standalone = nodes.filter((node) => node.relationCount === 0);
   standalone.forEach((node, index) => {
     const nodeIndex = nodes.indexOf(node);
     const progress = standalone.length === 1 ? 0.5 : index / (standalone.length - 1);
@@ -198,12 +190,12 @@ export function settleExplorerScene(scene, width = baseWidth, height = baseHeigh
   }));
   for (let iteration = 0; iteration < 260; iteration += 1) {
     const forces = nodes.map((node) => ({
-      x: (width / 2 - node.x) * 0.0017,
-      y: (height / 2 - node.y) * 0.0017,
+      x: (width / 2 - node.x) * 0.0005,
+      y: (height / 2 - node.y) * 0.0005,
     }));
     applyPairForces(nodes, forces);
     applyEdgeForces(nodes, scene.edges, forces);
-    applyFocusAnchors(nodes, scene, forces, width, height);
+    applyLayoutAnchors(nodes, forces, width, height);
     for (let index = 0; index < nodes.length; index += 1) {
       const node = nodes[index];
       node.vx = (node.vx + forces[index].x) * 0.8;
@@ -217,4 +209,9 @@ export function settleExplorerScene(scene, width = baseWidth, height = baseHeigh
     ...scene,
     nodes: nodes.map(({ vx, vy, ...node }) => node),
   };
+}
+
+export function selectExplorerNode(scene, nodeId) {
+  if (!scene.nodes.some(({ id }) => id === nodeId)) return scene;
+  return { ...scene, activeId: nodeId };
 }

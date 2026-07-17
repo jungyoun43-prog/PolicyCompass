@@ -45,14 +45,14 @@
   margin: var(--space-2) 0 var(--space-4);
   font-size: clamp(2rem, 3.5vw, 4.4rem);
   letter-spacing: -0.055em;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .connection-copy > p:not(.panel-index) {
   max-width: 52ch;
   color: var(--muted);
   font-size: 0.875rem;
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 .connection-actions {
@@ -130,10 +130,9 @@
 }
 
 .preview-node__type {
-  fill: color-mix(in srgb, var(--preview-tone) 82%, var(--ink));
-  font-size: 11px;
-  font-weight: 760;
-  dominant-baseline: central;
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 680;
 }
 
 .preview-node__label {

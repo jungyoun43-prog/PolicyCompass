@@ -165,7 +165,7 @@ body.insights-page {
   font-size: clamp(2.75rem, 5.4vw, 5.4rem);
   font-weight: 780;
   letter-spacing: -0.065em;
-  line-height: 1.02;
+  line-height: 1.1;
   overflow-wrap: normal;
   text-wrap: balance;
   word-break: keep-all;
@@ -177,7 +177,7 @@ body.insights-page {
   margin: 0;
   color: var(--muted);
   font-size: 1.0625rem;
-  line-height: 1.65;
+  line-height: 1.72;
 }
 
 .page-hero__aside {
@@ -190,7 +190,7 @@ body.insights-page {
   margin: 0;
   color: var(--muted);
   font-size: 0.8125rem;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .page-hero__actions {

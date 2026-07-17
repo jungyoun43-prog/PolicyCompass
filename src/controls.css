@@ -65,6 +65,37 @@
   font-weight: 700;
 }
 
+.field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.field-heading .field-label { margin-bottom: 0; }
+
+.demo-trigger {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 720;
+}
+
+.demo-mode {
+  margin: var(--space-2) 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--data-amber) 14%, var(--surface));
+  padding: var(--space-2) var(--space-3);
+  color: color-mix(in srgb, var(--data-amber) 65%, var(--ink));
+  font-size: .75rem;
+  font-weight: 700;
+}
+
 .import-box { margin-bottom: var(--space-6); border-radius: 16px; background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface)); padding: var(--space-4); }
 .import-heading { display: flex; align-items: center; gap: var(--space-3); }
 .import-heading > div { min-width: 0; flex: 1; }
@@ -77,7 +108,7 @@
 .import-result.is-success { color: color-mix(in srgb, var(--data-lime) 65%, var(--ink)); }
 .import-result.is-error { color: var(--urgent); }
 .import-result.is-loading { color: var(--muted); }
-.journey-save { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-top: var(--space-3); border: 0; border-radius: var(--radius-control); background: color-mix(in srgb, var(--data-violet) 10%, var(--surface)); padding: var(--space-3) var(--space-4); color: var(--ink); cursor: pointer; text-align: left; }
+.journey-save { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); border: 0; border-radius: var(--radius-control); background: color-mix(in srgb, var(--data-violet) 10%, var(--surface)); padding: var(--space-3) var(--space-4); color: var(--ink); cursor: pointer; text-align: left; }
 .journey-save span { font-weight: 720; } .journey-save small { color: var(--muted); font-size: .6875rem; } .journey-save:disabled { cursor: not-allowed; opacity: .45; } .journey-save.is-saved { background: color-mix(in srgb, var(--data-lime) 18%, var(--surface)); }
 
 textarea {
@@ -262,4 +293,10 @@ textarea:focus {
   .map-page .map-hero,
   .map-page .dashboard { grid-template-columns: 1fr; }
   .map-page .body-stage { min-height: 500px; }
+  .field-heading { align-items: stretch; flex-direction: column; }
+  .demo-trigger { width: 100%; }
+  .form-actions { grid-template-columns: 1fr; }
+  .form-actions .primary-button,
+  .form-actions .secondary-button { width: 100%; min-height: 48px; }
+  .journey-save { min-height: 56px; }
 }

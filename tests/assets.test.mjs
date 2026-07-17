@@ -38,3 +38,16 @@ test("Health Map 신체 아틀라스 이미지를 WebP 자산으로 제공한다
   const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 4).toString("ascii");
   assert.equal(signature, "RIFF");
 });
+
+test("랜딩 히어로 이미지를 PNG 자산으로 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+
+  const response = await worker.fetch(
+    new Request("https://example.com/assets/visit-prep-hero.png"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 8).toString("hex");
+  assert.equal(signature, "89504e470d0a1a0a");
+});

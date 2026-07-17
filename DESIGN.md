@@ -100,7 +100,7 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 ### Application shell
 - All routes use the same white atlas background: restrained coral light at the upper right and cyan light at the lower left; page-specific backgrounds are not allowed.
-- Header: one 1480px content rail, 80px height, brand at left and explicit Main, Health Map, Connections, AI Insights, Journey navigation. Every route uses the identical `app-header → app-header__inner → app-brand + app-nav + app-header__action` contract; only the active navigation state changes. On compact layouts, the brand and action stay in the first row while the same five navigation links scroll in a dedicated second row.
+- Header: one 1480px content rail, 80px height, brand at left and explicit 시작, 건강 지도, 연결 보기, 진료 준비, 기록 navigation. Every route uses the identical `app-header → app-header__inner → app-brand + app-nav + app-header__action` contract; only the active navigation state changes. On compact layouts, the brand and action stay in the first row while the same five navigation links scroll in a dedicated second row.
 - Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
 - Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
 - Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.
@@ -113,3 +113,68 @@ Micro feedback uses 140ms ease-out. Panel transitions use 260ms ease-in-out. Emp
 ## 7. Depth & Surface
 
 Strategy: shadows. Raised panels use a cool tinted shadow and white surface. Inner grouping relies on spacing and subtle tonal shifts. Borders are limited to interactive controls and data lines, not used as the primary panel-depth mechanism.
+
+## 8. Paid MVP Product Contract
+
+VitaGraph is a visit-preparation product, not a diagnostic graph demo. Its first paying audience is a Korean-speaking adult who manages multiple chronic health topics for themselves or a parent. Their job is: “turn scattered measurements, symptoms, and known conditions into one page I can use at the next appointment.”
+
+The activation path is one outcome-first sequence:
+
+1. Start with a clearly labeled sample or an empty private record.
+2. Confirm which items came from the note and which conditions the user already knows.
+3. Review the body and relationship views as supporting context.
+4. Open a printable Visit Brief with no more than five questions and a reason for each.
+5. Save a dated snapshot only through an explicit action.
+
+The paid-value hypothesis is a single plan around KRW 6,900 per month, aligned with comparable personal-health software at USD 6–9 per month. The current local beta must not claim that checkout, cloud sync, account recovery, or encrypted backup exists. Until those capabilities and policies are real, pricing is presented as a validation target and all product CTAs lead to the working sample or private local workflow.
+
+## 9. Clinical Honesty Rules
+
+- `AI`, `LLM`, probability, prediction, diagnosis, and personalized risk language are forbidden until a real model, traceable evidence layer, external validation, and monitoring exist.
+- Text matching is described as rule-based organization. An inferred measurement pattern is an “item to confirm,” never a newly diagnosed condition.
+- Sample data is opt-in, carries a persistent sample label, and is never saved to Journey.
+- Every generated question states why it appears. Questions are conversation prompts, not treatment advice.
+- Values always retain their unit, date when known, and source. Correlation uses “changed together,” never causal wording.
+- Trust claims describe only what the code proves: local browser processing, no application server upload, explicit local storage, export/delete controls when available, and the risk of browser-data deletion.
+- No fabricated testimonials, clinicians, customer counts, certifications, compliance claims, or support contacts.
+
+## 10. Image and Interface Roles
+
+Generated imagery owns atmosphere, empathy, and the landing focal scene. HTML and SVG own every interactive, measurable, or medical fact.
+
+- Hero: an original editorial image of one person with abstract record layers and VitaGraph-colored signals. No baked-in text, numbers, organs, diagnosis marks, charts, badges, logos, or imitation product UI.
+- Product proof: real HTML-rendered Visit Brief and health-map surfaces, not a generated dashboard screenshot.
+- Body atlas: the existing generated mannequin remains a neutral navigation base; all user state is semantic overlay content.
+- Controls, forms, pricing, trust statements, charts, focus states, and responsive behavior remain native UI.
+
+Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. VitaGraph keeps its own coral/cyan/lime/violet system and does not copy brand imagery, layouts, or claims.
+
+## 11. Landing Narrative
+
+1. State the appointment problem and the one-page outcome above the fold.
+2. Offer two 44px actions: view a labeled sample and start with an empty record.
+3. Prove the output with a real Visit Brief preview before feature explanation.
+4. Explain the three-step flow: add record, confirm connections, take the brief.
+5. Place the local-processing and non-diagnostic trust strip immediately before data-entry CTAs.
+6. Present one transparent beta plan, naming what works now and what requires a hosted paid release.
+7. Close with the same sample and private-start actions. No dead lead-capture form.
+
+## 12. Reference Research Log
+
+Research date: 2026-07-17.
+
+- Lazyweb queries: `personal health records dashboard onboarding`, `lab results health dashboard insights`, `health tracking timeline medical reports`.
+- 24 search results reviewed; five screens inspected closely: PicnicHealth overview, MyQuest laboratory timeline, Parsley Health clinical membership, Gentler activity product, WHOOP advanced labs.
+- Market flows reviewed: Function Health, Superpower, InsideTracker, Mito Health, Guava, Heads Up Health, Oura, and Exist.
+- Extracted: Function’s benefit-to-process-to-trust sales order; Guava’s records/timeline structure; Oura’s one-question-per-screen hierarchy; Exist’s statistical honesty; Apple’s image-led restraint.
+- Rejected: celebrity authority, countdowns, unverified medical detection claims, score proliferation, generated fake product screenshots, and compliance badges the implementation cannot substantiate.
+
+## 13. Release Acceptance
+
+- At 390px, the first screen identifies the buyer, appointment job, one-page outcome, sample action, and private-start action without horizontal overflow.
+- Primary actions are at least 44px high and have visible keyboard focus.
+- The map starts empty. Sample content appears only after an explicit action and stays visibly labeled.
+- Rule-derived items are framed as confirmation signals. Known conditions remain user-declared or imported.
+- Visit Brief prints cleanly, contains at most five questions with reasons, and never mentions AI or LLM.
+- The working routes build with the existing zero-dependency stack and preserve GET/HEAD-only, no-network CSP behavior.
+- Desktop and mobile screenshots, keyboard traversal, reduced-motion, automated tests, and route/content checks pass before release.

@@ -44,6 +44,11 @@ const sourceAssets = [
 
 const binaryAssets = [
   {
+    route: "/assets/visit-prep-hero.png",
+    file: "src/assets/visit-prep-hero.png",
+    type: "image/png",
+  },
+  {
     route: "/assets/body-atlas-v4.webp",
     file: "src/assets/body-atlas-v4.webp",
     type: "image/webp",

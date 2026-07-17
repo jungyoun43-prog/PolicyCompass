@@ -2,25 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
-test("랜딩 미리보기는 질환 노드만 관계선으로 보여 준다", async () => {
+test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", async () => {
   const html = await readFile("src/landing.html", "utf8");
-  const preview = html.match(/<article class="preview-network"[\s\S]*?<\/article>/)?.[0] ?? "";
+  const preview = html.match(/<article class="brief-preview"[\s\S]*?<\/article>/)?.[0] ?? "";
 
-  assert.match(preview, /고혈압/);
-  assert.match(preview, /당뇨병/);
-  assert.match(preview, /이상지질/);
-  assert.doesNotMatch(preview, /다음 확인/);
-  assert.doesNotMatch(preview, /preview-orb/);
+  assert.match(preview, /예시 데이터/);
+  assert.match(preview, /다음 진료에서 확인할 질문/);
+  assert.match(preview, /가정 혈압/);
+  assert.match(preview, /개인별 위험도나 질병 확률을 계산하지 않습니다/);
+  assert.doesNotMatch(preview, /AI|LLM/);
 });
 
-test("메인 히어로는 같은 크기의 작은 노드와 외부 라벨을 사용한다", async () => {
+test("메인 히어로는 생성 이미지와 의미 있는 대체 텍스트를 사용한다", async () => {
   const html = await readFile("src/landing.html", "utf8");
-  const orbit = html.match(/<figure class="hero-orbit"[\s\S]*?<\/figure>/)?.[0] ?? "";
+  const hero = html.match(/<figure class="landing-hero__visual"[\s\S]*?<\/figure>/)?.[0] ?? "";
 
-  assert.equal((orbit.match(/<circle class="orbit-node__dot"[^>]*r="22"/g) ?? []).length, 5);
-  assert.equal((orbit.match(/class="orbit-node__caption"/g) ?? []).length, 5);
-  assert.doesNotMatch(orbit, /orbit-label--main/);
-  assert.doesNotMatch(orbit, /r="54"/);
+  assert.match(hero, /src="\/assets\/visit-prep-hero\.png"/);
+  assert.match(hero, /width="1586"/);
+  assert.match(hero, /height="992"/);
+  assert.match(hero, /alt="[^"]+"/);
 });
 
 test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", async () => {

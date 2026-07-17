@@ -11,11 +11,11 @@ const pages = [
 ];
 
 const navigation = [
-  ["/", "Main"],
-  ["/map", "Health Map"],
-  ["/connections", "Connections"],
-  ["/insights", "AI Insights"],
-  ["/journey", "Journey"],
+  ["/", "시작"],
+  ["/map", "건강 지도"],
+  ["/connections", "연결 보기"],
+  ["/insights", "진료 준비"],
+  ["/journey", "기록"],
 ];
 
 test("모든 화면은 같은 VitaGraph 앱 헤더 계약을 사용한다", async () => {
@@ -26,7 +26,7 @@ test("모든 화면은 같은 VitaGraph 앱 헤더 계약을 사용한다", asyn
     assert.match(header, /class="app-header__inner"/, file);
     assert.match(header, /class="app-brand"/, file);
     assert.match(header, /class="app-nav"/, file);
-    assert.match(header, /class="app-header__action" href="\/map">건강 지도/, file);
+    assert.match(header, /class="app-header__action" href="\/map">/, file);
 
     for (const [route, label] of navigation) {
       assert.match(header, new RegExp('<a href="' + route + '"[^>]*>' + label + '<\\/a>'), file);

@@ -11,10 +11,13 @@ import {
 const toneClasses = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "tone-amber"];
 const sessionKey = "vitagraph-scene";
 const journeyKey = "vitagraph-journey";
+const demoNote = "혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통";
 
 const elements = {
   form: document.querySelector("#healthForm"),
   note: document.querySelector("#healthNote"),
+  loadDemo: document.querySelector("#loadDemo"),
+  demoMode: document.querySelector("#demoMode"),
   chips: [...document.querySelectorAll(".signal-chip")],
   analyzeButton: document.querySelector("#analyzeButton"),
   resetButton: document.querySelector("#resetButton"),
@@ -50,6 +53,7 @@ const state = {
   measurements: [],
   observedAt: "",
   source: "직접 입력",
+  isDemo: false,
 };
 
 function renderList(target, items) {
@@ -64,7 +68,7 @@ function renderList(target, items) {
 
 function renderSummary() {
   const conditions = state.visibleIds.map((id) => CONDITIONS[id]);
-  elements.count.textContent = `${conditions.length}개 신호`;
+  elements.count.textContent = `${conditions.length}개`;
   elements.miniList.replaceChildren(
     ...conditions.map((condition) => {
       const badge = document.createElement("span");
@@ -73,7 +77,46 @@ function renderSummary() {
     }),
   );
   elements.graphPreviewCount.textContent = conditions.length + "개";
-  elements.saveJourney.disabled = conditions.length === 0 && state.measurements.length === 0;
+  const hasJourneyData = conditions.length > 0 || state.measurements.length > 0;
+  elements.saveJourney.disabled = state.isDemo || !hasJourneyData;
+  const saveLabel = elements.saveJourney.querySelector("span");
+  const saveNote = elements.saveJourney.querySelector("small");
+  if (state.isDemo) {
+    saveLabel.textContent = "예시 데이터는 Journey에 저장되지 않아요";
+    saveNote.textContent = "데모 모드";
+  } else if (!elements.saveJourney.classList.contains("is-saved")) {
+    saveLabel.textContent = "현재 지도를 Journey에 저장";
+    saveNote.textContent = "브라우저 로컬 기록";
+  }
+}
+
+function persistScene() {
+  try {
+    if (state.isDemo) {
+      sessionStorage.removeItem(sessionKey);
+      return;
+    }
+    sessionStorage.setItem(sessionKey, JSON.stringify({
+      visibleIds: state.visibleIds,
+      activeId: state.activeId,
+    }));
+  } catch {
+    // The map remains usable when session storage is unavailable.
+  }
+}
+
+function leaveDemoMode({ clearResults = false } = {}) {
+  if (!state.isDemo) return;
+  state.isDemo = false;
+  elements.demoMode.hidden = true;
+  state.source = "직접 입력";
+  if (clearResults) {
+    state.visibleIds = [];
+    state.activeId = "";
+    state.measurements = [];
+    state.observedAt = "";
+  }
+  renderAll();
 }
 
 function measurementNote(measurements) {
@@ -149,17 +192,10 @@ function analyze() {
   elements.formError.hidden = state.visibleIds.length > 0;
   if (state.visibleIds.length === 0) {
     elements.formError.textContent =
-      "자동으로 연결할 신호를 찾지 못했습니다. 질환을 선택하거나 검사명을 더 구체적으로 적어 주세요.";
+      "자동으로 확인 필요 신호를 찾지 못했습니다. 알고 있는 질환을 선택하거나 검사명을 더 구체적으로 적어 주세요.";
   }
   renderAll();
-  try {
-    sessionStorage.setItem(sessionKey, JSON.stringify({
-      visibleIds: state.visibleIds,
-      activeId: state.activeId,
-    }));
-  } catch {
-    // The map remains usable when session storage is unavailable.
-  }
+  persistScene();
 }
 
 elements.form.addEventListener("submit", (event) => {
@@ -182,6 +218,7 @@ elements.form.addEventListener("submit", (event) => {
 
 for (const chip of elements.chips) {
   chip.addEventListener("click", () => {
+    leaveDemoMode({ clearResults: true });
     const id = chip.dataset.condition;
     const selected = chip.getAttribute("aria-pressed") === "true";
     chip.setAttribute("aria-pressed", String(!selected));
@@ -202,16 +239,28 @@ for (const hotspot of elements.hotspots) {
 
 for (const link of elements.connectionsLinks) {
   link.addEventListener("click", () => {
-    try {
-      sessionStorage.setItem(sessionKey, JSON.stringify({
-        visibleIds: state.visibleIds,
-        activeId: state.activeId,
-      }));
-    } catch {
-      // Navigation still works if session storage is unavailable.
-    }
+    persistScene();
   });
 }
+
+elements.note.addEventListener("input", () => leaveDemoMode({ clearResults: true }));
+
+elements.loadDemo.addEventListener("click", () => {
+  elements.note.value = demoNote;
+  state.declaredIds = [];
+  state.visibleIds = [];
+  state.activeId = "";
+  state.measurements = [];
+  state.observedAt = "";
+  state.source = "예시 데이터";
+  state.isDemo = true;
+  elements.demoMode.hidden = false;
+  elements.fhirFile.value = "";
+  elements.fhirResult.hidden = true;
+  for (const chip of elements.chips) chip.setAttribute("aria-pressed", "false");
+  elements.formError.hidden = true;
+  analyze();
+});
 
 elements.resetButton.addEventListener("click", () => {
   elements.note.value = "";
@@ -221,6 +270,8 @@ elements.resetButton.addEventListener("click", () => {
   state.measurements = [];
   state.observedAt = "";
   state.source = "직접 입력";
+  state.isDemo = false;
+  elements.demoMode.hidden = true;
   elements.fhirFile.value = "";
   elements.fhirResult.hidden = true;
   for (const chip of elements.chips) chip.setAttribute("aria-pressed", "false");
@@ -231,6 +282,7 @@ elements.resetButton.addEventListener("click", () => {
 elements.fhirFile.addEventListener("change", async () => {
   const [file] = elements.fhirFile.files;
   if (!file) return;
+  leaveDemoMode({ clearResults: true });
   elements.fhirResult.hidden = false;
   elements.fhirResult.className = "import-result is-loading";
   elements.fhirResult.textContent = "기록 구조를 확인하는 중…";
@@ -253,6 +305,11 @@ elements.fhirFile.addEventListener("change", async () => {
 });
 
 elements.saveJourney.addEventListener("click", () => {
+  if (state.isDemo) {
+    elements.formError.hidden = false;
+    elements.formError.textContent = "예시 데이터는 Journey에 저장되지 않습니다.";
+    return;
+  }
   const snapshot = createJourneySnapshot({
     observedAt: state.observedAt || new Date().toISOString(), conditionIds: state.visibleIds,
     measurements: state.measurements, source: state.source,
@@ -272,4 +329,8 @@ elements.saveJourney.addEventListener("click", () => {
 elements.sourceToggle.addEventListener("click", () => elements.sourceDialog.showModal());
 elements.sourceClose.addEventListener("click", () => elements.sourceDialog.close());
 
-analyze();
+if (new URLSearchParams(window.location.search).get("sample") === "1") {
+  elements.loadDemo.click();
+}
+
+renderAll();

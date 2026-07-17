@@ -31,11 +31,11 @@
           <span>VitaGraph</span>
         </a>
         <nav class="app-nav" aria-label="주요 화면">
-          <a href="/" data-main-link>Main</a>
-          <a href="/map" aria-current="page">Health Map</a>
-          <a href="/connections">Connections</a>
-          <a href="/insights">AI Insights</a>
-          <a href="/journey">Journey</a>
+          <a href="/" data-main-link>시작</a>
+          <a href="/map" aria-current="page">건강 지도</a>
+          <a href="/connections">연결 보기</a>
+          <a href="/insights">진료 준비</a>
+          <a href="/journey">기록</a>
         </nav>
         <a class="app-header__action" href="/map">건강 지도</a>
       </div>
@@ -82,13 +82,22 @@
               <div class="import-result" id="fhirResult" hidden></div>
             </section>
 
-            <label class="field-label" for="healthNote">증상과 검사 수치</label>
+            <div class="field-heading">
+              <label class="field-label" for="healthNote">증상과 검사 수치</label>
+              <button class="demo-trigger" id="loadDemo" type="button">
+                예시 기록 불러오기
+              </button>
+            </div>
+            <p class="demo-mode" id="demoMode" role="status" hidden>
+              예시 데이터 보는 중 · 세션과 Journey에 저장되지 않음
+            </p>
             <textarea
               id="healthNote"
               rows="5"
               spellcheck="false"
               aria-describedby="inputHint formError"
-            >혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통</textarea>
+              placeholder="증상이나 최근 검사 수치를 직접 입력해 주세요"
+            ></textarea>
             <p class="field-hint" id="inputHint">
               예: 혈압 148/94, 공복혈당 132, 속쓰림, 무릎 통증
             </p>
@@ -122,8 +131,8 @@
           </form>
 
           <div class="detected-summary" aria-live="polite">
-            <span>현재 지도</span>
-            <strong id="conditionCount">0개 신호</strong>
+            <span>확인 필요 신호 · 진단 아님</span>
+            <strong id="conditionCount">0개</strong>
             <div class="mini-condition-list" id="miniConditionList"></div>
           </div>
           <button class="journey-save" id="saveJourney" type="button" disabled>

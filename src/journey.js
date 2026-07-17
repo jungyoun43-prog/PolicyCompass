@@ -1,11 +1,15 @@
 import { CONDITIONS } from "/data.js";
-import { compareSnapshots, normalizeJourney } from "/journey-model.js";
+import { compareSnapshots, createJourneyBackup, normalizeJourney, parseJourneyBackup } from "/journey-model.js";
 
 const storageKey = "vitagraph-journey";
 const elements = {
   timeline: document.querySelector("#journeyTimeline"), empty: document.querySelector("#journeyEmpty"),
-  comparison: document.querySelector("#journeyComparison"), title: document.querySelector("#comparisonTitle"), copy: document.querySelector("#comparisonCopy"),
-  added: document.querySelector("#addedSignals"), steady: document.querySelector("#steadySignals"), removed: document.querySelector("#removedSignals"), clear: document.querySelector("#clearJourney"),
+  title: document.querySelector("#comparisonTitle"), copy: document.querySelector("#comparisonCopy"),
+  added: document.querySelector("#addedSignals"), steady: document.querySelector("#steadySignals"), removed: document.querySelector("#removedSignals"),
+  measurementChanges: document.querySelector("#measurementChanges"),
+  clear: document.querySelector("#clearJourney"), export: document.querySelector("#exportJourney"),
+  importTrigger: document.querySelector("#importJourneyTrigger"), importInput: document.querySelector("#journeyImport"),
+  transferStatus: document.querySelector("#journeyTransferStatus"),
 };
 
 function readJourney() {
@@ -13,22 +17,65 @@ function readJourney() {
 }
 let journey = readJourney();
 
+function persistJourney() {
+  if (journey.length === 0) localStorage.removeItem(storageKey);
+  else localStorage.setItem(storageKey, JSON.stringify(journey));
+}
+
+function setTransferStatus(message, state = "") {
+  elements.transferStatus.textContent = message;
+  elements.transferStatus.className = `journey-transfer-status${state ? ` is-${state}` : ""}`;
+}
+
 function conditionPills(target, ids, emptyText) {
   target.replaceChildren();
   if (ids.length === 0) { const span = document.createElement("span"); span.className = "change-empty"; span.textContent = emptyText; target.append(span); return; }
   for (const id of ids) { const span = document.createElement("span"); span.className = `journey-pill tone-${CONDITIONS[id].tone}`; span.textContent = CONDITIONS[id].label; target.append(span); }
 }
 
+const numberFormatter = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 4 });
+
+function measurementText(value, unit) {
+  return `${numberFormatter.format(value)}${unit ? ` ${unit}` : ""}`;
+}
+
+function renderMeasurementChanges(changes) {
+  elements.measurementChanges.replaceChildren();
+  if (changes.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "measurement-change-empty";
+    empty.textContent = "비교 가능한 숫자 변화 없음";
+    elements.measurementChanges.append(empty);
+    return;
+  }
+
+  for (const change of changes) {
+    const item = document.createElement("article");
+    item.className = "measurement-change";
+    const label = document.createElement("b");
+    label.textContent = change.label;
+    const values = document.createElement("span");
+    values.textContent = `${measurementText(change.before, change.unit)} → ${measurementText(change.after, change.unit)}`;
+    const delta = document.createElement("strong");
+    delta.dataset.direction = change.delta > 0 ? "up" : "down";
+    delta.textContent = `${change.delta > 0 ? "+" : ""}${measurementText(change.delta, change.unit)}`;
+    item.append(label, values, delta);
+    elements.measurementChanges.append(item);
+  }
+}
+
 function renderComparison() {
   if (journey.length < 2) {
     elements.title.textContent = journey.length === 1 ? "첫 기준점이 저장됐어요" : "두 시점을 선택하세요";
     elements.copy.textContent = journey.length === 1 ? "다음 기록을 저장하면 무엇이 달라졌는지 비교합니다." : "기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.";
-    conditionPills(elements.added, [], "비교 대기"); conditionPills(elements.steady, [], "비교 대기"); conditionPills(elements.removed, [], "비교 대기"); return;
+    conditionPills(elements.added, [], "비교 대기"); conditionPills(elements.steady, [], "비교 대기"); conditionPills(elements.removed, [], "비교 대기");
+    renderMeasurementChanges([]); return;
   }
   const before = journey.at(-2); const after = journey.at(-1); const changes = compareSnapshots(before, after);
   elements.title.textContent = `${before.date} → ${after.date}`;
   elements.copy.textContent = "최근 두 기록에 포함된 신호의 차이입니다. 임상적 변화로 해석하지 않습니다.";
   conditionPills(elements.added, changes.added, "새 신호 없음"); conditionPills(elements.steady, changes.unchanged, "유지 신호 없음"); conditionPills(elements.removed, changes.removed, "빠진 신호 없음");
+  renderMeasurementChanges(changes.measurementChanges);
 }
 
 function snapshotCard(snapshot, index) {
@@ -49,13 +96,57 @@ function snapshotCard(snapshot, index) {
     measures.append(row);
   }
   const remove = document.createElement("button"); remove.type = "button"; remove.className = "snapshot-remove"; remove.textContent = "삭제";
-  remove.addEventListener("click", () => { journey = journey.filter(({ id }) => id !== snapshot.id); localStorage.setItem(storageKey, JSON.stringify(journey)); render(); });
+  remove.setAttribute("aria-label", `${snapshot.date} 기록 삭제`);
+  remove.addEventListener("click", () => { journey = journey.filter(({ id }) => id !== snapshot.id); persistJourney(); render(); });
   content.append(meta, signals, measures, remove); article.append(marker, content); return article;
 }
 
 function render() {
   elements.empty.hidden = journey.length > 0; elements.timeline.hidden = journey.length === 0; elements.clear.hidden = journey.length === 0;
+  elements.export.disabled = journey.length === 0;
   elements.timeline.replaceChildren(...journey.map(snapshotCard)); renderComparison();
 }
-elements.clear.addEventListener("click", () => { if (!window.confirm("이 브라우저에 저장된 Journey 기록을 모두 지울까요?")) return; journey = []; localStorage.removeItem(storageKey); render(); });
+
+elements.export.addEventListener("click", () => {
+  const backup = createJourneyBackup(journey);
+  const blob = new Blob([`${JSON.stringify(backup, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `vitagraph-journey-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  setTransferStatus(`Journey 기록 ${journey.length}개를 JSON 파일로 내보냈습니다.`, "success");
+});
+
+elements.importTrigger.addEventListener("click", () => elements.importInput.click());
+elements.importInput.addEventListener("change", async () => {
+  const [file] = elements.importInput.files;
+  if (!file) return;
+  setTransferStatus("백업 파일을 확인하고 있습니다.");
+
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new TypeError("5MB 이하의 Journey 백업 파일을 선택하세요.");
+    const imported = parseJourneyBackup(JSON.parse(await file.text()));
+    if (journey.length > 0 && !window.confirm(`현재 기록 ${journey.length}개를 가져온 기록 ${imported.length}개로 교체할까요?`)) {
+      setTransferStatus("가져오기를 취소했습니다.");
+      return;
+    }
+    journey = imported;
+    persistJourney();
+    render();
+    setTransferStatus(`Journey 기록 ${journey.length}개를 가져와 현재 기록을 교체했습니다.`, "success");
+  } catch (error) {
+    const message = error instanceof SyntaxError
+      ? "JSON 파일을 읽을 수 없습니다."
+      : error instanceof Error ? error.message : "Journey 백업 파일을 가져오지 못했습니다.";
+    setTransferStatus(message, "error");
+  } finally {
+    elements.importInput.value = "";
+  }
+});
+
+elements.clear.addEventListener("click", () => { if (!window.confirm("이 브라우저에 저장된 Journey 기록을 모두 지울까요? 내보내지 않은 기록은 복구할 수 없습니다.")) return; journey = []; persistJourney(); render(); setTransferStatus("이 브라우저의 Journey 기록을 모두 지웠습니다.", "success"); });
 render();

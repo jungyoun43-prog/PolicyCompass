@@ -15,9 +15,9 @@ test("FHIR 가져오기와 Journey 화면 자산을 배포 Worker가 제공한�
   assert.match(html, /이 기기에만 저장/);
 });
 
-test("Overview는 FHIR 로컬 가져오기와 명시적 Journey 저장을 제공한다", async () => {
+test("Health Map은 FHIR 로컬 가져오기와 명시적 Journey 저장을 제공한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
-  const html = await (await worker.fetch(new Request("https://example.com/"))).text();
+  const html = await (await worker.fetch(new Request("https://example.com/map"))).text();
 
   assert.match(html, /id="fhirFile"/);
   assert.match(html, /서버 전송 없음/);

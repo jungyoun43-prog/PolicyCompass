@@ -1,0 +1,3 @@
+import { CONDITIONS } from "./data.js";
+const rules={diabetes:["당화혈색소와 혈당 추세","신장 기능·소변 알부민","눈·발 관련 증상"],hypertension:["반복 또는 가정 혈압 기록","신장 기능과 전해질","전체 심혈관 위험"],dyslipidemia:["지질 수치 추적","혈압·혈당을 포함한 심혈관 위험"],asthma:["증상 빈도와 흡입기 사용법","야간 증상과 행동 계획"],migraine:["두통 일지와 진통제 사용 빈도","새롭거나 갑작스러운 경고 증상"],reflux:["식사·증상 시간 기록","삼킴 곤란·출혈 같은 경고 증상"],mood:["수면·일상 기능 변화","안전과 위기 신호"],arthritis:["통증·붓기·기능 변화","활동 계획과 통증 조절"]};
+export function createInsights(ids=[]){const valid=[...new Set(ids)].filter(id=>CONDITIONS[id]);const checks=[...new Set(valid.flatMap(id=>rules[id]??[]))].slice(0,5);return{ids:valid,checks,watch:valid.map(id=>({label:CONDITIONS[id].label,detail:CONDITIONS[id].relation})),coverage:valid.length?"입력된 신호를 기준으로 정리됨":"아직 분석할 신호가 없습니다."};}

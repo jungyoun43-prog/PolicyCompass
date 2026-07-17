@@ -36,7 +36,7 @@ test("빌드된 Worker가 앱과 보안 헤더를 제공한다", async () => {
   // Then
   assert.equal(response.status, 200);
   assert.match(html, /VitaGraph/);
-  assert.match(html, /내 몸의 신호를.*연결해서 보기/s);
+  assert.match(html, /흩어진 건강 기록을.*하나의 맥락/s);
   assert.match(response.headers.get("content-security-policy") ?? "", /default-src 'self'/);
 });
 

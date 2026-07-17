@@ -76,6 +76,19 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - Responsive: desktop uses scene plus detail rail; mobile stacks a minimum 560px scene above the detail rail.
 - Accessibility: graph groups are keyboard selectable, visible focus is mandatory, and every selection is mirrored in text.
 
+### FHIR import box
+- Structure: compact local-file picker above manual entry, with format tag, privacy promise, and parse result.
+- Scope: FHIR R4 Condition and Observation subset; unsupported records remain visible as a count and never become inferred diagnoses.
+- States: idle, parsing, success, error. File size is capped at 2 MB.
+
+### Evidence card
+- Structure: connected condition, relationship category, plain-language rationale, and an external authoritative source.
+- Language: describes why two topics are viewed together, never causality or a personalized medical conclusion.
+
+### Journey timeline
+- Structure: local snapshots on a vertical rail, followed by added/steady/removed comparison columns.
+- Persistence: only explicit saves use browser local storage; each record can be removed and the entire history can be cleared.
+
 ## 6. Motion & Interaction
 
 Micro feedback uses 140ms ease-out. Panel transitions use 260ms ease-in-out. Emphasis entry uses 480ms cubic-bezier(0.16, 1, 0.3, 1). Only transform, opacity, and filter animate. Reduced-motion mode removes nonessential entry and floating effects. Analysis loading uses opacity only.

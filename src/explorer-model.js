@@ -70,12 +70,16 @@ export function createExplorerScene(visibleIds, activeId) {
     .map(initialConditionNode);
   const relationEdges = RELATIONS.filter(
     ({ a, b }) => visible.has(a) && visible.has(b),
-  ).map(({ a, b, label }) => ({
+  ).map(({ a, b, label, category, rationale, sourceTitle, sourceUrl }) => ({
     id: `${a}:${b}`,
     type: "relation",
     source: a,
     target: b,
     label,
+    category,
+    rationale,
+    sourceTitle,
+    sourceUrl,
   }));
   const active = CONDITIONS[activeId];
   const branches = active && visible.has(activeId)

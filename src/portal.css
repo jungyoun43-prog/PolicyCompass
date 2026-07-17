@@ -139,7 +139,20 @@
 
 @media (max-width: 620px) {
   .overview-nav {
-    display: none;
+    position: fixed;
+    z-index: 30;
+    right: auto;
+    bottom: var(--space-3);
+    left: 50%;
+    display: flex;
+    width: max-content;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 12px 35px color-mix(in srgb, var(--ink) 14%, transparent);
+    padding: var(--space-1);
+    transform: translateX(-50%);
+    backdrop-filter: blur(14px);
   }
 
   .connection-portal {

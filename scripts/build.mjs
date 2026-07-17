@@ -8,6 +8,7 @@ const cssAssets = [
   "detail",
   "responsive",
   "explorer",
+  "journey",
 ].map((name) => ({
   route: `/${name}.css`,
   file: `src/${name}.css`,
@@ -18,12 +19,17 @@ const sourceAssets = [
   { route: "/", file: "src/index.html", type: "text/html; charset=utf-8" },
   { route: "/connections", file: "src/connections.html", type: "text/html; charset=utf-8" },
   { route: "/connections.html", file: "src/connections.html", type: "text/html; charset=utf-8" },
+  { route: "/journey", file: "src/journey.html", type: "text/html; charset=utf-8" },
+  { route: "/journey.html", file: "src/journey.html", type: "text/html; charset=utf-8" },
   ...cssAssets,
   { route: "/data.js", file: "src/data.js", type: "text/javascript; charset=utf-8" },
   { route: "/view-model.js", file: "src/view-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/app.js", file: "src/app.js", type: "text/javascript; charset=utf-8" },
   { route: "/explorer-model.js", file: "src/explorer-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/connections.js", file: "src/connections.js", type: "text/javascript; charset=utf-8" },
+  { route: "/fhir-import.js", file: "src/fhir-import.js", type: "text/javascript; charset=utf-8" },
+  { route: "/journey-model.js", file: "src/journey-model.js", type: "text/javascript; charset=utf-8" },
+  { route: "/journey.js", file: "src/journey.js", type: "text/javascript; charset=utf-8" },
 ];
 
 const entries = await Promise.all(

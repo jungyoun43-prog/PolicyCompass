@@ -27,6 +27,7 @@
       <nav class="page-nav" aria-label="주요 화면">
         <a href="/">Overview</a>
         <a class="is-current" href="/connections" aria-current="page">Connections</a>
+        <a href="/journey">Journey</a>
       </nav>
       <a class="back-link" href="/">요약으로 돌아가기</a>
     </header>
@@ -70,6 +71,11 @@
               <g id="sceneNodes"></g>
             </g>
           </svg>
+          <div class="scene-empty" id="sceneEmpty" hidden>
+            <p class="panel-index">NO HEALTH MAP YET</p><h2>먼저 내 데이터를 연결하세요.</h2>
+            <p>Overview에서 직접 입력하거나 FHIR JSON을 가져오면 실제 신호만 이 장면에 표시됩니다.</p>
+            <a class="primary-button" href="/">Overview에서 시작</a>
+          </div>
           <p class="scene-hint">노드 선택 · 드래그로 이동 · 휠 또는 버튼으로 확대</p>
         </div>
 
@@ -94,6 +100,7 @@
             <h3>관리 대화</h3>
             <ul id="explorerDetailCare"></ul>
           </section>
+          <section><h3>관련 연결과 근거</h3><div class="evidence-list" id="explorerEvidenceList"></div></section>
         </aside>
       </section>
     </main>

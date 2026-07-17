@@ -32,6 +32,7 @@
         <nav class="overview-nav" aria-label="페이지">
           <a href="/" aria-current="page">Overview</a>
           <a href="/connections" data-connections-link>Connections</a>
+          <a href="/journey">Journey</a>
         </nav>
         <span class="privacy-state">입력 내용은 이 세션에서만 사용</span>
         <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
@@ -66,6 +67,16 @@
           </div>
 
           <form id="healthForm" novalidate>
+            <section class="import-box" aria-labelledby="fhirImportTitle">
+              <div class="import-heading">
+                <div><span class="import-tag">FHIR R4</span><h3 id="fhirImportTitle">병원 기록 JSON 가져오기</h3></div>
+                <label class="import-button" for="fhirFile">파일 선택</label>
+                <input id="fhirFile" type="file" accept=".json,application/json,application/fhir+json" />
+              </div>
+              <p>Condition·Observation 일부만 이 브라우저에서 읽습니다. 서버 전송 없음.</p>
+              <div class="import-result" id="fhirResult" hidden></div>
+            </section>
+
             <label class="field-label" for="healthNote">증상과 검사 수치</label>
             <textarea
               id="healthNote"
@@ -110,6 +121,9 @@
             <strong id="conditionCount">0개 신호</strong>
             <div class="mini-condition-list" id="miniConditionList"></div>
           </div>
+          <button class="journey-save" id="saveJourney" type="button" disabled>
+            <span>현재 지도를 Journey에 저장</span><small>브라우저 로컬 기록</small>
+          </button>
         </aside>
 
         <section class="panel body-panel" aria-labelledby="bodyTitle">

@@ -98,14 +98,18 @@ export const CONDITIONS = {
 };
 
 export const RELATIONS = [
-  { a: "hypertension", b: "diabetes", label: "대사 위험" },
-  { a: "hypertension", b: "dyslipidemia", label: "혈관 위험" },
-  { a: "diabetes", b: "dyslipidemia", label: "대사 연결" },
-  { a: "migraine", b: "mood", label: "수면·스트레스" },
-  { a: "reflux", b: "asthma", label: "기침·야간 증상" },
-  { a: "arthritis", b: "mood", label: "통증 부담" },
-  { a: "arthritis", b: "diabetes", label: "활동량" },
+  { a: "hypertension", b: "diabetes", label: "대사 위험", category: "함께 확인", rationale: "혈압과 혈당은 대사증후군과 심혈관 위험을 평가할 때 함께 확인하는 지표입니다.", sourceTitle: "NHLBI · Metabolic Syndrome", sourceUrl: "https://www.nhlbi.nih.gov/health/metabolic-syndrome/diagnosis" },
+  { a: "hypertension", b: "dyslipidemia", label: "혈관 위험", category: "공통 위험", rationale: "혈압과 콜레스테롤 상태는 심혈관 위험을 구성하는 서로 다른 요소입니다.", sourceTitle: "NHLBI · Metabolic Syndrome", sourceUrl: "https://www.nhlbi.nih.gov/health/metabolic-syndrome" },
+  { a: "diabetes", b: "dyslipidemia", label: "대사 연결", category: "공통 위험", rationale: "혈당과 지질 수치는 대사 건강과 심혈관 위험을 함께 이해하는 데 사용됩니다.", sourceTitle: "NHLBI · Metabolic Syndrome", sourceUrl: "https://www.nhlbi.nih.gov/health/metabolic-syndrome/diagnosis" },
+  { a: "migraine", b: "mood", label: "수면·스트레스", category: "동반 부담", rationale: "편두통이 있는 사람에게 불안·우울과 수면 문제가 더 흔하게 나타날 수 있습니다.", sourceTitle: "NINDS · Migraine", sourceUrl: "https://www.ninds.nih.gov/health-information/disorders/migraine" },
+  { a: "reflux", b: "asthma", label: "기침·야간 증상", category: "증상 구분", rationale: "위식도역류는 만성 기침을 동반할 수 있어 호흡기 증상과 함께 맥락을 확인할 수 있습니다.", sourceTitle: "NIDDK · GERD Symptoms", sourceUrl: "https://www.niddk.nih.gov/health-information/digestive-diseases/acid-reflux-ger-gerd-adults/symptoms-causes" },
+  { a: "arthritis", b: "mood", label: "통증 부담", category: "생활 영향", rationale: "지속되는 통증과 활동 제한은 기분과 일상 기능을 함께 살펴볼 이유가 됩니다.", sourceTitle: "CDC · Arthritis and Mental Health", sourceUrl: "https://www.cdc.gov/arthritis/about/about-arthritis-and-mental-health.html" },
+  { a: "arthritis", b: "diabetes", label: "활동량", category: "생활 영향", rationale: "관절 통증으로 활동이 줄면 혈당 관리 계획에도 영향을 줄 수 있어 함께 대화할 수 있습니다.", sourceTitle: "CDC · Physical Activity for Arthritis", sourceUrl: "https://www.cdc.gov/arthritis/basics/physical-activity-overview.html" },
 ];
+export function relationsFor(id, visibleIds = Object.keys(CONDITIONS)) {
+  const visible = new Set(visibleIds);
+  return RELATIONS.filter(({ a, b }) => (a === id || b === id) && visible.has(a) && visible.has(b));
+}
 
 export const POSITIONS = {
   hypertension: [260, 86],

@@ -1,9 +1,8 @@
-import { CONDITIONS } from "/data.js";
+import { CONDITIONS, relationsFor } from "/data.js";
 import { createExplorerScene, settleExplorerScene } from "/explorer-model.js";
 import { createDetailModel } from "/view-model.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
-const fallbackIds = ["hypertension", "diabetes", "dyslipidemia", "migraine", "reflux"];
 const sessionKey = "vitagraph-scene";
 const sceneSize = { width: 1180, height: 720 };
 
@@ -24,6 +23,8 @@ const elements = {
   detailRelation: document.querySelector("#explorerDetailRelation"),
   detailChecks: document.querySelector("#explorerDetailChecks"),
   detailCare: document.querySelector("#explorerDetailCare"),
+  evidenceList: document.querySelector("#explorerEvidenceList"),
+  empty: document.querySelector("#sceneEmpty"),
 };
 
 function readSession() {
@@ -33,11 +34,11 @@ function readSession() {
       ? stored.visibleIds.filter((id) => CONDITIONS[id])
       : [];
     return {
-      visibleIds: visibleIds.length > 0 ? visibleIds : fallbackIds,
-      activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? fallbackIds[0]),
+      visibleIds,
+      activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? ""),
     };
   } catch {
-    return { visibleIds: fallbackIds, activeId: fallbackIds[0] };
+    return { visibleIds: [], activeId: "" };
   }
 }
 
@@ -68,6 +69,7 @@ function renderList(target, items) {
 }
 
 function renderConditionDetail(id) {
+  if (!id || !CONDITIONS[id]) return;
   const detail = createDetailModel(id);
   elements.detailTone.className = `detail-tone tone-${detail.tone}`;
   elements.detailSystem.textContent = detail.system;
@@ -76,6 +78,16 @@ function renderConditionDetail(id) {
   elements.detailRelation.textContent = detail.relation;
   renderList(elements.detailChecks, detail.checks);
   renderList(elements.detailCare, detail.care);
+  const evidence = relationsFor(id, state.visibleIds);
+  elements.evidenceList.replaceChildren(...evidence.map((relation) => {
+    const card = document.createElement("article"); card.className = "evidence-card";
+    const neighborId = relation.a === id ? relation.b : relation.a;
+    const heading = document.createElement("strong"); heading.textContent = `${CONDITIONS[neighborId].label} · ${relation.category}`;
+    const rationale = document.createElement("p"); rationale.textContent = relation.rationale;
+    const source = document.createElement("a"); source.href = relation.sourceUrl; source.target = "_blank"; source.rel = "noreferrer"; source.textContent = `${relation.sourceTitle} ↗`;
+    card.append(heading, rationale, source); return card;
+  }));
+  if (evidence.length === 0) { const empty = document.createElement("p"); empty.className = "evidence-empty"; empty.textContent = "현재 지도 안에서 직접 연결된 근거가 없습니다."; elements.evidenceList.replaceChildren(empty); }
 }
 
 function renderBranchDetail(node) {
@@ -210,6 +222,13 @@ function renderSceneElements() {
 }
 
 function renderGraph() {
+  const hasData = state.visibleIds.length > 0;
+  elements.empty.hidden = hasData;
+  elements.scene.classList.toggle("is-empty", !hasData);
+  if (!hasData) {
+    state.scene = { nodes: [], edges: [] }; elements.edges.replaceChildren(); elements.nodes.replaceChildren();
+    elements.count.textContent = "0개 노드 · 입력 대기"; elements.focus.textContent = "선택 대기"; return;
+  }
   state.scene = settleExplorerScene(
     createExplorerScene(state.visibleIds, state.activeId),
     sceneSize.width,

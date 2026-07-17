@@ -97,6 +97,10 @@
 }
 
 @media (max-width: 520px) {
+  .topbar .text-button {
+    display: none;
+  }
+
   .topbar {
     height: 68px;
   }

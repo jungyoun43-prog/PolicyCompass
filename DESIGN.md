@@ -89,6 +89,14 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - Structure: local snapshots on a vertical rail, followed by added/steady/removed comparison columns.
 - Persistence: only explicit saves use browser local storage; each record can be removed and the entire history can be cleared.
 
+
+### Application shell
+- All routes use the same white atlas background: restrained coral light at the upper right and cyan light at the lower left; page-specific backgrounds are not allowed.
+- Header: one 1480px content rail, 80px height, brand at left and explicit Main, Health Map, Connections, AI Insights, Journey navigation. Active state is a soft surface pill; Main is always visible as a text link on desktop and reachable through the brand on compact layouts.
+- Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
+- Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
+- Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.
+
 ## 6. Motion & Interaction
 
 Micro feedback uses 140ms ease-out. Panel transitions use 260ms ease-in-out. Emphasis entry uses 480ms cubic-bezier(0.16, 1, 0.3, 1). Only transform, opacity, and filter animate. Reduced-motion mode removes nonessential entry and floating effects. Analysis loading uses opacity only.

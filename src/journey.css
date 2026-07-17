@@ -37,3 +37,29 @@
 .journey-disclaimer { margin: var(--space-5) 0 0; color: var(--muted); font-size: .8125rem; text-align: center; }
 @media (max-width: 800px) { .journey-shell { width: min(100% - var(--space-8), 1320px); } .journey-intro, .journey-comparison { grid-template-columns: 1fr; gap: var(--space-6); } .journey-intro h1 { font-size: clamp(3rem, 15vw, 5rem); } .change-columns { grid-template-columns: 1fr; } .privacy-state { display: none; } }
 @media (max-width: 520px) { .journey-workspace, .journey-comparison { padding: var(--space-5); } .journey-heading { flex-direction: column; } .page-nav { gap: 0; } .page-nav a { padding-inline: var(--space-2); } }
+
+
+/* Shared VitaGraph rhythm for Journey */
+.journey-page { background: transparent; }
+.journey-page .explorer-topbar {
+  width: min(100% - var(--page-gutter), var(--page-width));
+  min-height: var(--header-height);
+  height: var(--header-height);
+  border-bottom: 1px solid var(--line);
+}
+.journey-page .journey-shell {
+  width: min(100% - var(--page-gutter), var(--page-width));
+  padding: var(--hero-top) 0 var(--space-12);
+}
+.journey-page .journey-intro {
+  grid-template-columns: minmax(0, 1.18fr) minmax(280px, .82fr);
+  gap: var(--space-12);
+  margin: 0 0 var(--hero-bottom);
+}
+.journey-page .journey-intro h1 { max-width: 13ch; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: .98; }
+.journey-page .journey-intro > p { margin-bottom: 0; }
+@media (max-width: 800px) {
+  .journey-page .explorer-topbar, .journey-page .journey-shell { width: min(100% - var(--page-gutter), var(--page-width)); }
+  .journey-page .explorer-topbar { min-height: 68px; height: 68px; }
+  .journey-page .journey-intro { grid-template-columns: 1fr; gap: var(--space-5); }
+}

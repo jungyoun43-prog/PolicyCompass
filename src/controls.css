@@ -227,3 +227,39 @@ textarea:focus {
   font-size: 0.75rem;
   font-weight: 620;
 }
+
+
+/* Balanced Health Map workspace */
+.map-page .app-shell {
+  width: min(100% - var(--page-gutter), var(--page-width));
+  padding: var(--hero-top) 0 var(--space-12);
+}
+
+.map-page .intro {
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0 0 var(--hero-bottom);
+}
+
+.map-page .dashboard {
+  grid-template-columns: minmax(320px, 0.78fr) minmax(520px, 1.22fr);
+  gap: var(--space-5);
+  align-items: stretch;
+}
+
+.map-page .body-panel { display: flex; flex-direction: column; }
+.map-page .body-stage { flex: 1; min-height: 560px; }
+.map-page .connection-portal,
+.map-page .detail-panel { grid-column: 1 / -1; }
+
+@media (max-width: 980px) {
+  .map-page .dashboard { grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr); }
+}
+
+@media (max-width: 780px) {
+  .map-page .app-shell { width: min(100% - var(--page-gutter), var(--page-width)); }
+  .map-page .intro,
+  .map-page .dashboard { grid-template-columns: 1fr; }
+  .map-page .body-stage { min-height: 500px; }
+}

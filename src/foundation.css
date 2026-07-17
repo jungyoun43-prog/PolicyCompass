@@ -213,3 +213,91 @@ a {
   color: var(--muted);
   font-size: 0.8125rem;
 }
+
+
+/* Shared VitaGraph application shell */
+:root {
+  --page-width: 1480px;
+  --page-gutter: var(--space-12);
+  --header-height: 80px;
+  --hero-top: var(--space-10);
+  --hero-bottom: var(--space-12);
+}
+
+body,
+body.map-page,
+body.landing-page,
+body.explorer-page,
+body.journey-page,
+body.insights-page {
+  background:
+    radial-gradient(circle at 92% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 30rem),
+    radial-gradient(circle at -8% 92%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 31rem),
+    var(--surface);
+}
+
+.ambient { display: none; }
+
+.site-header {
+  width: min(100% - var(--page-gutter), var(--page-width));
+  height: var(--header-height);
+  min-height: var(--header-height);
+  margin-inline: auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header .site-nav,
+.site-header .overview-nav,
+.site-header .page-nav {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.site-header .site-nav a,
+.site-header .overview-nav a,
+.site-header .page-nav a {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-header .site-nav a:hover,
+.site-header .site-nav a:focus-visible,
+.site-header .site-nav a[aria-current="page"],
+.site-header .overview-nav a:hover,
+.site-header .overview-nav a:focus-visible,
+.site-header .overview-nav a[aria-current="page"],
+.site-header .page-nav a:hover,
+.site-header .page-nav a:focus-visible,
+.site-header .page-nav a[aria-current="page"] {
+  background: var(--surface-soft);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+@media (max-width: 800px) {
+  :root { --page-gutter: var(--space-8); }
+  .site-header { height: 68px; min-height: 68px; }
+  .site-header .privacy-state { display: none; }
+}
+
+@media (max-width: 620px) {
+  :root { --page-gutter: var(--space-6); }
+  .site-header .page-nav,
+  .site-header .overview-nav {
+    max-width: calc(100vw - var(--space-6));
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .site-header .page-nav::-webkit-scrollbar,
+  .site-header .overview-nav::-webkit-scrollbar { display: none; }
+  .site-header .page-nav a,
+  .site-header .overview-nav a { padding-inline: var(--space-2); font-size: 0.6875rem; }
+}

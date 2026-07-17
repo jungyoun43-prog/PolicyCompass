@@ -63,10 +63,18 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - States: default, hover, pressed, focus, disabled.
 
 ### Graph node
-- Structure: native button positioned over a semantic SVG edge layer.
-- Radius: 14px for conditions, full pill for branch leaves.
-- States: default, related, selected, focus.
-- Accessibility: keyboard selectable and mirrored in the detail panel.
+- Structure: an SVG group with a circular semantic orb and persistent labels below.
+- Geometry: collision bounds include both the orb and its text footprint; branches use a smaller dashed orb.
+- Layout: position is computed from relationship forces rather than rows, columns, or cards.
+- States: default, related, selected, dragged, and keyboard focus.
+- Accessibility: each group is keyboard selectable and every selection is mirrored in the detail rail.
+
+### Explorer scene
+- Structure: a dedicated full-viewport graph page with a floating toolbar, semantic SVG scene, and persistent detail rail.
+- Layout: deterministic force-directed placement balances center gravity, node repulsion, relationship springs, and collision radii.
+- Interaction: select to expand one-hop care branches, drag to pin a node, reset to recompute the scene, and return to the overview without losing the session map.
+- Responsive: desktop uses scene plus detail rail; mobile stacks a minimum 560px scene above the detail rail.
+- Accessibility: graph groups are keyboard selectable, visible focus is mandatory, and every selection is mirrored in text.
 
 ## 6. Motion & Interaction
 

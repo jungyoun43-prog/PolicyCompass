@@ -2,14 +2,12 @@ import { CONDITIONS, inferConditionIds } from "/data.js";
 import {
   createBodyModel,
   createDetailModel,
-  createGraphModel,
   normalizeActiveId,
   selectBodyArea,
-  selectGraphNode,
 } from "/view-model.js";
 
 const toneClasses = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "tone-amber"];
-const svgNamespace = "http://www.w3.org/2000/svg";
+const sessionKey = "vitagraph-scene";
 
 const elements = {
   form: document.querySelector("#healthForm"),
@@ -23,9 +21,8 @@ const elements = {
   mapStatus: document.querySelector("#mapStatus"),
   bodyKey: document.querySelector("#bodyKey"),
   hotspots: [...document.querySelectorAll(".body-hotspot")],
-  graphEdges: document.querySelector("#graphEdges"),
-  graphNodes: document.querySelector("#graphNodes"),
-  graphEmpty: document.querySelector("#graphEmpty"),
+  graphPreviewCount: document.querySelector("#graphPreviewCount"),
+  connectionsLinks: [...document.querySelectorAll("[data-connections-link]")],
   detailTone: document.querySelector("#detailTone"),
   detailSystem: document.querySelector("#detailSystem"),
   detailTitle: document.querySelector("#detailTitle"),
@@ -64,6 +61,7 @@ function renderSummary() {
       return badge;
     }),
   );
+  elements.graphPreviewCount.textContent = conditions.length + "개";
 }
 
 function renderBody() {
@@ -87,72 +85,6 @@ function renderBody() {
   elements.bodyKey.replaceChildren(swatch, document.createTextNode(model.keyText));
 }
 
-function addLine(start, end, className) {
-  const line = document.createElementNS(svgNamespace, "line");
-  line.setAttribute("x1", String(start[0]));
-  line.setAttribute("y1", String(start[1]));
-  line.setAttribute("x2", String(end[0]));
-  line.setAttribute("y2", String(end[1]));
-  line.setAttribute("class", className);
-  elements.graphEdges.append(line);
-}
-
-function graphButton(node) {
-  const { condition, position, selected } = node;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = `graph-node tone-${condition.tone}`;
-  button.classList.toggle("is-selected", selected);
-  button.style.left = `${(position[0] / 820) * 100}%`;
-  button.style.top = `${(position[1] / 430) * 100}%`;
-  button.setAttribute("aria-pressed", String(selected));
-
-  const label = document.createElement("strong");
-  label.textContent = condition.label;
-  const system = document.createElement("small");
-  system.textContent = condition.system;
-  button.append(label, system);
-  button.addEventListener("click", () => {
-    state.activeId = selectGraphNode(state.visibleIds, condition.id);
-    renderAll();
-  });
-  return button;
-}
-
-function branchNode(branch) {
-  addLine(branch.origin, branch.position, "branch-line");
-  const node = document.createElement("div");
-  node.className = "graph-node branch-node";
-  node.style.left = `${(branch.position[0] / 820) * 100}%`;
-  node.style.top = `${(branch.position[1] / 430) * 100}%`;
-  const title = document.createElement("strong");
-  title.textContent = branch.title;
-  const value = document.createElement("small");
-  value.textContent = branch.value;
-  node.append(title, value);
-  return node;
-}
-
-function renderGraph() {
-  const model = createGraphModel(state.visibleIds, state.activeId);
-  elements.graphEdges.replaceChildren();
-  elements.graphNodes.replaceChildren();
-  elements.graphEmpty.hidden = model.nodes.length > 0;
-  if (model.nodes.length === 0) return;
-
-  for (const edge of model.edges) {
-    addLine(
-      edge.start,
-      edge.end,
-      edge.selected ? "relation-line is-selected" : "relation-line",
-    );
-  }
-  elements.graphNodes.append(
-    ...model.nodes.map(graphButton),
-    ...model.branches.map(branchNode),
-  );
-}
-
 function renderDetail() {
   const detail = createDetailModel(state.activeId);
   elements.detailTone.className = detail.tone
@@ -169,7 +101,6 @@ function renderDetail() {
 function renderAll() {
   renderSummary();
   renderBody();
-  renderGraph();
   renderDetail();
 }
 
@@ -220,6 +151,19 @@ for (const hotspot of elements.hotspots) {
     if (!match) return;
     state.activeId = match;
     renderAll();
+  });
+}
+
+for (const link of elements.connectionsLinks) {
+  link.addEventListener("click", () => {
+    try {
+      sessionStorage.setItem(sessionKey, JSON.stringify({
+        visibleIds: state.visibleIds,
+        activeId: state.activeId,
+      }));
+    } catch {
+      // Navigation still works if session storage is unavailable.
+    }
   });
 }
 

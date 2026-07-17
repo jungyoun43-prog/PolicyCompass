@@ -4,9 +4,10 @@ const cssAssets = [
   "foundation",
   "controls",
   "body-map",
-  "graph",
+  "portal",
   "detail",
   "responsive",
+  "explorer",
 ].map((name) => ({
   route: `/${name}.css`,
   file: `src/${name}.css`,
@@ -15,10 +16,14 @@ const cssAssets = [
 
 const sourceAssets = [
   { route: "/", file: "src/index.html", type: "text/html; charset=utf-8" },
+  { route: "/connections", file: "src/connections.html", type: "text/html; charset=utf-8" },
+  { route: "/connections.html", file: "src/connections.html", type: "text/html; charset=utf-8" },
   ...cssAssets,
   { route: "/data.js", file: "src/data.js", type: "text/javascript; charset=utf-8" },
   { route: "/view-model.js", file: "src/view-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/app.js", file: "src/app.js", type: "text/javascript; charset=utf-8" },
+  { route: "/explorer-model.js", file: "src/explorer-model.js", type: "text/javascript; charset=utf-8" },
+  { route: "/connections.js", file: "src/connections.js", type: "text/javascript; charset=utf-8" },
 ];
 
 const entries = await Promise.all(

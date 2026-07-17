@@ -1,25 +1,11 @@
-import { CONDITIONS, POSITIONS, RELATIONS } from "./data.js";
-
-const branchSpecs = [
-  { title: "식사", source: "nutrition", offset: [-155, -86] },
-  { title: "확인", source: "checks", offset: [155, -58] },
-  { title: "관리", source: "care", offset: [0, 118] },
-];
+import { CONDITIONS } from "./data.js";
 
 function conditionFor(id) {
   return CONDITIONS[id];
 }
 
-function clamp(value, minimum, maximum) {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
 export function normalizeActiveId(visibleIds, activeId) {
   return visibleIds.includes(activeId) ? activeId : (visibleIds[0] ?? "");
-}
-
-export function selectGraphNode(visibleIds, requestedId) {
-  return visibleIds.includes(requestedId) ? requestedId : "";
 }
 
 export function selectBodyArea(visibleIds, area) {
@@ -44,39 +30,6 @@ export function createBodyModel(visibleIds, activeId) {
       ? `${active.system} 영역에서 ${active.label} 노드를 보고 있습니다.`
       : "입력 신호를 분석하면 관련 부위가 빛납니다.",
   };
-}
-
-export function createGraphModel(visibleIds, activeId) {
-  const visible = new Set(visibleIds);
-  const edges = RELATIONS.filter(
-    ({ a, b }) => visible.has(a) && visible.has(b),
-  ).map((relation) => ({
-    ...relation,
-    start: POSITIONS[relation.a],
-    end: POSITIONS[relation.b],
-    selected: relation.a === activeId || relation.b === activeId,
-  }));
-  const nodes = visibleIds.map((id) => ({
-    condition: conditionFor(id),
-    position: POSITIONS[id],
-    selected: id === activeId,
-  }));
-
-  const active = conditionFor(activeId);
-  const origin = active ? POSITIONS[active.id] : null;
-  const branches = !active || !origin
-    ? []
-    : branchSpecs.map((spec) => ({
-        title: spec.title,
-        value: active[spec.source][0],
-        origin,
-        position: [
-          clamp(origin[0] + spec.offset[0], 90, 730),
-          clamp(origin[1] + spec.offset[1], 52, 380),
-        ],
-      }));
-
-  return { edges, nodes, branches };
 }
 
 export function createDetailModel(activeId) {

@@ -40,6 +40,16 @@ test("빌드된 Worker가 앱과 보안 헤더를 제공한다", async () => {
   assert.match(response.headers.get("content-security-policy") ?? "", /default-src 'self'/);
 });
 
+test("연결 탐색 전용 페이지를 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const response = await worker.fetch(new Request("https://example.com/connections"));
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /질환 관계를 자유롭게 탐색/);
+  assert.match(html, /networkScene/);
+});
+
 test("존재하지 않는 경로는 404를 반환한다", async () => {
   // Given
   const { default: worker } = await import("../dist/server/index.js");

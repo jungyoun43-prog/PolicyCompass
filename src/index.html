@@ -10,10 +10,11 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#ffffff" />
     <title>VitaGraph | 내 몸의 연결 지도</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/body-map.css" />
-    <link rel="stylesheet" href="/graph.css" />
+    <link rel="stylesheet" href="/portal.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/responsive.css" />
     <script type="module" src="/app.js"></script>
@@ -28,6 +29,10 @@
         <span>VitaGraph</span>
       </a>
       <div class="topbar-actions">
+        <nav class="overview-nav" aria-label="페이지">
+          <a href="/" aria-current="page">Overview</a>
+          <a href="/connections" data-connections-link>Connections</a>
+        </nav>
         <span class="privacy-state">입력 내용은 이 세션에서만 사용</span>
         <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
       </div>
@@ -155,36 +160,31 @@
           </div>
         </section>
 
-        <section class="panel graph-panel" aria-labelledby="graphTitle">
-          <div class="panel-heading graph-heading">
-            <div>
-              <p class="panel-index">CONNECTION VIEW</p>
-              <h2 id="graphTitle">질환의 연결 보기</h2>
-            </div>
-            <div class="graph-legend" aria-label="그래프 범례">
-              <span><i class="legend-condition"></i>질환</span>
-              <span><i class="legend-branch"></i>관리 가지</span>
+        <section class="panel connection-portal" aria-labelledby="graphTitle">
+          <div class="connection-copy">
+            <p class="panel-index">CONNECTION EXPLORER</p>
+            <h2 id="graphTitle">연결은 더 넓은 장면에서 탐색하세요.</h2>
+            <p>
+              질환들이 고정된 칸이 아니라 관계의 힘에 따라 흩어집니다. 노드를 끌어 움직이고,
+              하나를 선택해 식사·검사·관리 가지를 펼쳐보세요.
+            </p>
+            <div class="connection-actions">
+              <a class="primary-button" href="/connections" data-connections-link>전체 화면에서 탐색</a>
+              <span><strong id="graphPreviewCount">0개</strong> 질환을 연결할 준비가 됐어요</span>
             </div>
           </div>
 
-          <p class="graph-guide">
-            질환 노드를 누르면 식사, 확인할 검사, 의료진과 상의할 관리 항목이 가지처럼 펼쳐집니다.
-          </p>
-
-          <div class="graph-canvas" id="graphCanvas" aria-live="polite">
-            <svg
-              class="graph-edges"
-              id="graphEdges"
-              viewBox="0 0 820 430"
-              preserveAspectRatio="none"
-              role="img"
-              aria-label="질환과 관리 항목의 연결선"
-            ></svg>
-            <div class="graph-nodes" id="graphNodes"></div>
-            <div class="graph-empty" id="graphEmpty" hidden>
-              <strong>아직 연결할 신호가 없습니다.</strong>
-              <span>왼쪽에 데이터를 입력해 지도를 만들어 보세요.</span>
-            </div>
+          <div class="connection-preview" aria-hidden="true">
+            <svg viewBox="0 0 520 290" preserveAspectRatio="xMidYMid meet">
+              <path d="M92 198 C138 123 180 151 227 92 S342 82 417 137" />
+              <path d="M227 92 C247 148 286 184 353 218" />
+              <path d="M92 198 C177 231 270 232 353 218" />
+              <circle class="preview-node tone-one" cx="92" cy="198" r="29" />
+              <circle class="preview-node tone-two" cx="227" cy="92" r="35" />
+              <circle class="preview-node tone-three" cx="353" cy="218" r="26" />
+              <circle class="preview-node tone-four" cx="417" cy="137" r="31" />
+              <circle class="preview-branch" cx="282" cy="183" r="15" />
+            </svg>
           </div>
         </section>
 

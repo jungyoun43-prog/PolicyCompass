@@ -7,10 +7,13 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
     "/foundation.css",
     "/controls.css",
     "/body-map.css",
-    "/graph.css",
+    "/portal.css",
     "/detail.css",
     "/responsive.css",
+    "/explorer.css",
     "/view-model.js",
+    "/explorer-model.js",
+    "/connections.js",
   ];
 
   for (const route of routes) {

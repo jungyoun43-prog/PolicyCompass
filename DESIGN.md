@@ -104,6 +104,7 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
 - Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
 - Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.
+- Landing graph vignette: all conceptual nodes use the same 44px dot and place one persistent label below the circle. The central record node is distinguished by coral, not by a larger size or text inside the circle; edges stop at each dot boundary.
 
 ## 6. Motion & Interaction
 

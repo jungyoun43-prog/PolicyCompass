@@ -13,6 +13,16 @@ test("랜딩 미리보기는 질환 노드만 관계선으로 보여 준다", as
   assert.doesNotMatch(preview, /preview-orb/);
 });
 
+test("메인 히어로는 같은 크기의 작은 노드와 외부 라벨을 사용한다", async () => {
+  const html = await readFile("src/landing.html", "utf8");
+  const orbit = html.match(/<figure class="hero-orbit"[\s\S]*?<\/figure>/)?.[0] ?? "";
+
+  assert.equal((orbit.match(/<circle class="orbit-node__dot"[^>]*r="22"/g) ?? []).length, 5);
+  assert.equal((orbit.match(/class="orbit-node__caption"/g) ?? []).length, 5);
+  assert.doesNotMatch(orbit, /orbit-label--main/);
+  assert.doesNotMatch(orbit, /r="54"/);
+});
+
 test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", async () => {
   const html = await readFile("src/connections.html", "utf8");
 

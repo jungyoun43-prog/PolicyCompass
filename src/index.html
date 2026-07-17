@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="몸의 신호, 질환의 연결, 확인할 관리 항목을 한 화면에서 탐색하는 개인 건강 관계 지도"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>VitaGraph | 내 몸의 연결 지도</title>
+    <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/controls.css" />
+    <link rel="stylesheet" href="/body-map.css" />
+    <link rel="stylesheet" href="/graph.css" />
+    <link rel="stylesheet" href="/detail.css" />
+    <link rel="stylesheet" href="/responsive.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-coral" aria-hidden="true"></div>
+    <div class="ambient ambient-cyan" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="VitaGraph 홈">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>VitaGraph</span>
+      </a>
+      <div class="topbar-actions">
+        <span class="privacy-state">입력 내용은 이 세션에서만 사용</span>
+        <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="intro" aria-labelledby="pageTitle">
+        <div>
+          <p class="kicker">PERSONAL HEALTH RELATION MAP</p>
+          <h1 id="pageTitle">내 몸의 신호를<br />연결해서 보기</h1>
+        </div>
+        <div class="intro-copy">
+          <p>
+            기록한 증상과 검사 수치를 신체 부위, 관련 질환, 확인할 관리 항목으로
+            이어 봅니다.
+          </p>
+          <p class="clinical-note">
+            진단 결과가 아닌 대화 준비용 지도입니다. 최종 판단은 의료진과 함께하세요.
+          </p>
+        </div>
+      </section>
+
+      <div class="dashboard">
+        <aside class="panel input-panel" aria-labelledby="inputTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-index">MY SIGNALS</p>
+              <h2 id="inputTitle">내 데이터 넣기</h2>
+            </div>
+            <span class="session-badge">SESSION ONLY</span>
+          </div>
+
+          <form id="healthForm" novalidate>
+            <label class="field-label" for="healthNote">증상과 검사 수치</label>
+            <textarea
+              id="healthNote"
+              rows="5"
+              spellcheck="false"
+              aria-describedby="inputHint formError"
+            >혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통</textarea>
+            <p class="field-hint" id="inputHint">
+              예: 혈압 148/94, 공복혈당 132, 속쓰림, 무릎 통증
+            </p>
+
+            <fieldset class="signal-fieldset">
+              <legend>이미 알고 있는 질환</legend>
+              <div class="chip-grid" id="conditionChips">
+                <button type="button" class="signal-chip" data-condition="hypertension" aria-pressed="false">고혈압</button>
+                <button type="button" class="signal-chip" data-condition="diabetes" aria-pressed="false">당뇨병</button>
+                <button type="button" class="signal-chip" data-condition="dyslipidemia" aria-pressed="false">이상지질혈증</button>
+                <button type="button" class="signal-chip" data-condition="migraine" aria-pressed="false">편두통</button>
+                <button type="button" class="signal-chip" data-condition="reflux" aria-pressed="false">위식도역류</button>
+                <button type="button" class="signal-chip" data-condition="asthma" aria-pressed="false">천식</button>
+                <button type="button" class="signal-chip" data-condition="mood" aria-pressed="false">우울·불안</button>
+                <button type="button" class="signal-chip" data-condition="arthritis" aria-pressed="false">관절염</button>
+              </div>
+            </fieldset>
+
+            <p class="form-error" id="formError" role="alert" hidden>
+              증상이나 수치를 입력하거나 질환을 하나 이상 선택해 주세요.
+            </p>
+
+            <div class="form-actions">
+              <button class="primary-button" id="analyzeButton" type="submit">
+                건강 지도 업데이트
+              </button>
+              <button class="secondary-button" id="resetButton" type="button">
+                비우기
+              </button>
+            </div>
+          </form>
+
+          <div class="detected-summary" aria-live="polite">
+            <span>현재 지도</span>
+            <strong id="conditionCount">0개 신호</strong>
+            <div class="mini-condition-list" id="miniConditionList"></div>
+          </div>
+        </aside>
+
+        <section class="panel body-panel" aria-labelledby="bodyTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-index">BODY VIEW</p>
+              <h2 id="bodyTitle">몸에서 먼저 보기</h2>
+            </div>
+            <span class="map-status" id="mapStatus">분석 대기</span>
+          </div>
+
+          <div class="body-stage">
+            <div class="body-caption body-caption-head">머리·신경</div>
+            <div class="body-caption body-caption-chest">심장·폐</div>
+            <div class="body-caption body-caption-abdomen">소화·대사</div>
+            <div class="body-caption body-caption-joints">관절·움직임</div>
+
+            <div class="human-figure" aria-label="신체 부위별 건강 신호">
+              <div class="human-part human-head" aria-hidden="true"></div>
+              <div class="human-part human-neck" aria-hidden="true"></div>
+              <div class="human-part human-torso" aria-hidden="true"></div>
+              <div class="human-part human-arm human-arm-left" aria-hidden="true"></div>
+              <div class="human-part human-arm human-arm-right" aria-hidden="true"></div>
+              <div class="human-part human-leg human-leg-left" aria-hidden="true"></div>
+              <div class="human-part human-leg human-leg-right" aria-hidden="true"></div>
+
+              <button class="body-hotspot hotspot-head" data-area="head" type="button">
+                <span class="visually-hidden">머리와 신경 관련 신호 보기</span>
+              </button>
+              <button class="body-hotspot hotspot-heart" data-area="heart" type="button">
+                <span class="visually-hidden">심장과 혈관 관련 신호 보기</span>
+              </button>
+              <button class="body-hotspot hotspot-lungs" data-area="lungs" type="button">
+                <span class="visually-hidden">폐와 호흡기 관련 신호 보기</span>
+              </button>
+              <button class="body-hotspot hotspot-abdomen" data-area="abdomen" type="button">
+                <span class="visually-hidden">복부와 대사 관련 신호 보기</span>
+              </button>
+              <button class="body-hotspot hotspot-joints" data-area="joints" type="button">
+                <span class="visually-hidden">관절 관련 신호 보기</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="body-key" id="bodyKey" aria-live="polite">
+            <span class="key-swatch"></span>
+            입력 신호를 분석하면 관련 부위가 빛납니다.
+          </div>
+        </section>
+
+        <section class="panel graph-panel" aria-labelledby="graphTitle">
+          <div class="panel-heading graph-heading">
+            <div>
+              <p class="panel-index">CONNECTION VIEW</p>
+              <h2 id="graphTitle">질환의 연결 보기</h2>
+            </div>
+            <div class="graph-legend" aria-label="그래프 범례">
+              <span><i class="legend-condition"></i>질환</span>
+              <span><i class="legend-branch"></i>관리 가지</span>
+            </div>
+          </div>
+
+          <p class="graph-guide">
+            질환 노드를 누르면 식사, 확인할 검사, 의료진과 상의할 관리 항목이 가지처럼 펼쳐집니다.
+          </p>
+
+          <div class="graph-canvas" id="graphCanvas" aria-live="polite">
+            <svg
+              class="graph-edges"
+              id="graphEdges"
+              viewBox="0 0 820 430"
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="질환과 관리 항목의 연결선"
+            ></svg>
+            <div class="graph-nodes" id="graphNodes"></div>
+            <div class="graph-empty" id="graphEmpty" hidden>
+              <strong>아직 연결할 신호가 없습니다.</strong>
+              <span>왼쪽에 데이터를 입력해 지도를 만들어 보세요.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel detail-panel" aria-labelledby="detailTitle">
+          <div class="detail-identity">
+            <p class="panel-index">SELECTED NODE</p>
+            <div class="detail-title-row">
+              <span class="detail-tone" id="detailTone" aria-hidden="true"></span>
+              <div>
+                <span class="detail-system" id="detailSystem">심혈관</span>
+                <h2 id="detailTitle">질환 노드를 선택하세요</h2>
+              </div>
+            </div>
+            <p class="detail-summary" id="detailSummary">
+              선택한 질환이 신체의 어느 부위와 연결되는지, 다음 진료에서 무엇을 확인할지 보여 줍니다.
+            </p>
+          </div>
+
+          <div class="detail-column">
+            <h3>왜 연결되나요</h3>
+            <p id="detailRelation">그래프의 질환 노드를 누르면 관계 설명이 표시됩니다.</p>
+          </div>
+          <div class="detail-column">
+            <h3>확인할 데이터</h3>
+            <ul id="detailChecks">
+              <li>증상 발생 시점</li>
+              <li>검사실 결과</li>
+              <li>복용 중인 약</li>
+            </ul>
+          </div>
+          <div class="detail-column">
+            <h3>관리 대화</h3>
+            <ul id="detailCare">
+              <li>의료진과 우선순위 정하기</li>
+              <li>생활 변화의 안전성 확인</li>
+              <li>추적 시점 기록하기</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <section class="safety-banner" aria-label="응급 상황 안내">
+        <strong>응급 증상은 지도보다 먼저 대응하세요.</strong>
+        <span>가슴 통증, 심한 호흡 곤란, 마비, 의식 변화, 자해·자살 생각이 있으면 119 또는 가까운 응급실로 가세요.</span>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>VitaGraph prototype</span>
+      <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
+    </footer>
+
+    <dialog class="source-dialog" id="sourceDialog" aria-labelledby="sourceTitle">
+      <div class="dialog-heading">
+        <div>
+          <p class="panel-index">INFORMATION PRINCIPLES</p>
+          <h2 id="sourceTitle">이 지도가 정보를 다루는 방식</h2>
+        </div>
+        <button class="dialog-close" id="sourceClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <p>
+        입력값만으로 질환을 확정하지 않습니다. 수치가 기준에 닿아도 반복 검사와 의료진 판단이 필요하며,
+        영양 정보는 보충제 처방이 아닌 식사 대화의 출발점으로만 제공합니다.
+      </p>
+      <ul class="source-list">
+        <li><a href="https://www.cdc.gov/high-blood-pressure/about/index.html" target="_blank" rel="noreferrer">CDC 고혈압 정보</a></li>
+        <li><a href="https://www.niddk.nih.gov/health-information/diabetes/overview/tests-diagnosis" target="_blank" rel="noreferrer">NIDDK 당뇨 검사와 진단</a></li>
+        <li><a href="https://www.niddk.nih.gov/health-information/digestive-diseases/acid-reflux-ger-gerd-adults/eating-diet-nutrition" target="_blank" rel="noreferrer">NIDDK 위식도역류 식사 정보</a></li>
+        <li><a href="https://www.nhlbi.nih.gov/health/asthma/attacks" target="_blank" rel="noreferrer">NHLBI 천식 행동 계획</a></li>
+      </ul>
+    </dialog>
+  </body>
+</html>

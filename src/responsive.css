@@ -1,0 +1,181 @@
+@keyframes node-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes loading-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1180px) {
+  .dashboard {
+    grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+  }
+
+  .graph-panel {
+    grid-column: 1 / -1;
+  }
+
+  .graph-canvas {
+    min-height: 500px;
+  }
+
+  .detail-panel {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .detail-identity {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 780px) {
+  .topbar,
+  .app-shell,
+  .footer {
+    width: min(100% - var(--space-8), 1480px);
+  }
+
+  .privacy-state {
+    display: none;
+  }
+
+  .intro {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    padding-top: var(--space-6);
+  }
+
+  .intro h1 {
+    font-size: clamp(2.7rem, 14vw, 4.6rem);
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-panel,
+  .detail-panel {
+    grid-column: auto;
+  }
+
+  .body-stage,
+  .graph-canvas {
+    min-height: 480px;
+  }
+
+  .detail-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-identity {
+    grid-column: auto;
+  }
+
+  .detail-column {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding-top: var(--space-5);
+    padding-left: 0;
+  }
+
+  .safety-banner {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    height: 68px;
+  }
+
+  .app-shell {
+    padding-top: var(--space-4);
+  }
+
+  .input-panel,
+  .body-panel,
+  .graph-panel,
+  .detail-panel {
+    padding: var(--space-5);
+  }
+
+  .panel-heading {
+    flex-direction: column;
+    margin-bottom: var(--space-5);
+  }
+
+  .session-badge,
+  .map-status {
+    align-self: flex-start;
+  }
+
+  .form-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .secondary-button {
+    min-height: 40px;
+  }
+
+  .body-stage {
+    min-height: 450px;
+  }
+
+  .human-figure {
+    right: 19%;
+    left: 19%;
+  }
+
+  .body-caption {
+    display: none;
+  }
+
+  .graph-canvas {
+    min-height: 440px;
+  }
+
+  .graph-node {
+    min-width: 78px;
+    padding: var(--space-2);
+  }
+
+  .graph-node.branch-node {
+    min-width: 90px;
+  }
+
+  .graph-legend {
+    justify-content: flex-start;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

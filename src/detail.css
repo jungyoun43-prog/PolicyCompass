@@ -1,0 +1,162 @@
+.detail-panel {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1.45fr repeat(3, 1fr);
+  gap: var(--space-6);
+  margin-top: var(--space-1);
+}
+
+.detail-identity,
+.detail-column {
+  min-width: 0;
+}
+
+.detail-title-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.detail-tone {
+  width: var(--space-3);
+  height: var(--space-10);
+  border-radius: var(--radius-pill);
+  background: var(--node-tone, var(--accent));
+}
+
+.detail-system {
+  color: var(--muted);
+}
+
+.detail-summary,
+.detail-column p {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.detail-column {
+  border-left: 1px solid var(--line);
+  padding-left: var(--space-6);
+}
+
+.detail-column h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.detail-column ul {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail-column li {
+  position: relative;
+  margin-top: var(--space-2);
+  padding-left: var(--space-4);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.detail-column li::before {
+  position: absolute;
+  top: 0.68em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--data-lime);
+  content: "";
+}
+
+.safety-banner {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+  margin-top: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--urgent) 7%, var(--surface));
+  padding: var(--space-5) var(--space-6);
+  color: color-mix(in srgb, var(--urgent) 82%, var(--ink));
+  font-size: 0.8125rem;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  width: min(100% - var(--space-12), 1480px);
+  margin: 0 auto;
+  padding: var(--space-8) 0 var(--space-10);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.source-dialog {
+  width: min(92vw, 640px);
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: 0 30px 100px color-mix(in srgb, var(--ink) 22%, transparent);
+  padding: var(--space-8);
+  color: var(--ink);
+}
+
+.source-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.dialog-heading {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dialog-close {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.source-dialog > p {
+  color: var(--muted);
+}
+
+.source-list {
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-list li + li {
+  margin-top: var(--space-2);
+}
+
+.source-list a {
+  color: var(--ink);
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 65%, var(--surface));
+  outline-offset: 3px;
+}
+
+[hidden] {
+  display: none !important;
+}

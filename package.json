@@ -1,0 +1,15 @@
+{
+  "name": "vitagraph-health-map",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/dev.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  },
+  "type": "module"
+}

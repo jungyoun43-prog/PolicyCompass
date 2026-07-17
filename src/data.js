@@ -1,0 +1,148 @@
+export const CONDITIONS = {
+  hypertension: {
+    id: "hypertension",
+    label: "고혈압",
+    system: "심혈관",
+    area: "heart",
+    tone: "coral",
+    summary: "입력된 혈압 신호를 심장과 혈관 관리 관점에서 묶어 봅니다.",
+    relation: "혈당과 지질 상태는 같은 심혈관 위험 평가에서 함께 확인하는 경우가 많습니다.",
+    checks: ["가정 혈압 기록", "신장 기능과 전해질", "전체 심혈관 위험"],
+    nutrition: ["나트륨 섭취 점검", "채소·통곡·콩류 중심 식사", "신장 질환이 있다면 칼륨 식품 상담"],
+    care: ["올바른 반복 측정법 확인", "처방약 복용 계획 검토", "운동 강도를 의료진과 조정"],
+  },
+  diabetes: {
+    id: "diabetes",
+    label: "당뇨병",
+    system: "대사",
+    area: "abdomen",
+    tone: "amber",
+    summary: "공복혈당이나 당뇨 키워드를 췌장과 대사 관리 신호로 표시합니다.",
+    relation: "혈압과 지질 이상이 함께 있으면 심혈관 위험 평가가 더 중요해질 수 있습니다.",
+    checks: ["공복혈당 재검", "당화혈색소", "신장·눈·발 정기 확인"],
+    nutrition: ["규칙적인 탄수화물 배분", "수용성 식이섬유", "가당 음료 줄이기"],
+    care: ["검사실 수치로 진단 확인", "개인별 약물 계획 상담", "저혈당 대처법 확인"],
+  },
+  dyslipidemia: {
+    id: "dyslipidemia",
+    label: "이상지질혈증",
+    system: "심혈관",
+    area: "heart",
+    tone: "cyan",
+    summary: "LDL과 콜레스테롤 신호를 혈관 건강과 연결해 보여 줍니다.",
+    relation: "혈압과 혈당 상태를 함께 보면 심혈관 위험을 더 입체적으로 평가할 수 있습니다.",
+    checks: ["공복 지질 검사", "가족력과 흡연 여부", "전체 심혈관 위험"],
+    nutrition: ["포화지방 대체하기", "귀리·콩류의 수용성 섬유", "생선과 견과류 식품"],
+    care: ["검사실 기준 범위 확인", "약물 필요성 위험도 평가", "추적 검사 시점 상담"],
+  },
+  migraine: {
+    id: "migraine",
+    label: "편두통",
+    system: "신경",
+    area: "head",
+    tone: "violet",
+    summary: "두통 신호를 수면, 스트레스, 촉발 요인과 함께 살펴봅니다.",
+    relation: "불안과 수면 문제는 편두통의 빈도와 체감 부담에 함께 영향을 줄 수 있습니다.",
+    checks: ["두통 일지", "신경학적 경고 증상", "복용 중인 진통제 빈도"],
+    nutrition: ["규칙적인 수분과 식사", "개인 촉발 음식 기록", "카페인 패턴 점검"],
+    care: ["급성·예방 치료 상담", "일정한 수면 리듬", "갑작스러운 최악의 두통은 즉시 진료"],
+  },
+  reflux: {
+    id: "reflux",
+    label: "위식도역류",
+    system: "소화기",
+    area: "abdomen",
+    tone: "coral",
+    summary: "속쓰림과 역류 신호를 위와 식도 부위에 표시합니다.",
+    relation: "야간 역류와 기침이 함께 있으면 호흡기 증상과 구분해 확인할 필요가 있습니다.",
+    checks: ["증상 시간과 식사 기록", "삼킴 곤란·출혈 여부", "체중과 복용 약물"],
+    nutrition: ["개인 촉발 음식 기록", "취침 3시간 전 식사 마치기", "과식과 잦은 야식 줄이기"],
+    care: ["생활 조정 반응 확인", "지속 증상은 진료 상담", "경고 증상은 소화기 평가"],
+  },
+  asthma: {
+    id: "asthma",
+    label: "천식",
+    system: "호흡기",
+    area: "lungs",
+    tone: "cyan",
+    summary: "쌕쌕거림과 호흡 곤란 신호를 폐와 기도 관리에 연결합니다.",
+    relation: "역류나 알레르기 증상이 기침을 악화시키는지 함께 살펴볼 수 있습니다.",
+    checks: ["증상 빈도", "폐기능 또는 최대호기유량", "야간 증상과 촉발 요인"],
+    nutrition: ["균형 잡힌 일반 식사", "확인되지 않은 보충제 피하기", "개인 알레르기 식품 확인"],
+    care: ["흡입기 사용법 점검", "서면 천식 행동 계획", "악화 시 응급 기준 확인"],
+  },
+  mood: {
+    id: "mood",
+    label: "우울·불안",
+    system: "정신건강",
+    area: "head",
+    tone: "violet",
+    summary: "기분과 불안 신호를 수면, 통증, 일상 기능과 연결해 봅니다.",
+    relation: "만성 통증과 편두통은 기분 증상과 서로 부담을 키울 수 있습니다.",
+    checks: ["증상 지속 기간", "수면과 일상 기능", "자해·자살 생각 여부"],
+    nutrition: ["규칙적인 식사 리듬", "과도한 음주 피하기", "결핍 검사는 의료진과 상의"],
+    care: ["선별검사와 전문 상담", "심리치료·약물 선택 논의", "위기 생각이 들면 즉시 119 또는 응급실"],
+  },
+  arthritis: {
+    id: "arthritis",
+    label: "관절염",
+    system: "근골격",
+    area: "joints",
+    tone: "lime",
+    summary: "무릎과 관절 통증 신호를 움직임과 기능 관리에 연결합니다.",
+    relation: "통증으로 활동량이 줄면 대사와 기분 건강에도 영향을 줄 수 있습니다.",
+    checks: ["통증 부위와 붓기", "아침 뻣뻣함 시간", "보행과 일상 기능"],
+    nutrition: ["충분한 단백질 식품", "칼슘·비타민 D 상태 상담", "체중 관리에 맞춘 식사"],
+    care: ["저충격 유산소 운동", "근력과 관절 가동성 운동", "통증 조절법 진료 상담"],
+  },
+};
+
+export const RELATIONS = [
+  { a: "hypertension", b: "diabetes", label: "대사 위험" },
+  { a: "hypertension", b: "dyslipidemia", label: "혈관 위험" },
+  { a: "diabetes", b: "dyslipidemia", label: "대사 연결" },
+  { a: "migraine", b: "mood", label: "수면·스트레스" },
+  { a: "reflux", b: "asthma", label: "기침·야간 증상" },
+  { a: "arthritis", b: "mood", label: "통증 부담" },
+  { a: "arthritis", b: "diabetes", label: "활동량" },
+];
+
+export const POSITIONS = {
+  hypertension: [260, 86],
+  diabetes: [505, 100],
+  dyslipidemia: [390, 218],
+  migraine: [110, 208],
+  reflux: [650, 250],
+  asthma: [690, 92],
+  mood: [205, 350],
+  arthritis: [480, 360],
+};
+
+const bloodPressurePattern = /혈압\s*:?\s*(\d{2,3})\s*[\/／-]\s*(\d{2,3})/i;
+const textRules = [
+  ["hypertension", /고혈압/i],
+  ["diabetes", /당뇨|공복\s*혈당\s*:?\s*(?:12[6-9]|1[3-9]\d|[2-9]\d{2})/i],
+  ["dyslipidemia", /이상지질|고지혈|콜레스테롤|ldl\s*:?\s*(?:1[3-9]\d|[2-9]\d{2})/i],
+  ["migraine", /편두통|반복(?:되는)?\s*두통/i],
+  ["reflux", /위식도역류|역류성\s*식도염|속쓰림|신물/i],
+  ["asthma", /천식|쌕쌕|호흡\s*곤란/i],
+  ["mood", /우울|불안|공황/i],
+  ["arthritis", /관절염|무릎\s*통증|관절\s*통증/i],
+];
+
+function hasElevatedBloodPressure(note) {
+  const match = note.match(bloodPressurePattern);
+  if (!match) return false;
+  const systolic = Number(match[1]);
+  const diastolic = Number(match[2]);
+  return systolic >= 140 || diastolic >= 90;
+}
+
+export function inferConditionIds(note, selectedIds) {
+  const ids = new Set(selectedIds);
+  if (hasElevatedBloodPressure(note)) ids.add("hypertension");
+  for (const [id, rule] of textRules) {
+    if (rule.test(note)) ids.add(id);
+  }
+  return [...ids];
+}

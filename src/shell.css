@@ -1,0 +1,297 @@
+/*
+ * VitaGraph application shell
+ *
+ * This is deliberately the single source of truth for every route's header,
+ * page rail, hero rhythm, and footer. Route styles may shape their content,
+ * but must not redefine these structural primitives.
+ */
+
+body,
+body.map-page,
+body.landing-page,
+body.explorer-page,
+body.journey-page,
+body.insights-page {
+  background:
+    radial-gradient(circle at 96% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 31rem),
+    radial-gradient(circle at -10% 100%, color-mix(in srgb, var(--data-cyan) 9%, transparent), transparent 32rem),
+    var(--surface);
+}
+
+.app-header {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 100;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  padding: var(--space-2) var(--space-3);
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-180%);
+  transition: transform 140ms ease-out;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.app-header__inner,
+.page-shell,
+.app-footer {
+  width: min(100% - var(--page-gutter), var(--page-width));
+  margin-inline: auto;
+}
+
+.app-header__inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: center;
+  min-height: var(--header-height);
+}
+
+.app-brand {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-brand__mark {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: none;
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, var(--accent) 0 48%, transparent 48%),
+    linear-gradient(315deg, var(--data-cyan) 0 48%, var(--data-lime) 48%);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.app-nav {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  justify-self: center;
+  min-width: 0;
+}
+
+.app-nav a {
+  display: inline-flex;
+  min-height: calc(var(--space-10) + var(--space-1));
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-3);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 140ms ease-out, color 140ms ease-out, transform 140ms ease-out;
+}
+
+.app-nav a:hover,
+.app-nav a:focus-visible,
+.app-nav a[aria-current="page"] {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.app-nav a:active,
+.app-header__action:active {
+  transform: scale(0.98);
+}
+
+.app-header__action {
+  display: inline-flex;
+  min-height: calc(var(--space-8) + var(--space-2));
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  padding-inline: var(--space-4);
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 720;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 140ms ease-out, filter 140ms ease-out;
+}
+
+.app-header__action:hover,
+.app-header__action:focus-visible {
+  filter: brightness(1.22);
+}
+
+.page-shell {
+  padding: var(--space-10) 0 var(--space-12);
+}
+
+.page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(18rem, 0.82fr);
+  gap: clamp(var(--space-8), 7vw, 112px);
+  align-items: end;
+  margin-bottom: var(--space-12);
+}
+
+.page-hero__eyebrow,
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.page-hero h1 {
+  max-width: 18ch;
+  margin: var(--space-3) 0 0;
+  font-size: clamp(2.75rem, 5.4vw, 5.4rem);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 1.02;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.page-hero__lead,
+.page-hero > p {
+  max-width: 37rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.page-hero__aside {
+  display: grid;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.page-hero__note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.page-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-top: 1px solid var(--line);
+  padding: var(--space-6) 0 var(--space-10);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  :root {
+    --page-gutter: var(--space-8);
+    --header-height: 72px;
+  }
+
+  .page-hero {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
+  }
+
+  .page-hero h1 {
+    max-width: 20ch;
+    font-size: clamp(2.5rem, 8vw, 4.3rem);
+  }
+}
+
+@media (max-width: 620px) {
+  :root {
+    --page-gutter: var(--space-4);
+  }
+
+  .app-header__inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-3);
+    min-height: 0;
+    padding: var(--space-3) 0;
+  }
+
+  .app-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 1px;
+    scrollbar-width: none;
+  }
+
+  .app-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-nav a {
+    flex: none;
+    min-height: var(--space-8);
+    padding-inline: var(--space-2);
+    font-size: 0.6875rem;
+  }
+
+  .app-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .app-header__action {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: var(--space-8);
+    padding-inline: var(--space-3);
+    font-size: 0.6875rem;
+  }
+
+  .page-shell {
+    padding-top: var(--space-8);
+  }
+
+  .page-hero h1 {
+    max-width: none;
+    font-size: clamp(2.35rem, 11vw, 3.5rem);
+    letter-spacing: -0.055em;
+  }
+
+  .page-hero__lead,
+  .page-hero > p {
+    font-size: 1rem;
+  }
+
+  .app-footer {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+}

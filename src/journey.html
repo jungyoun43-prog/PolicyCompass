@@ -12,38 +12,74 @@
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/explorer.css" />
     <link rel="stylesheet" href="/journey.css" />
+    <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/journey.js"></script>
   </head>
   <body class="journey-page">
-    <header class="explorer-topbar site-header">
-      <a class="brand" href="/" aria-label="VitaGraph 홈"><span class="brand-mark" aria-hidden="true"></span><span>VitaGraph</span></a>
-      <nav class="page-nav" aria-label="주요 화면"><a href="/" data-main-link>Main</a>
-        <a href="/map">Health Map</a><a href="/connections">Connections</a><a href="/insights">AI Insights</a><a href="/journey" aria-current="page">Journey</a>
-      </nav>
-      <span class="privacy-state">이 기기에만 저장</span>
+    <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
+    <header class="app-header">
+      <div class="app-header__inner">
+        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+          <span class="app-brand__mark" aria-hidden="true"></span>
+          <span>VitaGraph</span>
+        </a>
+        <nav class="app-nav" aria-label="주요 화면">
+          <a href="/" data-main-link>Main</a>
+          <a href="/map">Health Map</a>
+          <a href="/connections">Connections</a>
+          <a href="/insights">AI Insights</a>
+          <a href="/journey" aria-current="page">Journey</a>
+        </nav>
+        <a class="app-header__action" href="/map">건강 지도</a>
+      </div>
     </header>
-    <main class="journey-shell">
-      <header class="journey-intro">
-        <div><p class="panel-index">PATIENT JOURNEY</p><h1>한 장면이 아니라,<br />변화를 봅니다.</h1></div>
-        <p>Health Map에서 저장한 건강 지도를 날짜순으로 비교합니다. 이 기록은 서버가 아니라 현재 브라우저에만 남습니다.</p>
-      </header>
+
+    <main class="page-shell journey-shell" id="mainContent">
+      <section class="page-hero journey-intro" aria-labelledby="journeyPageTitle">
+        <div>
+          <p class="page-hero__eyebrow">PATIENT JOURNEY</p>
+          <h1 id="journeyPageTitle">한 장면이 아니라 변화를 봅니다.</h1>
+        </div>
+        <p class="page-hero__lead">
+          Health Map에서 저장한 건강 지도를 날짜순으로 비교합니다. 이 기록은 서버가 아니라 현재 브라우저의 이 기기에만 저장됩니다.
+        </p>
+      </section>
+
       <section class="journey-workspace" aria-labelledby="journeyTitle">
         <div class="journey-heading">
-          <div><p class="panel-index">LOCAL SNAPSHOTS</p><h2 id="journeyTitle">나의 건강 지도 기록</h2></div>
+          <div>
+            <p class="panel-index">LOCAL SNAPSHOTS</p>
+            <h2 id="journeyTitle">나의 건강 지도 기록</h2>
+          </div>
           <button class="secondary-button" id="clearJourney" type="button">전체 기록 지우기</button>
         </div>
         <div class="journey-empty" id="journeyEmpty" hidden>
-          <span>01</span><h3>아직 비교할 기록이 없습니다.</h3>
+          <span>01</span>
+          <h3>아직 비교할 기록이 없습니다.</h3>
           <p>Health Map에서 데이터를 분석한 뒤 “Journey에 저장”을 누르면 첫 시점이 생깁니다.</p>
           <a class="primary-button" href="/map">첫 지도 만들기</a>
         </div>
         <div class="timeline" id="journeyTimeline" aria-label="건강 지도 시간선"></div>
       </section>
+
       <section class="journey-comparison" id="journeyComparison" aria-live="polite">
-        <div><p class="panel-index">CHANGE SUMMARY</p><h2 id="comparisonTitle">두 시점을 선택하세요</h2><p id="comparisonCopy">기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.</p></div>
-        <div class="change-columns"><article><span class="change-mark added">+</span><h3>새로 표시</h3><div id="addedSignals"></div></article><article><span class="change-mark steady">=</span><h3>계속 표시</h3><div id="steadySignals"></div></article><article><span class="change-mark removed">−</span><h3>이번엔 없음</h3><div id="removedSignals"></div></article></div>
+        <div>
+          <p class="panel-index">CHANGE SUMMARY</p>
+          <h2 id="comparisonTitle">두 시점을 선택하세요</h2>
+          <p id="comparisonCopy">기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.</p>
+        </div>
+        <div class="change-columns">
+          <article><span class="change-mark added">+</span><h3>새로 표시</h3><div id="addedSignals"></div></article>
+          <article><span class="change-mark steady">=</span><h3>계속 표시</h3><div id="steadySignals"></div></article>
+          <article><span class="change-mark removed">−</span><h3>이번엔 없음</h3><div id="removedSignals"></div></article>
+        </div>
       </section>
       <p class="journey-disclaimer">표시 변화는 질환의 발생·호전·완치를 뜻하지 않습니다. 가져온 기록과 입력 상태의 차이입니다.</p>
     </main>
+
+    <footer class="app-footer">
+      <span>VitaGraph prototype</span>
+      <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
+    </footer>
   </body>
 </html>

@@ -17,42 +17,45 @@
     <link rel="stylesheet" href="/portal.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/responsive.css" />
+    <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body class="map-page">
-    <div class="ambient ambient-coral" aria-hidden="true"></div>
-    <div class="ambient ambient-cyan" aria-hidden="true"></div>
-
-    <header class="topbar site-header">
-      <a class="brand" href="/" aria-label="VitaGraph 홈">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>VitaGraph</span>
-      </a>
-      <div class="topbar-actions">
-        <nav class="overview-nav" aria-label="페이지"><a href="/" data-main-link>Main</a>
+    <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
+    <header class="app-header">
+      <div class="app-header__inner">
+        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+          <span class="app-brand__mark" aria-hidden="true"></span>
+          <span>VitaGraph</span>
+        </a>
+        <nav class="app-nav" aria-label="주요 화면">
+          <a href="/" data-main-link>Main</a>
           <a href="/map" aria-current="page">Health Map</a>
-          <a href="/connections" data-connections-link>Connections</a>
-          <a href="/insights">AI Insights</a><a href="/journey">Journey</a>
+          <a href="/connections">Connections</a>
+          <a href="/insights">AI Insights</a>
+          <a href="/journey">Journey</a>
         </nav>
-        <span class="privacy-state">입력 내용은 이 세션에서만 사용</span>
-        <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
+        <a class="app-header__action" href="/map">건강 지도</a>
       </div>
     </header>
 
-    <main class="app-shell">
-      <section class="intro" aria-labelledby="pageTitle">
+    <main class="page-shell map-shell" id="mainContent">
+      <section class="page-hero map-hero" aria-labelledby="pageTitle">
         <div>
-          <p class="kicker">PERSONAL HEALTH RELATION MAP</p>
-          <h1 id="pageTitle">내 몸의 신호를<br />연결해서 보기</h1>
+          <p class="page-hero__eyebrow">PERSONAL HEALTH RELATION MAP</p>
+          <h1 id="pageTitle">내 몸의 신호를 연결해서 보기</h1>
         </div>
-        <div class="intro-copy">
-          <p>
+        <div class="page-hero__aside">
+          <p class="page-hero__lead">
             기록한 증상과 검사 수치를 신체 부위, 관련 질환, 확인할 관리 항목으로
             이어 봅니다.
           </p>
-          <p class="clinical-note">
+          <p class="page-hero__note">
             진단 결과가 아닌 대화 준비용 지도입니다. 최종 판단은 의료진과 함께하세요.
           </p>
+          <div class="page-hero__actions">
+            <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
+          </div>
         </div>
       </section>
 
@@ -246,7 +249,7 @@
       </section>
     </main>
 
-    <footer class="footer">
+    <footer class="app-footer">
       <span>VitaGraph prototype</span>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>

@@ -14,38 +14,44 @@
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/explorer.css" />
+    <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/connections.js"></script>
   </head>
   <body class="explorer-page">
-    <a class="skip-link" href="#explorerMain">그래프 탐색으로 건너뛰기</a>
-
-    <header class="explorer-topbar site-header">
-      <a class="brand" href="/" aria-label="VitaGraph 요약 화면">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>VitaGraph</span>
-      </a>
-      <nav class="page-nav" aria-label="주요 화면"><a href="/" data-main-link>Main</a>
-        <a href="/map">Health Map</a>
-        <a class="is-current" href="/connections" aria-current="page">Connections</a>
-        <a href="/insights">AI Insights</a><a href="/journey">Journey</a>
-      </nav>
-      <a class="back-link" href="/map">요약으로 돌아가기</a>
+    <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
+    <header class="app-header">
+      <div class="app-header__inner">
+        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+          <span class="app-brand__mark" aria-hidden="true"></span>
+          <span>VitaGraph</span>
+        </a>
+        <nav class="app-nav" aria-label="주요 화면">
+          <a href="/" data-main-link>Main</a>
+          <a href="/map">Health Map</a>
+          <a href="/connections" aria-current="page">Connections</a>
+          <a href="/insights">AI Insights</a>
+          <a href="/journey">Journey</a>
+        </nav>
+        <a class="app-header__action" href="/map">건강 지도</a>
+      </div>
     </header>
 
-    <main class="explorer-shell" id="explorerMain">
-      <header class="explorer-intro">
+    <main class="page-shell explorer-shell" id="mainContent">
+      <section class="page-hero explorer-intro" aria-labelledby="explorerTitle">
         <div>
-          <p class="panel-index">CONNECTION EXPLORER</p>
-          <h1>질환 관계를 자유롭게 탐색</h1>
-          <p>
+          <p class="page-hero__eyebrow">CONNECTION EXPLORER</p>
+          <h1 id="explorerTitle">질환 관계를 자유롭게 탐색하세요</h1>
+        </div>
+        <div class="page-hero__aside">
+          <p class="page-hero__lead">
             노드를 선택하면 한 단계의 관리 가지가 열립니다. 노드를 직접 끌어서 관계를 다시 정리할 수 있습니다.
           </p>
+          <div class="scene-status" aria-live="polite">
+            <span id="sceneNodeCount">0개 노드</span>
+            <strong id="sceneFocus">선택 대기</strong>
+          </div>
         </div>
-        <div class="scene-status" aria-live="polite">
-          <span id="sceneNodeCount">0개 노드</span>
-          <strong id="sceneFocus">선택 대기</strong>
-        </div>
-      </header>
+      </section>
 
       <section class="explorer-workspace" aria-label="건강 관계 탐색 장면">
         <div class="scene-shell">
@@ -72,7 +78,8 @@
             </g>
           </svg>
           <div class="scene-empty" id="sceneEmpty" hidden>
-            <p class="panel-index">NO HEALTH MAP YET</p><h2>먼저 내 데이터를 연결하세요.</h2>
+            <p class="panel-index">NO HEALTH MAP YET</p>
+            <h2>먼저 내 데이터를 연결하세요.</h2>
             <p>Health Map에서 직접 입력하거나 FHIR JSON을 가져오면 실제 신호만 이 장면에 표시됩니다.</p>
             <a class="primary-button" href="/map">Health Map에서 시작</a>
           </div>
@@ -100,13 +107,17 @@
             <h3>관리 대화</h3>
             <ul id="explorerDetailCare"></ul>
           </section>
-          <section><h3>관련 연결과 근거</h3><div class="evidence-list" id="explorerEvidenceList"></div></section>
+          <section>
+            <h3>관련 연결과 근거</h3>
+            <div class="evidence-list" id="explorerEvidenceList"></div>
+          </section>
         </aside>
       </section>
     </main>
 
-    <footer class="explorer-footer">
-      진단 결과가 아닌 대화 준비용 지도입니다. 응급 증상은 119 또는 응급실에 문의하세요.
+    <footer class="app-footer">
+      <span>진단 결과가 아닌 대화 준비용 지도입니다.</span>
+      <span>응급 증상은 119 또는 응급실에 문의하세요.</span>
     </footer>
   </body>
 </html>

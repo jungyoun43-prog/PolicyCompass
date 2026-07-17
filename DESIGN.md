@@ -40,7 +40,7 @@ Coral is the sole interaction accent. Cyan, lime, violet, and amber are reserved
 | Body/sm | `0.8125rem` | 500 | 1.5 | Supporting detail |
 | Caption | `0.75rem` | 650 | 1.4 | Labels and metadata |
 
-Primary stack: `Pretendard Variable, Noto Sans KR, ui-sans-serif, system-ui, sans-serif`.
+Primary stack: `Pretendard Variable, Noto Sans KR, ui-sans-serif, system-ui, sans-serif`. Noto Sans KR is loaded with `font-display: swap` so Korean labels remain legible in minimal Linux and cloud environments as well as on local devices.
 Mono stack: `ui-monospace, SFMono-Regular, Consolas, monospace`.
 
 ## 4. Spacing & Layout
@@ -92,7 +92,7 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 ### Application shell
 - All routes use the same white atlas background: restrained coral light at the upper right and cyan light at the lower left; page-specific backgrounds are not allowed.
-- Header: one 1480px content rail, 80px height, brand at left and explicit Main, Health Map, Connections, AI Insights, Journey navigation. Active state is a soft surface pill; Main is always visible as a text link on desktop and reachable through the brand on compact layouts.
+- Header: one 1480px content rail, 80px height, brand at left and explicit Main, Health Map, Connections, AI Insights, Journey navigation. Every route uses the identical `app-header → app-header__inner → app-brand + app-nav + app-header__action` contract; only the active navigation state changes. On compact layouts, the brand and action stay in the first row while the same five navigation links scroll in a dedicated second row.
 - Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
 - Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
 - Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.

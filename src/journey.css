@@ -56,7 +56,7 @@
   gap: var(--space-12);
   margin: 0 0 var(--hero-bottom);
 }
-.journey-page .journey-intro h1 { max-width: 13ch; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: .98; }
+.journey-page .journey-intro h1 { max-width: 18ch; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: 1.02; }
 .journey-page .journey-intro > p { margin-bottom: 0; }
 @media (max-width: 800px) {
   .journey-page .explorer-topbar, .journey-page .journey-shell { width: min(100% - var(--page-gutter), var(--page-width)); }

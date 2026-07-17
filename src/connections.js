@@ -246,6 +246,11 @@ function setZoom(nextZoom) {
   elements.viewport.setAttribute("transform", `translate(${offsetX} ${offsetY}) scale(${state.zoom})`);
 }
 
+function updateSceneFraming() {
+  const compact = window.matchMedia("(max-width: 620px)").matches;
+  elements.scene.setAttribute("preserveAspectRatio", compact ? "xMidYMid slice" : "xMidYMid meet");
+}
+
 elements.zoomIn.addEventListener("click", () => setZoom(state.zoom + 0.12));
 elements.zoomOut.addEventListener("click", () => setZoom(state.zoom - 0.12));
 elements.reset.addEventListener("click", () => {
@@ -257,4 +262,6 @@ elements.scene.addEventListener("wheel", (event) => {
   setZoom(state.zoom + (event.deltaY < 0 ? 0.08 : -0.08));
 }, { passive: false });
 
+window.addEventListener("resize", updateSceneFraming);
+updateSceneFraming();
 renderGraph();

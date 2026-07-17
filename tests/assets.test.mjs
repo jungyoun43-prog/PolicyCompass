@@ -5,6 +5,7 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
   const { default: worker } = await import("../dist/server/index.js");
   const routes = [
     "/foundation.css",
+    "/shell.css",
     "/controls.css",
     "/body-map.css",
     "/portal.css",

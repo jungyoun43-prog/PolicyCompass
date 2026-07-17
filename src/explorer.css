@@ -494,8 +494,8 @@
   }
 
   .network-scene {
-    height: 600px;
-    min-height: 600px;
+    height: 480px;
+    min-height: 480px;
   }
 
   .scene-toolbar {
@@ -572,7 +572,7 @@
   font-size: 0.6875rem;
 }
 
- (max-width: 620px) {
+@media (max-width: 620px) {
   .back-link { display: none; }
   .scene-hint { display: none; }
 }

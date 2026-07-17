@@ -138,15 +138,6 @@
     min-height: 450px;
   }
 
-  .human-figure {
-    right: 19%;
-    left: 19%;
-  }
-
-  .body-caption {
-    display: none;
-  }
-
   .graph-canvas {
     min-height: 440px;
   }

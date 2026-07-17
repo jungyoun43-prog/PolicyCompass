@@ -11,6 +11,7 @@
     <meta name="theme-color" content="#ffffff" />
     <title>VitaGraph | 내 몸의 연결 지도</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="preload" as="image" href="/assets/body-atlas-v4.webp" type="image/webp" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/body-map.css" />
@@ -138,42 +139,70 @@
             <span class="map-status" id="mapStatus">분석 대기</span>
           </div>
 
-          <div class="body-stage">
-            <div class="body-caption body-caption-head">머리·신경</div>
-            <div class="body-caption body-caption-chest">심장·폐</div>
-            <div class="body-caption body-caption-abdomen">소화·대사</div>
-            <div class="body-caption body-caption-joints">관절·움직임</div>
+          <div class="body-stage" aria-describedby="bodyKeyText">
+            <div class="body-caption body-caption-head" data-area="head">
+              <span class="body-caption__title">머리·신경</span>
+              <span class="body-caption__status">현재 기록에 없음</span>
+            </div>
+            <div class="body-caption body-caption-heart" data-area="heart">
+              <span class="body-caption__title">심장·혈관</span>
+              <span class="body-caption__status">현재 기록에 없음</span>
+            </div>
+            <div class="body-caption body-caption-lungs body-caption--right" data-area="lungs">
+              <span class="body-caption__title">폐·호흡</span>
+              <span class="body-caption__status">현재 기록에 없음</span>
+            </div>
+            <div class="body-caption body-caption-abdomen" data-area="abdomen">
+              <span class="body-caption__title">소화·대사</span>
+              <span class="body-caption__status">현재 기록에 없음</span>
+            </div>
+            <div class="body-caption body-caption-joints body-caption--right" data-area="joints">
+              <span class="body-caption__title">관절·움직임</span>
+              <span class="body-caption__status">현재 기록에 없음</span>
+            </div>
 
             <div class="human-figure" aria-label="신체 부위별 건강 신호">
-              <div class="human-part human-head" aria-hidden="true"></div>
-              <div class="human-part human-neck" aria-hidden="true"></div>
-              <div class="human-part human-torso" aria-hidden="true"></div>
-              <div class="human-part human-arm human-arm-left" aria-hidden="true"></div>
-              <div class="human-part human-arm human-arm-right" aria-hidden="true"></div>
-              <div class="human-part human-leg human-leg-left" aria-hidden="true"></div>
-              <div class="human-part human-leg human-leg-right" aria-hidden="true"></div>
+              <img
+                class="human-figure__image"
+                src="/assets/body-atlas-v4.webp"
+                width="1024"
+                height="1536"
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                fetchpriority="high"
+              />
 
-              <button class="body-hotspot hotspot-head" data-area="head" type="button">
-                <span class="visually-hidden">머리와 신경 관련 신호 보기</span>
+              <button class="body-hotspot hotspot-head" data-area="head" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">머리와 신경: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-heart" data-area="heart" type="button">
-                <span class="visually-hidden">심장과 혈관 관련 신호 보기</span>
+              <button class="body-hotspot hotspot-heart" data-area="heart" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">심장과 혈관: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-lungs" data-area="lungs" type="button">
-                <span class="visually-hidden">폐와 호흡기 관련 신호 보기</span>
+              <button class="body-hotspot hotspot-lungs" data-area="lungs" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">폐와 호흡기: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-abdomen" data-area="abdomen" type="button">
-                <span class="visually-hidden">복부와 대사 관련 신호 보기</span>
+              <button class="body-hotspot hotspot-abdomen" data-area="abdomen" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">복부와 대사: 현재 기록에 연결된 신호 없음</span>
               </button>
-              <button class="body-hotspot hotspot-joints" data-area="joints" type="button">
-                <span class="visually-hidden">관절 관련 신호 보기</span>
+              <button class="body-hotspot hotspot-joints" data-area="joints" type="button" aria-pressed="false">
+                <span class="body-hotspot__core" aria-hidden="true"></span>
+                <span class="visually-hidden">관절과 움직임: 현재 기록에 연결된 신호 없음</span>
               </button>
             </div>
           </div>
 
-          <div class="body-key" id="bodyKey" aria-live="polite">
-            <span class="key-swatch"></span>
-            입력 신호를 분석하면 관련 부위가 빛납니다.
+          <div class="body-key" aria-live="polite">
+            <span class="body-key__selection">
+              <span class="key-swatch" id="bodyKeySwatch" aria-hidden="true"></span>
+              <span id="bodyKeyText">입력 신호를 분석하면 관련 부위가 표시됩니다.</span>
+            </span>
+            <span class="body-key__legend"><i class="body-key__dot body-key__dot--active" aria-hidden="true"></i>기록과 연결됨</span>
+            <span class="body-key__legend"><i class="body-key__dot" aria-hidden="true"></i>현재 기록에 없음</span>
           </div>
         </section>
 
@@ -183,7 +212,7 @@
             <h2 id="graphTitle">연결은 더 넓은 장면에서 탐색하세요.</h2>
             <p>
               질환들이 고정된 칸이 아니라 관계의 힘에 따라 흩어집니다. 노드를 끌어 움직이고,
-              하나를 선택해 식사·검사·관리 가지를 펼쳐보세요.
+              검사·식사·관리 메모는 선택한 질환의 상세 패널에서 읽어보세요.
             </p>
             <div class="connection-actions">
               <a class="primary-button" href="/connections" data-connections-link>전체 화면에서 탐색</a>
@@ -196,11 +225,26 @@
               <path d="M92 198 C138 123 180 151 227 92 S342 82 417 137" />
               <path d="M227 92 C247 148 286 184 353 218" />
               <path d="M92 198 C177 231 270 232 353 218" />
-              <circle class="preview-node tone-one" cx="92" cy="198" r="29" />
-              <circle class="preview-node tone-two" cx="227" cy="92" r="35" />
-              <circle class="preview-node tone-three" cx="353" cy="218" r="26" />
-              <circle class="preview-node tone-four" cx="417" cy="137" r="31" />
-              <circle class="preview-branch" cx="282" cy="183" r="15" />
+              <g class="preview-node tone-one">
+                <circle cx="92" cy="198" r="31" />
+                <text class="preview-node__type" x="92" y="202">심혈관</text>
+                <text class="preview-node__label" x="92" y="246">고혈압</text>
+              </g>
+              <g class="preview-node tone-two">
+                <circle cx="227" cy="92" r="37" />
+                <text class="preview-node__type" x="227" y="96">대사</text>
+                <text class="preview-node__label" x="227" y="144">당뇨병</text>
+              </g>
+              <g class="preview-node tone-three">
+                <circle cx="353" cy="218" r="29" />
+                <text class="preview-node__type" x="353" y="222">신경</text>
+                <text class="preview-node__label" x="353" y="264">편두통</text>
+              </g>
+              <g class="preview-node tone-four">
+                <circle cx="417" cy="137" r="33" />
+                <text class="preview-node__type" x="417" y="141">심혈관</text>
+                <text class="preview-node__label" x="417" y="186">이상지질혈증</text>
+              </g>
             </svg>
           </div>
         </section>

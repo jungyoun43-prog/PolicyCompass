@@ -107,25 +107,50 @@
 
 .connection-preview path {
   fill: none;
-  stroke: color-mix(in srgb, var(--ink) 25%, transparent);
-  stroke-width: 2;
+  stroke: color-mix(in srgb, var(--ink) 40%, transparent);
+  stroke-linecap: round;
+  stroke-width: 2.6;
 }
 
-.preview-node,
-.preview-branch {
+.preview-node {
+  --preview-tone: var(--accent);
+}
+
+.preview-node > circle {
+  fill: color-mix(in srgb, var(--preview-tone) 14%, var(--surface));
+  stroke: var(--preview-tone);
   stroke-width: 3;
+  filter: drop-shadow(0 10px 12px color-mix(in srgb, var(--preview-tone) 20%, transparent));
 }
 
-.tone-one { fill: color-mix(in srgb, var(--accent) 16%, var(--surface)); stroke: var(--accent); }
-.tone-two { fill: color-mix(in srgb, var(--data-cyan) 16%, var(--surface)); stroke: var(--data-cyan); }
-.tone-three { fill: color-mix(in srgb, var(--data-violet) 16%, var(--surface)); stroke: var(--data-violet); }
-.tone-four { fill: color-mix(in srgb, var(--data-amber) 16%, var(--surface)); stroke: var(--data-amber); }
-
-.preview-branch {
-  fill: color-mix(in srgb, var(--data-lime) 24%, var(--surface));
-  stroke: var(--data-lime);
-  stroke-dasharray: 3 3;
+.preview-node__type,
+.preview-node__label {
+  font-family: var(--font-sans);
+  text-anchor: middle;
 }
+
+.preview-node__type {
+  fill: color-mix(in srgb, var(--preview-tone) 82%, var(--ink));
+  font-size: 11px;
+  font-weight: 760;
+  dominant-baseline: central;
+}
+
+.preview-node__label {
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-linejoin: round;
+  stroke-width: 8px;
+}
+
+.tone-one { --preview-tone: var(--accent); }
+.tone-two { --preview-tone: var(--data-cyan); }
+.tone-three { --preview-tone: var(--data-violet); }
+.tone-four { --preview-tone: var(--data-amber); }
 
 @media (max-width: 900px) {
   .connection-portal {

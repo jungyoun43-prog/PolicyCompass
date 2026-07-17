@@ -63,18 +63,25 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - States: default, hover, pressed, focus, disabled.
 
 ### Graph node
-- Structure: an SVG group with a circular semantic orb and persistent labels below.
-- Geometry: collision bounds include both the orb and its text footprint; branches use a smaller dashed orb.
-- Layout: position is computed from relationship forces rather than rows, columns, or cards.
-- States: default, related, selected, dragged, and keyboard focus.
-- Accessibility: each group is keyboard selectable and every selection is mirrored in the detail rail.
+- Structure: an SVG group with one circular condition orb, an in-orb system label, and persistent title plus relationship count below. Care guidance never becomes a graph node.
+- Hierarchy: the selected condition is a solid semantic-color orb; directly related conditions remain vivid; unrelated or standalone signals are visibly quieter but keep readable labels. Node color expresses the body system, while size reflects relationship density.
+- Geometry: collision bounds include both the orb and its text footprint. Each edge starts and ends at the orb boundary, curves slightly to avoid a mechanical diagram look, and carries a readable relationship pill separate from node labels.
+- Layout: position is computed from condition-to-condition relationship forces rather than rows, columns, or cards. The selected condition receives a soft center anchor; standalone conditions settle on a quiet outer band.
+- States: default, related, selected, standalone, dragged, and keyboard focus.
+- Accessibility: each group is keyboard selectable with `aria-pressed`; the current state is described in its accessible name and every selection is mirrored in the detail rail.
 
 ### Explorer scene
-- Structure: a dedicated full-viewport graph page with a floating toolbar, semantic SVG scene, and persistent detail rail.
+- Structure: a dedicated full-viewport condition graph with a floating toolbar, semantic SVG scene, and persistent detail rail.
 - Layout: deterministic force-directed placement balances center gravity, node repulsion, relationship springs, and collision radii.
-- Interaction: select to expand one-hop care branches, drag to pin a node, reset to recompute the scene, and return to the overview without losing the session map.
+- Interaction: select a condition to update the adjacent text-only checks, food, care, and evidence notes; drag to pin a node and reset to recompute the scene.
 - Responsive: desktop uses scene plus detail rail; mobile stacks a minimum 560px scene above the detail rail.
 - Accessibility: graph groups are keyboard selectable, visible focus is mandatory, and every selection is mirrored in text.
+
+### Body atlas
+- Structure: a generated, transparent WebP medical mannequin with fixed dimensions, five native-button anatomical markers, and text callouts. The image is a visual base only; every patient-specific state remains a semantic HTML/CSS overlay.
+- Image direction: centered front-facing androgynous adult, pearl-white translucent material, no organs or embedded labels, and no diagnosis-like marks baked into the asset.
+- States: an active marker is solid and paired with a named condition caption; an inactive marker remains hollow and explicitly says that the current record has no connection there.
+- Accessibility: inactive regions are disabled, active regions have descriptive labels, and the selected area is reflected with `aria-pressed` and in the detail panel.
 
 ### FHIR import box
 - Structure: compact local-file picker above manual entry, with format tag, privacy promise, and parse result.

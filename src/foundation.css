@@ -28,7 +28,7 @@
   --radius-pill: 999px;
   --shadow-panel: 0 24px 70px color-mix(in srgb, var(--data-violet) 10%, transparent);
   --font-sans: "Pretendard Variable", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Noto Sans KR", monospace;
 }
 
 * {

@@ -12,7 +12,7 @@ test("질환 신호를 전신 부위별 활성 상태로 투영한다", () => {
   const model = createBodyModel(["hypertension", "dyslipidemia"], "dyslipidemia");
 
   assert.deepEqual(model.areas.heart, ["hypertension", "dyslipidemia"]);
-  assert.equal(model.statusText, "2개 신호 연결");
+  assert.equal(model.statusText, "1개 영역 · 2개 신호");
   assert.equal(model.keyTone, "cyan");
 });
 

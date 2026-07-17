@@ -23,3 +23,17 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
     assert.match(response.headers.get("content-type") ?? "", /text\/(css|javascript)/);
   }
 });
+
+test("Health Map 신체 아틀라스 이미지를 WebP 자산으로 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+
+  const response = await worker.fetch(
+    new Request("https://example.com/assets/body-atlas-v4.webp"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/webp");
+  assert.equal(response.headers.get("content-length"), null);
+  const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 4).toString("ascii");
+  assert.equal(signature, "RIFF");
+});

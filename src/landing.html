@@ -58,20 +58,38 @@
               </radialGradient>
             </defs>
             <ellipse cx="300" cy="220" rx="230" ry="168" fill="url(#orbitGlow)"></ellipse>
-            <path class="orbit-edge" d="M292 220 L137 112"></path>
-            <path class="orbit-edge" d="M308 220 L472 126"></path>
-            <path class="orbit-edge" d="M308 220 L465 326"></path>
-            <path class="orbit-edge" d="M292 220 L145 324"></path>
-            <circle class="orbit-node" style="--node-tone: var(--data-cyan)" cx="124" cy="104" r="53"></circle>
-            <circle class="orbit-node" style="--node-tone: var(--data-amber)" cx="485" cy="116" r="53"></circle>
-            <circle class="orbit-node" style="--node-tone: var(--data-violet)" cx="470" cy="337" r="53"></circle>
-            <circle class="orbit-node" style="--node-tone: var(--data-lime)" cx="130" cy="335" r="53"></circle>
-            <circle class="orbit-node orbit-node--main" cx="300" cy="220" r="70"></circle>
-            <text class="orbit-label" x="124" y="104">검사</text>
-            <text class="orbit-label" x="485" y="116">증상</text>
-            <text class="orbit-label" x="470" y="337">관리</text>
-            <text class="orbit-label" x="130" y="335">시간</text>
-            <text class="orbit-label orbit-label--main" x="300" y="220">나의 기록</text>
+            <path class="orbit-edge" d="M248 184 L164 128"></path>
+            <path class="orbit-edge" d="M352 185 L445 133"></path>
+            <path class="orbit-edge" d="M355 256 L428 305"></path>
+            <path class="orbit-edge" d="M246 256 L170 307"></path>
+            <g class="orbit-node orbit-node--cyan">
+              <circle cx="124" cy="104" r="48"></circle>
+              <circle class="orbit-node__ring" cx="124" cy="104" r="37"></circle>
+              <text class="orbit-node__type" x="124" y="108">검사</text>
+              <text class="orbit-node__caption" x="124" y="174">검사 결과</text>
+            </g>
+            <g class="orbit-node orbit-node--amber">
+              <circle cx="485" cy="116" r="48"></circle>
+              <circle class="orbit-node__ring" cx="485" cy="116" r="37"></circle>
+              <text class="orbit-node__type" x="485" y="120">증상</text>
+              <text class="orbit-node__caption" x="485" y="186">몸의 증상</text>
+            </g>
+            <g class="orbit-node orbit-node--violet">
+              <circle cx="470" cy="337" r="48"></circle>
+              <circle class="orbit-node__ring" cx="470" cy="337" r="37"></circle>
+              <text class="orbit-node__type" x="470" y="341">관리</text>
+              <text class="orbit-node__caption" x="470" y="409">관리 메모</text>
+            </g>
+            <g class="orbit-node orbit-node--lime">
+              <circle cx="130" cy="335" r="48"></circle>
+              <circle class="orbit-node__ring" cx="130" cy="335" r="37"></circle>
+              <text class="orbit-node__type" x="130" y="339">시간</text>
+              <text class="orbit-node__caption" x="130" y="407">시간 변화</text>
+            </g>
+            <circle class="orbit-node orbit-node--main" cx="300" cy="220" r="74"></circle>
+            <circle class="orbit-node__main-ring" cx="300" cy="220" r="61"></circle>
+            <text class="orbit-label orbit-label--main" x="300" y="216">나의 건강</text>
+            <text class="orbit-label orbit-label--main-sub" x="300" y="240">기록</text>
           </svg>
         </figure>
       </section>
@@ -106,13 +124,37 @@
           <p>숫자와 증상을 단순히 나열하지 않고, 몸의 부위와 질환 사이의 관계로 먼저 정리합니다.</p>
         </header>
         <div class="preview-workspace">
-          <article class="preview-network" aria-label="건강 관계 지도 예시">
-            <span class="preview-line line-a"></span>
-            <span class="preview-line line-b"></span>
-            <span class="preview-orb orb-heart">혈압</span>
-            <span class="preview-orb orb-metabolic">혈당</span>
-            <span class="preview-orb orb-lipid">지질</span>
-            <span class="preview-orb orb-action">다음 확인</span>
+          <article class="preview-network" aria-labelledby="previewGraphTitle">
+            <div class="preview-network__heading">
+              <span id="previewGraphTitle">질환 관계 예시</span>
+              <small>질환 노드만 선으로 연결합니다</small>
+            </div>
+            <svg class="preview-network__graph" viewBox="0 0 460 300" role="img" aria-labelledby="previewGraphDescription">
+              <title id="previewGraphDescription">고혈압과 당뇨병, 이상지질혈증의 관계 예시</title>
+              <path class="preview-network__edge" d="M147 148 C191 102 242 89 267 89"></path>
+              <path class="preview-network__edge" d="M150 173 C195 207 246 213 287 205"></path>
+              <text class="preview-network__edge-label" x="213" y="104">대사·심혈관</text>
+              <text class="preview-network__edge-label" x="220" y="215">공통 위험</text>
+              <g class="preview-network__node preview-network__node--coral">
+                <circle cx="112" cy="164" r="42"></circle>
+                <text class="preview-network__node-type" x="112" y="168">심혈관</text>
+                <text class="preview-network__node-label" x="112" y="231">고혈압</text>
+              </g>
+              <g class="preview-network__node preview-network__node--amber">
+                <circle cx="312" cy="88" r="42"></circle>
+                <text class="preview-network__node-type" x="312" y="92">대사</text>
+                <text class="preview-network__node-label" x="312" y="155">당뇨병</text>
+              </g>
+              <g class="preview-network__node preview-network__node--cyan">
+                <circle cx="332" cy="207" r="46"></circle>
+                <text class="preview-network__node-type" x="332" y="211">심혈관</text>
+                <text class="preview-network__node-label" x="332" y="278">이상지질혈증</text>
+              </g>
+            </svg>
+            <div class="preview-network__legend" aria-hidden="true">
+              <span><i class="preview-network__legend-dot"></i>질환 노드</span>
+              <span><i class="preview-network__legend-line"></i>함께 확인할 관계</span>
+            </div>
           </article>
           <article class="preview-summary">
             <p class="eyebrow">FROM A SAMPLE RECORD</p>
@@ -139,7 +181,7 @@
           <article>
             <b>02</b>
             <h3>관계를 펼칩니다</h3>
-            <p>관련 질환·신체 부위·관리 항목을 연결로 탐색합니다.</p>
+            <p>관련 질환은 선으로, 검사·식사·관리는 상세 메모로 나누어 살펴봅니다.</p>
           </article>
           <article>
             <b>03</b>

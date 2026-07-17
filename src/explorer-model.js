@@ -2,11 +2,6 @@ import { CONDITIONS, RELATIONS } from "./data.js";
 
 const baseWidth = 1180;
 const baseHeight = 720;
-const branchSpecs = [
-  { key: "nutrition", label: "식사" },
-  { key: "checks", label: "확인" },
-  { key: "care", label: "관리" },
-];
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -26,12 +21,21 @@ function seededUnit(seed) {
   return value - Math.floor(value);
 }
 
-function initialConditionNode(id, index) {
+function labelWidth(label, subtitle) {
+  const titleWidth = label.length * 22 + 42;
+  const subtitleWidth = subtitle.length * 15 + 38;
+  return clamp(Math.max(titleWidth, subtitleWidth), 132, 190);
+}
+
+function initialConditionNode(id, index, relationCount, isActive) {
   const condition = CONDITIONS[id];
   const seed = hash(id);
   const angle = seededUnit(seed) * Math.PI * 2 + index * 0.47;
   const radiusX = 250 + seededUnit(seed + 11) * 250;
   const radiusY = 145 + seededUnit(seed + 29) * 130;
+  const radius = relationCount > 1 ? 52 : relationCount === 1 ? 48 : 44;
+  const textWidth = labelWidth(condition.label, condition.system);
+
   return {
     id,
     type: "condition",
@@ -39,35 +43,20 @@ function initialConditionNode(id, index) {
     subtitle: condition.system,
     detail: condition.summary,
     tone: condition.tone,
-    radius: 35,
-    collisionRadius: 90,
-    x: baseWidth / 2 + Math.cos(angle) * radiusX,
-    y: baseHeight / 2 + Math.sin(angle) * radiusY,
-  };
-}
-
-function initialBranchNode(active, spec, index) {
-  const seed = hash(`${active.id}:${spec.key}`);
-  const angle = (-Math.PI / 2) + index * (Math.PI * 2 / 3) + seededUnit(seed) * 0.35;
-  return {
-    id: `${active.id}:${spec.key}`,
-    type: "branch",
-    label: spec.label,
-    subtitle: active[spec.key][0],
-    detail: active[spec.key].join(" · "),
-    tone: "lime",
-    radius: 27,
-    collisionRadius: 82,
-    x: baseWidth / 2 + Math.cos(angle) * 190,
-    y: baseHeight / 2 + Math.sin(angle) * 160,
+    relationCount,
+    radius,
+    labelWidth: textWidth,
+    labelHeight: 58,
+    // The circular collision area includes the label's lower reach so Korean
+    // labels remain readable even as the force layout settles.
+    collisionRadius: Math.max(108, Math.ceil(textWidth * 0.62)),
+    x: isActive ? baseWidth * 0.47 : baseWidth / 2 + Math.cos(angle) * radiusX,
+    y: isActive ? baseHeight * 0.46 : baseHeight / 2 + Math.sin(angle) * radiusY,
   };
 }
 
 export function createExplorerScene(visibleIds, activeId) {
   const visible = new Set(visibleIds);
-  const conditions = visibleIds
-    .filter((id) => CONDITIONS[id])
-    .map(initialConditionNode);
   const relationEdges = RELATIONS.filter(
     ({ a, b }) => visible.has(a) && visible.has(b),
   ).map(({ a, b, label, category, rationale, sourceTitle, sourceUrl }) => ({
@@ -81,22 +70,25 @@ export function createExplorerScene(visibleIds, activeId) {
     sourceTitle,
     sourceUrl,
   }));
+  const relationCounts = new Map(visibleIds.map((id) => [id, 0]));
+  for (const { source, target } of relationEdges) {
+    relationCounts.set(source, (relationCounts.get(source) ?? 0) + 1);
+    relationCounts.set(target, (relationCounts.get(target) ?? 0) + 1);
+  }
+  const conditions = visibleIds
+    .filter((id) => CONDITIONS[id])
+    .map((id, index) => initialConditionNode(
+      id,
+      index,
+      relationCounts.get(id) ?? 0,
+      id === activeId,
+    ));
   const active = CONDITIONS[activeId];
-  const branches = active && visible.has(activeId)
-    ? branchSpecs.map((spec, index) => initialBranchNode(active, spec, index))
-    : [];
-  const branchEdges = branches.map((node) => ({
-    id: `${activeId}:${node.id}`,
-    type: "branch",
-    source: activeId,
-    target: node.id,
-    label: node.label,
-  }));
 
   return {
     activeId: active && visible.has(activeId) ? activeId : (visibleIds[0] ?? ""),
-    nodes: [...conditions, ...branches],
-    edges: [...relationEdges, ...branchEdges],
+    nodes: conditions,
+    edges: relationEdges,
   };
 }
 
@@ -110,8 +102,8 @@ function applyPairForces(nodes, forces) {
       if (dx === 0 && dy === 0) dx = 0.01;
       const distance = Math.max(1, Math.hypot(dx, dy));
       const minimum = first.collisionRadius + second.collisionRadius;
-      const overlapForce = distance < minimum ? (minimum - distance) * 0.09 : 0;
-      const repelForce = Math.min(2.2, 1800 / (distance * distance));
+      const overlapForce = distance < minimum ? (minimum - distance) * 0.12 : 0;
+      const repelForce = Math.min(2.8, 2200 / (distance * distance));
       const force = overlapForce + repelForce;
       const unitX = dx / distance;
       const unitY = dy / distance;
@@ -134,8 +126,8 @@ function applyEdgeForces(nodes, edges, forces) {
     const dx = target.x - source.x;
     const dy = target.y - source.y;
     const distance = Math.max(1, Math.hypot(dx, dy));
-    const preferred = edge.type === "branch" ? 155 : 245;
-    const force = (distance - preferred) * 0.009;
+    const preferredDistance = source.radius + target.radius + 158;
+    const force = (distance - preferredDistance) * 0.011;
     const forceX = (dx / distance) * force;
     const forceY = (dy / distance) * force;
     forces[sourceIndex].x += forceX;
@@ -145,8 +137,27 @@ function applyEdgeForces(nodes, edges, forces) {
   }
 }
 
+function applyFocusAnchors(nodes, scene, forces, width, height) {
+  const activeIndex = nodes.findIndex(({ id }) => id === scene.activeId);
+  if (activeIndex === -1) return;
+
+  const active = nodes[activeIndex];
+  forces[activeIndex].x += (width * 0.47 - active.x) * 0.006;
+  forces[activeIndex].y += (height * 0.46 - active.y) * 0.006;
+
+  const standalone = nodes.filter((node) => node.relationCount === 0 && node.id !== active.id);
+  standalone.forEach((node, index) => {
+    const nodeIndex = nodes.indexOf(node);
+    const progress = standalone.length === 1 ? 0.5 : index / (standalone.length - 1);
+    const anchorX = width * 0.8;
+    const anchorY = height * (0.28 + progress * 0.46);
+    forces[nodeIndex].x += (anchorX - node.x) * 0.0018;
+    forces[nodeIndex].y += (anchorY - node.y) * 0.0018;
+  });
+}
+
 function separateOverlaps(nodes, width, height) {
-  for (let pass = 0; pass < 120; pass += 1) {
+  for (let pass = 0; pass < 160; pass += 1) {
     let changed = false;
     for (let index = 0; index < nodes.length; index += 1) {
       for (let comparison = index + 1; comparison < nodes.length; comparison += 1) {
@@ -185,13 +196,14 @@ export function settleExplorerScene(scene, width = baseWidth, height = baseHeigh
     vx: 0,
     vy: 0,
   }));
-  for (let iteration = 0; iteration < 220; iteration += 1) {
+  for (let iteration = 0; iteration < 260; iteration += 1) {
     const forces = nodes.map((node) => ({
-      x: (width / 2 - node.x) * 0.0014,
-      y: (height / 2 - node.y) * 0.0014,
+      x: (width / 2 - node.x) * 0.0017,
+      y: (height / 2 - node.y) * 0.0017,
     }));
     applyPairForces(nodes, forces);
     applyEdgeForces(nodes, scene.edges, forces);
+    applyFocusAnchors(nodes, scene, forces, width, height);
     for (let index = 0; index < nodes.length; index += 1) {
       const node = nodes[index];
       node.vx = (node.vx + forces[index].x) * 0.8;

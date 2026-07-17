@@ -4,7 +4,9 @@ import { createDetailModel } from "/view-model.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
 const sessionKey = "vitagraph-scene";
-const sceneSize = { width: 1180, height: 720 };
+const desktopSceneSize = { width: 1180, height: 720 };
+const compactSceneSize = { width: 680, height: 720 };
+let sceneSize = { ...desktopSceneSize };
 
 const elements = {
   scene: document.querySelector("#networkScene"),
@@ -22,6 +24,7 @@ const elements = {
   detailSummary: document.querySelector("#explorerDetailSummary"),
   detailRelation: document.querySelector("#explorerDetailRelation"),
   detailChecks: document.querySelector("#explorerDetailChecks"),
+  detailNutrition: document.querySelector("#explorerDetailNutrition"),
   detailCare: document.querySelector("#explorerDetailCare"),
   evidenceList: document.querySelector("#explorerEvidenceList"),
   empty: document.querySelector("#sceneEmpty"),
@@ -77,28 +80,47 @@ function renderConditionDetail(id) {
   elements.detailSummary.textContent = detail.summary;
   elements.detailRelation.textContent = detail.relation;
   renderList(elements.detailChecks, detail.checks);
+  renderList(elements.detailNutrition, detail.nutrition);
   renderList(elements.detailCare, detail.care);
+
   const evidence = relationsFor(id, state.visibleIds);
   elements.evidenceList.replaceChildren(...evidence.map((relation) => {
-    const card = document.createElement("article"); card.className = "evidence-card";
+    const card = document.createElement("article");
+    card.className = "evidence-card";
     const neighborId = relation.a === id ? relation.b : relation.a;
-    const heading = document.createElement("strong"); heading.textContent = `${CONDITIONS[neighborId].label} · ${relation.category}`;
-    const rationale = document.createElement("p"); rationale.textContent = relation.rationale;
-    const source = document.createElement("a"); source.href = relation.sourceUrl; source.target = "_blank"; source.rel = "noreferrer"; source.textContent = `${relation.sourceTitle} ↗`;
-    card.append(heading, rationale, source); return card;
+    const heading = document.createElement("strong");
+    heading.textContent = `${CONDITIONS[neighborId].label} · ${relation.category}`;
+    const rationale = document.createElement("p");
+    rationale.textContent = relation.rationale;
+    const source = document.createElement("a");
+    source.href = relation.sourceUrl;
+    source.target = "_blank";
+    source.rel = "noreferrer";
+    source.textContent = `${relation.sourceTitle} ↗`;
+    card.append(heading, rationale, source);
+    return card;
   }));
-  if (evidence.length === 0) { const empty = document.createElement("p"); empty.className = "evidence-empty"; empty.textContent = "현재 지도 안에서 직접 연결된 근거가 없습니다."; elements.evidenceList.replaceChildren(empty); }
+  if (evidence.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "evidence-empty";
+    empty.textContent = "현재 지도 안에서 직접 연결된 근거가 없습니다.";
+    elements.evidenceList.replaceChildren(empty);
+  }
 }
 
-function renderBranchDetail(node) {
-  const condition = CONDITIONS[state.activeId];
-  elements.detailTone.className = "detail-tone tone-lime";
-  elements.detailSystem.textContent = `${condition.label} · 관리 가지`;
-  elements.detailTitle.textContent = node.label;
-  elements.detailSummary.textContent = node.subtitle;
-  elements.detailRelation.textContent = `${condition.label} 노드에서 펼친 ${node.label} 항목입니다.`;
-  renderList(elements.detailChecks, node.detail.split(" · "));
-  renderList(elements.detailCare, ["개인 상태와 복용 약에 따라 적용 방법을 의료진과 확인하세요."]);
+function renderEmptyDetail() {
+  elements.detailTone.className = "detail-tone";
+  elements.detailSystem.textContent = "연결 지도";
+  elements.detailTitle.textContent = "질환 노드를 선택하세요";
+  elements.detailSummary.textContent = "질환 관계는 그래프에서, 검사·식사·관리 메모는 이 패널에서 분리해 읽습니다.";
+  elements.detailRelation.textContent = "Health Map에서 연결한 질환이 이 장면에 표시됩니다.";
+  renderList(elements.detailChecks, ["증상 발생 시점", "검사실 결과", "복용 중인 약"]);
+  renderList(elements.detailNutrition, ["개인 식사 패턴 기록", "의료진과 영양 목표 상의"]);
+  renderList(elements.detailCare, ["의료진과 우선순위 정하기", "추적 시점 기록하기"]);
+  const empty = document.createElement("p");
+  empty.className = "evidence-empty";
+  empty.textContent = "질환 노드를 선택하면 관계 근거가 표시됩니다.";
+  elements.evidenceList.replaceChildren(empty);
 }
 
 function saveSession() {
@@ -112,24 +134,67 @@ function saveSession() {
   }
 }
 
+function curveDirection(id) {
+  const value = [...id].reduce((total, character) => total + character.codePointAt(0), 0);
+  return value % 2 === 0 ? 1 : -1;
+}
+
 function relationLine(edge, positions) {
   const source = positions.get(edge.source);
   const target = positions.get(edge.target);
-  const line = svgElement("line", {
-    x1: source.x,
-    y1: source.y,
-    x2: target.x,
-    y2: target.y,
-    class: edge.type === "branch" ? "scene-edge branch-edge" : "scene-edge",
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const distance = Math.max(1, Math.hypot(dx, dy));
+  const unitX = dx / distance;
+  const unitY = dy / distance;
+  const start = {
+    x: source.x + unitX * (source.radius + 8),
+    y: source.y + unitY * (source.radius + 8),
+  };
+  const end = {
+    x: target.x - unitX * (target.radius + 8),
+    y: target.y - unitY * (target.radius + 8),
+  };
+  const bend = Math.min(42, Math.max(24, distance * 0.12)) * curveDirection(edge.id);
+  const control = {
+    x: (start.x + end.x) / 2 - unitY * bend,
+    y: (start.y + end.y) / 2 + unitX * bend,
+  };
+  const midpoint = {
+    x: (start.x + 2 * control.x + end.x) / 4,
+    y: (start.y + 2 * control.y + end.y) / 4,
+  };
+  const isActive = edge.source === state.activeId || edge.target === state.activeId;
+  const path = svgElement("path", {
+    d: `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
+    class: `scene-edge${isActive ? " is-active" : " is-muted"}`,
+    "data-edge-id": edge.id,
   });
-  const label = svgElement("text", {
-    x: (source.x + target.x) / 2,
-    y: (source.y + target.y) / 2 - 8,
-    class: "edge-caption",
+  const caption = svgElement("g", {
+    class: `edge-caption${isActive ? " is-active" : " is-muted"}`,
+    "aria-hidden": "true",
+  });
+  const captionWidth = Math.max(90, edge.label.length * 17 + 30);
+  const captionText = svgElement("text", {
+    class: "edge-caption__text",
+    x: midpoint.x,
+    y: midpoint.y + 2,
     "text-anchor": "middle",
+    "dominant-baseline": "middle",
   });
-  label.textContent = edge.label;
-  return [line, label];
+  captionText.textContent = edge.label;
+  caption.append(
+    svgElement("rect", {
+      class: "edge-caption__surface",
+      x: midpoint.x - captionWidth / 2,
+      y: midpoint.y - 20,
+      width: captionWidth,
+      height: 34,
+      rx: 15,
+    }),
+    captionText,
+  );
+  return [path, caption];
 }
 
 function pointFromEvent(event) {
@@ -148,47 +213,67 @@ function moveNode(nodeId, point) {
 }
 
 function nodeGroup(node) {
+  const isSelected = node.id === state.activeId || node.id === state.selectedNodeId;
+  const isRelated = state.scene.edges.some((edge) => (
+    (edge.source === state.activeId && edge.target === node.id)
+    || (edge.target === state.activeId && edge.source === node.id)
+  ));
+  const isStandalone = node.relationCount === 0;
+  const selectionDescription = isSelected
+    ? "선택한 중심 질환"
+    : isRelated
+      ? "선택한 질환과 직접 연결됨"
+      : isStandalone
+        ? "현재 지도 안에 직접 연결된 질환 없음"
+        : "다른 질환과 연결됨";
   const group = svgElement("g", {
-    class: `network-node ${node.type === "branch" ? "branch-node" : "condition-node"}`,
+    class: "network-node condition-node",
     transform: `translate(${node.x} ${node.y})`,
     tabindex: "0",
     role: "button",
     "data-tone": node.tone,
     "data-node-id": node.id,
-    "aria-label": `${node.label}, ${node.subtitle}`,
+    "data-relation-count": node.relationCount,
+    "aria-label": `${node.label}, ${node.subtitle}. ${selectionDescription}.`,
+    "aria-pressed": String(isSelected),
   });
-  if (node.id === state.activeId || node.id === state.selectedNodeId) {
-    group.classList.add("is-selected");
-  }
+  if (isSelected) group.classList.add("is-selected");
+  if (isRelated) group.classList.add("is-related");
+  if (!isSelected && !isRelated) group.classList.add("is-muted");
+  if (isStandalone) group.classList.add("is-standalone");
+
   group.append(
-    svgElement("circle", { class: "node-halo", r: node.radius + 10 }),
+    svgElement("circle", { class: "node-halo", r: node.radius + 16 }),
     svgElement("circle", { class: "node-core", r: node.radius }),
+    svgElement("circle", { class: "node-orbit", r: node.radius - 9 }),
   );
+  const system = svgElement("text", {
+    class: "node-system",
+    y: 4,
+    "text-anchor": "middle",
+    "dominant-baseline": "middle",
+  });
+  system.textContent = node.subtitle;
   const title = svgElement("text", {
     class: "node-title",
-    y: node.type === "branch" ? 4 : node.radius + 24,
+    y: node.radius + 30,
     "text-anchor": "middle",
   });
   title.textContent = node.label;
   const subtitle = svgElement("text", {
     class: "node-subtitle",
-    y: node.radius + 42,
+    y: node.radius + 52,
     "text-anchor": "middle",
   });
-  subtitle.textContent = node.subtitle.length > 16 ? `${node.subtitle.slice(0, 16)}…` : node.subtitle;
-  group.append(title, subtitle);
+  subtitle.textContent = isStandalone ? "직접 연결 없음" : `${node.relationCount}개 관계`;
+  group.append(system, title, subtitle);
 
   const select = () => {
     if (state.drag?.moved) return;
     state.selectedNodeId = node.id;
-    if (node.type === "condition") {
-      state.activeId = node.id;
-      saveSession();
-      renderGraph();
-      return;
-    }
-    renderBranchDetail(node);
-    renderSceneElements();
+    state.activeId = node.id;
+    saveSession();
+    renderGraph();
   };
   group.addEventListener("click", select);
   group.addEventListener("keydown", (event) => {
@@ -217,8 +302,8 @@ function renderSceneElements() {
     ...state.scene.edges.flatMap((edge) => relationLine(edge, positions)),
   );
   elements.nodes.replaceChildren(...state.scene.nodes.map(nodeGroup));
-  elements.count.textContent = `${state.scene.nodes.length}개 노드 · ${state.scene.edges.length}개 연결`;
-  elements.focus.textContent = CONDITIONS[state.activeId]?.label ?? "선택 대기";
+  elements.count.textContent = `${state.scene.nodes.length}개 질환 · ${state.scene.edges.length}개 관계`;
+  elements.focus.textContent = state.activeId ? `${CONDITIONS[state.activeId]?.label} 중심` : "선택 대기";
 }
 
 function renderGraph() {
@@ -226,8 +311,13 @@ function renderGraph() {
   elements.empty.hidden = hasData;
   elements.scene.classList.toggle("is-empty", !hasData);
   if (!hasData) {
-    state.scene = { nodes: [], edges: [] }; elements.edges.replaceChildren(); elements.nodes.replaceChildren();
-    elements.count.textContent = "0개 노드 · 입력 대기"; elements.focus.textContent = "선택 대기"; return;
+    state.scene = { nodes: [], edges: [] };
+    elements.edges.replaceChildren();
+    elements.nodes.replaceChildren();
+    elements.count.textContent = "0개 질환 · 입력 대기";
+    elements.focus.textContent = "선택 대기";
+    renderEmptyDetail();
+    return;
   }
   state.scene = settleExplorerScene(
     createExplorerScene(state.visibleIds, state.activeId),
@@ -248,7 +338,12 @@ function setZoom(nextZoom) {
 
 function updateSceneFraming() {
   const compact = window.matchMedia("(max-width: 620px)").matches;
-  elements.scene.setAttribute("preserveAspectRatio", compact ? "xMidYMid slice" : "xMidYMid meet");
+  const nextSize = compact ? compactSceneSize : desktopSceneSize;
+  const changed = sceneSize.width !== nextSize.width || sceneSize.height !== nextSize.height;
+  sceneSize = { ...nextSize };
+  elements.scene.setAttribute("viewBox", `0 0 ${sceneSize.width} ${sceneSize.height}`);
+  elements.scene.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  return changed;
 }
 
 elements.zoomIn.addEventListener("click", () => setZoom(state.zoom + 0.12));
@@ -262,6 +357,8 @@ elements.scene.addEventListener("wheel", (event) => {
   setZoom(state.zoom + (event.deltaY < 0 ? 0.08 : -0.08));
 }, { passive: false });
 
-window.addEventListener("resize", updateSceneFraming);
+window.addEventListener("resize", () => {
+  if (updateSceneFraming()) renderGraph();
+});
 updateSceneFraming();
 renderGraph();

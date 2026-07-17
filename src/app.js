@@ -22,7 +22,9 @@ const elements = {
   count: document.querySelector("#conditionCount"),
   miniList: document.querySelector("#miniConditionList"),
   mapStatus: document.querySelector("#mapStatus"),
-  bodyKey: document.querySelector("#bodyKey"),
+  bodyCaptions: [...document.querySelectorAll(".body-caption")],
+  bodyKeySwatch: document.querySelector("#bodyKeySwatch"),
+  bodyKeyText: document.querySelector("#bodyKeyText"),
   hotspots: [...document.querySelectorAll(".body-hotspot")],
   graphPreviewCount: document.querySelector("#graphPreviewCount"),
   connectionsLinks: [...document.querySelectorAll("[data-connections-link]")],
@@ -85,23 +87,40 @@ function importFhirFile(file) {
 
 function renderBody() {
   const model = createBodyModel(state.visibleIds, state.activeId);
+  const captionsByArea = new Map(elements.bodyCaptions.map((caption) => [caption.dataset.area, caption]));
   for (const hotspot of elements.hotspots) {
-    hotspot.classList.remove("is-active", ...toneClasses);
+    hotspot.classList.remove("is-active", "is-current", ...toneClasses);
     const areaIds = model.areas[hotspot.dataset.area] ?? [];
+    const caption = captionsByArea.get(hotspot.dataset.area);
+    const captionStatus = caption?.querySelector(".body-caption__status");
+    const captionTitle = caption?.querySelector(".body-caption__title")?.textContent ?? "이 신체 부위";
+    caption?.classList.remove("is-active", "is-current", ...toneClasses);
     if (areaIds.length === 0) {
+      hotspot.disabled = true;
+      hotspot.setAttribute("aria-pressed", "false");
+      hotspot.setAttribute("aria-label", `${captionTitle}: 현재 기록에 연결된 신호 없음`);
       hotspot.removeAttribute("title");
+      if (captionStatus) captionStatus.textContent = "현재 기록에 없음";
       continue;
     }
     const first = CONDITIONS[areaIds[0]];
+    const labels = areaIds.map((id) => CONDITIONS[id].label);
+    const isCurrent = areaIds.includes(state.activeId);
+    hotspot.disabled = false;
     hotspot.classList.add("is-active", `tone-${first.tone}`);
-    hotspot.title = areaIds.map((id) => CONDITIONS[id].label).join(", ");
+    if (isCurrent) hotspot.classList.add("is-current");
+    hotspot.setAttribute("aria-pressed", String(isCurrent));
+    hotspot.setAttribute("aria-label", `${captionTitle}: ${labels.join(", ")}. 이 영역의 질환 정보 보기`);
+    hotspot.title = labels.join(", ");
+    caption?.classList.add("is-active", `tone-${first.tone}`);
+    if (isCurrent) caption?.classList.add("is-current");
+    if (captionStatus) captionStatus.textContent = labels.join(" · ");
   }
 
   elements.mapStatus.textContent = model.statusText;
   elements.mapStatus.classList.toggle("is-ready", model.ready);
-  const swatch = document.createElement("span");
-  swatch.className = model.keyTone ? `key-swatch tone-${model.keyTone}` : "key-swatch";
-  elements.bodyKey.replaceChildren(swatch, document.createTextNode(model.keyText));
+  elements.bodyKeySwatch.className = model.keyTone ? `key-swatch tone-${model.keyTone}` : "key-swatch";
+  elements.bodyKeyText.textContent = model.keyText;
 }
 
 function renderDetail() {

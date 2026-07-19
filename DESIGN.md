@@ -86,7 +86,7 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 ### FHIR import box
 - Structure: compact local-file picker above manual entry, with format tag, privacy promise, and parse result.
-- Scope: FHIR R4 Condition and Observation subset; unsupported records remain visible as a count and never become inferred diagnoses.
+- Scope: one-patient FHIR R4 Bundle subset for Condition, Observation, MedicationRequest, AllergyIntolerance, Procedure, and Encounter. Every clinical resource requires an exact matching subject; absolute/URN references match the Patient fullUrl exactly, while relative Patient references resolve only from the referencing entry fullUrl base. Current condition/allergy facts require active + confirmed lifecycle, and medications require active order-family intent with doNotPerform=false. Unknown modifierExtension/implicitRules, unsupported Patient active/deceased/link semantics, and malformed modifier primitives fail closed. Unsupported records retain a visible reason and never become inferred diagnoses.
 - States: idle, parsing, success, error. File size is capped at 2 MB.
 
 ### Evidence card
@@ -130,7 +130,7 @@ The paid-value hypothesis is a single plan around KRW 6,900 per month, aligned w
 
 ## 9. Clinical Honesty Rules
 
-- `AI`, `LLM`, probability, prediction, diagnosis, and personalized risk language are forbidden until a real model, traceable evidence layer, external validation, and monitoring exist.
+- Public patient-facing routes must not use `AI`, `LLM`, probability, prediction, diagnosis, or personalized-risk language until a real model, traceable evidence layer, external validation, and monitoring exist. The local clinical sandbox may expose a clearly labelled copilot draft only when every statement links back to source chart data; its deterministic fallback must be labelled rule-based and never presented as model output.
 - Text matching is described as rule-based organization. An inferred measurement pattern is an “item to confirm,” never a newly diagnosed condition.
 - Sample data is opt-in, carries a persistent sample label, and is never saved to Journey.
 - Every generated question states why it appears. Questions are conversation prompts, not treatment advice.
@@ -178,3 +178,120 @@ Research date: 2026-07-17.
 - Visit Brief prints cleanly, contains at most five questions with reasons, and never mentions AI or LLM.
 - The working routes build with the existing zero-dependency stack and preserve GET/HEAD-only, no-network CSP behavior.
 - Desktop and mobile screenshots, keyboard traversal, reduced-motion, automated tests, and route/content checks pass before release.
+
+## 14. Local Clinical EMR Extension
+
+### Source of truth
+
+- Status: Active
+- Last refreshed: 2026-07-19
+- Primary product surfaces: existing personal-health routes plus `/emr`, a local clinical workspace.
+- Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/fhir-import.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
+
+### Brand
+
+- Personality: calm clinical command center; precise, humane, low-noise.
+- Trust signals: local-only state, explicit source provenance, effective-dated reimbursement rules, draft/confirmed separation, visible audit trail, export and wipe controls.
+- Avoid: futuristic AI theatre, opaque scores, revenue-first language in the clinical graph, fake compliance claims, diagnostic certainty, and colors that imply severity without text.
+
+### Product goals
+
+- Give a clinician or billing coordinator one local workspace for patients, encounters, structured observations, conditions, medications, procedures, VitaGraph relationships, longitudinal Journey, visit briefs, and reimbursement-readiness tasks.
+- Reduce preventable claim adjustments by surfacing interval, count, evidence, and documentation gaps before submission.
+- Preserve the existing VitaGraph consumer experience and reuse its relationship, provenance, Journey, and visit-preparation concepts.
+- Non-goals: certified production EMR, live HIRA submission, medical-device diagnosis, autonomous treatment decisions, guaranteed zero adjustments, cloud accounts, multi-user synchronization, or storing real identifiers without an institution-approved security deployment.
+- Success signals: complete sample workflow in under five minutes; every rule result explains evidence and rule version; all data can be exported and wiped; no AI draft enters confirmed chart state automatically.
+
+### Personas and jobs
+
+- Primary personas: outpatient clinician, nurse/care coordinator, and claims-review coordinator evaluating the product locally.
+- User jobs: open a patient, understand current context, add an encounter event, review clinical relationships, prepare the visit, clear reimbursement gaps, export a portable local backup.
+- Key context: desktop-first during chart review; tablet during rounds; compact mobile view for read-only triage and quick tasks.
+
+### Information architecture
+
+- Primary navigation inside `/emr`: overview, chart, VitaGraph, reimbursement board, Journey, data controls.
+- Core screens: patient worklist, selected-patient clinical cockpit, chart-event composer, relationship graph, AI/rule-based copilot brief, patient reimbursement board, institution-wide risk worklist, audit/data controls.
+- Content hierarchy: patient identity and safety banner first; urgent/allergy context second; clinical summary and active work third; source evidence and audit detail on demand.
+
+### Design principles
+
+1. Record of truth and assistance are visibly separate. Confirmed chart facts use neutral surfaces; suggestions use tinted, labelled surfaces and require a human action.
+2. Clinical graph and reimbursement status are linked but not conflated. Clinical nodes never change severity because of claim risk.
+3. Every computed status answers “why, from which record, under which rule version, and what next?”
+4. Dense workflow stays scan-friendly through compact typography, consistent lane grammar, and progressive disclosure rather than dashboard ornament.
+- Tradeoff: local-first simplicity enables immediate evaluation but cannot claim institutional security, concurrency, recovery, or certification.
+
+### Visual language
+
+- Color: keep existing coral interaction accent and cyan/lime/violet/amber data palette. Reimbursement states add semantic text and icons; red is reserved for hard safety/error states, never routine claim risk.
+- Typography: existing Noto/Pretendard stack; compact 12–14px operational metadata and 16–22px patient/work headings.
+- Spacing/layout rhythm: existing 4px scale; desktop cockpit uses a 280px patient rail plus fluid workspace; boards scroll horizontally without shrinking cards below 260px.
+- Shape/radius/elevation: reuse control and panel radii; reduce shadow depth inside dense clinical workspaces.
+- Motion: 140ms feedback only; no animated medical or financial state changes.
+- Imagery/iconography: no decorative clinical imagery inside EMR. Use CSS/SVG/data marks with text equivalents.
+
+### Components
+
+- Existing components to reuse: app brand, skip link, buttons, chips, panels, detail lists, graph node semantics, Journey comparison, Visit Brief question cards.
+- New components: patient rail, patient safety header, operational tabs, chart-event composer, provenance badge, copilot draft panel, reimbursement rule card, Kanban lane, rule explanation drawer, audit event, local data toolbar.
+- Variants and states: draft/confirmed, documented/inferred, rule pass/warn/not-ready/unknown, empty/loading/error/saved, demo/private.
+- Token ownership: shared visual tokens remain in `foundation.css`; EMR-only composition belongs to `emr.css`; domain state classes must not redefine shared shell primitives.
+
+### Accessibility
+
+- Target: WCAG 2.2 AA behavior for keyboard, labels, landmarks, focus visibility, contrast, status announcements, and minimum 44px primary touch targets.
+- Keyboard/focus: tabs use buttons with `aria-selected`; Kanban remains a semantic list with headings; dialogs restore focus; graph selection mirrors into text.
+- Contrast/readability: never rely on color; dates, counts, rule state, and missing evidence remain explicit text.
+- Screen readers: patient selection, save status, destructive data actions, and copilot provenance use live/status regions conservatively.
+- Reduced motion: all nonessential transitions removed under `prefers-reduced-motion`.
+
+### Responsive behavior
+
+- Supported: 390px, 768px, 1280px, and wide desktop.
+- Desktop: fixed patient rail plus flexible cockpit; clinical summary uses two columns; Kanban horizontal scroll.
+- Tablet: patient rail becomes a top worklist strip; content remains one or two columns.
+- Mobile: all panels stack; tabs and lanes scroll; editing forms remain full-width; graph becomes text-first when space is constrained.
+- Touch/hover: all critical content available without hover; drag is never required.
+
+### Interaction states
+
+- Loading: local operations use brief inline state, not blocking skeletons.
+- Empty: one primary action and a truthful explanation; demo records load only by explicit action.
+- Error: preserve user input and show a recovery action.
+- Success: announce saved/exported state and retain visible timestamp.
+- Disabled: include a reason near the control.
+- Offline: full deterministic workflow remains available; configured model assistance may fail closed to the labelled rule-based brief.
+
+### Content voice
+
+- Tone: direct Korean clinical operations language; short labels, complete safety explanations.
+- Terminology: “급여 적합성”, “조정 위험”, “근거 부족”, and “확인 필요”; never “삭감 방지 보장”.
+- AI copy: “코파일럿 초안” only for actual model output; fallback copy says “규칙 기반 요약”. Always display “의료진 검토 전 확정 기록 아님”.
+
+### Implementation constraints
+
+- Framework: existing zero-dependency ES modules and generated Worker asset bundle.
+- Persistence: versioned browser `localStorage` JSON with strict backup validation, corrupt-source recovery export, import/export, and wipe; no silent sample persistence. It is not an encrypted clinical database.
+- Clinical input: accept only FHIR R4 Bundles with exactly one Patient and explicit matching subject references; require fail-closed lifecycle certainty for current facts and keep unsupported resources plus reasons visible in the import report.
+- Clinical graph: node provenance is factual. Keyword relationships are heuristic only and must remain dashed, labelled `추론`, and accompanied by their basis plus “차트 사실 아님”.
+- Reimbursement: deterministic, effective-dated rule engine. Institution-authored rules require coding-system namespaces for applicability, evidence, and service matching. Procedure/Observation/Encounter records are chart evidence, not adjudicated claims; Claim/ClaimResponse remain a manual reconciliation boundary. AI cannot set pass/fail by itself.
+- Security: no analytics, no remote fonts/data beyond existing style contract, no credentials in browser storage, and no production-compliance claim.
+- Compatibility: latest Chrome/Edge/Firefox/Safari desktop; graceful fallback when local persistence is unavailable.
+- Test expectations: pure model tests, route/build/header tests, persistence serialization tests, keyboard/content assertions, local Chrome screenshots at desktop and mobile widths.
+
+### Open questions
+
+- [ ] Institution-specific HIRA rule catalogue ingestion and update authority / product owner + claims specialist / blocks production claim guidance, not local sample evaluation.
+- [ ] Certified identity, access control, encryption-at-rest, backup, and retention profile / security and legal owners / blocks real-patient deployment.
+- [ ] Which on-premise model and validation dataset become supported / clinical AI owner / blocks validated generative summaries, not deterministic fallback.
+- [ ] Live claim submission adapter and certified claim-software scope / billing integration owner / blocks HIRA submission, not readiness workflow.
+
+### EMR release acceptance
+
+- Existing routes and their 46-test baseline remain intact.
+- `/emr` starts empty, explicitly loads a labelled demo, and supports patient create/select/edit, event entry, FHIR import, local backup export/import, and full wipe.
+- Selected patient shows conditions, medications, allergies, observations, procedures, encounters, clinical graph, Journey, visit brief, and source provenance.
+- Reimbursement board calculates interval/count/evidence states from effective-dated deterministic rules and exposes patient plus institution views.
+- Copilot output is source-linked, labelled as actual model or deterministic fallback, and cannot mutate confirmed records.
+- Desktop and mobile screenshot review, keyboard navigation, reduced motion, build, and all tests pass before handoff.

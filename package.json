@@ -6,8 +6,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "npm run build && node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
+    "smoke:emr": "node scripts/emr-browser-smoke.mjs",
     "start": "node scripts/render-server.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },

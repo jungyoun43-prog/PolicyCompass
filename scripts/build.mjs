@@ -13,6 +13,7 @@ const cssAssets = [
   "journey",
   "landing",
   "insights",
+  "emr",
 ].map((name) => ({
   route: `/${name}.css`,
   file: `src/${name}.css`,
@@ -29,6 +30,8 @@ const sourceAssets = [
   { route: "/journey.html", file: "src/journey.html", type: "text/html; charset=utf-8" },
   { route: "/insights", file: "src/insights.html", type: "text/html; charset=utf-8" },
   { route: "/insights.html", file: "src/insights.html", type: "text/html; charset=utf-8" },
+  { route: "/emr", file: "src/emr.html", type: "text/html; charset=utf-8" },
+  { route: "/emr.html", file: "src/emr.html", type: "text/html; charset=utf-8" },
   ...cssAssets,
   { route: "/data.js", file: "src/data.js", type: "text/javascript; charset=utf-8" },
   { route: "/view-model.js", file: "src/view-model.js", type: "text/javascript; charset=utf-8" },
@@ -40,6 +43,10 @@ const sourceAssets = [
   { route: "/journey.js", file: "src/journey.js", type: "text/javascript; charset=utf-8" },
   { route: "/insights.js", file: "src/insights.js", type: "text/javascript; charset=utf-8" },
   { route: "/insight-model.js", file: "src/insight-model.js", type: "text/javascript; charset=utf-8" },
+  { route: "/emr.js", file: "src/emr.js", type: "text/javascript; charset=utf-8" },
+  { route: "/emr-model.js", file: "src/emr-model.js", type: "text/javascript; charset=utf-8" },
+  { route: "/emr-fhir.js", file: "src/emr-fhir.js", type: "text/javascript; charset=utf-8" },
+  { route: "/claim-rules.js", file: "src/claim-rules.js", type: "text/javascript; charset=utf-8" },
 ];
 
 const binaryAssets = [

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="VitaGraph 관계 지도와 급여 적합성 칸반을 결합한 로컬 임상 EMR 워크스페이스" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>VitaGraph Clinical | 로컬 AI 보조 EMR</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%2315141a%27/%3E%3Cpath d=%27M19 32h26M32 19v26%27 stroke=%27%23fff%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/shell.css" />
+    <link rel="stylesheet" href="/emr.css" />
+    <script type="module" src="/emr.js"></script>
+  </head>
+  <body class="emr-page">
+    <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
+
+    <header class="app-header clinical-header">
+      <div class="app-header__inner">
+        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+          <span class="app-brand__mark" aria-hidden="true"></span>
+          <span>VitaGraph <b>Clinical</b></span>
+        </a>
+        <nav class="app-nav clinical-nav" aria-label="임상 워크스페이스">
+          <a href="#overview" data-tab-target="overview" aria-current="page">환자 요약</a>
+          <a href="#chart" data-tab-target="chart">차트</a>
+          <a href="#graph" data-tab-target="graph">VitaGraph</a>
+          <a href="#claims" data-tab-target="claims">급여 보드</a>
+          <a href="#journey" data-tab-target="journey">Journey</a>
+          <a href="#data" data-tab-target="data">감사·데이터</a>
+        </nav>
+        <a class="app-header__action" href="#patientComposer">환자 추가</a>
+      </div>
+    </header>
+
+    <main class="emr-shell" id="mainContent">
+      <section class="clinical-command" aria-labelledby="emrTitle">
+        <div>
+          <p class="page-hero__eyebrow">LOCAL CLINICAL WORKSPACE</p>
+          <h1 id="emrTitle">기록, 관계, 급여 준비를 한 환자 흐름으로</h1>
+          <p>
+            확정 차트는 그대로 두고 VitaGraph 관계 지도, 진료 브리프, 근거 기반 급여 적합성 칸반을 연결합니다.
+          </p>
+        </div>
+        <div class="command-actions" aria-label="로컬 데이터 작업">
+          <button class="clinical-button clinical-button--demo" id="loadDemo" type="button">샘플 환자 보기</button>
+          <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
+          <input class="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" />
+          <label class="clinical-button" for="fhirImport">FHIR 가져오기</label>
+          <button class="clinical-button" id="exportEmr" type="button">백업 내보내기</button>
+          <input class="visually-hidden" id="importEmr" type="file" accept=".json,application/json" />
+          <label class="clinical-button" for="importEmr">백업 복원</label>
+        </div>
+      </section>
+
+      <details class="fhir-import-report" id="fhirImportReport" hidden>
+        <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary"></span></summary>
+        <ul id="fhirImportIssues"></ul>
+      </details>
+
+      <section class="trust-strip" aria-label="임상 안전 상태">
+        <div>
+          <span class="trust-dot trust-dot--local" aria-hidden="true"></span>
+          <b>LOCAL ONLY</b>
+          <span>환자 기록은 이 브라우저에만 저장</span>
+        </div>
+        <div>
+          <span class="trust-dot" id="aiStatusDot" aria-hidden="true"></span>
+          <b id="aiStatusLabel">규칙 기반 모드</b>
+          <span id="aiStatusDetail">로컬 AI 연결 확인 중</span>
+        </div>
+        <div class="demo-banner" id="demoBanner" hidden>
+          <span class="trust-dot trust-dot--demo" aria-hidden="true"></span>
+          <b>DEMO</b>
+          <span>가상 환자 · 저장되지 않음</span>
+        </div>
+        <p>이 화면은 현장 검증용 로컬 샌드박스입니다. 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않습니다.</p>
+      </section>
+
+      <p class="workspace-status" id="workspaceStatus" role="status" aria-live="polite"></p>
+
+      <div class="clinical-layout">
+        <aside class="patient-rail" aria-labelledby="patientRailTitle">
+          <div class="rail-heading">
+            <div>
+              <p class="rail-eyebrow">PATIENT WORKLIST</p>
+              <h2 id="patientRailTitle">환자</h2>
+            </div>
+            <span class="rail-count" id="patientCount">0명</span>
+          </div>
+
+          <label class="patient-search">
+            <span class="visually-hidden">환자 검색</span>
+            <input id="patientSearch" type="search" placeholder="이름 또는 등록번호 검색" autocomplete="off" />
+          </label>
+
+          <details class="patient-composer" id="patientComposer">
+            <summary><span>새 환자 등록</span><span aria-hidden="true">＋</span></summary>
+            <form id="patientForm" novalidate>
+              <input id="patientFormMode" type="hidden" value="create" />
+              <label>등록번호<input id="patientMrn" name="mrn" required maxlength="40" placeholder="예: VG-1003" /></label>
+              <label>이름<input id="patientName" name="name" required maxlength="40" placeholder="환자 이름" /></label>
+              <div class="form-pair">
+                <label>생년월일<input id="patientBirthDate" name="birthDate" type="date" /></label>
+                <label>성별<select id="patientSex" name="sex"><option value="unknown">미상</option><option value="female">여성</option><option value="male">남성</option><option value="other">기타</option></select></label>
+              </div>
+              <label>연락처<input id="patientPhone" name="phone" maxlength="40" autocomplete="off" /></label>
+              <p class="form-message" id="patientFormMessage" role="alert"></p>
+              <div class="compact-actions">
+                <button class="clinical-button clinical-button--primary" type="submit">환자 저장</button>
+                <button class="clinical-button" id="cancelPatientEdit" type="button" hidden>편집 취소</button>
+              </div>
+            </form>
+          </details>
+
+          <ul class="patient-list" id="patientList" aria-label="환자 목록"></ul>
+
+          <div class="rail-empty" id="patientListEmpty">
+            <b>등록된 환자 없음</b>
+            <p>새 환자를 등록하거나, 샘플·FHIR·백업을 불러오세요.</p>
+          </div>
+        </aside>
+
+        <section class="patient-workspace" aria-label="선택 환자 차트">
+          <div class="workspace-empty" id="workspaceEmpty">
+            <span class="workspace-empty__mark" aria-hidden="true"></span>
+            <p class="rail-eyebrow">NO PATIENT SELECTED</p>
+            <h2>환자 한 명을 선택하면 임상 흐름이 열립니다.</h2>
+            <p>차트, VitaGraph, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
+            <button class="clinical-button clinical-button--demo" data-load-demo type="button">샘플 워크스페이스 열기</button>
+          </div>
+
+          <div id="workspaceContent" hidden>
+            <header class="patient-safety-header">
+              <div class="patient-identity">
+                <p class="rail-eyebrow">SELECTED PATIENT</p>
+                <div>
+                  <h2 id="selectedPatientName">—</h2>
+                  <span id="selectedPatientMeta">—</span>
+                </div>
+              </div>
+              <div class="safety-alerts" id="safetyAlerts" aria-label="환자 안전 알림"></div>
+              <div class="patient-header-actions">
+                <button class="clinical-button" id="editPatient" type="button">환자 정보 편집</button>
+                <span id="lastSavedAt">저장 대기</span>
+              </div>
+            </header>
+
+            <div class="workspace-tabs" role="tablist" aria-label="선택 환자 화면">
+              <button id="tab-overview" type="button" role="tab" aria-selected="true" aria-controls="panel-overview" data-tab="overview">환자 요약</button>
+              <button id="tab-chart" type="button" role="tab" aria-selected="false" aria-controls="panel-chart" data-tab="chart">차트</button>
+              <button id="tab-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph" data-tab="graph">VitaGraph</button>
+              <button id="tab-claims" type="button" role="tab" aria-selected="false" aria-controls="panel-claims" data-tab="claims">급여 보드</button>
+              <button id="tab-journey" type="button" role="tab" aria-selected="false" aria-controls="panel-journey" data-tab="journey">Journey</button>
+              <button id="tab-data" type="button" role="tab" aria-selected="false" aria-controls="panel-data" data-tab="data">감사·데이터</button>
+            </div>
+
+            <section class="workspace-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" data-panel="overview">
+              <div class="metric-grid" id="patientMetrics" aria-label="환자 기록 요약"></div>
+
+              <div class="overview-grid">
+                <section class="clinical-card clinical-card--summary" aria-labelledby="clinicalSummaryTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">CHART SUMMARY</p><h3 id="clinicalSummaryTitle">확정 기록 요약</h3></div>
+                    <span class="source-badge">CHART FACTS</span>
+                  </div>
+                  <div class="summary-sections" id="clinicalSummary"></div>
+                </section>
+
+                <section class="clinical-card copilot-card" id="copilotPanel" aria-labelledby="copilotTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">CLINICAL COPILOT</p><h3 id="copilotTitle">진료 준비 초안</h3></div>
+                    <span class="source-badge source-badge--draft" id="copilotMode">규칙 기반</span>
+                  </div>
+                  <p class="draft-warning">의료진 검토 전 확정 기록 아님 · 인용 ID와 문장 의미를 원 차트에서 직접 대조</p>
+                  <div id="copilotContent"></div>
+                  <button class="clinical-button clinical-button--primary" id="runCopilot" type="button">근거로 초안 다시 만들기</button>
+                </section>
+              </div>
+
+              <section class="clinical-card next-work-card" aria-labelledby="nextWorkTitle">
+                <div class="card-heading">
+                  <div><p class="rail-eyebrow">NEXT WORK</p><h3 id="nextWorkTitle">놓치면 안 되는 다음 작업</h3></div>
+                  <button class="text-action" type="button" data-open-tab="claims">급여 보드 열기</button>
+                </div>
+                <div class="next-work-list" id="nextWorkList"></div>
+              </section>
+            </section>
+
+            <section class="workspace-panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" data-panel="chart" hidden>
+              <div class="chart-layout">
+                <section class="clinical-card event-composer" aria-labelledby="eventFormTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">STRUCTURED ENTRY</p><h3 id="eventFormTitle">차트 이벤트 추가</h3></div>
+                    <span class="source-badge">MANUAL</span>
+                  </div>
+                  <form id="eventForm" novalidate>
+                    <div class="form-pair">
+                      <label>기록 유형<select id="eventType" required><option value="encounter">내원</option><option value="condition">진단·문제</option><option value="observation">검사·측정</option><option value="medication">약물</option><option value="allergy">알레르기</option><option value="procedure">수술·처치</option><option value="symptom">증상</option><option value="note">진료 메모</option></select></label>
+                      <label>기록일<input id="eventDate" type="date" required /></label>
+                    </div>
+                    <div class="form-pair">
+                      <label>코드<input id="eventCode" maxlength="80" placeholder="KCD·LOINC·EDI 또는 내부코드" /></label>
+                      <label>이름<input id="eventLabel" required maxlength="100" placeholder="예: 혈압" /></label>
+                    </div>
+                    <label>코드 시스템<input id="eventSystem" maxlength="300" placeholder="예: http://loinc.org · 내부코드는 urn:기관명:코드체계" /></label>
+                    <div class="form-pair form-pair--value">
+                      <label>값<input id="eventValue" maxlength="80" placeholder="예: 148/94" /></label>
+                      <label>단위<input id="eventUnit" maxlength="40" placeholder="예: mmHg" /></label>
+                    </div>
+                    <label>기록 메모<textarea id="eventNote" rows="4" maxlength="2000" placeholder="의료진이 확인한 맥락과 근거"></textarea></label>
+                    <p class="form-message" id="eventFormMessage" role="alert"></p>
+                    <button class="clinical-button clinical-button--primary" type="submit">확정 차트에 추가</button>
+                  </form>
+                </section>
+
+                <section class="clinical-card event-timeline-card" aria-labelledby="eventTimelineTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">PATIENT TIMELINE</p><h3 id="eventTimelineTitle">전체 임상기록</h3></div>
+                    <span class="rail-count" id="eventCount">0건</span>
+                  </div>
+                  <div class="event-filters" role="group" aria-label="기록 유형 필터" id="eventFilters"></div>
+                  <ol class="event-timeline" id="eventTimeline"></ol>
+                </section>
+              </div>
+            </section>
+
+            <section class="workspace-panel" id="panel-graph" role="tabpanel" aria-labelledby="tab-graph" data-panel="graph" hidden>
+              <section class="clinical-card graph-workspace" aria-labelledby="clinicalGraphTitle">
+                <div class="card-heading">
+                  <div><p class="rail-eyebrow">VITAGRAPH CLINICAL VIEW</p><h3 id="clinicalGraphTitle">임상기록 관계 지도</h3></div>
+                  <a class="text-action" href="/connections" target="_blank" rel="noreferrer">기존 질환 탐색 열기</a>
+                </div>
+                <p class="graph-guidance">질환, 검사, 약물, 알레르기, 처치를 원본 차트 출처와 함께 봅니다. 점선은 코드·표시명 기반 추론이며 차트 사실이 아닙니다. 급여 위험은 별도 보드에서만 표시됩니다.</p>
+                <div class="clinical-graph-layout">
+                  <div class="clinical-graph-stage">
+                    <svg id="clinicalGraph" viewBox="0 0 900 520" role="img" aria-labelledby="clinicalGraphTitle clinicalGraphDesc"></svg>
+                    <p class="visually-hidden" id="clinicalGraphDesc">선택 환자의 임상 이벤트와 점선으로 구분한 추론 관계</p>
+                  </div>
+                  <aside class="graph-evidence" aria-labelledby="graphEvidenceTitle">
+                    <h4 id="graphEvidenceTitle">노드·관계 근거</h4>
+                    <div class="graph-legend" aria-label="노드 유형"></div>
+                    <ol id="graphEvidenceList"></ol>
+                  </aside>
+                </div>
+              </section>
+            </section>
+
+            <section class="workspace-panel" id="panel-claims" role="tabpanel" aria-labelledby="tab-claims" data-panel="claims" hidden>
+              <section class="clinical-card claim-intro" aria-labelledby="claimBoardTitle">
+                <div class="card-heading">
+                  <div><p class="rail-eyebrow">REIMBURSEMENT READINESS</p><h3 id="claimBoardTitle">급여 적합성 칸반</h3></div>
+                  <div class="scope-switch" role="group" aria-label="급여 보드 범위">
+                    <button type="button" aria-pressed="true" data-board-scope="patient">이 환자</button>
+                    <button type="button" aria-pressed="false" data-board-scope="all">전체 환자</button>
+                  </div>
+                </div>
+                <p>FHIR 임상 근거와 기관 규칙을 연결해 기간·횟수·문서 누락을 사전 점검합니다. 의료적 필요를 막거나 급여를 확정하지 않습니다.</p>
+                <div class="rule-trust-note"><b>샘플 규칙 주의</b><span>기본 규칙은 UI 검증용입니다. 실제 심평원·기관 기준은 시행일과 출처를 검증해 직접 등록하세요.</span></div>
+              </section>
+
+              <div class="claim-board" id="claimBoard" aria-label="급여 적합성 상태별 보드"></div>
+
+              <details class="clinical-card rule-composer">
+                <summary><span><b>기관 급여 규칙 추가</b><small>기간·횟수·필수 근거를 버전으로 저장</small></span><span aria-hidden="true">＋</span></summary>
+                <form id="ruleForm">
+                  <div class="rule-form-grid">
+                    <label>규칙군 ID<input id="ruleSetId" required maxlength="100" pattern="[A-Za-z0-9._-]+" placeholder="예: clinic-bp-followup" /></label>
+                    <label>버전<input id="ruleVersion" required maxlength="40" value="1" placeholder="예: 2026.1" /></label>
+                    <label>규칙 이름<input id="ruleTitle" required maxlength="100" placeholder="예: 기관 추적검사 기준" /></label>
+                    <label>서비스 코드<input id="ruleServiceCode" required maxlength="80" placeholder="EDI 또는 내부코드" /></label>
+                    <label>서비스 코드 시스템<input id="ruleServiceSystem" required maxlength="300" placeholder="EDI URI 또는 urn:기관명:코드체계" /></label>
+                    <label>차트 시행 유형<select id="ruleServiceEventType"><option value="procedure">완료 처치·검사</option><option value="observation">확정 검사결과</option><option value="encounter">종료 내원</option></select></label>
+                    <label>기준기간(일)<input id="ruleWindowDays" type="number" min="1" max="3650" value="365" required /></label>
+                    <label>최대 횟수<input id="ruleMaxCount" type="number" min="1" max="100" value="1" required /></label>
+                    <label>적용 조건 코드<input id="ruleApplicabilityCodes" maxlength="500" placeholder="쉼표로 구분 · 비우면 전체" /></label>
+                    <label>적용 조건 코드 시스템<input id="ruleApplicabilitySystem" maxlength="300" placeholder="예: KCD URI · 조건 코드가 있으면 필수" /></label>
+                    <label>필수 근거 코드<input id="ruleEvidenceCodes" maxlength="500" placeholder="쉼표로 구분: 85354-9" /></label>
+                    <label>근거 이벤트 유형<select id="ruleEvidenceEventType"><option value="observation">확정 검사결과</option><option value="condition">활성 진단</option><option value="procedure">완료 처치·검사</option><option value="encounter">종료 내원</option><option value="medication">활성 약물</option><option value="allergy">활성 알레르기</option><option value="symptom">활성 증상</option></select></label>
+                    <label>근거 코드 시스템<input id="ruleEvidenceSystem" maxlength="300" placeholder="예: http://loinc.org" /></label>
+                    <label>근거 최근성(일)<input id="ruleEvidenceLookbackDays" type="number" min="1" max="3650" placeholder="비우면 기간 제한 없음" /></label>
+                    <label>시행일<input id="ruleEffectiveFrom" type="date" required /></label>
+                    <label>종료일<input id="ruleEffectiveTo" type="date" /></label>
+                    <label>공식 출처명<input id="ruleSourceLabel" required maxlength="160" placeholder="고시·기관 검증 문서명" /></label>
+                    <label class="rule-source-url">공식 출처 URL<input id="ruleSourceUrl" type="url" maxlength="500" placeholder="https://..." /></label>
+                  </div>
+                  <p class="form-message" id="ruleFormMessage" role="alert"></p>
+                  <button class="clinical-button clinical-button--primary" type="submit">버전형 규칙 저장</button>
+                </form>
+              </details>
+            </section>
+
+            <section class="workspace-panel" id="panel-journey" role="tabpanel" aria-labelledby="tab-journey" data-panel="journey" hidden>
+              <div class="journey-layout">
+                <section class="clinical-card" aria-labelledby="clinicalJourneyTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">CLINICAL JOURNEY</p><h3 id="clinicalJourneyTitle">환자 변화 타임라인</h3></div>
+                    <a class="text-action" href="/journey" target="_blank" rel="noreferrer">개인 건강 Journey 열기</a>
+                  </div>
+                  <ol class="clinical-journey" id="clinicalJourney"></ol>
+                </section>
+                <section class="clinical-card" aria-labelledby="visitBriefTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">VISIT BRIEF</p><h3 id="visitBriefTitle">이번 진료 질문</h3></div>
+                    <span class="source-badge source-badge--draft">DRAFT</span>
+                  </div>
+                  <ol class="visit-question-list" id="visitQuestions"></ol>
+                </section>
+              </div>
+            </section>
+
+            <section class="workspace-panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data" data-panel="data" hidden>
+              <div class="data-layout">
+                <section class="clinical-card" aria-labelledby="auditTitle">
+                  <div class="card-heading">
+                    <div><p class="rail-eyebrow">AUDIT TRAIL</p><h3 id="auditTitle">로컬 변경 이력</h3></div>
+                    <span class="rail-count" id="auditCount">0건</span>
+                  </div>
+                  <ol class="audit-list" id="auditList"></ol>
+                </section>
+                <section class="clinical-card data-control-card" aria-labelledby="dataControlTitle">
+                  <div class="card-heading"><div><p class="rail-eyebrow">LOCAL DATA CONTROL</p><h3 id="dataControlTitle">백업과 초기화</h3></div></div>
+                  <p>브라우저 데이터 삭제·기기 교체에 대비해 암호화된 저장장치에 JSON 백업을 보관하세요. 이 샌드박스 백업 파일 자체는 암호화되지 않습니다.</p>
+                  <dl class="data-facts" id="dataFacts"></dl>
+                  <div class="data-actions">
+                    <button class="clinical-button clinical-button--primary" id="exportEmrSecondary" type="button">전체 백업 내보내기</button>
+                    <button class="clinical-button" id="exportRecoveryRaw" type="button" hidden>손상 저장 원본 내보내기</button>
+                    <button class="clinical-button clinical-button--danger" id="wipeEmr" type="button">이 브라우저 기록 모두 삭제</button>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="app-footer clinical-footer">
+      <span>VitaGraph Clinical · local evaluation build</span>
+      <span>확정 기록과 보조 초안을 분리합니다.</span>
+    </footer>
+  </body>
+</html>

@@ -264,6 +264,45 @@ test("환자 안전 전송 파일은 확정 VitaGraph 정보만 내보내고 앱
   assert.equal(parsed.provenance.transferCode, TRANSFER_CODE);
 });
 
+test("같은 날 같은 측정은 ID나 배열 순서가 아니라 실제 측정 시각이 최신인 값을 전달한다", () => {
+  const patient = buildTransferPatient();
+  const earlier = normalizedEvent({
+    id: "z-earlier-hba1c",
+    type: "observation",
+    recordStatus: "final",
+    system: "http://loinc.org",
+    code: "4548-4",
+    label: "당화혈색소",
+    date: "2026-07-20",
+    observedAt: "2026-07-20T08:05:00.000Z",
+    status: "final",
+    value: 6.5,
+    unit: "%",
+    source: { kind: "manual", label: "확정 과거자료" },
+  });
+  const later = normalizedEvent({
+    id: "a-later-hba1c",
+    type: "observation",
+    recordStatus: "final",
+    system: "http://loinc.org",
+    code: "4548-4",
+    label: "당화혈색소",
+    date: "2026-07-20",
+    observedAt: "2026-07-20T08:10:00.000Z",
+    status: "final",
+    value: 7.2,
+    unit: "%",
+    source: { kind: "manual", label: "확정 과거자료" },
+  });
+
+  const transfer = createPatientTransferPackage(
+    { ...patient, events: [later, ...patient.events, earlier] },
+    EXPORTED_AT,
+    TRANSFER_CODE,
+  );
+  assert.equal(transfer.healthMap.measurements.find(({ key }) => key === "hba1c").value, 7.2);
+});
+
 test("전송 파일은 정확한 allowlist shape만 가지며 식별자와 임상 내부정보를 누출하지 않는다", () => {
   const transfer = createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE);
 
@@ -298,6 +337,20 @@ test("서명되지 않았거나 의증·초안·외부 미검증인 기록은 �
 
   assert.doesNotMatch(serialized, /provisional|의증|draft-observation|외부 미검증|9999-9|140/);
   assert.match(serialized, /hypertension|diabetes|4548-4|2089-1/);
+});
+
+test("서명자·시각이 없는 legacy 이관 진료는 환자 전달 사실로 사용하지 않는다", () => {
+  const patient = buildTransferPatient();
+  const legacyEvents = patient.events.map((event) => event.id === ENCOUNTER_ID
+    ? normalizedEvent({
+      ...event,
+      signature: { status: "legacy", signer: "", signedAt: "" },
+    })
+    : event);
+  const transfer = createPatientTransferPackage({ ...patient, events: legacyEvents }, EXPORTED_AT, TRANSFER_CODE);
+
+  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["diabetes"]);
+  assert.deepEqual(transfer.healthMap.measurements.map(({ key }) => key), ["ldl"]);
 });
 
 test("코드 시스템과 구조화 코드가 표시명보다 우선하며 임의 시스템·분리 혈압·데모·생성·고아 진료 기록을 제외한다", () => {

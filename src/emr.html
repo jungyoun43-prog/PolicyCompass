@@ -45,23 +45,30 @@
         <div class="command-actions" aria-label="로컬 데이터 작업">
           <button class="clinical-button clinical-button--demo" id="loadDemo" type="button">샘플 환자 보기</button>
           <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
-          <input class="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" />
-          <label class="clinical-button" for="fhirImport">FHIR 가져오기</label>
-          <button class="clinical-button clinical-button--patient-transfer" id="exportPatientTransfer" type="button" aria-describedby="patientTransferGuidance">환자용 VitaGraph JSON</button>
-          <button class="clinical-button" id="exportFhir" type="button">의료기관용 FHIR</button>
-          <button class="clinical-button" id="exportEmr" type="button">백업 내보내기</button>
-          <input class="visually-hidden" id="importEmr" type="file" accept=".json,application/json" />
-          <label class="clinical-button" for="importEmr">백업 복원</label>
+          <details class="emr-utilities" id="emrUtilities">
+            <summary class="clinical-button">데이터 작업</summary>
+            <div class="emr-utility-panel">
+              <p class="emr-utility-heading"><b>가져오기·전달·백업</b><span>진료 화면과 분리된 로컬 데이터 작업입니다.</span></p>
+              <div class="emr-utility-actions">
+                <input class="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" />
+                <label class="clinical-button" for="fhirImport">FHIR 가져오기</label>
+                <button class="clinical-button clinical-button--patient-transfer" id="exportPatientTransfer" type="button" aria-describedby="patientTransferGuidance">환자용 VitaGraph JSON</button>
+                <button class="clinical-button" id="exportFhir" type="button">의료기관용 FHIR</button>
+                <button class="clinical-button" id="exportEmr" type="button">백업 내보내기</button>
+                <input class="visually-hidden" id="importEmr" type="file" accept=".json,application/json" />
+                <label class="clinical-button" for="importEmr">백업 복원</label>
+              </div>
+              <div class="patient-transfer-guidance" id="patientTransferGuidance">
+                <div>
+                  <b>환자 앱 전달용</b>
+                  <span>선택 환자의 지원되는 최종·확정 사실만 JSON에 포함합니다. 다운로드 전에 환자명과 일회성 전달 확인 코드를 대조하고, 코드는 파일과 다른 경로로 환자에게 안내하세요.</span>
+                </div>
+                <p id="patientTransferStatus" role="status" aria-live="polite"></p>
+              </div>
+            </div>
+          </details>
         </div>
       </section>
-
-      <div class="patient-transfer-guidance" id="patientTransferGuidance">
-        <div>
-          <b>환자 앱 전달용</b>
-          <span>선택 환자의 지원되는 최종·확정 사실만 JSON에 포함합니다. 다운로드 전에 환자명과 일회성 전달 확인 코드를 대조하고, 코드는 파일과 다른 경로로 환자에게 안내하세요.</span>
-        </div>
-        <p id="patientTransferStatus" role="status" aria-live="polite"></p>
-      </div>
 
       <details class="fhir-import-report" id="fhirImportReport" hidden>
         <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary"></span></summary>
@@ -250,17 +257,25 @@
                       </div>
                     </section>
 
-                    <div class="encounter-save-bar">
-                      <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
-                      <div class="encounter-save-actions">
-                        <button class="clinical-button" id="cancelEncounter" type="button" hidden>진료 취소</button>
-                        <button class="clinical-button" id="reopenEncounter" type="button" hidden>서명 전 재개</button>
-                        <button class="clinical-button" id="saveEncounterDraft" type="submit">임시 저장</button>
-                        <button class="clinical-button" id="completeEncounter" type="button">진료 완료</button>
-                        <button class="clinical-button clinical-button--primary" id="signEncounter" type="button">검토 후 서명</button>
-                      </div>
-                    </div>
                   </form>
+
+                  <section class="clinical-card clinical-entry-card vital-card" aria-labelledby="vitalTitle">
+                    <div class="card-heading">
+                      <div><p class="rail-eyebrow">VITAL SIGNS · RESULTS</p><h3 id="vitalTitle">진료 측정</h3></div>
+                      <span class="source-badge">LOINC · ENCOUNTER</span>
+                    </div>
+                    <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
+                    <form class="inline-clinical-form" id="vitalForm" novalidate autocomplete="off" spellcheck="false">
+                      <div class="vital-form-grid">
+                        <label>측정 항목<select id="vitalPreset" name="preset" required></select></label>
+                        <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
+                        <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
+                        <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
+                        <button class="clinical-button clinical-button--primary" type="submit">측정 추가</button>
+                      </div>
+                    </form>
+                    <ul class="clinical-entry-list" id="vitalList" aria-label="이번 진료 측정 목록" aria-live="polite"></ul>
+                  </section>
 
                   <section class="clinical-card clinical-entry-card" aria-labelledby="diagnosisTitle">
                     <div class="card-heading">
@@ -322,6 +337,17 @@
                     </form>
                     <ul class="clinical-entry-list" id="orderList" aria-label="이번 진료 오더 목록" aria-live="polite"></ul>
                   </section>
+
+                  <div class="encounter-save-bar">
+                    <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
+                    <div class="encounter-save-actions">
+                      <button class="clinical-button" id="cancelEncounter" type="button" hidden>진료 취소</button>
+                      <button class="clinical-button" id="reopenEncounter" type="button" hidden>서명 전 재개</button>
+                      <button class="clinical-button" id="saveEncounterDraft" type="submit" form="encounterForm">임시 저장</button>
+                      <button class="clinical-button" id="completeEncounter" type="button">진료 완료</button>
+                      <button class="clinical-button clinical-button--primary" id="signEncounter" type="button">검토 후 서명</button>
+                    </div>
+                  </div>
                 </div>
 
                 <aside class="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">

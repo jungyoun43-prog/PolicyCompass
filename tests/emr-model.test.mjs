@@ -115,6 +115,17 @@ test("직접 입력 과거자료는 의료진 검토 후에만 확정 차트 사
     mrn: "CONFIRM-1",
     name: "확정 환자",
   }, "2026-07-19T10:00:00.000Z");
+  assert.throws(() => appendPatientEvent(state, "patient-confirm", {
+    id: "invalid-manual-blood-pressure",
+    type: "observation",
+    system: "http://loinc.org",
+    code: "85354-9",
+    label: "혈압",
+    value: "not-a-blood-pressure",
+    unit: "evil",
+    date: "2026-07-19",
+    source: { kind: "manual", label: "직접 입력 · 검토 대기" },
+  }), /표준 측정값·단위/);
   state = appendPatientEvent(state, "patient-confirm", {
     id: "manual-hba1c",
     type: "observation",

@@ -377,18 +377,76 @@
   }
 
   .gateway-shell {
-    padding-top: var(--space-8);
+    padding-top: var(--space-4);
+  }
+
+  .gateway-intro {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .gateway-eyebrow,
+  .role-card__kicker {
+    font-size: 0.62rem;
   }
 
   .gateway-intro h1 {
     max-width: none;
-    font-size: clamp(2.5rem, 13vw, 3.8rem);
+    margin-top: var(--space-2);
+    font-size: clamp(2.15rem, 11vw, 3rem);
+    line-height: 1;
+  }
+
+  .gateway-intro__lead {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .role-grid {
+    gap: var(--space-3);
   }
 
   .role-card {
-    gap: var(--space-5);
+    gap: var(--space-3);
     border-radius: var(--radius-panel);
-    padding: var(--space-6);
+    padding: var(--space-4);
+  }
+
+  .role-card__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.8rem;
+  }
+
+  .role-card__badge {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.58rem;
+  }
+
+  .role-card h2 {
+    font-size: 1.5rem;
+  }
+
+  .role-card__summary {
+    margin-top: var(--space-2);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .role-card__features {
+    display: none;
+  }
+
+  .role-card__caution {
+    margin-top: calc(var(--space-1) * -1);
+    font-size: 0.64rem;
+    line-height: 1.35;
+  }
+
+  .role-action {
+    min-height: 48px;
+    padding-inline: var(--space-4);
+    font-size: 0.82rem;
   }
 
   .handoff-steps {

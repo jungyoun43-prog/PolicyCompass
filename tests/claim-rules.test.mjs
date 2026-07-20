@@ -65,6 +65,81 @@ test("내장 추적 규칙은 같은 코드의 진단을 검사 결과로 오인
   assert.deepEqual(result.missingEvidence, ["90일 이내 혈압 기록"]);
 });
 
+test("형식·단위가 검증되지 않은 표준 측정은 급여 근거가 되지 않는다", () => {
+  const bloodPressureRule = DEFAULT_CLAIM_RULES.find(({ id }) => id === "demo-bp-follow-up");
+  const result = evaluateClaimRule({
+    id: "p",
+    name: "환자",
+    events: [
+      { id: "dx", type: "condition", recordStatus: "final", system: KCD_SYSTEM, code: "I10", label: "고혈압", date: "2026-01-01", status: "active" },
+      { id: "invalid-bp", type: "observation", recordStatus: "final", system: "http://loinc.org", code: "85354-9", label: "혈압", date: "2026-07-10", status: "final", value: "not-a-blood-pressure", unit: "evil", source: { kind: "manual" } },
+    ],
+  }, bloodPressureRule, "2026-07-19");
+
+  assert.equal(result.status, "missing-evidence");
+  assert.deepEqual(result.missingEvidence, ["90일 이내 혈압 기록"]);
+});
+
+test("출처 미검증 백업 기록은 코드와 값이 맞아도 급여 근거가 되지 않는다", () => {
+  const result = evaluateClaimRule({
+    id: "patient-imported",
+    name: "백업 환자",
+    events: [{
+      id: "imported-bp",
+      type: "observation",
+      recordStatus: "final",
+      status: "final",
+      system: "http://loinc.org",
+      code: "85354-9",
+      label: "혈압 패널",
+      date: "2026-07-19",
+      value: "128/78",
+      unit: "mmHg",
+      source: { kind: "import", label: "백업 복원 · 출처 미검증", resourceId: "" },
+    }],
+  }, {
+    id: "bp-import-check",
+    title: "혈압 확인",
+    serviceCode: "BP-CHECK",
+    serviceSystem: "urn:institution:service",
+    requiredEvidence: [{ system: "http://loinc.org", code: "85354-9", eventTypes: ["observation"], statuses: ["final"] }],
+    effectiveFrom: "2026-01-01",
+    sourceLabel: "기관 검증 기준",
+  }, "2026-07-20");
+
+  assert.equal(result.status, "missing-evidence");
+  assert.deepEqual(result.evidenceEventIds, []);
+});
+
+test("출처 미검증 백업의 시행 기록은 급여 사용 횟수에도 포함하지 않는다", () => {
+  const result = evaluateClaimRule({
+    id: "patient-imported-service",
+    name: "백업 환자",
+    events: [{
+      id: "imported-service",
+      type: "procedure",
+      recordStatus: "final",
+      status: "completed",
+      system: "urn:institution:service",
+      code: "SERVICE-1",
+      label: "출처 미검증 시행",
+      date: "2026-07-19",
+      source: { kind: "import", label: "백업 복원 · 출처 미검증", resourceId: "" },
+    }],
+  }, {
+    id: "imported-service-check",
+    title: "시행 횟수 확인",
+    serviceCode: "SERVICE-1",
+    serviceSystem: "urn:institution:service",
+    maxCount: 1,
+    effectiveFrom: "2026-01-01",
+  }, "2026-07-20");
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.usedCount, 0);
+  assert.deepEqual(result.evidenceEventIds, []);
+});
+
 test("기준기간 내 횟수를 모두 사용하면 다음 인정 가능일을 계산한다", () => {
   const result = evaluateClaimRule(patient, {
     id: "rule-1",
@@ -318,7 +393,7 @@ test("검사 근거는 확정 상태와 코드 시스템을 모두 만족해야 
   const valid = evaluateClaimRule({
     id: "p3",
     name: "환자",
-    events: [...baseEvents, { id: "bp", type: "observation", system: "http://loinc.org", code: "85354-9", label: "혈압", value: "138/88", date: "2026-07-10", status: "final" }],
+    events: [...baseEvents, { id: "bp", type: "observation", system: "http://loinc.org", code: "85354-9", label: "혈압", value: "138/88", unit: "mmHg", date: "2026-07-10", status: "final" }],
   }, rule, "2026-07-19");
 
   assert.equal(preliminary.status, "missing-evidence");
@@ -365,7 +440,7 @@ test("적용 조건과 시행 서비스는 규칙에 지정된 코드 시스템�
   assert.equal(exact.usedCount, 1);
 });
 
-test("값 없는 Observation은 필수 근거나 시행 횟수로 계산하지 않는다", () => {
+test("값 없거나 표준 범위를 벗어난 Observation은 필수 근거나 시행 횟수로 계산하지 않는다", () => {
   const blankObservation = {
     id: "blank",
     type: "observation",
@@ -398,12 +473,19 @@ test("값 없는 Observation은 필수 근거나 시행 횟수로 계산하지 �
     name: "환자",
     events: [{ ...blankObservation, id: "zero", value: 0 }],
   }, serviceRule, "2026-07-19");
+  const validService = evaluateClaimRule({
+    id: "p4",
+    name: "환자",
+    events: [{ ...blankObservation, id: "valid", value: "120/80", unit: "mmHg" }],
+  }, serviceRule, "2026-07-19");
 
   assert.equal(evidenceResult.status, "missing-evidence");
   assert.deepEqual(evidenceResult.evidenceEventIds, []);
   assert.equal(blankService.usedCount, 0);
-  assert.equal(zeroService.usedCount, 1);
-  assert.equal(zeroService.status, "waiting");
+  assert.equal(zeroService.usedCount, 0);
+  assert.equal(zeroService.status, "ready");
+  assert.equal(validService.usedCount, 1);
+  assert.equal(validService.status, "waiting");
 });
 
 test("반박 진단과 비주문 약물은 active 문자열이어도 급여 근거가 아니다", () => {

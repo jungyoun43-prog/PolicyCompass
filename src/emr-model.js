@@ -1,5 +1,6 @@
 import { DEFAULT_CLAIM_RULES, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
 import { createVisitBrief } from "./insight-model.js";
+import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
 
 export const EMR_SCHEMA = "vitagraph-emr";
 export const EMR_BACKUP_SCHEMA = "vitagraph-emr-backup";
@@ -83,11 +84,13 @@ function uniqueId(prefix) {
 
 function normalizeSource(source) {
   const input = source && typeof source === "object" ? source : {};
-  return {
+  const normalized = {
     kind: ["manual", "fhir", "demo", "import", "copilot", "encounter"].includes(input.kind) ? input.kind : "manual",
     label: cleanText(input.label, "직접 입력", 160),
     resourceId: cleanText(input.resourceId, "", 200),
   };
+  const metaSource = cleanText(input.metaSource, "", 200);
+  return metaSource ? { ...normalized, metaSource } : normalized;
 }
 
 function normalizeSoap(input = {}) {
@@ -137,7 +140,8 @@ export function normalizePatientEvent(input = {}) {
   const id = cleanText(input.id, "", 160);
   const type = cleanText(input.type, "", 40);
   const label = cleanText(input.label, "", 240);
-  const date = validDate(input.date ?? input.recordedAt ?? input.observedAt);
+  const occurrenceTimestamp = optionalTimestamp(input.recordedAt ?? input.observedAt);
+  const date = validDate(input.date) || occurrenceTimestamp.slice(0, 10);
   if (!id || !EVENT_TYPES.has(type) || !label || !date) return null;
   const value = typeof input.value === "number" && Number.isFinite(input.value)
     ? input.value
@@ -183,6 +187,9 @@ export function normalizePatientEvent(input = {}) {
     event.diagnosisRole = DIAGNOSIS_ROLES.has(input.diagnosisRole) ? input.diagnosisRole : "secondary";
     event.certainty = DIAGNOSIS_CERTAINTIES.has(input.certainty) ? input.certainty : "confirmed";
     event.onsetDate = validDate(input.onsetDate);
+  } else if (type === "observation") {
+    const observedAt = optionalTimestamp(input.observedAt);
+    if (observedAt) event.observedAt = observedAt;
   } else if (type === "medication") {
     event.prescription = normalizePrescription(input.prescription);
   } else if (type === "service-request") {
@@ -220,6 +227,10 @@ function hasCompatibleEventLifecycle(event) {
 }
 
 function assertCanonicalEventLifecycle(event) {
+  if (event?.type === "observation" && event.system === LOINC_SYSTEM && clinicalObservationSpec(event.code)
+    && !isCanonicalClinicalObservation(event)) {
+    throw new TypeError(`표준 측정값·단위가 유효하지 않습니다: ${event.id}`);
+  }
   if (event?.recordStatus === "entered-in-error") {
     if (event.type === "encounter" && event.status !== "cancelled") {
       throw new TypeError(`취소 진료의 상태가 유효하지 않습니다: ${event.id}`);
@@ -236,17 +247,38 @@ export function selectFinalPatientEvents(patientInput = {}) {
   const encounterById = new Map(patient.events.filter((event) => event.type === "encounter").map((event) => [event.id, event]));
   return patient.events.filter((event) => {
     if (event.recordStatus !== "final" || !hasCompatibleEventLifecycle(event)) return false;
-    if (event.source?.kind === "fhir") return false;
+    if (["fhir", "import"].includes(event.source?.kind)) return false;
     if (["condition", "allergy"].includes(event.type) && event.verificationStatus && event.verificationStatus !== "confirmed") return false;
     if (!event.encounterId) return true;
     const encounter = encounterById.get(event.encounterId);
-    return encounter?.recordStatus === "final" && encounter.status === "finished";
+    return encounter?.recordStatus === "final"
+      && encounter.status === "finished"
+      && !["fhir", "import"].includes(encounter.source?.kind);
   });
 }
 
 export function createFinalizedPatientView(patientInput = {}) {
   const patient = createPatient(patientInput);
   return { ...patient, events: selectFinalPatientEvents(patient) };
+}
+
+export function createClaimPreflightPatient(patientInput = {}, encounterId = "") {
+  const patient = createPatient(patientInput);
+  const finalPatient = createFinalizedPatientView(patient);
+  const encounter = patient.events.find((event) => event.type === "encounter" && event.id === encounterId);
+  if (!encounter
+    || encounter.recordStatus !== "draft"
+    || !["manual", "demo"].includes(encounter.source?.kind)) return finalPatient;
+  const projected = patient.events
+    .filter((event) => event.encounterId === encounter.id
+      && event.recordStatus === "draft"
+      && ((event.source?.kind === "encounter" && event.source.resourceId === encounter.id)
+        || (encounter.source.kind === "demo" && event.source?.kind === "demo")))
+    .map((event) => ({ ...event, recordStatus: "final" }));
+  const projectedEncounter = encounter.status === "finished"
+    ? [{ ...encounter, recordStatus: "final" }]
+    : [];
+  return { ...finalPatient, events: [...finalPatient.events, ...projectedEncounter, ...projected] };
 }
 
 export function createPatient(input = {}, now = new Date().toISOString()) {
@@ -554,6 +586,7 @@ export function removePatientEvent(stateInput, patientId, eventId, reasonInput =
   const patients = state.patients.map((patient) => {
     if (patient.id !== patientId) return patient;
     const target = patient.events.find((event) => event.id === eventId);
+    if (target?.source?.kind === "import") throw new Error("출처 미검증 백업 기록은 변경하거나 취소할 수 없습니다.");
     if (target?.encounterId) throw new Error("진료에 연결된 항목은 해당 진료 화면에서만 관리할 수 있습니다.");
     if (target?.type === "encounter") throw new Error("진료 회차는 삭제할 수 없습니다. 취소 사유와 함께 진료 취소를 사용하세요.");
     if (target?.recordStatus === "entered-in-error") throw new Error("이미 취소된 기록입니다.");
@@ -1142,6 +1175,36 @@ export function parseEmrBackup(input) {
     throw new TypeError("EMR 백업의 선택 환자 참조가 유효하지 않습니다.");
   }
   return normalized;
+}
+
+export function prepareUnverifiedBackupRestore(backupStateInput, trustedStateInput, restoredAt = new Date().toISOString()) {
+  const backupState = validateCanonicalEmrState(backupStateInput);
+  const trustedState = validateCanonicalEmrState(trustedStateInput);
+  const timestamp = validTimestamp(restoredAt);
+  const patients = backupState.patients.map((patient) => ({
+    ...patient,
+    events: patient.events.map((event) => {
+      return {
+        ...event,
+        source: { kind: "import", label: "백업 복원 · 출처 미검증", resourceId: "" },
+        ...(event.type === "encounter" && event.recordStatus === "final"
+          ? { signature: { status: "external", signer: "", signedAt: "" } }
+          : {}),
+      };
+    }),
+    updatedAt: timestamp,
+  }));
+  return validateCanonicalEmrState({
+    ...backupState,
+    patients,
+    selectedEncounterId: "",
+    rules: trustedState.rules,
+    audit: [],
+    demo: false,
+    storageError: "",
+    recoveryRaw: "",
+    updatedAt: timestamp,
+  });
 }
 
 function loadEmrStateUnlocked(storage, persistMigration) {

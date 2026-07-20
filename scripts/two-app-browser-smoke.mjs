@@ -102,7 +102,12 @@ try {
       }
       await delay(100);
     }
-    throw new Error(message);
+    const diagnostic = await evaluate(`JSON.stringify({
+      workspace: document.getElementById('workspaceStatus')?.textContent || '',
+      encounter: document.getElementById('encounterFormMessage')?.textContent || '',
+      patient: document.getElementById('patientFormMessage')?.textContent || ''
+    })`).catch(() => "");
+    throw new Error(`${message}${diagnostic ? ` ${diagnostic}` : ""}`);
   }
 
   async function navigate(path, readyExpression) {
@@ -126,33 +131,44 @@ try {
     `Patient registration did not finish: ${await evaluate("document.getElementById('patientFormMessage')?.textContent || document.getElementById('workspaceStatus')?.textContent || 'no UI error'")}`,
   );
 
+  await evaluate("document.getElementById('checkInPatient').click();");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '대기'", "Patient check-in did not finish.");
+  await evaluate("document.getElementById('startEncounter').click();");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '진료 중'", "Encounter did not start.");
   await evaluate(`
-    document.querySelector('[data-tab-target="chart"]').click();
-    document.getElementById("eventType").value = "condition";
-    document.getElementById("eventDate").value = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    document.getElementById("eventSystem").value = "urn:kr:kcd";
-    document.getElementById("eventCode").value = "I10";
-    document.getElementById("eventLabel").value = "본태성 고혈압";
-    document.getElementById("eventForm").requestSubmit();
+    document.getElementById("encounterDepartment").value = "내과";
+    document.getElementById("encounterClinician").value = "전달검증의사";
+    document.getElementById("chiefComplaint").value = "고혈압과 당화혈색소 추적";
+    document.getElementById("soapSubjective").value = "복약 중이며 특이 증상 없음";
+    document.getElementById("soapObjective").value = "당화혈색소 결과 확인";
+    document.getElementById("soapAssessment").value = "고혈압 추적 평가";
+    document.getElementById("soapPlan").value = "복약 유지 및 추적 검사";
+    document.getElementById("encounterForm").requestSubmit();
   `);
-  await waitFor("document.querySelectorAll('[data-confirm-event]').length === 1", "Condition draft was not created.");
-  await evaluate("window.confirm = () => true; document.querySelector('[data-confirm-event]').click();");
-  await waitFor("document.querySelectorAll('[data-confirm-event]').length === 0", "Condition draft was not confirmed.");
-
+  await waitFor("document.getElementById('workspaceStatus').textContent.includes('초안을 저장')", "Encounter draft did not save.");
   await evaluate(`
-    document.getElementById("eventType").value = "observation";
-    document.getElementById("eventType").dispatchEvent(new Event("change", { bubbles: true }));
-    document.getElementById("eventDate").value = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    document.getElementById("eventCode").value = "4548-4";
-    document.getElementById("eventLabel").value = "당화혈색소";
-    document.getElementById("eventValue").value = "7.1";
-    document.getElementById("eventUnit").value = "%";
-    document.getElementById("eventForm").requestSubmit();
+    document.getElementById("vitalPreset").value = "4548-4";
+    document.getElementById("vitalPreset").dispatchEvent(new Event("change", { bubbles: true }));
+    document.getElementById("vitalValue").value = "7.1";
+    document.getElementById("vitalNote").value = "당일 검사";
+    document.getElementById("vitalForm").requestSubmit();
   `);
-  await waitFor("document.querySelectorAll('[data-confirm-event]').length === 1", "Observation draft was not created.");
-  await evaluate("document.querySelector('[data-confirm-event]').click();");
-  await waitFor("document.querySelectorAll('[data-confirm-event]').length === 0", "Observation draft was not confirmed.");
+  await waitFor("document.getElementById('vitalList').textContent.includes('7.1 %')", "Encounter observation did not render.");
+  await evaluate(`
+    document.getElementById("diagnosisRole").value = "primary";
+    document.getElementById("diagnosisSystem").value = "urn:kr:kcd";
+    document.getElementById("diagnosisCode").value = "I10";
+    document.getElementById("diagnosisLabel").value = "본태성 고혈압";
+    document.getElementById("diagnosisForm").requestSubmit();
+  `);
+  await waitFor("document.getElementById('diagnosisList').textContent.includes('본태성 고혈압')", "Encounter diagnosis did not render.");
+  await evaluate("document.getElementById('completeEncounter').click();");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Encounter did not complete.");
+  await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click();");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
 
+  await evaluate("document.querySelector('#emrUtilities > summary').click()");
+  await waitFor("document.getElementById('emrUtilities').open && document.getElementById('exportPatientTransfer').getClientRects().length === 1", "Data utility disclosure did not expose patient transfer through its summary control.");
   await evaluate(`
     window.__transferDownloadText = "";
     window.__nativeCreateObjectURL = URL.createObjectURL.bind(URL);
@@ -225,15 +241,42 @@ try {
   await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
   await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Visit brief did not receive imported patient state.");
 
+  await client.call("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await navigate("/", "document.querySelectorAll('.role-action').length === 2");
+  await evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  const gatewayLayout = await evaluate(`(() => ({
+    width: document.documentElement.scrollWidth,
+    actions: [...document.querySelectorAll('.role-action')].map((node) => ({
+      top: node.getBoundingClientRect().top,
+      bottom: node.getBoundingClientRect().bottom,
+      display: getComputedStyle(node).display,
+    })),
+    cautions: [...document.querySelectorAll('.role-card__caution')].map((node) => ({
+      top: node.getBoundingClientRect().top,
+      bottom: node.getBoundingClientRect().bottom,
+      display: getComputedStyle(node).display,
+    })),
+  }))()`);
+  assert(gatewayLayout.width <= 390, `Gateway overflowed the 390px viewport: ${JSON.stringify(gatewayLayout)}`);
+  assert(gatewayLayout.actions.length === 2 && gatewayLayout.actions.every(({ top, bottom, display }) => top >= 0 && bottom <= 844 && display !== "none"), `Both role actions were not visible within 390×844: ${JSON.stringify(gatewayLayout)}`);
+  assert(gatewayLayout.cautions.length === 2 && gatewayLayout.cautions.every(({ top, bottom, display }) => top >= 0 && bottom <= 844 && display !== "none"), `Both safety cautions were not visible within 390×844: ${JSON.stringify(gatewayLayout)}`);
+
   process.stdout.write(`${JSON.stringify({
     transferCode: transfer.transferCode,
     conditions: transfer.healthMap.conditions.length,
     measurements: transfer.healthMap.measurements.length,
+    signedEncounterTransfer: true,
     demoExportBlocked: true,
     cancelledImportAtomic: true,
     mapHydrated: true,
     connectionsLinked: true,
     visitBriefLinked: true,
+    gatewayMobileReady: true,
   })}\n`);
 } finally {
   client?.close();

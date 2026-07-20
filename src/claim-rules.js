@@ -1,3 +1,5 @@
+import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
+
 const DAY_MS = 86_400_000;
 const MAX_RULE_DAYS = 3_650;
 const MAX_RULE_COUNT = 100;
@@ -226,13 +228,16 @@ function eventDate(event) {
 
 function hasRecordedObservationValue(event) {
   if (cleanText(event?.type) !== "observation") return true;
-  return (typeof event?.value === "number" && Number.isFinite(event.value))
+  const hasValue = (typeof event?.value === "number" && Number.isFinite(event.value))
     || (typeof event?.value === "string" && cleanText(event.value) !== "");
+  if (!hasValue) return false;
+  return !(event?.system === LOINC_SYSTEM && clinicalObservationSpec(event?.code))
+    || isCanonicalClinicalObservation(event);
 }
 
 function hasCompatibleEvidenceLifecycle(event, type, status) {
   if (!event || typeof event !== "object") return false;
-  if (event.source?.kind === "fhir") return false;
+  if (["fhir", "import"].includes(event.source?.kind)) return false;
   if (["condition", "allergy"].includes(type)) {
     if (Object.hasOwn(event, "verificationStatus") && cleanText(event.verificationStatus) !== "confirmed") return false;
     if (Object.hasOwn(event, "clinicalStatus") && cleanText(event.clinicalStatus) !== status) return false;
@@ -325,7 +330,7 @@ export function evaluateClaimRule(patientInput, ruleInput, asOfInput = new Date(
   const acceptedServiceStatuses = SERVICE_STATUS_BY_TYPE[rule.serviceEventType];
   const serviceEvents = patient.events
     .filter((event) => (!event?.recordStatus || cleanText(event.recordStatus) === "final")
-      && event.source?.kind !== "fhir"
+      && !["fhir", "import"].includes(event.source?.kind)
       && cleanText(event?.code) === rule.serviceCode
       && (!rule.serviceSystem || cleanText(event?.system) === rule.serviceSystem)
       && cleanText(event?.type) === rule.serviceEventType

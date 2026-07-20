@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { exportPatientFhirBundle } from "../src/emr-fhir-export.js";
+import { parseEmrFhirBundle } from "../src/emr-fhir.js";
 
 function fullPatient() {
   return {
@@ -151,6 +152,18 @@ test("확정·완료·서명된 진료를 참조가 모두 해소되는 FHIR R4 
   assert.deepEqual(patient, original, "내보내기는 원본 환자 데이터를 변경하지 않는다");
 });
 
+test("출처 미검증 백업 기록은 환자 식별정보 외 임상 FHIR 리소스로 재수출하지 않는다", () => {
+  const patient = fullPatient();
+  patient.events = patient.events.map((event) => ({
+    ...event,
+    source: { kind: "import", label: "백업 복원 · 출처 미검증", resourceId: "" },
+    ...(event.type === "encounter" ? { signature: { status: "external", signer: "", signedAt: "" } } : {}),
+  }));
+  const bundle = exportPatientFhirBundle(patient, "2026-07-19T01:00:00Z");
+
+  assert.deepEqual(bundle.entry.map(({ resource }) => resource.resourceType), ["Patient"]);
+});
+
 test("환자·Encounter·SOAP Composition과 진단 역할을 손실 없이 매핑하고 XHTML을 escape한다", () => {
   const input = fullPatient();
   input.events[0].soap.plan += " 🩺\uD800";
@@ -220,6 +233,62 @@ test("처방 용법·기간·수량과 검사·처치 오더를 구조화한다"
   assert.equal(service.category[0].coding[0].code, "laboratory");
   assert.equal(service.code.coding[0].code, "4548-4");
   assert.equal(service.patientInstruction, "공복 불필요");
+});
+
+test("혈압 패널은 수축기·이완기 UCUM component와 실제 측정 시각으로 FHIR 왕복한다", () => {
+  const input = fullPatient();
+  input.events = input.events.filter(({ type }) => type !== "observation");
+  input.events.push({
+    id: "blood-pressure-panel",
+    type: "observation",
+    encounterId: "encounter-1",
+    recordStatus: "final",
+    status: "final",
+    system: "http://loinc.org",
+    code: "85354-9",
+    label: "혈압",
+    date: "2026-07-19",
+    observedAt: "2026-07-19T00:12:34.000Z",
+    value: "128/78",
+    unit: "mmHg",
+  });
+
+  const bundle = exportPatientFhirBundle(input, "2026-07-19T01:00:00Z");
+  const observation = resources(bundle, "Observation")[0];
+  assert.equal(observation.code.coding[0].code, "85354-9");
+  assert.equal(observation.category[0].coding[0].code, "vital-signs");
+  assert.equal(observation.effectiveDateTime, "2026-07-19T00:12:34.000Z");
+  assert.equal(observation.valueString, undefined);
+  assert.equal(observation.valueQuantity, undefined);
+  assert.deepEqual(observation.component.map(({ code, valueQuantity }) => ({
+    code: code.coding[0].code,
+    value: valueQuantity.value,
+    unit: valueQuantity.unit,
+    system: valueQuantity.system,
+    unitCode: valueQuantity.code,
+  })), [
+    { code: "8480-6", value: 128, unit: "mmHg", system: "http://unitsofmeasure.org", unitCode: "mm[Hg]" },
+    { code: "8462-4", value: 78, unit: "mmHg", system: "http://unitsofmeasure.org", unitCode: "mm[Hg]" },
+  ]);
+
+  const roundTrip = parseEmrFhirBundle(bundle).patient.events.find(({ code }) => code === "85354-9");
+  assert.equal(roundTrip.value, "128/78");
+  assert.equal(roundTrip.unit, "mmHg");
+  assert.equal(roundTrip.observedAt, "2026-07-19T00:12:34.000Z");
+});
+
+test("변조된 표준 측정은 FHIR 자원으로 내보내지 않고 fail-closed 처리한다", () => {
+  const input = fullPatient();
+  const observation = input.events.find(({ type }) => type === "observation");
+  Object.assign(observation, {
+    system: "http://loinc.org",
+    code: "85354-9",
+    label: "혈압",
+    value: "999/999",
+    unit: "DROP TABLE",
+  });
+
+  assert.throws(() => exportPatientFhirBundle(input, "2026-07-19T01:00:00Z"), /표준 Observation 값·단위/);
 });
 
 test("draft·취소·미서명 진료와 그 하위 기록을 내보내지 않는다", () => {

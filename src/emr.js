@@ -7,6 +7,7 @@ import {
   clearEmrState,
   confirmPatientEvent,
   createClinicalGraph,
+  createClaimPreflightPatient,
   createCopilotRequest,
   createDemoEmrState,
   createEmptyEmrState,
@@ -19,6 +20,7 @@ import {
   localCalendarDate,
   KOREA_TIMEZONE_OFFSET_MINUTES,
   parseEmrBackup,
+  prepareUnverifiedBackupRestore,
   recoverEmrState,
   removePatientEvent,
   retireClaimRule,
@@ -35,6 +37,7 @@ import {
 } from "./patient-transfer.js";
 import {
   addEncounterDiagnosis,
+  addEncounterObservation,
   addEncounterOrder,
   addEncounterPrescription,
   cancelEncounter,
@@ -47,6 +50,7 @@ import {
   saveEncounterDraft,
   signEncounter,
   startEncounter,
+  ENCOUNTER_OBSERVATION_PRESETS,
 } from "./emr-encounter.js";
 import {
   buildClaimBoard,
@@ -87,9 +91,11 @@ const AUDIT_LABELS = {
   "encounter.reopened": "서명 전 진료 재개",
   "encounter.cancelled": "진료 취소",
   "diagnosis.added": "진단 추가",
+  "observation.added": "진료 측정 추가",
   "prescription.added": "처방 추가",
   "order.added": "오더 추가",
   "condition.removed": "진단 초안 삭제",
+  "observation.removed": "진료 측정 초안 삭제",
   "medication.removed": "처방 초안 삭제",
   "service-request.removed": "오더 초안 삭제",
   "schema.migrated": "EMR 스키마 이관",
@@ -149,6 +155,7 @@ const timestampFormatter = new Intl.DateTimeFormat("ko-KR", {
 });
 
 const refs = {
+  mainContent: byId("mainContent"),
   patientList: byId("patientList"),
   patientListEmpty: byId("patientListEmpty"),
   patientCount: byId("patientCount"),
@@ -206,6 +213,12 @@ const refs = {
   reopenEncounter: byId("reopenEncounter"),
   cancelEncounter: byId("cancelEncounter"),
   encounterFormMessage: byId("encounterFormMessage"),
+  vitalForm: byId("vitalForm"),
+  vitalPreset: byId("vitalPreset"),
+  vitalValue: byId("vitalValue"),
+  vitalUnit: byId("vitalUnit"),
+  vitalNote: byId("vitalNote"),
+  vitalList: byId("vitalList"),
   diagnosisForm: byId("diagnosisForm"),
   diagnosisRole: byId("diagnosisRole"),
   diagnosisCode: byId("diagnosisCode"),
@@ -310,6 +323,8 @@ let eventFilter = "all";
 let boardScope = "patient";
 let queueFilter = "all";
 let viewedEncounterId = "";
+let clinicalComposerContextKey = "";
+let stateTransitionBusy = false;
 let copilotBusy = false;
 let stateGeneration = 0;
 let copilotRequestController = null;
@@ -381,6 +396,7 @@ function unresolvedEncounterForPatient(patient) {
   return patient?.events
     ?.filter((event) => event.type === "encounter"
       && event.recordStatus === "draft"
+      && event.source?.kind !== "import"
       && ["arrived", "in-progress", "finished"].includes(event.status))
     .sort((left, right) => {
       const priority = { "in-progress": 0, arrived: 1, finished: 2 };
@@ -393,7 +409,10 @@ function todayEncounterForPatient(patient) {
   const unresolved = unresolvedEncounterForPatient(patient);
   if (unresolved) return unresolved;
   return patient?.events
-    ?.filter((event) => event.type === "encounter" && event.date === today() && event.recordStatus !== "entered-in-error")
+    ?.filter((event) => event.type === "encounter"
+      && event.date === today()
+      && event.source?.kind !== "import"
+      && event.recordStatus !== "entered-in-error")
     .sort((left, right) => String(right.arrivedAt).localeCompare(String(left.arrivedAt)))[0] ?? null;
 }
 
@@ -404,9 +423,14 @@ function currentEncounter(patient) {
   const unresolved = unresolvedEncounterForPatient(patient);
   if (unresolved) return unresolved;
   const explicitlySelected = getEncounter(patient, state.selectedEncounterId);
-  if (explicitlySelected?.date === today() && explicitlySelected.recordStatus !== "entered-in-error") return explicitlySelected;
+  if (explicitlySelected?.date === today()
+    && explicitlySelected.source?.kind !== "import"
+    && explicitlySelected.recordStatus !== "entered-in-error") return explicitlySelected;
   return patient.events
-    .filter((event) => event.type === "encounter" && event.date === today() && event.recordStatus !== "entered-in-error")
+    .filter((event) => event.type === "encounter"
+      && event.date === today()
+      && event.source?.kind !== "import"
+      && event.recordStatus !== "entered-in-error")
     .sort((left, right) => {
       const priority = { "in-progress": 0, arrived: 1, finished: 2 };
       return (priority[left.status] ?? 9) - (priority[right.status] ?? 9)
@@ -438,18 +462,10 @@ function finalizedPatient(patient) {
 
 function claimEvaluations(patient, { includeCurrentDraft = false, encounterId = "", asOf = today() } = {}) {
   if (!patient) return [];
-  const finalPatient = finalizedPatient(patient);
-  let evaluationPatient = finalPatient;
-  if (includeCurrentDraft) {
-    const encounter = getEncounter(patient, encounterId) ?? unresolvedEncounterForPatient(patient);
-    if (encounter) {
-      const projected = patient.events
-        .filter((event) => event.encounterId === encounter.id && event.recordStatus === "draft")
-        .map((event) => ({ ...event, recordStatus: "final" }));
-      const projectedEncounter = encounter.status === "finished" ? [{ ...encounter, recordStatus: "final" }] : [];
-      evaluationPatient = { ...finalPatient, events: [...finalPatient.events, ...projectedEncounter, ...projected] };
-    }
-  }
+  const activeEncounter = getEncounter(patient, encounterId) ?? unresolvedEncounterForPatient(patient);
+  const evaluationPatient = includeCurrentDraft && activeEncounter
+    ? createClaimPreflightPatient(patient, activeEncounter.id)
+    : createClaimPreflightPatient(patient);
   const board = buildClaimBoard([evaluationPatient], state.rules, asOf);
   return CLAIM_LANE_ORDER.flatMap((status) => board.lanes[status]).map((evaluation) => ({
     ...evaluation,
@@ -489,6 +505,20 @@ function setStatus(message, tone = "") {
   refs.workspaceStatus.className = "workspace-status" + (tone ? " is-" + tone : "");
 }
 
+async function withStateTransition(operation) {
+  if (stateTransitionBusy) throw new Error("다른 로컬 저장 작업이 진행 중입니다. 완료 후 다시 시도하세요.");
+  stateTransitionBusy = true;
+  refs.mainContent.inert = true;
+  refs.mainContent.setAttribute("aria-busy", "true");
+  try {
+    return await operation();
+  } finally {
+    stateTransitionBusy = false;
+    refs.mainContent.inert = false;
+    refs.mainContent.removeAttribute("aria-busy");
+  }
+}
+
 function assertCurrentStateGeneration(expectedGeneration) {
   if (expectedGeneration !== stateGeneration) {
     throw new Error("전체 삭제가 적용되어 이전 작업 결과를 폐기했습니다.");
@@ -502,25 +532,27 @@ function reportFormValidity(form) {
 }
 
 async function applyMutation(mutator, message, { preserveDraft = true, announce = true } = {}) {
-  const wasDemo = state.demo;
-  const expectedRevision = state.revision;
-  const expectedGeneration = stateGeneration;
-  if (!wasDemo && state.storageError) {
-    throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.");
-  }
-  const base = preserveDraft ? preserveEncounterDraftIfChanged(state) : state;
-  const candidate = mutator(base);
-  if (wasDemo) {
-    state = { ...candidate, demo: true };
-  } else {
-    const saved = await saveEmrState(candidate, undefined, expectedRevision);
-    assertCurrentStateGeneration(expectedGeneration);
-    state = saved;
-    savedState = saved;
-  }
-  briefCache.clear();
-  render();
-  if (announce) setStatus(message + (wasDemo ? " · 데모 변경은 저장되지 않습니다." : ""), "success");
+  return withStateTransition(async () => {
+    const wasDemo = state.demo;
+    const expectedRevision = state.revision;
+    const expectedGeneration = stateGeneration;
+    if (!wasDemo && state.storageError) {
+      throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.");
+    }
+    const base = preserveDraft ? preserveEncounterDraftIfChanged(state) : state;
+    const candidate = mutator(base);
+    if (wasDemo) {
+      state = { ...candidate, demo: true };
+    } else {
+      const saved = await saveEmrState(candidate, undefined, expectedRevision);
+      assertCurrentStateGeneration(expectedGeneration);
+      state = saved;
+      savedState = saved;
+    }
+    briefCache.clear();
+    render();
+    if (announce) setStatus(message + (wasDemo ? " · 데모 변경은 저장되지 않습니다." : ""), "success");
+  });
 }
 
 function createEmptyMessage(text, className = "summary-empty") {
@@ -779,7 +811,7 @@ function renderTimeline(patient) {
     body.lastElementChild.textContent = (event.source?.label || "출처 없음") + (event.source?.resourceId ? " · " + event.source.resourceId : "");
     item.append(body);
     const isLockedEncounterRecord = Boolean(event.encounterId) || event.type === "encounter";
-    if (!isLockedEncounterRecord && event.recordStatus !== "entered-in-error") {
+    if (!isLockedEncounterRecord && event.source?.kind !== "import" && event.recordStatus !== "entered-in-error") {
       const actions = element("div", "event-actions");
       if (event.recordStatus === "draft" && event.source?.kind === "manual") {
         const confirm = element("button", "event-confirm", "검토·확정");
@@ -1123,6 +1155,85 @@ function setFormControlsDisabled(form, disabled) {
   for (const control of form.querySelectorAll("input, textarea, select, button")) control.disabled = disabled;
 }
 
+function resetClinicalComposerForms() {
+  refs.vitalForm.reset();
+  refs.diagnosisForm.reset();
+  refs.prescriptionForm.reset();
+  refs.orderForm.reset();
+  refs.diagnosisSystem.value = "urn:kr:kcd";
+  syncVitalPreset();
+}
+
+function clinicalComposerHasPendingInput() {
+  const hasTextInput = [
+    refs.vitalValue,
+    refs.vitalNote,
+    refs.diagnosisCode,
+    refs.diagnosisLabel,
+    refs.medicationCode,
+    refs.medicationSystem,
+    refs.medicationName,
+    refs.medicationDose,
+    refs.medicationDoseUnit,
+    refs.medicationRoute,
+    refs.medicationFrequency,
+    refs.medicationDurationDays,
+    refs.medicationQuantity,
+    refs.medicationInstructions,
+    refs.orderCode,
+    refs.orderSystem,
+    refs.orderLabel,
+    refs.orderInstructions,
+  ].some((control) => String(control.value ?? "").trim());
+  return hasTextInput
+    || refs.vitalPreset.value !== ENCOUNTER_OBSERVATION_PRESETS[0]?.code
+    || refs.diagnosisRole.value !== "primary"
+    || refs.diagnosisSystem.value !== "urn:kr:kcd"
+    || refs.diagnosisCertainty.value !== "confirmed"
+    || refs.orderKind.value !== "laboratory"
+    || refs.orderPriority.value !== "routine";
+}
+
+function manualEventFormHasPendingInput() {
+  return refs.eventType.value !== "condition"
+    || refs.eventDate.value !== today()
+    || refs.eventSystem.value !== "urn:kr:kcd"
+    || [refs.eventCode, refs.eventLabel, refs.eventValue, refs.eventUnit, refs.eventNote]
+      .some((control) => String(control.value ?? "").trim());
+}
+
+function blockClinicalContextChange({ patientChanged = false } = {}) {
+  const hasClinicalComposer = clinicalComposerHasPendingInput();
+  const hasManualEvent = patientChanged && manualEventFormHasPendingInput();
+  if (!hasClinicalComposer && !hasManualEvent) return false;
+  const message = hasManualEvent
+    ? "추가하지 않은 과거 기록 입력이 있습니다. 현재 환자에 추가하거나 입력을 지운 뒤 환자를 전환하세요."
+    : "추가하지 않은 측정·진단·처방·오더 입력이 있습니다. 현재 진료에 추가하거나 입력을 지운 뒤 전환·완료·취소하세요.";
+  refs.encounterFormMessage.textContent = message;
+  setStatus(message, "error");
+  return true;
+}
+
+function syncVitalPreset() {
+  const preset = ENCOUNTER_OBSERVATION_PRESETS.find(({ code }) => code === refs.vitalPreset.value)
+    ?? ENCOUNTER_OBSERVATION_PRESETS[0];
+  if (!preset) return;
+  refs.vitalUnit.value = preset.unit;
+  refs.vitalValue.placeholder = preset.placeholder;
+  refs.vitalValue.inputMode = preset.kind === "blood-pressure" ? "text" : "decimal";
+  refs.vitalValue.setAttribute("aria-label", `${preset.label} 결과`);
+}
+
+function initializeVitalOptions() {
+  clear(refs.vitalPreset);
+  for (const preset of ENCOUNTER_OBSERVATION_PRESETS) {
+    const option = element("option", "", `${preset.label} · ${preset.unit}`);
+    option.value = preset.code;
+    refs.vitalPreset.append(option);
+  }
+  syncVitalPreset();
+}
+
 function encounterDraftFromForm() {
   return {
     date: refs.encounterDate.value,
@@ -1220,22 +1331,28 @@ function renderEncounterContext(patient, encounter, evaluations) {
 
 function renderEncounter(patient, evaluations) {
   const encounter = currentEncounter(patient);
+  const nextComposerContextKey = `${patient?.id ?? ""}:${encounter?.id ?? ""}`;
+  if (nextComposerContextKey !== clinicalComposerContextKey) {
+    resetClinicalComposerForms();
+    clinicalComposerContextKey = nextComposerContextKey;
+  }
   const status = encounterQueueStatus(encounter);
-  const editable = status === "in-progress" && encounter?.recordStatus === "draft";
-  const completed = status === "completed";
+  const unverifiedBackup = encounter?.source?.kind === "import";
+  const editable = status === "in-progress" && encounter?.recordStatus === "draft" && !unverifiedBackup;
+  const completed = status === "completed" && !unverifiedBackup;
   refs.encounterTitle.textContent = encounter ? `${displayDate(encounter.date)} ${encounter.label}` : "오늘 외래 진료";
   refs.encounterStatus.dataset.status = status;
   refs.encounterStatusText.textContent = QUEUE_LABELS[status];
   refs.returnCurrentEncounter.hidden = !viewedEncounterId;
   const finalized = ["signed", "legacy", "external"].includes(status);
-  refs.checkInPatient.hidden = !["none", "signed", "legacy", "external"].includes(status);
-  refs.checkInPatient.textContent = finalized ? "새 진료 접수" : "오늘 접수";
-  refs.startEncounter.hidden = status !== "waiting";
+  refs.checkInPatient.hidden = !unverifiedBackup && !["none", "signed", "legacy", "external"].includes(status);
+  refs.checkInPatient.textContent = finalized || unverifiedBackup ? "새 로컬 진료 접수" : "오늘 접수";
+  refs.startEncounter.hidden = status !== "waiting" || unverifiedBackup;
   refs.saveEncounterDraft.hidden = !editable;
   refs.completeEncounter.hidden = !editable;
   refs.signEncounter.hidden = !completed;
   refs.reopenEncounter.hidden = !completed;
-  refs.cancelEncounter.hidden = !["waiting", "in-progress"].includes(status);
+  refs.cancelEncounter.hidden = unverifiedBackup || !["waiting", "in-progress"].includes(status);
 
   refs.encounterDate.value = encounter?.date || today();
   refs.encounterDepartment.value = encounter?.department || "";
@@ -1247,7 +1364,9 @@ function renderEncounter(patient, evaluations) {
   refs.soapAssessment.value = encounter?.soap?.assessment || "";
   refs.soapPlan.value = encounter?.soap?.plan || "";
   for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = !editable;
-  refs.encounterFormMessage.textContent = status === "signed"
+  refs.encounterFormMessage.textContent = unverifiedBackup
+    ? "백업 복원 · 출처 미검증 진료. 진행·수정·완료·서명·취소할 수 없으며 새 로컬 진료로 접수해야 합니다."
+    : status === "signed"
     ? `${encounter.signature?.signer || "의료진"} · ${displayTimestamp(encounter.signature?.signedAt)} 로컬 서명 완료. 법적 전자서명 아님.`
     : status === "external"
       ? "외부 완료 기록 · 원본 기관·작성자·전자서명 미검증. 로컬 서명으로 보지 않습니다."
@@ -1261,13 +1380,27 @@ function renderEncounter(patient, evaluations) {
           ? "오늘 접수 후 진료를 시작하세요."
           : "";
 
+  setFormControlsDisabled(refs.vitalForm, !editable);
   setFormControlsDisabled(refs.diagnosisForm, !editable);
   setFormControlsDisabled(refs.prescriptionForm, !editable);
   setFormControlsDisabled(refs.orderForm, !editable);
+  clear(refs.vitalList);
   clear(refs.diagnosisList);
   clear(refs.prescriptionList);
   clear(refs.orderList);
   const records = encounter ? getEncounterRecords(patient, encounter.id).slice(1) : [];
+  for (const observation of records.filter((event) => event.type === "observation")) {
+    appendEncounterEntry(refs.vitalList, {
+      title: observation.label,
+      meta: ["LOINC", observation.code, displayDate(observation.date)].filter(Boolean).join(" · "),
+      detail: [`${observation.value} ${observation.unit}`.trim(), observation.note].filter(Boolean).join(" · "),
+      badge: observation.recordStatus === "final" ? "확정 측정" : "측정 초안",
+      entityId: observation.id,
+      editable,
+    });
+  }
+  if (!refs.vitalList.childElementCount) refs.vitalList.append(element("li", "encounter-entry-empty", editable ? "이번 진료의 활력징후·검사 결과를 추가하세요." : "이번 진료 측정 없음"));
+
   for (const diagnosis of records.filter((event) => event.type === "condition")) {
     appendEncounterEntry(refs.diagnosisList, {
       title: diagnosis.label,
@@ -1332,9 +1465,8 @@ function clearPatientWorkspaceUi() {
   resetPatientForm();
   refs.patientSearch.value = "";
   refs.encounterForm.reset();
-  refs.diagnosisForm.reset();
-  refs.prescriptionForm.reset();
-  refs.orderForm.reset();
+  resetClinicalComposerForms();
+  clinicalComposerContextKey = "";
   refs.eventForm.reset();
   refs.ruleForm.reset();
   refs.fhirImport.value = "";
@@ -1343,7 +1475,6 @@ function clearPatientWorkspaceUi() {
   refs.eventDate.value = today();
   refs.ruleEffectiveFrom.value = today();
   refs.patientBirthDate.max = today();
-  refs.diagnosisSystem.value = "urn:kr:kcd";
   refs.selectedPatientName.textContent = "";
   refs.selectedPatientMeta.textContent = "";
   refs.lastSavedAt.textContent = "";
@@ -1364,6 +1495,7 @@ function clearPatientWorkspaceUi() {
   refs.cancelEncounter.hidden = true;
   refs.runCopilot.disabled = true;
   for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = true;
+  setFormControlsDisabled(refs.vitalForm, true);
   setFormControlsDisabled(refs.diagnosisForm, true);
   setFormControlsDisabled(refs.prescriptionForm, true);
   setFormControlsDisabled(refs.orderForm, true);
@@ -1373,6 +1505,7 @@ function clearPatientWorkspaceUi() {
     refs.clinicalSummary,
     refs.copilotContent,
     refs.nextWorkList,
+    refs.vitalList,
     refs.diagnosisList,
     refs.prescriptionList,
     refs.orderList,
@@ -1490,11 +1623,16 @@ function patientFormHasPendingInput() {
 }
 
 function encounterFormHasUnsavedInput() {
+  if (clinicalComposerHasPendingInput()) return true;
   try {
     return preserveEncounterDraftIfChanged(state) !== state;
   } catch {
     return true;
   }
+}
+
+function patientContextHasUnsavedInput() {
+  return encounterFormHasUnsavedInput() || manualEventFormHasPendingInput();
 }
 
 function beginPatientEdit() {
@@ -1539,13 +1677,13 @@ function setPatientTransferStatus(message, tone = "") {
   else delete refs.patientTransferStatus.dataset.tone;
 }
 
-function currentExportBlocker() {
-  if (state.storageError) return "손상된 로컬 저장을 정리하기 전에는 내보낼 수 없습니다.";
-  if (patientFormHasPendingInput() || encounterFormHasUnsavedInput()) return "미저장 환자·진료 입력을 먼저 저장하거나 취소한 뒤 내보내세요.";
+function currentExportBlocker(exportState = state) {
+  if (exportState.storageError) return "손상된 로컬 저장을 정리하기 전에는 내보낼 수 없습니다.";
+  if (patientFormHasPendingInput() || patientContextHasUnsavedInput()) return "미저장 환자·진료·임상항목·과거기록 입력을 먼저 저장하거나 취소한 뒤 내보내세요.";
   const persisted = loadEmrState();
   if (persisted.storageError) return "현재 저장 상태를 확인할 수 없어 내보내기를 차단했습니다.";
-  if (isClearedEmrState(persisted)) return "다른 탭에서 전체 삭제가 적용되어 내보내기를 차단했습니다.";
-  if (persisted.revision !== state.revision) return "다른 탭의 최신 변경을 먼저 반영한 뒤 내보내세요.";
+  if (isClearedEmrState(persisted) && !isClearedEmrState(exportState)) return "다른 탭에서 전체 삭제가 적용되어 내보내기를 차단했습니다.";
+  if (persisted.revision !== exportState.revision) return "다른 탭의 최신 변경을 먼저 반영한 뒤 내보내세요.";
   return "";
 }
 
@@ -1662,23 +1800,26 @@ refs.patientList.addEventListener("click", async (event) => {
     setStatus("현재 환자 정보 편집을 저장하거나 취소한 뒤 다른 환자를 선택하세요.", "error");
     return;
   }
+  if (button.dataset.patientId !== state.selectedPatientId && blockClinicalContextChange({ patientChanged: true })) return;
   try {
-    const expectedRevision = state.revision;
-    const expectedGeneration = stateGeneration;
-    const base = preserveEncounterDraftIfChanged(state);
-    const candidate = selectPatient(base, button.dataset.patientId);
-    if (state.demo) {
-      state = candidate;
-    } else {
-      const saved = await saveEmrState(candidate, undefined, expectedRevision);
-      assertCurrentStateGeneration(expectedGeneration);
-      state = saved;
-      savedState = saved;
-    }
-    viewedEncounterId = "";
-    eventFilter = "all";
-    activeTab = "encounter";
-    render();
+    await withStateTransition(async () => {
+      const expectedRevision = state.revision;
+      const expectedGeneration = stateGeneration;
+      const base = preserveEncounterDraftIfChanged(state);
+      const candidate = selectPatient(base, button.dataset.patientId);
+      if (state.demo) {
+        state = candidate;
+      } else {
+        const saved = await saveEmrState(candidate, undefined, expectedRevision);
+        assertCurrentStateGeneration(expectedGeneration);
+        state = saved;
+        savedState = saved;
+      }
+      viewedEncounterId = "";
+      eventFilter = "all";
+      activeTab = "encounter";
+      render();
+    });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "환자 선택을 저장하지 못했습니다.", "error");
   }
@@ -1722,6 +1863,10 @@ refs.patientForm.addEventListener("submit", async (event) => {
       throw new Error("편집 대상 환자가 바뀌었습니다. 편집을 취소하고 다시 시작하세요.");
     }
     if (mode === "create") {
+      if (selectedPatient() && blockClinicalContextChange({ patientChanged: true })) {
+        refs.patientFormMessage.textContent = "현재 환자의 미등록 임상 입력을 먼저 추가하거나 지우세요.";
+        return;
+      }
       await applyMutation((current) => addPatient(current, payload), "환자를 등록했습니다.");
     } else {
       await applyMutation((current) => updatePatient(current, mode, payload), "환자 정보를 수정했습니다.");
@@ -1753,29 +1898,33 @@ refs.recentEncounterList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-view-encounter]");
   const patient = selectedPatient();
   if (!button || !patient) return;
+  if (button.dataset.viewEncounter !== currentEncounter(patient)?.id && blockClinicalContextChange()) return;
   try {
-    const expectedRevision = state.revision;
-    const expectedGeneration = stateGeneration;
-    const preserved = preserveEncounterDraftIfChanged(state);
-    if (preserved !== state) {
-      if (state.demo) state = { ...preserved, demo: true };
-      else {
-        const saved = await saveEmrState(preserved, undefined, expectedRevision);
-        assertCurrentStateGeneration(expectedGeneration);
-        state = saved;
-        savedState = saved;
+    await withStateTransition(async () => {
+      const expectedRevision = state.revision;
+      const expectedGeneration = stateGeneration;
+      const preserved = preserveEncounterDraftIfChanged(state);
+      if (preserved !== state) {
+        if (state.demo) state = { ...preserved, demo: true };
+        else {
+          const saved = await saveEmrState(preserved, undefined, expectedRevision);
+          assertCurrentStateGeneration(expectedGeneration);
+          state = saved;
+          savedState = saved;
+        }
       }
-    }
-    viewedEncounterId = button.dataset.viewEncounter;
-    activeTab = "encounter";
-    render();
-    document.getElementById("panel-encounter")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      viewedEncounterId = button.dataset.viewEncounter;
+      activeTab = "encounter";
+      render();
+      document.getElementById("panel-encounter")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "과거 진료를 열지 못했습니다.", "error");
   }
 });
 
 refs.returnCurrentEncounter.addEventListener("click", () => {
+  if (blockClinicalContextChange()) return;
   viewedEncounterId = "";
   render();
 });
@@ -1825,6 +1974,7 @@ refs.completeEncounter.addEventListener("click", async () => {
   const patient = selectedPatient();
   const encounter = currentEncounter(patient);
   if (!patient || !encounter) return;
+  if (blockClinicalContextChange()) return;
   try {
     await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, encounterDraftFromForm()), "진료를 완료했습니다. 최종 검토 후 서명하세요.", { preserveDraft: false });
   } catch (error) {
@@ -1836,7 +1986,7 @@ refs.signEncounter.addEventListener("click", async () => {
   const patient = selectedPatient();
   const encounter = currentEncounter(patient);
   if (!patient || !encounter) return;
-  if (!window.confirm("SOAP·진단·처방·오더를 확정하고 로컬 서명할까요? 서명 후 직접 수정할 수 없습니다.")) return;
+  if (!window.confirm("SOAP·측정·진단·처방·오더를 확정하고 로컬 서명할까요? 서명 후 직접 수정할 수 없습니다.")) return;
   try {
     await applyMutation((current) => signEncounter(current, patient.id, encounter.id, encounter.clinician), "진료를 완료·서명했습니다.");
   } catch (error) {
@@ -1859,12 +2009,35 @@ refs.cancelEncounter.addEventListener("click", async () => {
   const patient = selectedPatient();
   const encounter = currentEncounter(patient);
   if (!patient || !encounter) return;
+  if (blockClinicalContextChange()) return;
   const reason = window.prompt("진료 취소 사유를 입력하세요. 연결된 초안도 취소됩니다.");
   if (reason === null) return;
   try {
     await applyMutation((current) => cancelEncounter(current, patient.id, encounter.id, reason), "진료를 취소했습니다.");
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 취소하지 못했습니다.";
+  }
+});
+
+refs.vitalPreset.addEventListener("change", syncVitalPreset);
+
+refs.vitalForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!reportFormValidity(refs.vitalForm)) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => addEncounterObservation(current, patient.id, encounter.id, {
+      code: refs.vitalPreset.value,
+      value: refs.vitalValue.value,
+      note: refs.vitalNote.value,
+    }), "진료 측정 초안을 추가했습니다.");
+    refs.vitalForm.reset();
+    syncVitalPreset();
+    refs.vitalValue.focus();
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 측정을 추가하지 못했습니다.";
   }
 });
 
@@ -1947,6 +2120,7 @@ async function removeEncounterItemFromClick(event) {
   }
 }
 
+refs.vitalList.addEventListener("click", removeEncounterItemFromClick);
 refs.diagnosisList.addEventListener("click", removeEncounterItemFromClick);
 refs.prescriptionList.addEventListener("click", removeEncounterItemFromClick);
 refs.orderList.addEventListener("click", removeEncounterItemFromClick);
@@ -2124,6 +2298,7 @@ for (const button of document.querySelectorAll("[data-board-scope]")) {
 }
 
 function loadDemo() {
+  if (blockClinicalContextChange({ patientChanged: true })) return;
   state = createDemoEmrState();
   viewedEncounterId = "";
   activeTab = "encounter";
@@ -2135,6 +2310,7 @@ function loadDemo() {
 
 refs.loadDemo.addEventListener("click", loadDemo);
 refs.exitDemo.addEventListener("click", () => {
+  if (blockClinicalContextChange({ patientChanged: true })) return;
   savedState = loadEmrState();
   state = savedState;
   viewedEncounterId = "";
@@ -2150,36 +2326,40 @@ refs.exitDemo.addEventListener("click", () => {
 refs.fhirImport.addEventListener("change", async () => {
   const expectedGeneration = stateGeneration;
   try {
-    const bundle = await readJsonFile(refs.fhirImport.files?.[0], 2 * 1024 * 1024);
-    assertCurrentStateGeneration(expectedGeneration);
-    const result = parseEmrFhirBundle(bundle);
-    lastFhirReport = result.provenance;
-    renderFhirReport();
-    const persistedBase = state.demo ? loadEmrState() : state;
-    const expectedRevision = persistedBase.revision;
-    const base = state.demo ? persistedBase : preserveEncounterDraftIfChanged(state);
-    if (base.storageError) throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 복원 또는 삭제하세요.");
-    const patient = result.patient;
-    if (base.patients.some((item) => item.id === patient.id || (patient.mrn && item.mrn === patient.mrn))) {
-      throw new Error("같은 FHIR 환자 ID 또는 등록번호가 이미 있습니다. 기존 환자 병합은 지원하지 않습니다.");
-    }
-    let candidate = addPatient(base, patient);
-    candidate = appendStateAudit(
-      candidate,
-      "fhir.imported",
-      `FHIR R4 · 지원 ${result.provenance.supported}건 · 제외 ${result.provenance.unsupported}건`,
-      new Date().toISOString(),
-      patient.id,
-    );
-    const saved = await saveEmrState(candidate, undefined, expectedRevision);
-    assertCurrentStateGeneration(expectedGeneration);
-    state = saved;
-    savedState = saved;
-    viewedEncounterId = "";
-    activeTab = "encounter";
-    briefCache.clear();
-    render();
-    setStatus("FHIR R4에서 환자 1명과 임상기록 " + patient.events.length + "건을 가져왔습니다. 외부 미검증 기록은 확정 요약·AI·급여 근거에서 제외하며 미지원 " + result.provenance.unsupported + "건입니다.", "success");
+    if (blockClinicalContextChange({ patientChanged: true })) return;
+    const file = refs.fhirImport.files?.[0];
+    await withStateTransition(async () => {
+      const bundle = await readJsonFile(file, 2 * 1024 * 1024);
+      assertCurrentStateGeneration(expectedGeneration);
+      const result = parseEmrFhirBundle(bundle);
+      lastFhirReport = result.provenance;
+      renderFhirReport();
+      const persistedBase = state.demo ? loadEmrState() : state;
+      const expectedRevision = persistedBase.revision;
+      const base = state.demo ? persistedBase : preserveEncounterDraftIfChanged(state);
+      if (base.storageError) throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 복원 또는 삭제하세요.");
+      const patient = result.patient;
+      if (base.patients.some((item) => item.id === patient.id || (patient.mrn && item.mrn === patient.mrn))) {
+        throw new Error("같은 FHIR 환자 ID 또는 등록번호가 이미 있습니다. 기존 환자 병합은 지원하지 않습니다.");
+      }
+      let candidate = addPatient(base, patient);
+      candidate = appendStateAudit(
+        candidate,
+        "fhir.imported",
+        `FHIR R4 · 지원 ${result.provenance.supported}건 · 제외 ${result.provenance.unsupported}건`,
+        new Date().toISOString(),
+        patient.id,
+      );
+      const saved = await saveEmrState(candidate, undefined, expectedRevision);
+      assertCurrentStateGeneration(expectedGeneration);
+      state = saved;
+      savedState = saved;
+      viewedEncounterId = "";
+      activeTab = "encounter";
+      briefCache.clear();
+      render();
+      setStatus("FHIR R4에서 환자 1명과 임상기록 " + patient.events.length + "건을 가져왔습니다. 외부 미검증 기록은 확정 요약·AI·급여 근거에서 제외하며 미지원 " + result.provenance.unsupported + "건입니다.", "success");
+    });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "FHIR 가져오기에 실패했습니다.", "error");
   } finally {
@@ -2188,31 +2368,40 @@ refs.fhirImport.addEventListener("change", async () => {
 });
 
 refs.importEmr.addEventListener("change", async () => {
+  if (patientFormHasPendingInput() || patientContextHasUnsavedInput()) {
+    refs.importEmr.value = "";
+    setStatus("미저장 환자·진료·임상항목·과거기록 입력을 먼저 저장하거나 취소한 뒤 백업을 복원하세요.", "error");
+    return;
+  }
   const expectedGeneration = stateGeneration;
   try {
-    const backup = await readJsonFile(refs.importEmr.files?.[0]);
-    assertCurrentStateGeneration(expectedGeneration);
-    const parsed = parseEmrBackup(backup);
-    if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 출처를 직접 확인했나요? 현재 브라우저 기록과 기관 규칙을 교체하면 기존 데이터는 별도 백업 없이는 복구할 수 없습니다.")) {
-      setStatus("백업 복원을 취소했습니다.");
-      return;
-    }
-    const persistedState = state.demo ? savedState : state;
-    const restoreRevision = persistedState.storageError ? Date.now() * 1_000 : persistedState.revision;
-    let candidate = { ...parsed, revision: restoreRevision, demo: false };
-    candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`);
-    const saved = persistedState.storageError && persistedState.recoveryRaw
-      ? await recoverEmrState(candidate, persistedState.recoveryRaw)
-      : await saveEmrState(candidate, undefined, persistedState.revision, { allowSignedRecordReplacement: true });
-    assertCurrentStateGeneration(expectedGeneration);
-    state = saved;
-    savedState = saved;
-    viewedEncounterId = "";
-    lastFhirReport = null;
-    resetPatientForm();
-    briefCache.clear();
-    render();
-    setStatus("VitaGraph EMR 백업을 복원했습니다.", "success");
+    const file = refs.importEmr.files?.[0];
+    await withStateTransition(async () => {
+      const backup = await readJsonFile(file);
+      assertCurrentStateGeneration(expectedGeneration);
+      const parsed = parseEmrBackup(backup);
+      if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자 전달에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙과 감사 이력도 신뢰하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
+        setStatus("백업 복원을 취소했습니다.");
+        return;
+      }
+      const persistedState = state.demo ? savedState : state;
+      const restoreRevision = persistedState.storageError ? Date.now() * 1_000 : persistedState.revision;
+      let candidate = prepareUnverifiedBackupRestore(parsed, persistedState, new Date().toISOString());
+      candidate = { ...candidate, revision: restoreRevision };
+      candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`);
+      const saved = persistedState.storageError && persistedState.recoveryRaw
+        ? await recoverEmrState(candidate, persistedState.recoveryRaw)
+        : await saveEmrState(candidate, undefined, persistedState.revision, { allowSignedRecordReplacement: true });
+      assertCurrentStateGeneration(expectedGeneration);
+      state = saved;
+      savedState = saved;
+      viewedEncounterId = "";
+      lastFhirReport = null;
+      resetPatientForm();
+      briefCache.clear();
+      render();
+      setStatus("백업의 모든 임상 기록을 출처 미검증 상태로 복원·격리했습니다. 이 로컬 샌드박스에서는 AI·급여·FHIR·환자 전달·로컬 서명의 근거에서 제외합니다.", "success");
+    });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "백업 복원에 실패했습니다.", "error");
   } finally {
@@ -2222,8 +2411,9 @@ refs.importEmr.addEventListener("change", async () => {
 
 function exportBackup() {
   const exportState = state.demo ? savedState : state;
-  if (exportState.storageError) {
-    setStatus("정상 백업을 만들 수 없습니다. 손상 저장 원본을 먼저 내보내세요.", "error");
+  const blocker = currentExportBlocker(exportState);
+  if (blocker) {
+    setStatus(blocker, "error");
     return;
   }
   downloadJson(exportEmrBackup(exportState), "vitagraph-emr-backup-" + today() + ".json");
@@ -2318,9 +2508,11 @@ refs.exportRecoveryRaw.addEventListener("click", () => {
 refs.wipeEmr.addEventListener("click", async () => {
   if (!window.confirm("이 브라우저의 VitaGraph EMR 환자 기록과 기관 규칙을 모두 삭제할까요? 백업 없이는 복구할 수 없습니다.")) return;
   try {
-    const cleared = await clearEmrState();
-    adoptClearedEmrState(cleared);
-    setStatus("이 브라우저의 VitaGraph EMR 기록을 모두 삭제했습니다.", "success");
+    await withStateTransition(async () => {
+      const cleared = await clearEmrState();
+      adoptClearedEmrState(cleared);
+      setStatus("이 브라우저의 VitaGraph EMR 기록을 모두 삭제했습니다.", "success");
+    });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "로컬 기록을 삭제하지 못했습니다.", "error");
   }
@@ -2338,7 +2530,7 @@ window.addEventListener("storage", (event) => {
     savedState = latest;
     return;
   }
-  if (patientFormHasPendingInput() || encounterFormHasUnsavedInput()) {
+  if (patientFormHasPendingInput() || patientContextHasUnsavedInput()) {
     setStatus("다른 탭에서 기록이 변경됐습니다. 현재 미저장 입력을 보존했습니다. 내용을 확인한 뒤 새로고침하세요.", "error");
     return;
   }
@@ -2355,6 +2547,7 @@ window.addEventListener("storage", (event) => {
 refs.runCopilot.addEventListener("click", runCopilot);
 
 refs.eventDate.value = today();
+initializeVitalOptions();
 refs.eventSystem.value = "urn:kr:kcd";
 refs.ruleEffectiveFrom.value = today();
 refs.encounterDate.value = today();

@@ -457,6 +457,60 @@ test("결과 값이 없는 확정 Observation은 급여 근거가 되지 않는�
   assert.equal(evaluation.status, "missing-evidence");
 });
 
+test("단일값·비UCUM 혈압은 환자 전체를 중단하지 않고 미지원 리소스로 격리한다", () => {
+  const loinc = (code, display) => ({ coding: [{ system: "http://loinc.org", code, display }], text: display });
+  const result = parseEmrFhirBundle({
+    resourceType: "Bundle",
+    entry: [
+      { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "혈압 검사 환자" }] } },
+      {
+        fullUrl: "Observation/scalar-bp",
+        resource: {
+          resourceType: "Observation",
+          id: "scalar-bp",
+          subject: { reference: "Patient/p1" },
+          status: "final",
+          code: loinc("85354-9", "혈압 패널"),
+          valueQuantity: { value: 120, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+          effectiveDateTime: "2026-07-10T09:00:00+09:00",
+        },
+      },
+      {
+        fullUrl: "Observation/non-ucum-bp",
+        resource: {
+          resourceType: "Observation",
+          id: "non-ucum-bp",
+          subject: { reference: "Patient/p1" },
+          status: "final",
+          code: loinc("85354-9", "혈압 패널"),
+          component: [
+            { code: loinc("8480-6", "수축기"), valueQuantity: { value: 128, unit: "mmHg", system: "https://example.test/unit", code: "mmHg" } },
+            { code: loinc("8462-4", "이완기"), valueQuantity: { value: 78, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" } },
+          ],
+          effectiveDateTime: "2026-07-10T09:01:00+09:00",
+        },
+      },
+      {
+        fullUrl: "Observation/temperature",
+        resource: {
+          resourceType: "Observation",
+          id: "temperature",
+          subject: { reference: "Patient/p1" },
+          status: "final",
+          code: loinc("8310-5", "체온"),
+          valueQuantity: { value: 36.7, unit: "Cel", system: "http://unitsofmeasure.org", code: "Cel" },
+          effectiveDateTime: "2026-07-10T09:02:00+09:00",
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(result.patient.events.map(({ code }) => code), ["8310-5"]);
+  assert.equal(result.provenance.supported, 2);
+  assert.equal(result.provenance.unsupported, 2);
+  assert.deepEqual(result.provenance.unsupportedItems.map(({ id }) => id), ["scalar-bp", "non-ucum-bp"]);
+});
+
 test("FHIR Bundle 형식과 최대 항목 수를 검증한다", () => {
   assert.throws(() => parseEmrFhirBundle({ resourceType: "Patient" }), /FHIR Bundle/);
   assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", type: "transaction", entry: [] }), /collection 또는 document/);
@@ -620,6 +674,15 @@ test("미지원 modifierExtension과 환자 상태 modifier는 fail-closed 처�
       entry: [{ resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }], ...patientPatch } }],
     }), /Patient|환자|modifierExtension|implicitRules|비활성|사망|대체/);
   }
+});
+
+test("과도하게 깊은 FHIR JSON은 재귀 스택을 소진하지 않고 제한 오류로 거부한다", () => {
+  let nested = { valueString: "끝" };
+  for (let depth = 0; depth < 200; depth += 1) nested = { nested };
+  assert.throws(() => parseEmrFhirBundle({
+    resourceType: "Bundle",
+    entry: [{ resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }], extension: [nested] } }],
+  }), (error) => error instanceof TypeError && !(error instanceof RangeError) && /안전|modifierExtension|implicitRules/.test(error.message));
 });
 
 test("환자 참조가 없거나 다른 임상 리소스는 가져오지 않는다", () => {
@@ -829,4 +892,52 @@ test("독립 FHIR 문제·약물·오더·알레르기·관찰·처치는 원출
       ["PROC", `${originBase}/Procedure/p1`],
     ]),
   );
+});
+
+test("FHIR meta.source와 원본 리소스 식별자가 달라도 각각 보존해 왕복한다", () => {
+  const metaSource = "https://provenance.example/source/A";
+  const sourceIdentity = "https://origin.example/fhir/Observation/B";
+  const imported = parseEmrFhirBundle({
+    resourceType: "Bundle",
+    type: "collection",
+    entry: [
+      {
+        fullUrl: "https://origin.example/fhir/Patient/p1",
+        resource: { resourceType: "Patient", id: "p1", name: [{ text: "출처 보존 환자" }] },
+      },
+      {
+        fullUrl: "https://exchange.example/fhir/Observation/exchanged",
+        resource: {
+          resourceType: "Observation",
+          id: "exchanged",
+          meta: { source: metaSource },
+          identifier: [{
+            system: "https://vitagraph.local/fhir/identifier/source-resource",
+            value: sourceIdentity,
+          }],
+          subject: { reference: "https://origin.example/fhir/Patient/p1" },
+          status: "final",
+          code: coding("OBS", "출처 분리 관찰"),
+          valueString: "정상",
+          effectiveDateTime: "2026-07-20",
+        },
+      },
+    ],
+  });
+  const [event] = imported.patient.events;
+
+  assert.equal(event.source.resourceId, sourceIdentity);
+  assert.equal(event.source.metaSource, metaSource);
+
+  const exported = exportPatientFhirBundle(imported.patient, "2026-07-20T12:00:00Z");
+  const observation = exported.entry.find(({ resource }) => resource.resourceType === "Observation").resource;
+  assert.equal(observation.meta.source, metaSource);
+  assert.equal(
+    observation.identifier.find(({ system }) => system.endsWith("/identifier/source-resource")).value,
+    sourceIdentity,
+  );
+
+  const reimported = parseEmrFhirBundle(exported);
+  assert.equal(reimported.patient.events[0].source.resourceId, sourceIdentity);
+  assert.equal(reimported.patient.events[0].source.metaSource, metaSource);
 });

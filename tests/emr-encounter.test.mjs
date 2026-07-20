@@ -4,6 +4,7 @@ import test from "node:test";
 import { evaluateClaimRule } from "../src/claim-rules.js";
 import {
   addEncounterDiagnosis,
+  addEncounterObservation,
   addEncounterOrder,
   addEncounterPrescription,
   cancelEncounter,
@@ -19,14 +20,18 @@ import {
   startEncounter,
   updateEncounterItem,
   validateEncounterForCompletion,
+  ENCOUNTER_OBSERVATION_PRESETS,
 } from "../src/emr-encounter.js";
 import {
   addPatient,
   appendPatientEvent,
+  confirmPatientEvent,
+  createClaimPreflightPatient,
   createEmptyEmrState,
   exportEmrBackup,
   loadEmrState,
   parseEmrBackup,
+  prepareUnverifiedBackupRestore,
   removePatientEvent,
   saveEmrState,
   selectEncounter,
@@ -43,6 +48,7 @@ const TIMES = {
   arrived: "2026-07-19T09:00:00.000Z",
   started: "2026-07-19T09:05:00.000Z",
   soapSaved: "2026-07-19T09:12:00.000Z",
+  observationAdded: "2026-07-19T09:13:00.000Z",
   diagnosisAdded: "2026-07-19T09:14:00.000Z",
   prescriptionAdded: "2026-07-19T09:16:00.000Z",
   orderAdded: "2026-07-19T09:18:00.000Z",
@@ -111,6 +117,12 @@ function checkInAndStart() {
 function buildSignedEncounter() {
   let state = checkInAndStart();
   state = saveEncounterDraft(state, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, TIMES.soapSaved);
+  state = addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+    id: "observation-blood-pressure",
+    code: "85354-9",
+    value: "148/94",
+    note: "좌측 상완",
+  }, TIMES.observationAdded);
   state = addEncounterDiagnosis(state, PATIENT_ID, ENCOUNTER_ID, {
     id: "diagnosis-i10",
     system: KCD_SYSTEM,
@@ -188,6 +200,12 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
 
   state = startEncounter(state, PATIENT_ID, ENCOUNTER_ID, TIMES.started);
   state = saveEncounterDraft(state, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, TIMES.soapSaved);
+  state = addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+    id: "observation-blood-pressure",
+    code: "85354-9",
+    value: "148 / 94",
+    note: "좌측 상완",
+  }, TIMES.observationAdded);
   state = addEncounterDiagnosis(state, PATIENT_ID, ENCOUNTER_ID, {
     id: "diagnosis-i10",
     system: KCD_SYSTEM,
@@ -221,10 +239,30 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
 
   let patient = state.patients[0];
   let encounter = getEncounter(patient, ENCOUNTER_ID);
+  const observation = patient.events.find(({ id }) => id === "observation-blood-pressure");
   const diagnosis = patient.events.find(({ id }) => id === "diagnosis-i10");
   const prescription = patient.events.find(({ id }) => id === "prescription-amlodipine");
   const order = patient.events.find(({ id }) => id === "order-cbc");
   assert.deepEqual(encounter.soap, SOAP);
+  assert.deepEqual({
+    system: observation.system,
+    code: observation.code,
+    label: observation.label,
+    value: observation.value,
+    unit: observation.unit,
+    observedAt: observation.observedAt,
+    note: observation.note,
+    recordStatus: observation.recordStatus,
+  }, {
+    system: "http://loinc.org",
+    code: "85354-9",
+    label: "혈압",
+    value: "148/94",
+    unit: "mmHg",
+    observedAt: TIMES.observationAdded,
+    note: "좌측 상완",
+    recordStatus: "draft",
+  });
   assert.deepEqual({ system: diagnosis.system, code: diagnosis.code, role: diagnosis.diagnosisRole }, {
     system: KCD_SYSTEM,
     code: "I10",
@@ -259,13 +297,14 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
   assert.equal(encounter.status, "finished");
   assert.equal(encounter.recordStatus, "final");
   assert.deepEqual(encounter.signature, { status: "signed", signer: "이선우", signedAt: TIMES.signed });
-  assert.equal(records.length, 4);
+  assert.equal(records.length, 5);
   assert.ok(records.every(({ recordStatus }) => recordStatus === "final"));
   assert.ok(records.slice(1).every(({ encounterId, source }) => encounterId === ENCOUNTER_ID
     && source.kind === "encounter"
     && source.resourceId === ENCOUNTER_ID));
   assert.deepEqual(new Set(selectFinalPatientEvents(patient).map(({ id }) => id)), new Set([
     ENCOUNTER_ID,
+    "observation-blood-pressure",
     "diagnosis-i10",
     "prescription-amlodipine",
     "order-cbc",
@@ -277,6 +316,7 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
     "encounter.checked-in",
     "encounter.started",
     "encounter.draft.saved",
+    "observation.added",
     "diagnosis.added",
     "prescription.added",
     "order.added",
@@ -285,6 +325,50 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
     "encounter.signed",
   ]);
   assert.ok(state.audit.slice(1).every(({ patientId, encounterId }) => patientId === PATIENT_ID && encounterId === ENCOUNTER_ID));
+});
+
+test("진료 측정은 지원 LOINC·고정 단위·임상 범위를 모델 경계에서 강제한다", () => {
+  const state = checkInAndStart();
+  assert.ok(ENCOUNTER_OBSERVATION_PRESETS.some(({ code, unit }) => code === "85354-9" && unit === "mmHg"));
+  assert.throws(() => addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+    code: "unknown",
+    value: "120/80",
+  }), /지원되는 진료 측정/);
+
+  for (const value of ["120", "80/120", "301/90", "120/10", "abc/80"]) {
+    assert.throws(() => addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+      code: "85354-9",
+      value,
+    }), /혈압/);
+  }
+  for (const value of [0, 101, "not-a-number"]) {
+    assert.throws(() => addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+      code: "59408-5",
+      value,
+    }), /산소포화도/);
+  }
+  for (const { code } of ENCOUNTER_OBSERVATION_PRESETS) {
+    for (const value of ["", "   ", null, undefined]) {
+      assert.throws(() => addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, { code, value }), /값을 입력/);
+    }
+  }
+
+  const added = addEncounterObservation(state, PATIENT_ID, ENCOUNTER_ID, {
+    id: "fixed-loinc-observation",
+    code: "59408-5",
+    system: "urn:spoofed",
+    label: "변조 이름",
+    unit: "wrong",
+    value: "98",
+  }, TIMES.observationAdded);
+  const observation = added.patients[0].events.find(({ id }) => id === "fixed-loinc-observation");
+  assert.deepEqual({ system: observation.system, label: observation.label, unit: observation.unit, value: observation.value, observedAt: observation.observedAt }, {
+    system: "http://loinc.org",
+    label: "산소포화도",
+    unit: "%",
+    value: 98,
+    observedAt: TIMES.observationAdded,
+  });
 });
 
 test("Encounter 상태 전이는 순서를 건너뛰거나 반복할 수 없다", () => {
@@ -606,4 +690,91 @@ test("서명 기록과 환자 인구정보는 로컬 저장·JSON 백업에서 �
   assert.equal(restored.audit.at(-1).action, "encounter.signed");
   assert.equal(restored.selectedPatientId, PATIENT_ID);
   assert.equal(restored.selectedEncounterId, ENCOUNTER_ID);
+});
+
+test("암호학적으로 검증되지 않은 백업은 서명·규칙·감사 이력을 신뢰 상태로 복원하지 않는다", () => {
+  const backupState = buildSignedEncounter();
+  const trustedState = createEmptyEmrState("2026-07-20T00:00:00.000Z");
+  const restoredAt = "2026-07-20T00:01:00.000Z";
+  const restored = prepareUnverifiedBackupRestore(backupState, trustedState, restoredAt);
+  const patient = restored.patients[0];
+  const encounter = getEncounter(patient, ENCOUNTER_ID);
+
+  assert.equal(encounter.signature.status, "external");
+  assert.equal(encounter.signature.signer, "");
+  assert.equal(encounter.signature.signedAt, "");
+  assert.ok(patient.events.every(({ source }) => source.kind === "import" && source.resourceId === ""));
+  assert.deepEqual(selectFinalPatientEvents(patient), []);
+  assert.deepEqual(restored.rules, trustedState.rules);
+  assert.deepEqual(restored.audit, []);
+  assert.equal(restored.updatedAt, restoredAt);
+});
+
+test("백업의 초안 기록과 진행 중 진료도 격리되어 급여 투영·확정·수정·서명·취소할 수 없다", () => {
+  const restoredAt = "2026-07-20T00:01:00.000Z";
+  const trustedState = createEmptyEmrState("2026-07-20T00:00:00.000Z");
+  let draftBackup = checkInAndStart();
+  draftBackup = appendPatientEvent(draftBackup, PATIENT_ID, {
+    id: "backup-manual-draft",
+    type: "condition",
+    recordStatus: "draft",
+    system: KCD_SYSTEM,
+    code: "E11",
+    label: "백업 초안 당뇨",
+    date: VISIT_DATE,
+    status: "active",
+    clinicalStatus: "active",
+    verificationStatus: "confirmed",
+    certainty: "confirmed",
+    source: { kind: "manual", label: "직접 입력" },
+  }, "2026-07-19T09:06:00.000Z");
+  draftBackup = addEncounterDiagnosis(draftBackup, PATIENT_ID, ENCOUNTER_ID, {
+    id: "backup-encounter-diagnosis",
+    system: KCD_SYSTEM,
+    code: "I10",
+    label: "백업 진료 고혈압",
+    diagnosisRole: "primary",
+    certainty: "confirmed",
+  }, "2026-07-19T09:07:00.000Z");
+  assert.ok(createClaimPreflightPatient(draftBackup.patients[0], ENCOUNTER_ID).events
+    .some(({ id }) => id === "backup-encounter-diagnosis"));
+
+  const restoredDrafts = prepareUnverifiedBackupRestore(draftBackup, trustedState, restoredAt);
+  const restoredPatient = restoredDrafts.patients[0];
+  assert.ok(restoredPatient.events.every(({ source }) => source.kind === "import"));
+  assert.deepEqual(createClaimPreflightPatient(restoredPatient, ENCOUNTER_ID).events, []);
+  assert.throws(() => confirmPatientEvent(restoredDrafts, PATIENT_ID, "backup-manual-draft", restoredAt), /직접 입력|출처/);
+  assert.throws(() => removePatientEvent(restoredDrafts, PATIENT_ID, "backup-manual-draft", "격리 기록 폐기 시도", restoredAt), /출처 미검증/);
+  assert.throws(() => saveEncounterDraft(restoredDrafts, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, restoredAt), /출처 미검증/);
+  assert.throws(() => addEncounterDiagnosis(restoredDrafts, PATIENT_ID, ENCOUNTER_ID, {
+    system: KCD_SYSTEM,
+    code: "I10",
+    label: "추가 시도",
+  }, restoredAt), /출처 미검증/);
+  assert.throws(() => completeEncounter(restoredDrafts, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, restoredAt), /출처 미검증/);
+  assert.throws(() => cancelEncounter(restoredDrafts, PATIENT_ID, ENCOUNTER_ID, "격리 기록 취소 시도", restoredAt), /출처 미검증/);
+  const newLocalVisit = checkInPatient(restoredDrafts, PATIENT_ID, {
+    id: "post-restore-local-encounter",
+    date: VISIT_DATE,
+    clinician: "새 진료 의료진",
+  }, "2026-07-20T00:02:00.000Z");
+  assert.equal(getEncounter(newLocalVisit.patients[0], ENCOUNTER_ID).source.kind, "import");
+  assert.equal(getEncounter(newLocalVisit.patients[0], ENCOUNTER_ID).status, "in-progress");
+  assert.equal(getEncounter(newLocalVisit.patients[0], "post-restore-local-encounter").source.kind, "manual");
+  assert.equal(newLocalVisit.selectedEncounterId, "post-restore-local-encounter");
+
+  let completedBackup = checkInAndStart();
+  completedBackup = saveEncounterDraft(completedBackup, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, TIMES.soapSaved);
+  completedBackup = addEncounterDiagnosis(completedBackup, PATIENT_ID, ENCOUNTER_ID, {
+    id: "backup-completed-diagnosis",
+    system: KCD_SYSTEM,
+    code: "I10",
+    label: "본태성 고혈압",
+    diagnosisRole: "primary",
+    certainty: "confirmed",
+  }, TIMES.diagnosisAdded);
+  completedBackup = completeEncounter(completedBackup, PATIENT_ID, ENCOUNTER_ID, {}, TIMES.completed);
+  const restoredCompleted = prepareUnverifiedBackupRestore(completedBackup, trustedState, restoredAt);
+  assert.throws(() => signEncounter(restoredCompleted, PATIENT_ID, ENCOUNTER_ID, "서명 시도", "2026-07-20T00:02:00.000Z"), /출처 미검증/);
+  assert.throws(() => reopenEncounter(restoredCompleted, PATIENT_ID, ENCOUNTER_ID, "2026-07-20T00:02:00.000Z"), /출처 미검증/);
 });

@@ -4,6 +4,12 @@ import {
   localCalendarDate,
   normalizePatientEvent,
 } from "./emr-model.js";
+import {
+  clinicalObservationSpec,
+  isCanonicalClinicalObservation,
+  LOINC_SYSTEM,
+  normalizeClinicalObservationValue,
+} from "./clinical-observations.js";
 
 const MAXIMUM_ENTRIES = 1_000;
 const FHIR_BASE_URL = "https://vitagraph.local/fhir";
@@ -78,33 +84,37 @@ function resourceDate(resource) {
 
 function sourceResourceProvenance(resource) {
   if (Object.hasOwn(resource, "identifier") && !Array.isArray(resource.identifier)) {
-    return { valid: false, identity: "", source: "" };
+    return { valid: false, identity: "", metaSource: "" };
   }
   const identities = (Array.isArray(resource.identifier) ? resource.identifier : [])
     .filter(({ system }) => String(system ?? "").trim() === SOURCE_RESOURCE_IDENTITY_SYSTEM)
     .map(({ value }) => String(value ?? "").trim());
   if (identities.some((value) => !value || value.length > 200)) {
-    return { valid: false, identity: "", source: "" };
+    return { valid: false, identity: "", metaSource: "" };
   }
   const distinctIdentities = [...new Set(identities)];
-  if (distinctIdentities.length > 1) return { valid: false, identity: "", source: "" };
+  if (distinctIdentities.length > 1) return { valid: false, identity: "", metaSource: "" };
   const metaSource = resource.meta?.source;
   if (metaSource !== undefined && (typeof metaSource !== "string" || !metaSource.trim() || metaSource.trim().length > 200)) {
-    return { valid: false, identity: "", source: "" };
+    return { valid: false, identity: "", metaSource: "" };
   }
   return {
     valid: true,
     identity: distinctIdentities[0] ?? "",
-    source: distinctIdentities[0] ?? String(metaSource ?? "").trim(),
+    metaSource: String(metaSource ?? "").trim(),
   };
 }
 
 function sourceFor(resource, fullUrl) {
   const provenance = sourceResourceProvenance(resource);
+  const fallbackIdentity = String(fullUrl ?? `${resource.resourceType}/${resource.id ?? "unknown"}`);
+  const resourceId = provenance.identity || fallbackIdentity;
+  const metaSource = provenance.metaSource || resourceId;
   return {
     kind: "fhir",
     label: `FHIR R4 · ${resource.resourceType}`,
-    resourceId: provenance.source || String(fullUrl ?? `${resource.resourceType}/${resource.id ?? "unknown"}`),
+    resourceId,
+    ...(metaSource ? { metaSource } : {}),
   };
 }
 
@@ -195,21 +205,64 @@ function resourceNotes(resource) {
     : "";
 }
 
-function observationValue(resource) {
+function bloodPressureObservationValue(resource) {
+  if (Object.hasOwn(resource, "valueQuantity")
+    || Object.hasOwn(resource, "valueString")
+    || Object.hasOwn(resource, "valueCodeableConcept")) return null;
+  const components = Array.isArray(resource.component) ? resource.component : [];
+  const quantities = new Map();
+  for (const component of components) {
+    const system = conceptSystem(component?.code);
+    const code = conceptCode(component?.code);
+    if (system !== LOINC_SYSTEM || !["8480-6", "8462-4"].includes(code)) continue;
+    if (quantities.has(code)) return null;
+    const quantity = component?.valueQuantity;
+    if (!quantity || !Number.isFinite(quantity.value)
+      || quantity.system !== "http://unitsofmeasure.org"
+      || quantity.code !== "mm[Hg]") return null;
+    quantities.set(code, quantity.value);
+  }
+  if (quantities.size !== 2) return null;
+  try {
+    return {
+      value: normalizeClinicalObservationValue(`${quantities.get("8480-6")}/${quantities.get("8462-4")}`, "85354-9"),
+      unit: "mmHg",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function observationValue(resource, system, code) {
+  if (system === LOINC_SYSTEM && code === "85354-9") return bloodPressureObservationValue(resource);
   if (Number.isFinite(resource.valueQuantity?.value)) return { value: resource.valueQuantity.value, unit: resource.valueQuantity.unit ?? resource.valueQuantity.code ?? "" };
   if (typeof resource.valueString === "string") return { value: resource.valueString, unit: "" };
   if (resource.valueCodeableConcept) return { value: conceptLabel(resource.valueCodeableConcept, ""), unit: "" };
-  const systolic = (Array.isArray(resource.component) ? resource.component : []).find(({ code }) => conceptCode(code) === "8480-6")?.valueQuantity;
-  const diastolic = (Array.isArray(resource.component) ? resource.component : []).find(({ code }) => conceptCode(code) === "8462-4")?.valueQuantity;
-  if (Number.isFinite(systolic?.value) && Number.isFinite(diastolic?.value)) return { value: `${systolic.value}/${diastolic.value}`, unit: systolic.unit ?? diastolic.unit ?? "mmHg" };
-  return { value: "", unit: "" };
+  return null;
+}
+
+function observationOccurrence(resource) {
+  const value = resource.effectiveDateTime ?? resource.effectivePeriod?.start ?? resource.issued;
+  if (typeof value !== "string" || !value) return "";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? "" : parsed.toISOString();
 }
 
 function parseObservation(resource, fullUrl) {
   if (!["final", "amended", "corrected"].includes(resource.status)) return null;
-  const value = observationValue(resource);
+  const system = conceptSystem(resource.code);
+  const code = conceptCode(resource.code);
+  const value = observationValue(resource, system, code);
+  if (!value) return null;
   if ((typeof value.value === "string" && !value.value.trim()) || (typeof value.value === "number" && !Number.isFinite(value.value))) return null;
-  return normalizePatientEvent({ ...eventBase(resource, fullUrl, "observation", resource.code, "검사 결과"), ...value, note: resourceNotes(resource) });
+  const event = normalizePatientEvent({
+    ...eventBase(resource, fullUrl, "observation", resource.code, "검사 결과"),
+    ...value,
+    observedAt: observationOccurrence(resource),
+    note: resourceNotes(resource),
+  });
+  if (system === LOINC_SYSTEM && clinicalObservationSpec(code) && !isCanonicalClinicalObservation(event)) return null;
+  return event;
 }
 
 function positiveNumber(value) {
@@ -471,29 +524,46 @@ function subjectReference(resource) {
   return String(resource.subject?.reference ?? resource.patient?.reference ?? "").trim();
 }
 
-function hasUnknownModifierExtension(value, seen = new WeakSet()) {
-  if (!value || typeof value !== "object") return false;
-  if (seen.has(value)) return false;
-  seen.add(value);
-  if (Array.isArray(value)) return value.some((item) => hasUnknownModifierExtension(item, seen));
-  if (Object.hasOwn(value, "modifierExtension")) {
-    const modifiers = value.modifierExtension;
-    if (!Array.isArray(modifiers) || modifiers.length > 0) return true;
+const MAX_FHIR_TRAVERSAL_DEPTH = 100;
+const MAX_FHIR_TRAVERSAL_NODES = 50_000;
+
+function inspectModifierSemantics(root) {
+  const stack = [{ value: root, depth: 0 }];
+  const seen = new WeakSet();
+  let nodes = 0;
+  let unknownModifierExtension = false;
+  let implicitRules = false;
+  while (stack.length) {
+    const { value, depth } = stack.pop();
+    if (!value || typeof value !== "object" || seen.has(value)) continue;
+    seen.add(value);
+    nodes += 1;
+    if (depth > MAX_FHIR_TRAVERSAL_DEPTH || nodes > MAX_FHIR_TRAVERSAL_NODES) {
+      return { unknownModifierExtension: true, implicitRules: true, traversalLimitExceeded: true };
+    }
+    if (!Array.isArray(value)) {
+      if (Object.hasOwn(value, "implicitRules")) implicitRules = true;
+      if (Object.hasOwn(value, "modifierExtension")) {
+        const modifiers = value.modifierExtension;
+        if (!Array.isArray(modifiers) || modifiers.length > 0) unknownModifierExtension = true;
+      }
+    }
+    if (unknownModifierExtension && implicitRules) break;
+    const children = Array.isArray(value)
+      ? value
+      : Object.entries(value).filter(([key]) => key !== "modifierExtension").map(([, item]) => item);
+    for (const child of children) stack.push({ value: child, depth: depth + 1 });
   }
-  return Object.entries(value).some(([key, item]) => key !== "modifierExtension" && hasUnknownModifierExtension(item, seen));
+  return { unknownModifierExtension, implicitRules, traversalLimitExceeded: false };
 }
 
-function hasImplicitRules(value, seen = new WeakSet()) {
-  if (!value || typeof value !== "object") return false;
-  if (seen.has(value)) return false;
-  seen.add(value);
-  if (Array.isArray(value)) return value.some((item) => hasImplicitRules(item, seen));
-  if (Object.hasOwn(value, "implicitRules")) return true;
-  return Object.values(value).some((item) => hasImplicitRules(item, seen));
+function hasUnknownModifierExtension(value) {
+  return inspectModifierSemantics(value).unknownModifierExtension;
 }
 
 function hasUnsupportedModifierSemantics(value) {
-  return hasUnknownModifierExtension(value) || hasImplicitRules(value);
+  const result = inspectModifierSemantics(value);
+  return result.unknownModifierExtension || result.implicitRules || result.traversalLimitExceeded;
 }
 
 function assertSupportedPatientModifiers(patientEntry) {

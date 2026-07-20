@@ -1,12 +1,15 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
 const appUrl = process.env.EMR_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9224", 10);
+const [viewportWidth, viewportHeight] = (process.env.CHROME_WINDOW_SIZE ?? "1440,1100")
+  .split(",")
+  .map((value) => Number.parseInt(value, 10));
 const koreaToday = new Date(Date.now() + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-emr-smoke-"));
 const browser = spawn(chrome, [
@@ -14,6 +17,7 @@ const browser = spawn(chrome, [
   "--no-sandbox",
   "--disable-gpu",
   "--disable-background-networking",
+  `--window-size=${viewportWidth},${viewportHeight}`,
   "--remote-debugging-port=" + debugPort,
   "--user-data-dir=" + profile,
   "about:blank",
@@ -109,7 +113,12 @@ try {
       }
       await delay(100);
     }
-    throw new Error(message);
+    const diagnostic = await evaluate(`JSON.stringify({
+      workspace: document.getElementById('workspaceStatus')?.textContent || '',
+      encounter: document.getElementById('encounterFormMessage')?.textContent || '',
+      event: document.getElementById('eventFormMessage')?.textContent || ''
+    })`, targetClient).catch(() => "");
+    throw new Error(`${message}${diagnostic ? ` ${diagnostic}` : ""}`);
   }
 
   async function openPage(url) {
@@ -133,6 +142,17 @@ try {
   await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", "Demo patient did not render.");
   assert(await evaluate("document.getElementById('workspaceContent').hidden === false"), "Selected patient workspace stayed hidden.");
   assert(await evaluate("document.getElementById('loadDemo').hidden === true"), "Demo controls did not reflect demo state.");
+  if (process.env.EMR_SCREENSHOT) {
+    await client.call("Emulation.setDeviceMetricsOverride", {
+      width: viewportWidth,
+      height: viewportHeight,
+      deviceScaleFactor: 1,
+      mobile: viewportWidth <= 620,
+    });
+    await evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+    const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    await writeFile(process.env.EMR_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
+  }
 
   await waitFor("!document.getElementById('aiStatusLabel')?.textContent.includes('확인 중')", "AI capability check did not finish.");
   await evaluate([
@@ -186,16 +206,20 @@ try {
   ].join(";"));
   assert(await evaluate("document.querySelector('[data-tab=\"chart\"]').getAttribute('aria-selected') === 'true'"), "Arrow-key tab navigation failed.");
 
-  await evaluate(`(() => {
-    for (let index = 0; index < 17; index += 1) {
+  for (let index = 0; index < 17; index += 1) {
+    await evaluate(`(() => {
       document.getElementById('eventType').value = 'condition';
       document.getElementById('eventDate').value = '2026-07-19';
       document.getElementById('eventSystem').value = 'urn:vitagraph:smoke:condition';
-      document.getElementById('eventCode').value = 'SMOKE-COND-' + index;
-      document.getElementById('eventLabel').value = '그래프 부하 진단 ' + index;
+      document.getElementById('eventCode').value = 'SMOKE-COND-${index}';
+      document.getElementById('eventLabel').value = '그래프 부하 진단 ${index}';
       document.getElementById('eventForm').requestSubmit();
-    }
-  })()`);
+    })()`);
+    await waitFor(
+      `document.getElementById('mainContent').inert === false && document.getElementById('eventTimeline').textContent.includes('그래프 부하 진단 ${index}')`,
+      `Graph-load event ${index} did not finish saving.`,
+    );
+  }
   await evaluate("document.querySelector('[data-tab=\"graph\"]').click()");
   await waitFor("document.querySelectorAll('#clinicalGraph .clinical-node').length >= 20", "Large clinical graph did not render.");
   demoGraphNodes = await evaluate("document.querySelectorAll('#clinicalGraph .clinical-node').length");
@@ -239,7 +263,16 @@ try {
           subject: { reference: "Patient/smoke-fhir" },
           status: "final",
           code: { coding: [{ system: "http://loinc.org", code: "85354-9", display: "혈압" }] },
-          valueString: "118/76",
+          component: [
+            {
+              code: { coding: [{ system: "http://loinc.org", code: "8480-6", display: "수축기 혈압" }] },
+              valueQuantity: { value: 118, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+            },
+            {
+              code: { coding: [{ system: "http://loinc.org", code: "8462-4", display: "이완기 혈압" }] },
+              valueQuantity: { value: 76, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
+            },
+          ],
           effectiveDateTime: "2026-07-19",
         },
       },
@@ -354,6 +387,65 @@ try {
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('초안을 저장')", "SOAP draft did not save.");
 
   await evaluate([
+    "document.getElementById('vitalValue').value = '149/93'",
+    "document.getElementById('vitalNote').value = '환자 전환 전 미추가 값'",
+    "window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))",
+  ].join(";"));
+  assert(await evaluate("document.getElementById('vitalValue').value === '149/93' && document.getElementById('workspaceStatus').textContent.includes('미저장 입력을 보존')"), "A storage event discarded the pending clinical-item composer.");
+  await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('FHIR 추가 환자')).click()");
+  await delay(100);
+  assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자' && document.getElementById('workspaceStatus').textContent.includes('현재 진료에 추가')"), "Patient switching did not block a pending clinical item.");
+  await evaluate([
+    "document.getElementById('vitalValue').value = ''",
+    "document.getElementById('vitalNote').value = ''",
+    "document.getElementById('eventLabel').value = '환자 전환 전 미추가 과거기록'",
+    "[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('FHIR 추가 환자')).click()",
+  ].join(";"));
+  await delay(100);
+  assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자' && document.getElementById('eventLabel').value.includes('미추가 과거기록') && document.getElementById('workspaceStatus').textContent.includes('과거 기록')"), "Patient switching did not block a pending historical-event form.");
+  await evaluate([
+    "document.getElementById('eventLabel').value = ''",
+    "[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('FHIR 추가 환자')).click()",
+  ].join(";"));
+  await waitFor("document.getElementById('selectedPatientName').textContent === 'FHIR 추가 환자'", "Patient switching stayed blocked after the pending clinical item was cleared.");
+  assert(await evaluate("document.getElementById('vitalValue').value === ''"), "A pending measurement crossed into another patient context.");
+  await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click()");
+  await waitFor("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'", "Could not return after the clinical composer attribution test.");
+
+  await evaluate([
+    "window.__smokeOriginalPrompt = window.prompt",
+    "window.__cancelPromptCalls = 0",
+    "window.prompt = () => { window.__cancelPromptCalls += 1; return '취소되면 안 됨'; }",
+    "document.getElementById('vitalValue').value = '148/92'",
+    "document.getElementById('cancelEncounter').click()",
+  ].join(";"));
+  await delay(100);
+  assert(await evaluate(`window.__cancelPromptCalls === 0
+    && document.getElementById('encounterStatusText').textContent === '진료 중'
+    && document.getElementById('vitalValue').value === '148/92'
+    && document.getElementById('workspaceStatus').textContent.includes('현재 진료에 추가')`), "Encounter cancellation discarded pending clinical composer input.");
+  await evaluate("document.getElementById('vitalValue').value = ''; window.prompt = window.__smokeOriginalPrompt; delete window.__smokeOriginalPrompt");
+
+  await evaluate([
+    "document.getElementById('vitalPreset').value = '85354-9'",
+    "document.getElementById('vitalPreset').dispatchEvent(new Event('change', { bubbles: true }))",
+    "document.getElementById('vitalValue').value = '150/95'",
+    "document.getElementById('vitalNote').value = '좌측 상완'",
+    "document.getElementById('vitalForm').requestSubmit()",
+  ].join(";"));
+  await waitFor("document.getElementById('vitalList').textContent.includes('150/95 mmHg')", "Encounter observation did not render.");
+  assert(await evaluate(`(() => {
+    const state = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const patient = state.patients.find(({ mrn }) => mrn === 'SMOKE-001');
+    const observation = patient.events.find(({ type, code }) => type === 'observation' && code === '85354-9');
+    return observation?.system === 'http://loinc.org'
+      && observation.label === '혈압'
+      && observation.value === '150/95'
+      && observation.unit === 'mmHg'
+      && observation.recordStatus === 'draft';
+  })()`), "Encounter observation did not preserve fixed LOINC metadata.");
+
+  await evaluate([
     "document.getElementById('diagnosisRole').value = 'primary'",
     "document.getElementById('diagnosisCode').value = 'I10'",
     "document.getElementById('diagnosisSystem').value = 'urn:kr:kcd'",
@@ -362,7 +454,8 @@ try {
     "document.getElementById('diagnosisForm').requestSubmit()",
   ].join(";"));
   await waitFor("document.getElementById('diagnosisList').textContent.includes('본태성 고혈압')", "Encounter diagnosis did not render.");
-  assert(await evaluate("document.getElementById('encounterClaimSummary').textContent.includes('고혈압 추적검사') && document.getElementById('encounterClaimSummary').textContent.includes('필수 근거')"), "Draft diagnosis did not feed the explicitly provisional claim preflight.");
+  const claimPreflight = await evaluate("document.getElementById('encounterClaimSummary').textContent");
+  assert(claimPreflight.includes("예비판정") && claimPreflight.includes("1시행 준비") && !claimPreflight.includes("필수 근거"), `Draft diagnosis and structured blood pressure did not feed the explicitly provisional claim preflight: ${claimPreflight}`);
 
   await evaluate([
     "document.getElementById('medicationCode').value = 'SMOKE-MED-001'",
@@ -401,9 +494,9 @@ try {
     const children = patient.events.filter(({ encounterId }) => encounterId === encounter.id);
     return encounter.recordStatus === 'final'
       && encounter.signature.status === 'signed'
-      && children.length === 3
+      && children.length === 4
       && children.every(({ recordStatus }) => recordStatus === 'final');
-  })()`), "Signed encounter or its diagnosis/prescription/order children were not finalized atomically.");
+  })()`), "Signed encounter or its observation/diagnosis/prescription/order children were not finalized atomically.");
 
   await evaluate("document.querySelector('[data-tab=\"chart\"]').click()");
   await evaluate([
@@ -419,7 +512,7 @@ try {
   assert(await evaluate("document.getElementById('eventTimeline').textContent.includes('스모크 혈압')"), "Chart event did not render.");
   assert(await evaluate(`(() => {
     const actions = JSON.parse(localStorage.getItem('vitagraph-emr-v2')).audit.map(({ action }) => action);
-    return ['fhir.imported', 'patient.created', 'encounter.checked-in', 'encounter.started', 'encounter.signed', 'patient.event.added']
+    return ['fhir.imported', 'patient.created', 'encounter.checked-in', 'encounter.started', 'observation.added', 'encounter.signed', 'patient.event.added']
       .every((action) => actions.includes(action));
   })()`), "Audit trail missed a required patient, encounter, FHIR, or chart action.");
 
@@ -432,9 +525,16 @@ try {
     "document.getElementById('patientName').value = '<img src=x onerror=__xssExecuted=1>'",
     "document.getElementById('patientAgeYears').value = '47'",
     "document.getElementById('patientSex').value = 'male'",
+    "document.getElementById('eventLabel').value = '새 환자 생성 전 미추가 과거기록'",
     "document.getElementById('patientForm').requestSubmit()",
   ].join(";"));
   await delay(100);
+  assert(await evaluate(`!JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.some(({ mrn }) => mrn === '../SMOKE-XSS')
+    && document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'
+    && document.getElementById('eventLabel').value.includes('미추가 과거기록')
+    && document.getElementById('patientFormMessage').textContent.includes('미등록 임상 입력')`), "New-patient creation discarded or reattributed a pending historical-event form.");
+  await evaluate("document.getElementById('eventLabel').value = ''; document.getElementById('patientForm').requestSubmit()");
+  await waitFor("document.getElementById('selectedPatientName').textContent.includes('<img')", "Hostile-text patient creation stayed blocked after pending input was cleared.");
   const hostilePatientDebug = await evaluate(`JSON.stringify({
     selectedName: document.getElementById('selectedPatientName').textContent,
     formMessage: document.getElementById('patientFormMessage').textContent,
@@ -445,9 +545,9 @@ try {
   assert(await evaluate("window.__xssExecuted === 0 && document.getElementById('selectedPatientName').querySelector('img') === null"), "Hostile patient text executed as markup.");
   assert(await evaluate("document.getElementById('selectedPatientName').textContent.includes('<img')"), `Hostile patient text was not preserved as inert text: ${hostilePatientDebug}`);
   assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.some(({ mrn, birthDate, ageYears, sex }) => mrn === '../SMOKE-XSS' && !birthDate && ageYears === 47 && sex === 'male')"), "Direct age or sex did not persist when birth date was unknown.");
-  await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click()");
-  await delay(100);
-  assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'"), "Could not return to the smoke patient after hostile input test.");
+  await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click(); window.__patientTransitionWasInert = document.getElementById('mainContent').inert");
+  await waitFor("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'", "Could not return to the smoke patient after hostile input test.");
+  assert(await evaluate("window.__patientTransitionWasInert === true && document.getElementById('mainContent').inert === false"), "Async patient transition did not lock patient-bound inputs for its full save window.");
   assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).audit.filter(({ action }) => action === 'patient.created').length >= 2"), "Hostile-text patient creation was not audited.");
 
   const stateBeforeFailure = await evaluate("localStorage.getItem('vitagraph-emr-v2')");
@@ -472,6 +572,44 @@ try {
 
   const lowRevisionBackup = JSON.parse(recoveryBackup);
   lowRevisionBackup.data.revision = 0;
+  const blockedBackupExport = await evaluate(`(() => {
+    const OriginalBlob = window.Blob;
+    const originalClick = HTMLAnchorElement.prototype.click;
+    window.__pendingBackupParts = [];
+    window.Blob = class extends OriginalBlob {
+      constructor(parts, options) {
+        super(parts, options);
+        window.__pendingBackupParts.push(parts.map(String).join(''));
+      }
+    };
+    HTMLAnchorElement.prototype.click = function () {};
+    document.getElementById('vitalValue').value = '147/91';
+    document.getElementById('exportEmr').click();
+    const result = {
+      downloads: window.__pendingBackupParts.length,
+      status: document.getElementById('workspaceStatus').textContent,
+      value: document.getElementById('vitalValue').value,
+    };
+    window.Blob = OriginalBlob;
+    HTMLAnchorElement.prototype.click = originalClick;
+    return result;
+  })()`);
+  assert(blockedBackupExport.downloads === 0 && blockedBackupExport.status.includes("미저장") && blockedBackupExport.value === "147/91", "Backup export discarded or omitted a pending clinical item.");
+
+  const revisionBeforeBlockedRestore = await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision");
+  await evaluate(`(() => {
+    window.confirm = () => true;
+    const input = document.getElementById('importEmr');
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([${JSON.stringify(JSON.stringify(lowRevisionBackup))}], 'blocked-low-revision-backup.json', { type: 'application/json' }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change'));
+  })()`);
+  await delay(100);
+  assert(await evaluate(`document.getElementById('workspaceStatus').textContent.includes('미저장')
+    && document.getElementById('vitalValue').value === '147/91'
+    && JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision === ${revisionBeforeBlockedRestore}`), "Backup restore discarded a pending clinical item or changed persisted state.");
+  await evaluate("document.getElementById('vitalValue').value = ''; document.getElementById('cancelPatientEdit').click()");
   await evaluate(`(() => {
     window.confirm = () => true;
     const input = document.getElementById('importEmr');
@@ -480,8 +618,46 @@ try {
     input.files = transfer.files;
     input.dispatchEvent(new Event('change'));
   })()`);
-  await waitFor("document.getElementById('workspaceStatus').textContent.includes('백업을 복원')", "Normal backup restore did not finish.");
+  await waitFor("document.getElementById('workspaceStatus').textContent.includes('출처 미검증 상태로 복원')", "Normal backup restore did not finish.");
   assert(await evaluate(`JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision === ${JSON.parse(stateBeforeFailure).revision + 1}`), "Backup restore reused its historical revision and left an ABA window.");
+  assert(await evaluate(`(() => {
+    const restored = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const restoredRecords = restored.patients.flatMap(({ events }) => events);
+    return restored.audit.length === 1
+      && restored.audit[0].action === 'backup.restored'
+      && restoredRecords.length > 0
+      && restoredRecords.every(({ source }) => source.kind === 'import')
+      && restoredRecords.filter(({ type, recordStatus }) => type === 'encounter' && recordStatus === 'final').every(({ signature }) => signature.status === 'external')
+      && document.querySelectorAll('[data-remove-event]').length === 0;
+  })()`), "Unsigned backup restored forged signatures, provenance, or audit history as trusted state.");
+
+  const staleBackupExport = await evaluate(`(async () => {
+    const model = await import('/emr-model.js');
+    const persisted = model.loadEmrState();
+    const changed = model.addPatient(persisted, { id: 'backup-cas-patient', mrn: 'BACKUP-CAS', name: '백업 CAS 환자' });
+    await model.saveEmrState(changed, undefined, persisted.revision);
+    const OriginalBlob = window.Blob;
+    const originalClick = HTMLAnchorElement.prototype.click;
+    window.__staleBackupParts = [];
+    window.Blob = class extends OriginalBlob {
+      constructor(parts, options) {
+        super(parts, options);
+        window.__staleBackupParts.push(parts.map(String).join(''));
+      }
+    };
+    HTMLAnchorElement.prototype.click = function () {};
+    document.getElementById('exportEmr').click();
+    const result = {
+      downloads: window.__staleBackupParts.length,
+      status: document.getElementById('workspaceStatus').textContent,
+    };
+    window.Blob = OriginalBlob;
+    HTMLAnchorElement.prototype.click = originalClick;
+    return result;
+  })()`);
+  assert(staleBackupExport.downloads === 0 && staleBackupExport.status.includes("다른 탭의 최신 변경"), "Backup export emitted a stale cross-tab revision.");
+  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))");
+  await waitFor("document.getElementById('workspaceStatus').textContent.includes('다른 탭의 로컬 기록 변경')", "Primary tab did not adopt the backup-guard CAS change.");
 
   const corruptRaw = "{corrupt-smoke";
   await evaluate(`localStorage.setItem('vitagraph-emr-v2', ${JSON.stringify(corruptRaw)})`);
@@ -513,7 +689,7 @@ try {
     input.files = transfer.files;
     input.dispatchEvent(new Event('change'));
   })()`);
-  await waitFor("document.getElementById('workspaceStatus').textContent.includes('백업을 복원')", "Backup could not replace the exact corrupt storage source.");
+  await waitFor("document.getElementById('workspaceStatus').textContent.includes('출처 미검증 상태로 복원')", "Backup could not replace the exact corrupt storage source.");
   assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'"), "Recovered backup did not restore the selected patient.");
   assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision > 1000000000000000"), "Corrupt-storage restore did not rotate the revision away from stale tabs.");
 
@@ -549,6 +725,7 @@ try {
   await evaluate([
     "document.getElementById('soapSubjective').value = 'CROSS-TAB-DIRTY-SOAP-S'",
     "document.getElementById('soapPlan').value = 'CROSS-TAB-DIRTY-SOAP-P'",
+    "document.getElementById('vitalValue').value = '121/81'",
     "window.__staleEmrBeforeWipe = JSON.parse(localStorage.getItem('vitagraph-emr-v2'))",
     "window.__wipeDownloads = []",
     "window.__wipeOriginalBlob = window.Blob",
@@ -586,6 +763,7 @@ try {
   await evaluate([
     "document.getElementById('patientMemo').value = 'WIPE-TAB-PATIENT-DRAFT'",
     "document.getElementById('soapPlan').value = 'WIPE-TAB-SOAP-DRAFT'",
+    "document.getElementById('vitalValue').value = '122/82'",
     "document.getElementById('diagnosisLabel').value = 'WIPE-TAB-DIAGNOSIS-DRAFT'",
     "document.getElementById('medicationName').value = 'WIPE-TAB-MEDICATION-DRAFT'",
     "document.getElementById('orderLabel').value = 'WIPE-TAB-ORDER-DRAFT'",
@@ -603,9 +781,9 @@ try {
   }
 
   assert(await evaluate(`(() => {
-    const values = ['patientMemo', 'soapPlan', 'diagnosisLabel', 'medicationName', 'orderLabel', 'eventNote']
+    const values = ['patientMemo', 'soapPlan', 'vitalValue', 'diagnosisLabel', 'medicationName', 'orderLabel', 'eventNote']
       .map((id) => document.getElementById(id).value);
-    const text = ['selectedPatientName', 'selectedPatientMeta', 'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList']
+    const text = ['selectedPatientName', 'selectedPatientMeta', 'vitalList', 'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList']
       .map((id) => document.getElementById(id).textContent).join(' ');
     return values.every((value) => value === '')
       && !/브라우저 테스트 환자|본태성 고혈압|스모크정|WIPE-TAB-/.test(text)
@@ -613,7 +791,7 @@ try {
   })()`, wipeClient), "Full wipe left patient, SOAP, diagnosis, prescription, or order PHI in the executing tab DOM.");
   assert(await evaluate(`(() => {
     const text = ['patientList', 'selectedPatientName', 'selectedPatientMeta', 'safetyAlerts', 'clinicalSummary', 'copilotContent',
-      'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList', 'eventTimeline', 'graphEvidenceList',
+      'vitalList', 'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList', 'eventTimeline', 'graphEvidenceList',
       'claimBoard', 'clinicalJourney', 'visitQuestions', 'auditList'].map((id) => document.getElementById(id).textContent).join(' ');
     return document.getElementById('soapSubjective').value === ''
       && document.getElementById('soapPlan').value === ''
@@ -687,6 +865,8 @@ try {
     persistedPatient: "SMOKE-001",
     persistedEvent: "SMOKE-BP",
     signedEncounter: true,
+    structuredEncounterObservation: true,
+    clinicalComposerAttributionGuard: true,
     fhirImported: "FHIR-SMOKE-001",
     aiMode,
     clinicalPosts: clinicalPosts.length,

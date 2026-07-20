@@ -1,13 +1,18 @@
+import {
+  CLINICAL_OBSERVATION_SPECS,
+  isCanonicalClinicalObservation,
+  LOINC_SYSTEM,
+  normalizeClinicalObservationValue,
+} from "./clinical-observations.js";
+
 export const PATIENT_TRANSFER_SCHEMA = "vitagraph-patient-transfer";
 export const PATIENT_TRANSFER_VERSION = 1;
 
 const TRANSFER_SCOPE = "patient-vita-graph";
 const TRANSFER_TRUST = "unsigned-local-export";
 const KCD_SYSTEM = "urn:kr:kcd";
-const LOINC_SYSTEM = "http://loinc.org";
 const MAX_TRANSFER_BYTES = 2 * 1024 * 1024;
 const MAX_TRANSFER_FACTS = 1_000;
-const SIGNED_ENCOUNTER_STATUSES = new Set(["signed", "legacy"]);
 const CONDITION_STATUSES = new Set(["active", "recurrence", "relapse"]);
 const OBSERVATION_STATUSES = new Set(["final", "amended", "corrected"]);
 const OBSERVATION_SELECTION_RANK = { final: 1, amended: 2, corrected: 3 };
@@ -27,12 +32,9 @@ const conditionSpecs = [
 ];
 
 const conditionById = new Map(conditionSpecs.map((spec) => [spec.id, spec]));
-const measurementByCode = new Map([
-  ["85354-9", { key: "blood-pressure", label: "혈압", unit: "mmHg" }],
-  ["2089-1", { key: "ldl", label: "LDL 콜레스테롤", unit: "mg/dL", minimum: 0, maximum: 1_000 }],
-  ["1558-6", { key: "glucose", label: "공복 혈당", unit: "mg/dL", minimum: 0, maximum: 2_000 }],
-  ["4548-4", { key: "hba1c", label: "당화혈색소", unit: "%", minimum: 0, maximum: 30 }],
-]);
+const measurementByCode = new Map(CLINICAL_OBSERVATION_SPECS
+  .filter(({ patientTransferKey }) => patientTransferKey)
+  .map((spec) => [spec.code, { ...spec, key: spec.patientTransferKey }]));
 const measurementByKey = new Map([...measurementByCode.entries()].map(([code, spec]) => [spec.key, { ...spec, code }]));
 
 function isPlainObject(value) {
@@ -127,6 +129,16 @@ function eventDate(event) {
   return "";
 }
 
+function eventOccurrenceInstant(event) {
+  for (const value of [event?.observedAt, event?.recordedAt]) {
+    if (typeof value !== "string" || !value) continue;
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.valueOf())) return parsed.toISOString();
+  }
+  const date = eventDate(event);
+  return date ? `${date}T00:00:00.000Z` : "";
+}
+
 function finalRecord(event) {
   return event?.recordStatus === "final" && ["manual", "encounter"].includes(event?.source?.kind);
 }
@@ -135,7 +147,9 @@ function eligibleEncounter(event) {
   return event?.type === "encounter"
     && finalRecord(event)
     && event.status === "finished"
-    && SIGNED_ENCOUNTER_STATUSES.has(event.signature?.status);
+    && event.signature?.status === "signed"
+    && Boolean(event.signature.signer)
+    && Boolean(event.signature.signedAt);
 }
 
 function belongsToEligibleEncounter(event, encounterById) {
@@ -167,22 +181,15 @@ function eligibleObservation(event, encounterById) {
 }
 
 function normalizedMeasurementValue(value, spec) {
-  if (spec.key === "blood-pressure") {
-    if (typeof value !== "string") return null;
-    const match = value.trim().match(/^(\d{2,3})\s*[\/／]\s*(\d{2,3})$/);
-    if (!match) return null;
-    const systolic = Number(match[1]);
-    const diastolic = Number(match[2]);
-    return systolic >= 40 && systolic <= 300 && diastolic >= 20 && diastolic <= 200 && systolic > diastolic
-      ? `${systolic}/${diastolic}`
-      : null;
+  try {
+    return normalizeClinicalObservationValue(value, spec);
+  } catch {
+    return null;
   }
-  if (typeof value === "string" && value.trim()) value = Number(value);
-  return Number.isFinite(value) && value >= spec.minimum && value <= spec.maximum ? value : null;
 }
 
 function transferMeasurement(event, spec, code = event.code) {
-  if (event.system !== LOINC_SYSTEM || event.unit !== spec.unit) return null;
+  if (event.system !== LOINC_SYSTEM || !isCanonicalClinicalObservation(event)) return null;
   const value = normalizedMeasurementValue(event.value, spec);
   if (value === null) return null;
   return {
@@ -192,6 +199,7 @@ function transferMeasurement(event, spec, code = event.code) {
     value,
     unit: spec.unit,
     observedOn: eventDate(event),
+    observedAt: eventOccurrenceInstant(event),
     basis: "final-observation",
     selectionRank: OBSERVATION_SELECTION_RANK[event.status] ?? 0,
   };
@@ -209,8 +217,9 @@ function latestByKey(items, keyOf, dateOf, rankOf = () => 0) {
   return [...latest.values()].sort((left, right) => keyOf(left).localeCompare(keyOf(right)));
 }
 
-function selectedHealthMap(patient, exportedOn) {
+function selectedHealthMap(patient, exportedAt) {
   if (!isPlainObject(patient)) throw new TypeError("내보낼 환자 기록이 유효하지 않습니다.");
+  const exportedOn = koreanCalendarDate(exportedAt);
   const events = Array.isArray(patient.events) ? patient.events.filter(isPlainObject) : [];
   const encounterById = new Map(events.filter(({ type, id }) => type === "encounter" && typeof id === "string").map((event) => [event.id, event]));
 
@@ -236,7 +245,10 @@ function selectedHealthMap(patient, exportedOn) {
     if (spec) {
       const measurement = transferMeasurement(event, spec);
       if (measurement) {
-        if (measurement.observedOn > exportedOn) throw new TypeError("내보내기 시각보다 미래인 최종 측정 기록이 있습니다.");
+        const hasExactOccurrence = typeof event.observedAt === "string" || typeof event.recordedAt === "string";
+        if ((hasExactOccurrence && measurement.observedAt > exportedAt) || (!hasExactOccurrence && measurement.observedOn > exportedOn)) {
+          throw new TypeError("내보내기 시각보다 미래인 최종 측정 기록이 있습니다.");
+        }
         measurementCandidates.push(measurement);
       }
     }
@@ -247,15 +259,15 @@ function selectedHealthMap(patient, exportedOn) {
     measurements: latestByKey(
       measurementCandidates,
       ({ key }) => key,
-      ({ observedOn }) => observedOn,
+      ({ observedAt }) => observedAt,
       ({ selectionRank }) => selectionRank,
-    ).map(({ selectionRank: _selectionRank, ...measurement }) => measurement),
+    ).map(({ selectionRank: _selectionRank, observedAt: _observedAt, ...measurement }) => measurement),
   };
 }
 
 export function createPatientTransferPackage(patient, exportedAt, transferCode = randomTransferCode()) {
   const instant = canonicalInstant(exportedAt);
-  const { conditions, measurements } = selectedHealthMap(patient, koreanCalendarDate(instant));
+  const { conditions, measurements } = selectedHealthMap(patient, instant);
   if (conditions.length + measurements.length === 0) {
     throw new TypeError("환자용 VitaGraph에 내보낼 최종·확정 지원 기록이 없습니다.");
   }

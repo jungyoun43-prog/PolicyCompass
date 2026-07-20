@@ -1,3 +1,10 @@
+import {
+  bloodPressureComponents,
+  clinicalObservationSpec,
+  isCanonicalClinicalObservation,
+  LOINC_SYSTEM,
+} from "./clinical-observations.js";
+
 const FHIR_BASE_URL = "https://vitagraph.local/fhir";
 const SOURCE_PATIENT_IDENTITY_SYSTEM = `${FHIR_BASE_URL}/identifier/source-patient`;
 const SOURCE_RESOURCE_IDENTITY_SYSTEM = `${FHIR_BASE_URL}/identifier/source-resource`;
@@ -106,11 +113,15 @@ function codingConcept(system, code, display) {
 
 function provenanceFields(event) {
   const source = event?.source && typeof event.source === "object" ? event.source : {};
-  const sourceIdentity = source.kind === "fhir" ? cleanText(source.resourceId, 200) : "";
-  return sourceIdentity ? {
-    meta: { source: sourceIdentity },
-    identifier: [{ system: SOURCE_RESOURCE_IDENTITY_SYSTEM, value: sourceIdentity }],
-  } : {};
+  if (source.kind !== "fhir") return {};
+  const sourceIdentity = cleanText(source.resourceId, 200);
+  const metaSource = cleanText(source.metaSource, 200) || sourceIdentity;
+  return {
+    ...(metaSource ? { meta: { source: metaSource } } : {}),
+    ...(sourceIdentity ? {
+      identifier: [{ system: SOURCE_RESOURCE_IDENTITY_SYSTEM, value: sourceIdentity }],
+    } : {}),
+  };
 }
 
 function escapeXhtml(value) {
@@ -199,6 +210,7 @@ function isExportableEncounter(event) {
   return event?.type === "encounter"
     && event.recordStatus === "final"
     && event.status === "finished"
+    && event.source?.kind !== "import"
     && SIGNED_STATUSES.has(signatureStatus);
 }
 
@@ -316,18 +328,43 @@ function serviceResource(event, identity, patientReference, encounterReference, 
 }
 
 function observationResource(event, identity, patientReference, encounterReference) {
+  if (event.system === LOINC_SYSTEM && clinicalObservationSpec(event.code) && !isCanonicalClinicalObservation(event)) {
+    throw new TypeError(`표준 Observation 값·단위가 유효하지 않습니다: ${event.id}`);
+  }
   const value = typeof event.value === "number" && Number.isFinite(event.value) ? event.value : null;
   const textValue = value === null ? cleanText(event.value, 1_000) : "";
+  const bloodPressure = event.system === LOINC_SYSTEM && event.code === "85354-9"
+    ? bloodPressureComponents(textValue)
+    : null;
+  const bloodPressureComponent = (code, display, componentValue) => ({
+    code: codingConcept("http://loinc.org", code, display),
+    valueQuantity: {
+      value: componentValue,
+      unit: "mmHg",
+      system: "http://unitsofmeasure.org",
+      code: "mm[Hg]",
+    },
+  });
   return {
     resourceType: "Observation",
     id: identity.id,
     ...provenanceFields(event),
     status: ["final", "amended", "corrected"].includes(event.status) ? event.status : "final",
     code: codeableConcept(event, "검사 결과"),
+    ...(bloodPressure ? {
+      category: [codingConcept("http://terminology.hl7.org/CodeSystem/observation-category", "vital-signs", "Vital Signs")],
+    } : {}),
     subject: { reference: patientReference },
     ...(encounterReference ? { encounter: { reference: encounterReference } } : {}),
-    effectiveDateTime: validDateTime(event.date),
-    ...(value !== null ? { valueQuantity: { value, ...(cleanText(event.unit, 80) ? { unit: cleanText(event.unit, 80) } : {}) } } : { valueString: textValue }),
+    effectiveDateTime: validDateTime(event.observedAt) || validDateTime(event.date),
+    ...(bloodPressure ? {
+      component: [
+        bloodPressureComponent("8480-6", "Systolic blood pressure", bloodPressure.systolic),
+        bloodPressureComponent("8462-4", "Diastolic blood pressure", bloodPressure.diastolic),
+      ],
+    } : value !== null
+      ? { valueQuantity: { value, ...(cleanText(event.unit, 80) ? { unit: cleanText(event.unit, 80) } : {}) } }
+      : { valueString: textValue }),
     ...(cleanText(event.note, 2_000) ? { note: [{ text: cleanText(event.note, 2_000) }] } : {}),
   };
 }
@@ -525,11 +562,13 @@ export function exportPatientFhirBundle(patientInput, exportedAt) {
   const childEvents = events.filter((event) => {
     if (!["condition", "medication", "service-request", "allergy"].includes(event?.type)) return false;
     if (event.recordStatus !== "final" || isCancelled(event)) return false;
+    if (event.source?.kind === "import") return false;
     return !event.encounterId || encounterById.has(event.encounterId);
   });
   const sourceEvents = events.filter((event) => {
     if (!["observation", "procedure"].includes(event?.type)) return false;
     if ((event.recordStatus && event.recordStatus !== "final") || isCancelled(event)) return false;
+    if (event.source?.kind === "import") return false;
     if (event.encounterId && !encounterById.has(event.encounterId)) return false;
     if (event.type === "observation") {
       const hasValue = (typeof event.value === "number" && Number.isFinite(event.value)) || Boolean(cleanText(event.value, 1_000));

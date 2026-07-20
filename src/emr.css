@@ -97,6 +97,73 @@ body.emr-page {
   justify-content: flex-end;
 }
 
+.emr-utilities {
+  position: relative;
+  z-index: 24;
+}
+
+.emr-utilities > summary {
+  list-style: none;
+  user-select: none;
+}
+
+.emr-utilities > summary::-webkit-details-marker {
+  display: none;
+}
+
+.emr-utilities > summary::after {
+  margin-left: var(--space-2);
+  color: var(--muted);
+  content: "＋";
+  font-family: var(--font-mono);
+}
+
+.emr-utilities[open] > summary {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+}
+
+.emr-utilities[open] > summary::after {
+  content: "−";
+}
+
+.emr-utility-panel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(700px, calc(100vw - var(--space-8)));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  padding: var(--space-4);
+  box-shadow: 0 22px 60px color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+.emr-utility-heading {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  margin: 0 0 var(--space-3);
+  font-size: 0.72rem;
+}
+
+.emr-utility-heading span {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.emr-utility-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.emr-utility-actions .clinical-button {
+  width: 100%;
+  padding-inline: var(--space-2);
+  text-align: center;
+}
+
 .clinical-button,
 .text-action {
   display: inline-flex;
@@ -181,6 +248,10 @@ body.emr-page {
   border-radius: 12px;
   background: color-mix(in srgb, var(--data-cyan) 5%, var(--surface));
   padding: var(--space-2) var(--space-4);
+}
+
+.emr-utility-panel .patient-transfer-guidance {
+  margin: 0;
 }
 
 .patient-transfer-guidance > div {
@@ -1010,12 +1081,17 @@ body.emr-page {
   margin-bottom: var(--space-4);
 }
 
+.vital-form-grid,
 .diagnosis-form-grid,
 .prescription-form-grid,
 .order-form-grid {
   display: grid;
   gap: var(--space-2);
   align-items: end;
+}
+
+.vital-form-grid {
+  grid-template-columns: minmax(150px, 1.2fr) minmax(110px, 0.8fr) minmax(105px, 0.65fr) minmax(180px, 1.5fr) auto;
 }
 
 .diagnosis-form-grid {
@@ -2250,6 +2326,21 @@ body.emr-page {
     width: 100%;
   }
 
+  .emr-utility-panel {
+    width: min(540px, calc(100vw - var(--space-4)));
+    padding: var(--space-3);
+  }
+
+  .emr-utility-heading,
+  .emr-utility-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .emr-utility-heading {
+    gap: var(--space-1);
+  }
+
   .patient-transfer-guidance,
   .patient-transfer-guidance > div {
     align-items: flex-start;
@@ -2313,6 +2404,7 @@ body.emr-page {
   .rule-form-grid,
   .encounter-meta-grid,
   .soap-grid,
+  .vital-form-grid,
   .diagnosis-form-grid,
   .prescription-form-grid,
   .order-form-grid,

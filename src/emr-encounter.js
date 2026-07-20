@@ -5,9 +5,17 @@ import {
   normalizeEmrState,
   normalizePatientEvent,
 } from "./emr-model.js";
+import {
+  CLINICAL_OBSERVATION_SPECS,
+  clinicalObservationSpec,
+  LOINC_SYSTEM,
+  normalizeClinicalObservationValue,
+} from "./clinical-observations.js";
 
 const ACTIVE_ENCOUNTER_STATUSES = new Set(["arrived", "in-progress"]);
-const ENCOUNTER_CHILD_TYPES = new Set(["condition", "medication", "service-request"]);
+const ENCOUNTER_CHILD_TYPES = new Set(["condition", "observation", "medication", "service-request"]);
+
+export const ENCOUNTER_OBSERVATION_PRESETS = CLINICAL_OBSERVATION_SPECS;
 
 function cleanText(value, maximum = 2_000) {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
@@ -91,8 +99,15 @@ function requireEncounter(state, patientId, encounterId) {
   return { patient, encounter };
 }
 
+function assertTrustedEncounterOrigin(encounter) {
+  if (encounter.source?.kind === "import") {
+    throw new Error("출처 미검증 백업 진료는 진행·수정·완료·서명·취소할 수 없습니다. 새 로컬 진료로 접수하세요.");
+  }
+}
+
 function requireEditableEncounter(state, patientId, encounterId) {
   const result = requireEncounter(state, patientId, encounterId);
+  assertTrustedEncounterOrigin(result.encounter);
   if (result.encounter.recordStatus !== "draft" || result.encounter.signature?.status === "signed") {
     throw new Error("서명된 진료는 직접 수정할 수 없습니다.");
   }
@@ -125,7 +140,10 @@ export function checkInPatient(stateInput, patientId, input = {}, nowInput = new
   const now = normalizedNow(nowInput);
   const state = normalizeEmrState(stateInput);
   const patient = patientIn(state, patientId);
-  if (patient.events.some((event) => event.type === "encounter" && event.recordStatus === "draft" && ACTIVE_ENCOUNTER_STATUSES.has(event.status))) {
+  if (patient.events.some((event) => event.type === "encounter"
+    && event.recordStatus === "draft"
+    && event.source?.kind !== "import"
+    && ACTIVE_ENCOUNTER_STATUSES.has(event.status))) {
     throw new Error("이 환자에게 이미 대기 또는 진료 중인 회차가 있습니다.");
   }
   const date = cleanText(input.date, 10) || calendarDate(now);
@@ -158,6 +176,7 @@ export function startEncounter(stateInput, patientId, encounterId, nowInput = ne
   const now = normalizedNow(nowInput);
   const state = normalizeEmrState(stateInput);
   const { patient, encounter } = requireEncounter(state, patientId, encounterId);
+  assertTrustedEncounterOrigin(encounter);
   if (encounter.recordStatus !== "draft" || encounter.status !== "arrived") throw new Error("대기 상태 진료만 시작할 수 있습니다.");
   assertEncounterMutationTime(state, encounterId, now, encounter.arrivedAt, "진료 시작");
   const updated = normalizePatientEvent({ ...encounter, status: "in-progress", startedAt: now });
@@ -208,6 +227,7 @@ function addChildEvent(stateInput, patientId, encounterId, eventInput, action, n
     encounterId,
     recordStatus: "draft",
     date: encounter.date,
+    ...(eventInput.type === "observation" ? { observedAt: now } : {}),
     source: { kind: "encounter", label: "진료 입력", resourceId: encounterId },
   });
   if (!event) throw new TypeError("진료 항목이 유효하지 않습니다.");
@@ -246,6 +266,25 @@ export function addEncounterDiagnosis(stateInput, patientId, encounterId, input 
     onsetDate: cleanText(input.onsetDate, 10),
     note: cleanText(input.note, 4_000),
   }, "diagnosis.added", now);
+}
+
+export function addEncounterObservation(stateInput, patientId, encounterId, input = {}, now = new Date().toISOString()) {
+  requireEditableEncounter(normalizeEmrState(stateInput), patientId, encounterId);
+  const code = cleanText(input.code, 120);
+  const preset = clinicalObservationSpec(code);
+  if (!preset) throw new TypeError("지원되는 진료 측정 항목을 선택하세요.");
+  const value = normalizeClinicalObservationValue(input.value, preset);
+  return addChildEvent(stateInput, patientId, encounterId, {
+    id: input.id,
+    type: "observation",
+    system: LOINC_SYSTEM,
+    code: preset.code,
+    label: preset.label,
+    status: "final",
+    value,
+    unit: preset.unit,
+    note: cleanText(input.note, 4_000),
+  }, "observation.added", now);
 }
 
 export function addEncounterPrescription(stateInput, patientId, encounterId, input = {}, now = new Date().toISOString()) {
@@ -305,6 +344,7 @@ export function addEncounterOrder(stateInput, patientId, encounterId, input = {}
 
 const EDITABLE_ITEM_FIELDS = {
   condition: new Set(["system", "code", "label", "diagnosisRole", "certainty", "onsetDate", "note"]),
+  observation: new Set(["note"]),
   medication: new Set(["system", "code", "label", "prescription", "note"]),
   "service-request": new Set(["system", "code", "label", "order", "note"]),
 };
@@ -330,6 +370,13 @@ function assertEditableItem(current, updated, patient, encounterId) {
       && event.recordStatus === "draft"
       && event.diagnosisRole === "primary"
     ))) throw new TypeError("주상병은 진료 회차마다 한 건만 입력할 수 있습니다.");
+  }
+  if (current.type === "observation") {
+    const preset = clinicalObservationSpec(updated.code);
+    if (!preset || updated.system !== "http://loinc.org" || updated.label !== preset.label || updated.unit !== preset.unit) {
+      throw new TypeError("진료 측정의 LOINC 코드·이름·단위를 변경할 수 없습니다.");
+    }
+    normalizeClinicalObservationValue(updated.value, preset);
   }
   if (current.type === "medication") {
     const prescription = updated.prescription ?? {};
@@ -420,6 +467,7 @@ export function signEncounter(stateInput, patientId, encounterId, signerInput = 
   const now = normalizedNow(nowInput);
   const state = normalizeEmrState(stateInput);
   const { patient, encounter } = requireEncounter(state, patientId, encounterId);
+  assertTrustedEncounterOrigin(encounter);
   if (encounter.recordStatus !== "draft" || encounter.status !== "finished" || encounter.signature?.status !== "unsigned") {
     throw new Error("완료되어 서명 대기 중인 진료만 서명할 수 있습니다.");
   }
@@ -444,6 +492,7 @@ export function reopenEncounter(stateInput, patientId, encounterId, nowInput = n
   const now = normalizedNow(nowInput);
   const state = normalizeEmrState(stateInput);
   const { patient, encounter } = requireEncounter(state, patientId, encounterId);
+  assertTrustedEncounterOrigin(encounter);
   if (encounter.recordStatus !== "draft" || encounter.status !== "finished" || encounter.signature?.status !== "unsigned") {
     throw new Error("서명 전 완료 진료만 다시 열 수 있습니다.");
   }
@@ -460,6 +509,7 @@ export function cancelEncounter(stateInput, patientId, encounterId, reasonInput 
   if (!reason) throw new TypeError("진료 취소 사유가 필요합니다.");
   const state = normalizeEmrState(stateInput);
   const { patient, encounter } = requireEncounter(state, patientId, encounterId);
+  assertTrustedEncounterOrigin(encounter);
   if (encounter.recordStatus !== "draft" || !ACTIVE_ENCOUNTER_STATUSES.has(encounter.status)) throw new Error("대기 또는 진료 중 회차만 취소할 수 있습니다.");
   assertEncounterMutationTime(state, encounterId, now, encounter.startedAt || encounter.arrivedAt, "진료 취소");
   const events = patient.events.map((event) => {

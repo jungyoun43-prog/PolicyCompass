@@ -54,7 +54,7 @@ The v1 object is an exact allowlist:
 - `transferCode` is freshly generated for every export from at least 128 bits of Web Crypto randomness. The clinician sees patient name plus code before download and gives the code to the patient through a different channel. The patient must confirm the same code before any map/session mutation. This mitigates accidental file handoff only; it does not authenticate a patient or institution, sign the file, prevent replay, or bind multiple exports to one Journey profile.
 - The file excludes all identifiers and demographics, including name, chart number/MRN, FHIR Patient identity, birth date, age, sex, phone, address, insurance, emergency contact, and blood type.
 - It also excludes internal patient/Encounter/event/resource IDs, chief concern, SOAP, free text, clinician/department/room/signature, medications, allergies, procedures, orders, claims, reimbursement rules/results, audit events, AI output, revisions, and actor metadata.
-- The source allowlist is positive: `encounter` facts require a non-empty Encounter ID that resolves to the same patient's finished, locally signed Encounter; only `manual` facts may stand alone, after explicit clinician “검토·확정”. Draft, provisional, differential, refuted, cancelled, entered-in-error, orphaned, unsupported, demo, imported, copilot-generated, and external-unverified facts are omitted. Raw imported FHIR facts remain ineligible for patient transfer.
+- The source allowlist is positive: `encounter` facts require a non-empty Encounter ID that resolves to the same patient's finished Encounter with a current local `signed` signature, non-empty signer, and signing instant. Legacy-migrated completion markers are not signatures and never qualify. Only `manual` facts may stand alone, after explicit clinician “검토·확정”. Draft, provisional, differential, refuted, cancelled, entered-in-error, orphaned, unsupported, demo, imported, copilot-generated, and external-unverified facts are omitted. Raw imported FHIR facts remain ineligible for patient transfer.
 - Unknown keys, an unsupported schema/version/scope/trust value, invalid transfer code/counts, malformed or future dates, invalid systems/codes/units/ranges, unsupported condition or measurement IDs, and an oversized file fail closed. A valid import replaces only the current unsaved map after complete validation and recipient-code confirmation; existing Journey history changes only through a separate explicit save action.
 - The personal app accepts only this transfer schema. Generic patient-side FHIR fallback is intentionally absent so multi-patient Bundles cannot silently merge. Clinical FHIR import/export remains owned by `/emr`.
 - The file still contains sensitive personal health information. It is plain, unencrypted, and unsigned JSON. `trust: "unsigned-local-export"` means the patient app cannot verify origin, authorship, or valid-value tampering without institution-managed cryptographic keys.
@@ -274,7 +274,7 @@ Research date: 2026-07-17.
 ### Source of truth
 
 - Status: Active
-- Last refreshed: 2026-07-19
+- Last refreshed: 2026-07-20
 - Primary product surface: `/emr`, a physician-centered local outpatient EMR workspace. `/patient` and its feature routes are the separate personal VitaGraph companion; `/` is the stateless role gateway.
 - Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/patient-transfer.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
 
@@ -316,12 +316,13 @@ Research date: 2026-07-17.
 1. Select an existing patient from today's queue or create a patient record.
 2. Enter or edit chart number, name, date of birth, date-derived age (or a clearly labelled direct age when birth date is unknown), sex, phone, address, insurance type, and emergency contact.
 3. Start an Encounter with date/time, department, clinician, and chief concern. Queue state changes from waiting to in progress.
-4. Write Subjective, Objective, Assessment, and Plan, then save the Encounter as a draft without requiring completion.
-5. Add one or more KCD diagnoses with code, display, primary/secondary role, and clinical status.
-6. Add prescriptions with medication/code, dose and unit, route, frequency, duration, quantity, and directions. The record is a local clinical draft, not a transmitted legal prescription.
-7. Add laboratory, imaging, procedure, or referral orders with code, priority, status, and instructions.
-8. Review allergy/current-medication context, encounter-linked VitaGraph/AI support, and pre-claim eligibility/evidence warnings.
-9. Finish the visit, then locally sign it. A signed Encounter is immutable. Only a completed but unsigned Encounter can be reopened, with the transition captured in the audit trail.
+4. Record structured vital signs and common measurements as Encounter-owned LOINC observations. Values remain visible beside SOAP and become final only with the same local signature.
+5. Write Subjective, Objective, Assessment, and Plan, then save the Encounter as a draft without requiring completion.
+6. Add one or more KCD diagnoses with code, display, primary/secondary role, and clinical status.
+7. Add prescriptions with medication/code, dose and unit, route, frequency, duration, quantity, and directions. The record is a local clinical draft, not a transmitted legal prescription.
+8. Add laboratory, imaging, procedure, or referral orders with code, priority, status, and instructions.
+9. Review allergy/current-medication context, encounter-linked VitaGraph/AI support, and pre-claim eligibility/evidence warnings.
+10. Finish the visit, then locally sign it. A signed Encounter is immutable. Only a completed but unsigned Encounter can be reopened, with the transition captured in the audit trail.
 
 The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures, observations, Journey entries, VitaGraph nodes, assistance citations, and reimbursement evidence reference the same Encounter ID. Derived views must not silently fork or overwrite signed source records.
 
@@ -365,6 +366,8 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - Desktop: fixed queue rail, flexible Encounter editor, and compact safety/claim rail; full Kanban uses horizontal scroll.
 - Tablet: queue becomes a top worklist strip; the safety/claim rail moves below the Encounter editor.
 - Mobile: queue, patient identity, Encounter editor, and safety/claim summary stack in that order; tabs and lanes scroll; editing forms remain full-width; graph becomes text-first when space is constrained.
+- Mobile gateway: both role names and both role actions must appear within the first 844px viewport; supporting bullet lists may collapse so one long role card cannot hide the other choice.
+- Mobile EMR: patient and Encounter work precede transfer, FHIR, and backup utilities. Secondary data operations live in a labelled disclosure instead of occupying the full first viewport.
 - Touch/hover: all critical content available without hover; drag is never required.
 
 ### Interaction states
@@ -385,9 +388,10 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 ### Implementation constraints
 
 - Framework: existing zero-dependency ES modules and generated Worker asset bundle.
-- Persistence: versioned browser `localStorage` JSON with Web Locks-serialized writes, revision conflict checks, anti-resurrection wipe tombstones, cross-tab in-memory/DOM purge on wipe, strict backup validation, corrupt-source recovery export, import/export, and wipe; no silent sample persistence. It is not an encrypted clinical database.
+- Persistence: versioned browser `localStorage` JSON with Web Locks-serialized writes, revision conflict checks, anti-resurrection wipe tombstones, cross-tab in-memory/DOM purge on wipe, strict backup validation, corrupt-source recovery export, import/export, and wipe; no silent sample persistence. An unsigned backup never restores its local signatures, institution rules, or audit trail as trusted state: every restored clinical event, including drafts, becomes immutable external/unverified data. Restored records cannot be confirmed, changed, cancelled, or used for a local signature; restored Encounter drafts also cannot be continued, completed, signed, or reopened, but they do not block a new local Encounter. A clinician must create that new Encounter or manually re-enter and verify a fact. Restored events remain excluded from AI, reimbursement evidence, FHIR clinical export, and patient transfer. It is not an encrypted clinical database.
 - Clinical record: patient demographics and Encounter-owned SOAP, diagnoses, prescriptions, and orders are the local source of truth. Signed encounters cannot be reopened or edited; corrections require an explicit void/amendment workflow outside this sandbox.
-- FHIR: FHIR R4 is an exchange projection, not the application's reimbursement rule source. Import accepts only Bundles with exactly one Patient and explicit matching subject references; current facts require fail-closed lifecycle certainty, and unsupported resources plus reasons remain visible in the import report. Exported resources preserve the Encounter link where the supported subset allows it.
+- FHIR: FHIR R4 is an exchange projection, not the application's reimbursement rule source. Import accepts only Bundles with exactly one Patient and explicit matching subject references; current facts require fail-closed lifecycle certainty, and unsupported resources plus reasons remain visible in the import report. Raw imported FHIR facts remain untrusted for finalized summaries, AI, reimbursement, and patient transfer, while an explicit institutional FHIR export may losslessly re-emit supported facts with their original `meta.source` and source identifier. Re-emission preserves exchange provenance and is not clinician attestation. Exported resources preserve the Encounter link where the supported subset allows it.
+- Structured observations: the Encounter vital-sign picker, model validation, claim evidence, FHIR projection, and patient transfer share one bounded local catalogue of active LOINC codes and canonical display units. It validates nonblank values and ranges before creating a draft Observation and records the exact observation timestamp. A blood-pressure panel exports as systolic/diastolic UCUM components, not an invalid scalar string. This catalogue is an input aid, not an institution terminology service or clinical decision rule.
 - Clinical graph: node provenance is factual. Keyword relationships are heuristic only and must remain dashed, labelled `추론`, and accompanied by their basis plus “차트 사실 아님”.
 - Reimbursement: Korean benefit review is based on HIRA claim statements and effective benefit/review criteria, not on FHIR itself. The product provides deterministic, effective-dated pre-claim eligibility and evidence checks. Institution-authored rules require coding-system namespaces for applicability, evidence, and service matching. Procedure/Observation/Encounter records are chart evidence, not adjudicated claims; Claim/ClaimResponse remain a manual reconciliation boundary. AI cannot set pass/fail or promise reimbursement.
 - Security: no analytics, no remote fonts/data beyond existing style contract, no credentials in browser storage, and no production-compliance claim.
@@ -408,6 +412,9 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - A patient can store chart number, name, date of birth, derived age, sex, phone, address, insurance information, and emergency contact without losing existing records during schema migration.
 - Today's queue supports waiting, in-progress, and completed states and opens the same selected-patient Encounter workspace.
 - A clinician can start an Encounter, save all four SOAP sections, add multiple KCD diagnoses, add prescriptions with dose/frequency/duration/directions, and add laboratory/imaging/procedure orders.
+- A clinician can add, review, remove, sign, export, and patient-transfer eligible structured vital signs without duplicating them as unlinked manual chart events.
+- Unsubmitted measurement, diagnosis, prescription, or order input blocks patient/Encounter switching, completion, import, and export so typed clinical content cannot cross context or disappear silently.
+- An unsigned JSON backup restores every clinical event as external/unverified, blocks promotion or local signing of restored drafts, retains the currently installed institution rules, discards the supplied audit trail, and adds one fresh local restore audit event.
 - Finishing and locally signing an Encounter records timestamps and audit actions. Signed content cannot be silently edited.
 - Selected patient and Encounter show diagnoses, medications, allergies, observations, procedures, VitaGraph, Journey, assistance, and source provenance without duplicating the source record.
 - Encounter-side checks and the full reimbursement board calculate interval/count/evidence states from effective-dated deterministic rules and expose patient plus institution views.

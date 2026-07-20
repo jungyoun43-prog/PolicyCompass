@@ -25,6 +25,7 @@ const DEFAULT_EVIDENCE_STATUS = {
   symptom: "active",
 };
 const ORDER_INTENTS = new Set(["order", "original-order", "reflex-order", "filler-order", "instance-order"]);
+export const KCD_SYSTEM = "urn:kr:kcd";
 
 export const CLAIM_LANE_ORDER = [
   "missing-evidence",
@@ -57,7 +58,7 @@ export const DEFAULT_CLAIM_RULES = [
     maxCount: 1,
     dueSoonDays: 21,
     applicabilityCodes: ["I10"],
-    applicabilitySystem: "http://hl7.org/fhir/sid/icd-10",
+    applicabilitySystem: KCD_SYSTEM,
     requiredEvidence: [{ code: "85354-9", system: "http://loinc.org", label: "90일 이내 혈압 기록", eventTypes: ["observation"], lookbackDays: 90 }],
     effectiveFrom: "2026-01-01",
     sourceLabel: "기관 검증용 샘플 규칙 · 실제 급여기준 아님",
@@ -76,7 +77,7 @@ export const DEFAULT_CLAIM_RULES = [
     maxCount: 1,
     dueSoonDays: 28,
     applicabilityCodes: ["E11"],
-    applicabilitySystem: "http://hl7.org/fhir/sid/icd-10",
+    applicabilitySystem: KCD_SYSTEM,
     requiredEvidence: [{ code: "4548-4", system: "http://loinc.org", label: "120일 이내 당화혈색소 기록", eventTypes: ["observation"], lookbackDays: 120 }],
     effectiveFrom: "2026-01-01",
     sourceLabel: "기관 검증용 샘플 규칙 · 실제 급여기준 아님",
@@ -231,6 +232,7 @@ function hasRecordedObservationValue(event) {
 
 function hasCompatibleEvidenceLifecycle(event, type, status) {
   if (!event || typeof event !== "object") return false;
+  if (event.source?.kind === "fhir") return false;
   if (["condition", "allergy"].includes(type)) {
     if (Object.hasOwn(event, "verificationStatus") && cleanText(event.verificationStatus) !== "confirmed") return false;
     if (Object.hasOwn(event, "clinicalStatus") && cleanText(event.clinicalStatus) !== status) return false;
@@ -244,6 +246,7 @@ function hasCompatibleEvidenceLifecycle(event, type, status) {
 }
 
 function matchesEvidence(event, criterion, asOf) {
+  if (event?.recordStatus && cleanText(event.recordStatus) !== "final") return false;
   const date = eventDate(event);
   const type = cleanText(event?.type);
   const acceptedStatuses = EVIDENCE_STATUS_BY_TYPE[type];
@@ -321,7 +324,9 @@ export function evaluateClaimRule(patientInput, ruleInput, asOfInput = new Date(
   const cutoff = addDays(asOf, -(rule.windowDays - 1));
   const acceptedServiceStatuses = SERVICE_STATUS_BY_TYPE[rule.serviceEventType];
   const serviceEvents = patient.events
-    .filter((event) => cleanText(event?.code) === rule.serviceCode
+    .filter((event) => (!event?.recordStatus || cleanText(event.recordStatus) === "final")
+      && event.source?.kind !== "fhir"
+      && cleanText(event?.code) === rule.serviceCode
       && (!rule.serviceSystem || cleanText(event?.system) === rule.serviceSystem)
       && cleanText(event?.type) === rule.serviceEventType
       && acceptedServiceStatuses.has(cleanText(event?.status))

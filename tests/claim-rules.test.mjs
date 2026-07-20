@@ -5,6 +5,7 @@ import {
   buildClaimBoard,
   DEFAULT_CLAIM_RULES,
   evaluateClaimRule,
+  KCD_SYSTEM,
   normalizeClaimRule,
 } from "../src/claim-rules.js";
 
@@ -55,7 +56,7 @@ test("내장 추적 규칙은 같은 코드의 진단을 검사 결과로 오인
     id: "p",
     name: "환자",
     events: [
-      { id: "dx", type: "condition", system: "http://hl7.org/fhir/sid/icd-10", code: "I10", label: "고혈압", date: "2026-01-01", status: "active" },
+      { id: "dx", type: "condition", system: KCD_SYSTEM, code: "I10", label: "고혈압", date: "2026-01-01", status: "active" },
       { id: "wrong-type", type: "condition", system: "http://loinc.org", code: "85354-9", label: "혈압 코드 진단", date: "2026-07-10", status: "active" },
     ],
   }, bloodPressureRule, "2026-07-19");

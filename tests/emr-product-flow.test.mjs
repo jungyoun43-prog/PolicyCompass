@@ -8,7 +8,9 @@ test("배포 Worker가 로컬 EMR 화면과 모듈을 제공한다", async () =>
     "/emr.css",
     "/emr.js",
     "/emr-model.js",
+    "/emr-encounter.js",
     "/emr-fhir.js",
+    "/emr-fhir-export.js",
     "/claim-rules.js",
   ];
 
@@ -24,6 +26,12 @@ test("EMR은 환자·차트·VitaGraph·코파일럿·급여 칸반·로컬 데�
   const html = await response.text();
 
   assert.match(html, /id="patientList"/);
+  assert.match(html, /id="encounterForm"/);
+  assert.match(html, /id="soapSubjective"/);
+  assert.match(html, /id="diagnosisForm"/);
+  assert.match(html, /id="prescriptionForm"/);
+  assert.match(html, /id="orderForm"/);
+  assert.match(html, /id="encounterClaimSummary"/);
   assert.match(html, /id="eventForm"/);
   assert.match(html, /id="eventSystem"/);
   assert.match(html, /id="clinicalGraph"/);
@@ -56,8 +64,10 @@ test("공개 Worker는 EMR 데이터를 받지 않고 로컬 개발 서버만 �
 test("공개 빌드는 네트워크 연결을 차단한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const response = await worker.fetch(new Request("https://example.com/emr"));
+  const policy = response.headers.get("content-security-policy") ?? "";
 
-  assert.match(response.headers.get("content-security-policy") ?? "", /connect-src 'none'/);
+  assert.match(policy, /connect-src 'none'/);
+  assert.doesNotMatch(policy, /https?:\/\//);
 });
 
 test("개발 명령은 새 체크아웃에서도 빌드 산출물을 먼저 만든다", async () => {

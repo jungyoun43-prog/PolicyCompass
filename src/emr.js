@@ -9,18 +9,40 @@ import {
   createCopilotRequest,
   createDemoEmrState,
   createEmptyEmrState,
+  createFinalizedPatientView,
   createLocalCopilotBrief,
   EMR_STORAGE_KEY,
   exportEmrBackup,
+  initializeEmrState,
   loadEmrState,
   localCalendarDate,
+  KOREA_TIMEZONE_OFFSET_MINUTES,
   parseEmrBackup,
+  recoverEmrState,
   removePatientEvent,
+  retireClaimRule,
   saveEmrState,
   selectPatient,
+  selectEncounter,
   updatePatient,
 } from "./emr-model.js";
 import { parseEmrFhirBundle } from "./emr-fhir.js";
+import { exportPatientFhirBundle } from "./emr-fhir-export.js";
+import {
+  addEncounterDiagnosis,
+  addEncounterOrder,
+  addEncounterPrescription,
+  cancelEncounter,
+  checkInPatient,
+  completeEncounter,
+  getEncounter,
+  getEncounterRecords,
+  reopenEncounter,
+  removeEncounterItem,
+  saveEncounterDraft,
+  signEncounter,
+  startEncounter,
+} from "./emr-encounter.js";
 import {
   buildClaimBoard,
   CLAIM_LANE_LABELS,
@@ -34,6 +56,7 @@ const EVENT_LABELS = {
   medication: "약물",
   allergy: "알레르기",
   procedure: "수술·처치",
+  "service-request": "검사·처치 오더",
   symptom: "증상",
   note: "진료 메모",
 };
@@ -49,11 +72,46 @@ const AUDIT_LABELS = {
   "patient.created": "환자 등록",
   "patient.updated": "환자 정보 변경",
   "patient.event.added": "임상 이벤트 추가",
-  "patient.event.removed": "임상 이벤트 삭제",
+  "patient.event.voided": "임상 이벤트 취소",
+  "encounter.checked-in": "오늘 진료 접수",
+  "encounter.started": "진료 시작",
+  "encounter.draft.saved": "SOAP·진료 초안 저장",
+  "encounter.completed": "진료 완료",
+  "encounter.signed": "진료 서명",
+  "encounter.reopened": "서명 전 진료 재개",
+  "encounter.cancelled": "진료 취소",
+  "diagnosis.added": "진단 추가",
+  "prescription.added": "처방 추가",
+  "order.added": "오더 추가",
+  "condition.removed": "진단 초안 삭제",
+  "medication.removed": "처방 초안 삭제",
+  "service-request.removed": "오더 초안 삭제",
+  "schema.migrated": "EMR 스키마 이관",
   "claim-rule.saved": "급여 규칙 저장",
+  "claim-rule.retired": "급여 규칙 종료일 설정",
   "fhir.imported": "FHIR 가져오기",
   "backup.restored": "백업 복원",
   "demo.loaded": "샘플 워크스페이스 열기",
+};
+
+const INSURANCE_LABELS = {
+  "national-health": "건강보험",
+  "medical-aid": "의료급여",
+  industrial: "산재보험",
+  auto: "자동차보험",
+  "self-pay": "일반·비급여",
+  other: "기타",
+  unknown: "보험 미상",
+};
+
+const QUEUE_LABELS = {
+  none: "미접수",
+  waiting: "대기",
+  "in-progress": "진료 중",
+  completed: "서명 대기",
+  signed: "완료·서명",
+  legacy: "완료·이관",
+  external: "외부 완료·미검증",
 };
 
 const GRAPH_COLORS = {
@@ -66,7 +124,7 @@ const GRAPH_COLORS = {
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const today = () => localCalendarDate();
+const today = () => localCalendarDate(new Date(), KOREA_TIMEZONE_OFFSET_MINUTES);
 const byId = (id) => document.getElementById(id);
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
@@ -93,8 +151,16 @@ const refs = {
   patientMrn: byId("patientMrn"),
   patientName: byId("patientName"),
   patientBirthDate: byId("patientBirthDate"),
+  patientAgeYears: byId("patientAgeYears"),
   patientSex: byId("patientSex"),
   patientPhone: byId("patientPhone"),
+  patientAddress: byId("patientAddress"),
+  patientBloodType: byId("patientBloodType"),
+  patientInsuranceType: byId("patientInsuranceType"),
+  patientEmergencyName: byId("patientEmergencyName"),
+  patientEmergencyRelation: byId("patientEmergencyRelation"),
+  patientEmergencyPhone: byId("patientEmergencyPhone"),
+  patientMemo: byId("patientMemo"),
   patientFormMessage: byId("patientFormMessage"),
   cancelPatientEdit: byId("cancelPatientEdit"),
   workspaceEmpty: byId("workspaceEmpty"),
@@ -109,6 +175,59 @@ const refs = {
   copilotContent: byId("copilotContent"),
   runCopilot: byId("runCopilot"),
   nextWorkList: byId("nextWorkList"),
+  queueFilters: byId("queueFilters"),
+  encounterTitle: byId("encounterTitle"),
+  encounterStatus: byId("encounterStatus"),
+  encounterStatusText: byId("encounterStatusText"),
+  returnCurrentEncounter: byId("returnCurrentEncounter"),
+  checkInPatient: byId("checkInPatient"),
+  startEncounter: byId("startEncounter"),
+  encounterForm: byId("encounterForm"),
+  encounterDate: byId("encounterDate"),
+  encounterDepartment: byId("encounterDepartment"),
+  encounterClinician: byId("encounterClinician"),
+  encounterRoom: byId("encounterRoom"),
+  chiefComplaint: byId("chiefComplaint"),
+  soapSubjective: byId("soapSubjective"),
+  soapObjective: byId("soapObjective"),
+  soapAssessment: byId("soapAssessment"),
+  soapPlan: byId("soapPlan"),
+  saveEncounterDraft: byId("saveEncounterDraft"),
+  completeEncounter: byId("completeEncounter"),
+  signEncounter: byId("signEncounter"),
+  reopenEncounter: byId("reopenEncounter"),
+  cancelEncounter: byId("cancelEncounter"),
+  encounterFormMessage: byId("encounterFormMessage"),
+  diagnosisForm: byId("diagnosisForm"),
+  diagnosisRole: byId("diagnosisRole"),
+  diagnosisCode: byId("diagnosisCode"),
+  diagnosisSystem: byId("diagnosisSystem"),
+  diagnosisLabel: byId("diagnosisLabel"),
+  diagnosisCertainty: byId("diagnosisCertainty"),
+  diagnosisList: byId("diagnosisList"),
+  prescriptionForm: byId("prescriptionForm"),
+  medicationCode: byId("medicationCode"),
+  medicationSystem: byId("medicationSystem"),
+  medicationName: byId("medicationName"),
+  medicationDose: byId("medicationDose"),
+  medicationDoseUnit: byId("medicationDoseUnit"),
+  medicationRoute: byId("medicationRoute"),
+  medicationFrequency: byId("medicationFrequency"),
+  medicationDurationDays: byId("medicationDurationDays"),
+  medicationQuantity: byId("medicationQuantity"),
+  medicationInstructions: byId("medicationInstructions"),
+  prescriptionList: byId("prescriptionList"),
+  orderForm: byId("orderForm"),
+  orderKind: byId("orderKind"),
+  orderCode: byId("orderCode"),
+  orderSystem: byId("orderSystem"),
+  orderLabel: byId("orderLabel"),
+  orderPriority: byId("orderPriority"),
+  orderInstructions: byId("orderInstructions"),
+  orderList: byId("orderList"),
+  encounterClaimSummary: byId("encounterClaimSummary"),
+  recentEncounterList: byId("recentEncounterList"),
+  encounterGraphSummary: byId("encounterGraphSummary"),
   eventForm: byId("eventForm"),
   eventType: byId("eventType"),
   eventDate: byId("eventDate"),
@@ -126,6 +245,7 @@ const refs = {
   graphEvidenceList: byId("graphEvidenceList"),
   graphLegend: document.querySelector(".graph-legend"),
   claimBoard: byId("claimBoard"),
+  ruleVersionList: byId("ruleVersionList"),
   ruleForm: byId("ruleForm"),
   ruleSetId: byId("ruleSetId"),
   ruleVersion: byId("ruleVersion"),
@@ -158,6 +278,7 @@ const refs = {
   fhirImport: byId("fhirImport"),
   importEmr: byId("importEmr"),
   exportEmr: byId("exportEmr"),
+  exportFhir: byId("exportFhir"),
   exportEmrSecondary: byId("exportEmrSecondary"),
   wipeEmr: byId("wipeEmr"),
   exportRecoveryRaw: byId("exportRecoveryRaw"),
@@ -170,14 +291,18 @@ const refs = {
   aiStatusDetail: byId("aiStatusDetail"),
 };
 
-let savedState = loadEmrState();
+let savedState = await initializeEmrState();
 let state = new URL(window.location.href).searchParams.get("demo") === "1"
   ? createDemoEmrState()
   : savedState;
-let activeTab = "overview";
+let activeTab = "encounter";
 let eventFilter = "all";
 let boardScope = "patient";
+let queueFilter = "all";
+let viewedEncounterId = "";
 let copilotBusy = false;
+let stateGeneration = 0;
+let copilotRequestController = null;
 let aiCapability = { checked: false, configured: false, model: "" };
 let lastFhirReport = null;
 const briefCache = new Map();
@@ -221,14 +346,105 @@ function ageFromBirthDate(value) {
   return age >= 0 ? "만 " + age + "세" : "";
 }
 
+function patientAgeLabel(patient) {
+  return ageFromBirthDate(patient?.birthDate) || (Number.isInteger(patient?.ageYears) ? `만 ${patient.ageYears}세 · 직접 입력` : "나이 미상");
+}
+
 function selectedPatient() {
   return state.patients.find((patient) => patient.id === state.selectedPatientId) ?? null;
 }
 
-function claimEvaluations(patient) {
+function encounterQueueStatus(encounter) {
+  if (!encounter) return "none";
+  if (encounter.recordStatus === "final" && encounter.status === "finished") {
+    if (encounter.signature?.status === "external") return "external";
+    if (encounter.signature?.status === "legacy") return "legacy";
+    return "signed";
+  }
+  if (encounter.status === "finished") return "completed";
+  if (encounter.status === "in-progress") return "in-progress";
+  if (encounter.status === "arrived") return "waiting";
+  return "none";
+}
+
+function unresolvedEncounterForPatient(patient) {
+  return patient?.events
+    ?.filter((event) => event.type === "encounter"
+      && event.recordStatus === "draft"
+      && ["arrived", "in-progress", "finished"].includes(event.status))
+    .sort((left, right) => {
+      const priority = { "in-progress": 0, arrived: 1, finished: 2 };
+      return (priority[left.status] ?? 9) - (priority[right.status] ?? 9)
+        || String(right.arrivedAt).localeCompare(String(left.arrivedAt));
+    })[0] ?? null;
+}
+
+function todayEncounterForPatient(patient) {
+  const unresolved = unresolvedEncounterForPatient(patient);
+  if (unresolved) return unresolved;
+  return patient?.events
+    ?.filter((event) => event.type === "encounter" && event.date === today() && event.recordStatus !== "entered-in-error")
+    .sort((left, right) => String(right.arrivedAt).localeCompare(String(left.arrivedAt)))[0] ?? null;
+}
+
+function currentEncounter(patient) {
+  if (!patient) return null;
+  const viewed = getEncounter(patient, viewedEncounterId);
+  if (viewed && viewed.recordStatus !== "entered-in-error") return viewed;
+  const unresolved = unresolvedEncounterForPatient(patient);
+  if (unresolved) return unresolved;
+  const explicitlySelected = getEncounter(patient, state.selectedEncounterId);
+  if (explicitlySelected?.date === today() && explicitlySelected.recordStatus !== "entered-in-error") return explicitlySelected;
+  return patient.events
+    .filter((event) => event.type === "encounter" && event.date === today() && event.recordStatus !== "entered-in-error")
+    .sort((left, right) => {
+      const priority = { "in-progress": 0, arrived: 1, finished: 2 };
+      return (priority[left.status] ?? 9) - (priority[right.status] ?? 9)
+        || String(right.arrivedAt).localeCompare(String(left.arrivedAt));
+    })[0] ?? null;
+}
+
+function preserveEncounterDraftIfChanged(stateInput) {
+  const patient = stateInput.patients.find((item) => item.id === stateInput.selectedPatientId);
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounter.recordStatus !== "draft" || encounter.status !== "in-progress") return stateInput;
+  const draft = encounterDraftFromForm();
+  const clean = (value) => String(value ?? "").trim();
+  const same = clean(draft.date) === clean(encounter.date)
+    && clean(draft.department) === clean(encounter.department)
+    && clean(draft.clinician) === clean(encounter.clinician)
+    && clean(draft.room) === clean(encounter.room)
+    && clean(draft.chiefComplaint) === clean(encounter.chiefComplaint)
+    && clean(draft.soap.subjective) === clean(encounter.soap?.subjective)
+    && clean(draft.soap.objective) === clean(encounter.soap?.objective)
+    && clean(draft.soap.assessment) === clean(encounter.soap?.assessment)
+    && clean(draft.soap.plan) === clean(encounter.soap?.plan);
+  return same ? stateInput : saveEncounterDraft(stateInput, patient.id, encounter.id, draft);
+}
+
+function finalizedPatient(patient) {
+  return patient ? createFinalizedPatientView(patient) : null;
+}
+
+function claimEvaluations(patient, { includeCurrentDraft = false, encounterId = "", asOf = today() } = {}) {
   if (!patient) return [];
-  const board = buildClaimBoard([patient], state.rules, today());
-  return CLAIM_LANE_ORDER.flatMap((status) => board.lanes[status]);
+  const finalPatient = finalizedPatient(patient);
+  let evaluationPatient = finalPatient;
+  if (includeCurrentDraft) {
+    const encounter = getEncounter(patient, encounterId) ?? unresolvedEncounterForPatient(patient);
+    if (encounter) {
+      const projected = patient.events
+        .filter((event) => event.encounterId === encounter.id && event.recordStatus === "draft")
+        .map((event) => ({ ...event, recordStatus: "final" }));
+      const projectedEncounter = encounter.status === "finished" ? [{ ...encounter, recordStatus: "final" }] : [];
+      evaluationPatient = { ...finalPatient, events: [...finalPatient.events, ...projectedEncounter, ...projected] };
+    }
+  }
+  const board = buildClaimBoard([evaluationPatient], state.rules, asOf);
+  return CLAIM_LANE_ORDER.flatMap((status) => board.lanes[status]).map((evaluation) => ({
+    ...evaluation,
+    preflight: includeCurrentDraft,
+  }));
 }
 
 function restoreCopilotEvidenceIds(brief, aliasToEventId) {
@@ -263,16 +479,32 @@ function setStatus(message, tone = "") {
   refs.workspaceStatus.className = "workspace-status" + (tone ? " is-" + tone : "");
 }
 
-function applyMutation(mutator, message) {
+function assertCurrentStateGeneration(expectedGeneration) {
+  if (expectedGeneration !== stateGeneration) {
+    throw new Error("전체 삭제가 적용되어 이전 작업 결과를 폐기했습니다.");
+  }
+}
+
+function reportFormValidity(form) {
+  if (form.checkValidity()) return true;
+  form.reportValidity();
+  return false;
+}
+
+async function applyMutation(mutator, message, { preserveDraft = true } = {}) {
   const wasDemo = state.demo;
+  const expectedRevision = state.revision;
+  const expectedGeneration = stateGeneration;
   if (!wasDemo && state.storageError) {
     throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.");
   }
-  const candidate = mutator(state);
+  const base = preserveDraft ? preserveEncounterDraftIfChanged(state) : state;
+  const candidate = mutator(base);
   if (wasDemo) {
     state = { ...candidate, demo: true };
   } else {
-    const saved = saveEmrState(candidate);
+    const saved = await saveEmrState(candidate, undefined, expectedRevision);
+    assertCurrentStateGeneration(expectedGeneration);
     state = saved;
     savedState = saved;
   }
@@ -289,10 +521,20 @@ function renderPatients() {
   const query = refs.patientSearch.value.trim().toLocaleLowerCase("ko");
   const patients = state.patients.filter((patient) => {
     const haystack = (patient.name + " " + patient.mrn).toLocaleLowerCase("ko");
-    return !query || haystack.includes(query);
+    const status = encounterQueueStatus(todayEncounterForPatient(patient));
+    const statusMatches = queueFilter === "all"
+      || (queueFilter === "completed" ? ["completed", "signed", "legacy", "external"].includes(status) : status === queueFilter);
+    return (!query || haystack.includes(query)) && statusMatches;
+  }).sort((left, right) => {
+    const priority = { "in-progress": 0, waiting: 1, completed: 2, signed: 3, legacy: 4, external: 5, none: 6 };
+    const leftStatus = encounterQueueStatus(todayEncounterForPatient(left));
+    const rightStatus = encounterQueueStatus(todayEncounterForPatient(right));
+    return priority[leftStatus] - priority[rightStatus] || left.name.localeCompare(right.name, "ko");
   });
   clear(refs.patientList);
   for (const patient of patients) {
+    const encounter = todayEncounterForPatient(patient);
+    const queueStatus = encounterQueueStatus(encounter);
     const item = element("li");
     const button = element("button");
     button.type = "button";
@@ -300,22 +542,27 @@ function renderPatients() {
     button.setAttribute("aria-current", String(patient.id === state.selectedPatientId));
     button.append(
       element("strong", "", patient.name),
-      element("small", "", patient.mrn || "등록번호 없음"),
-      element("em", "", patient.events.length + "건"),
+      element("small", "", [patient.mrn || "등록번호 없음", patientAgeLabel(patient), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")),
+      element("em", `queue-badge queue-badge--${queueStatus}`, QUEUE_LABELS[queueStatus]),
     );
     item.append(button);
     refs.patientList.append(item);
   }
-  refs.patientCount.textContent = state.patients.length + "명";
+  const todayCount = state.patients.filter((patient) => encounterQueueStatus(todayEncounterForPatient(patient)) !== "none").length;
+  refs.patientCount.textContent = `${todayCount}/${state.patients.length}명`;
   refs.patientListEmpty.hidden = state.patients.length > 0;
   if (state.patients.length > 0 && patients.length === 0) {
     refs.patientList.append(element("li", "rail-empty", "검색 결과가 없습니다."));
   }
+  for (const button of refs.queueFilters.querySelectorAll("[data-queue-filter]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.queueFilter === queueFilter));
+  }
 }
 
 function renderSafety(patient) {
+  const chart = finalizedPatient(patient);
   clear(refs.safetyAlerts);
-  const allergies = patient.events.filter((event) => event.type === "allergy");
+  const allergies = chart.events.filter((event) => event.type === "allergy");
   if (allergies.length) {
     for (const allergy of allergies.slice(0, 3)) {
       refs.safetyAlerts.append(element("span", "safety-chip safety-chip--allergy", "알레르기 · " + allergy.label));
@@ -323,7 +570,7 @@ function renderSafety(patient) {
   } else {
     refs.safetyAlerts.append(element("span", "safety-chip", "알레르기 확인 필요"));
   }
-  const activeMedications = patient.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
+  const activeMedications = chart.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
   refs.safetyAlerts.append(element("span", "safety-chip", "활성 약물 " + activeMedications.length + "건"));
 }
 
@@ -334,10 +581,11 @@ function addMetric(label, value, detail, warning = false) {
 }
 
 function renderMetrics(patient, evaluations) {
+  const chart = finalizedPatient(patient);
   clear(refs.patientMetrics);
-  const conditions = patient.events.filter((event) => event.type === "condition" && !["inactive", "resolved", "remission"].includes(event.status));
-  const medications = patient.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
-  const latestObservation = patient.events.find((event) => event.type === "observation");
+  const conditions = chart.events.filter((event) => event.type === "condition" && !["inactive", "resolved", "remission"].includes(event.status));
+  const medications = chart.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
+  const latestObservation = chart.events.find((event) => event.type === "observation");
   const attention = evaluations.filter((item) => ["missing-evidence", "due-soon", "unknown"].includes(item.status));
   addMetric("ACTIVE PROBLEMS", conditions.length + "개", conditions[0]?.label ?? "구조화 문제 없음");
   addMetric("ACTIVE MEDICATIONS", medications.length + "개", medications[0]?.label ?? "활성 약물 없음");
@@ -346,6 +594,7 @@ function renderMetrics(patient, evaluations) {
 }
 
 function renderSummary(patient) {
+  const chart = finalizedPatient(patient);
   clear(refs.clinicalSummary);
   const groups = [
     ["활성 문제", ["condition", "symptom"]],
@@ -356,7 +605,7 @@ function renderSummary(patient) {
   for (const [title, types] of groups) {
     const section = element("section", "summary-group");
     section.append(element("h4", "", title));
-    const events = patient.events.filter((event) => types.includes(event.type)).slice(0, 4);
+    const events = chart.events.filter((event) => types.includes(event.type)).slice(0, 4);
     if (!events.length) {
       section.append(createEmptyMessage("해당 구조화 기록이 없습니다."));
     } else {
@@ -506,7 +755,11 @@ function renderTimeline(patient) {
     item.append(element("time", "", displayDate(event.date)));
     const body = element("div", "event-row__body");
     const header = element("header");
-    header.append(element("span", "event-type-badge", EVENT_LABELS[event.type] ?? event.type), element("b", "", event.label));
+    header.append(
+      element("span", "event-type-badge", EVENT_LABELS[event.type] ?? event.type),
+      element("span", `event-type-badge event-type-badge--${event.recordStatus}`, event.recordStatus === "draft" ? "초안" : event.recordStatus === "entered-in-error" ? "취소" : "확정"),
+      element("b", "", event.label),
+    );
     body.append(header);
     const value = event.value === "" ? "" : String(event.value) + (event.unit ? " " + event.unit : "");
     const codedValue = event.code ? [event.system, event.code].filter(Boolean).join(" | ") : "";
@@ -515,11 +768,14 @@ function renderTimeline(patient) {
     body.append(element("span", "event-source", "",));
     body.lastElementChild.textContent = (event.source?.label || "출처 없음") + (event.source?.resourceId ? " · " + event.source.resourceId : "");
     item.append(body);
-    const remove = element("button", "event-remove", "삭제");
-    remove.type = "button";
-    remove.dataset.removeEvent = event.id;
-    remove.setAttribute("aria-label", event.label + " 기록 삭제");
-    item.append(remove);
+    const isLockedEncounterRecord = Boolean(event.encounterId) || event.type === "encounter";
+    if (!isLockedEncounterRecord && event.recordStatus !== "entered-in-error") {
+      const remove = element("button", "event-remove", event.recordStatus === "draft" ? "폐기" : "취소");
+      remove.type = "button";
+      remove.dataset.removeEvent = event.id;
+      remove.setAttribute("aria-label", event.label + " 기록 취소");
+      item.append(remove);
+    }
     refs.eventTimeline.append(item);
   }
   if (!events.length) refs.eventTimeline.append(createEmptyMessage("선택한 유형의 기록이 없습니다."));
@@ -647,7 +903,37 @@ function safeExternalUrl(value) {
   }
 }
 
+function renderRuleVersions() {
+  clear(refs.ruleVersionList);
+  const rules = [...state.rules].sort((left, right) => left.ruleSetId.localeCompare(right.ruleSetId)
+    || right.effectiveFrom.localeCompare(left.effectiveFrom));
+  for (const rule of rules) {
+    const row = element("article", "rule-version-row");
+    const summary = element("div", "rule-version-summary");
+    summary.append(
+      element("b", "", `${rule.title} · v${rule.version}`),
+      element("span", "", `${rule.ruleSetId} · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}${rule.sample ? " · 샘플" : ""}`),
+    );
+    const actions = element("div", "rule-version-actions");
+    const label = element("label", "", "종료일");
+    const input = document.createElement("input");
+    input.type = "date";
+    input.min = rule.effectiveFrom;
+    input.value = rule.effectiveTo || today();
+    input.dataset.ruleEndDate = rule.id;
+    const button = element("button", "clinical-button", rule.effectiveTo ? "종료일 수정" : "이 버전 종료");
+    button.type = "button";
+    button.dataset.retireRule = rule.id;
+    label.append(input);
+    actions.append(label, button);
+    row.append(summary, actions);
+    refs.ruleVersionList.append(row);
+  }
+  if (!rules.length) refs.ruleVersionList.append(createEmptyMessage("저장된 급여 규칙이 없습니다."));
+}
+
 function renderClaimBoard(patient) {
+  renderRuleVersions();
   const patients = boardScope === "all" ? state.patients : [patient];
   const board = buildClaimBoard(patients, state.rules, today());
   clear(refs.claimBoard);
@@ -716,9 +1002,10 @@ function renderClaimBoard(patient) {
 }
 
 function renderJourney(patient, brief) {
+  const chart = finalizedPatient(patient);
   clear(refs.clinicalJourney);
   const grouped = new Map();
-  for (const event of patient.events) {
+  for (const event of chart.events) {
     if (!grouped.has(event.date)) grouped.set(event.date, []);
     grouped.get(event.date).push(event);
   }
@@ -736,7 +1023,7 @@ function renderJourney(patient, brief) {
   if (!grouped.size) refs.clinicalJourney.append(createEmptyMessage("Journey로 묶을 임상기록이 없습니다."));
 
   clear(refs.visitQuestions);
-  const eventById = new Map(patient.events.map((event) => [event.id, event]));
+  const eventById = new Map(chart.events.map((event) => [event.id, event]));
   for (const item of brief.questions ?? []) {
     const question = normalizedQuestion(item);
     const sources = question.evidenceEventIds.map((id) => eventById.get(id)).filter(Boolean);
@@ -763,7 +1050,7 @@ function renderAudit() {
     const detail = element("div");
     detail.append(
       element("b", "", AUDIT_LABELS[event.action] ?? event.action),
-      element("span", "", [event.actor, event.patientId, event.detail].filter(Boolean).join(" · ")),
+      element("span", "", [event.actor, event.patientId, event.encounterId, event.entityId, event.detail].filter(Boolean).join(" · ")),
     );
     item.append(detail);
     refs.auditList.append(item);
@@ -776,7 +1063,9 @@ function renderDataFacts() {
   const facts = [
     ["저장 위치", state.demo ? "메모리 전용 데모" : "브라우저 localStorage"],
     ["환자 수", state.patients.length + "명"],
+    ["진료 회차", state.patients.reduce((sum, patient) => sum + patient.events.filter((event) => event.type === "encounter").length, 0) + "건"],
     ["임상 이벤트", state.patients.reduce((sum, patient) => sum + patient.events.length, 0) + "건"],
+    ["데이터 스키마", `v${state.version} · revision ${state.revision}`],
     ["급여 규칙", state.rules.length + "개"],
     ["마지막 변경", displayTimestamp(state.updatedAt)],
     ["저장 상태", state.storageError ? "복구 필요" : "정상"],
@@ -795,8 +1084,9 @@ function renderFhirReport() {
     clear(refs.fhirImportIssues);
     return;
   }
-  refs.fhirImportReportSummary.textContent = "지원 " + lastFhirReport.supported + "건 · 제외 " + lastFhirReport.unsupported + "건";
+  refs.fhirImportReportSummary.textContent = "외부 미검증 · 지원 " + lastFhirReport.supported + "건 · 제외 " + lastFhirReport.unsupported + "건";
   clear(refs.fhirImportIssues);
+  refs.fhirImportIssues.append(element("li", "", "가져온 기록의 기관·작성자·전자서명은 검증되지 않았습니다. 타임라인에는 표시되지만 확정 요약·AI·급여 근거에서는 제외됩니다."));
   for (const item of lastFhirReport.unsupportedItems ?? []) {
     refs.fhirImportIssues.append(element(
       "li",
@@ -808,6 +1098,198 @@ function renderFhirReport() {
     refs.fhirImportIssues.append(element("li", "", "추가 제외 항목 " + lastFhirReport.unsupportedTruncated + "건"));
   }
   if (!refs.fhirImportIssues.childElementCount) refs.fhirImportIssues.append(element("li", "", "제외된 리소스가 없습니다."));
+}
+
+function setFormControlsDisabled(form, disabled) {
+  for (const control of form.querySelectorAll("input, textarea, select, button")) control.disabled = disabled;
+}
+
+function encounterDraftFromForm() {
+  return {
+    date: refs.encounterDate.value,
+    department: refs.encounterDepartment.value,
+    clinician: refs.encounterClinician.value,
+    room: refs.encounterRoom.value,
+    chiefComplaint: refs.chiefComplaint.value,
+    soap: {
+      subjective: refs.soapSubjective.value,
+      objective: refs.soapObjective.value,
+      assessment: refs.soapAssessment.value,
+      plan: refs.soapPlan.value,
+    },
+  };
+}
+
+function appendEncounterEntry(list, { title, meta, detail = "", badge = "", entityId = "", editable = false }) {
+  const item = element("li", "encounter-entry-row");
+  const body = element("div", "encounter-entry-row__body");
+  const heading = element("div", "encounter-entry-row__heading");
+  heading.append(element("b", "", title));
+  if (badge) heading.append(element("span", "event-type-badge", badge));
+  body.append(heading, element("small", "", meta));
+  if (detail) body.append(element("p", "", detail));
+  item.append(body);
+  if (editable && entityId) {
+    const remove = element("button", "event-remove", "삭제");
+    remove.type = "button";
+    remove.dataset.removeEncounterItem = entityId;
+    remove.setAttribute("aria-label", `${title} 초안 삭제`);
+    item.append(remove);
+  }
+  list.append(item);
+}
+
+function renderEncounterClaims(patient, evaluations) {
+  clear(refs.encounterClaimSummary);
+  refs.encounterClaimSummary.append(element("p", "claim-preflight-note", "예비판정 · 서명 전 초안을 확정 사실과 분리해 가상 반영"));
+  const attentionStatuses = new Set(["missing-evidence", "due-soon", "unknown"]);
+  const counts = Object.fromEntries(CLAIM_LANE_ORDER.map((status) => [status, evaluations.filter((item) => item.status === status).length]));
+  const countRow = element("div", "claim-mini-counts");
+  for (const status of ["missing-evidence", "due-soon", "ready", "waiting", "unknown"]) {
+    const chip = element("span", `claim-mini-count claim-mini-count--${status}`);
+    chip.append(element("b", "", counts[status]), document.createTextNode(CLAIM_LANE_LABELS[status]));
+    countRow.append(chip);
+  }
+  refs.encounterClaimSummary.append(countRow);
+  const attention = evaluations.filter((item) => attentionStatuses.has(item.status)).slice(0, 3);
+  for (const evaluation of attention) {
+    const card = element("article", "claim-mini-risk");
+    card.append(
+      element("b", "", evaluation.title),
+      element("span", "", CLAIM_LANE_LABELS[evaluation.status] ?? "확인"),
+      element("p", "", evaluation.explanation),
+    );
+    refs.encounterClaimSummary.append(card);
+  }
+  if (!attention.length) refs.encounterClaimSummary.append(element("p", "context-ok", "현재 규칙에서 즉시 보완할 항목 없음 · 실제 청구 전 담당자 재확인"));
+}
+
+function renderEncounterContext(patient, encounter, evaluations) {
+  renderEncounterClaims(patient, evaluations);
+  clear(refs.recentEncounterList);
+  const recent = patient.events
+    .filter((event) => event.type === "encounter" && event.recordStatus === "final" && event.status === "finished")
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, 3);
+  for (const visit of recent) {
+    const item = element("li");
+    item.append(
+      element("b", "", visit.label),
+      element("span", "", [displayDate(visit.date), visit.department, visit.clinician].filter(Boolean).join(" · ")),
+    );
+    const open = element("button", "text-action", visit.id === encounter?.id ? "열림" : "진료 기록 열기");
+    open.type = "button";
+    open.dataset.viewEncounter = visit.id;
+    open.disabled = visit.id === encounter?.id;
+    item.append(open);
+    refs.recentEncounterList.append(item);
+  }
+  if (!recent.length) refs.recentEncounterList.append(element("li", "", "완료·서명된 이전 진료 없음"));
+
+  clear(refs.encounterGraphSummary);
+  const graph = createClinicalGraph(patient);
+  const types = new Map();
+  for (const node of graph.nodes) types.set(node.type, (types.get(node.type) ?? 0) + 1);
+  const summary = element("div", "graph-mini-facts");
+  summary.append(
+    element("strong", "", `${graph.nodes.length}개 임상 노드`),
+    element("span", "", `${graph.edges.length}개 추론 관계 · 차트 사실 아님`),
+    element("small", "", [...types].map(([type, count]) => `${EVENT_LABELS[type] ?? type} ${count}`).join(" · ") || "확정 구조화 기록 없음"),
+  );
+  refs.encounterGraphSummary.append(summary);
+}
+
+function renderEncounter(patient, evaluations) {
+  const encounter = currentEncounter(patient);
+  const status = encounterQueueStatus(encounter);
+  const editable = status === "in-progress" && encounter?.recordStatus === "draft";
+  const completed = status === "completed";
+  refs.encounterTitle.textContent = encounter ? `${displayDate(encounter.date)} ${encounter.label}` : "오늘 외래 진료";
+  refs.encounterStatus.dataset.status = status;
+  refs.encounterStatusText.textContent = QUEUE_LABELS[status];
+  refs.returnCurrentEncounter.hidden = !viewedEncounterId;
+  const finalized = ["signed", "legacy", "external"].includes(status);
+  refs.checkInPatient.hidden = !["none", "signed", "legacy", "external"].includes(status);
+  refs.checkInPatient.textContent = finalized ? "새 진료 접수" : "오늘 접수";
+  refs.startEncounter.hidden = status !== "waiting";
+  refs.saveEncounterDraft.hidden = !editable;
+  refs.completeEncounter.hidden = !editable;
+  refs.signEncounter.hidden = !completed;
+  refs.reopenEncounter.hidden = !completed;
+  refs.cancelEncounter.hidden = !["waiting", "in-progress"].includes(status);
+
+  refs.encounterDate.value = encounter?.date || today();
+  refs.encounterDepartment.value = encounter?.department || "";
+  refs.encounterClinician.value = encounter?.clinician || "";
+  refs.encounterRoom.value = encounter?.room || "";
+  refs.chiefComplaint.value = encounter?.chiefComplaint || "";
+  refs.soapSubjective.value = encounter?.soap?.subjective || "";
+  refs.soapObjective.value = encounter?.soap?.objective || "";
+  refs.soapAssessment.value = encounter?.soap?.assessment || "";
+  refs.soapPlan.value = encounter?.soap?.plan || "";
+  for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = !editable;
+  refs.encounterFormMessage.textContent = status === "signed"
+    ? `${encounter.signature?.signer || "의료진"} · ${displayTimestamp(encounter.signature?.signedAt)} 로컬 서명 완료. 법적 전자서명 아님.`
+    : status === "external"
+      ? "외부 완료 기록 · 원본 기관·작성자·전자서명 미검증. 로컬 서명으로 보지 않습니다."
+      : status === "legacy"
+        ? "이전 버전에서 이관된 완료 기록 · 원본 서명 상태를 별도로 확인하세요."
+    : status === "completed"
+      ? "진료 완료 · 최종 검토 후 서명하세요. 서명 전에는 다시 열 수 있습니다."
+      : status === "waiting"
+        ? "접수 완료 · 진료 시작 후 기록할 수 있습니다."
+        : status === "none"
+          ? "오늘 접수 후 진료를 시작하세요."
+          : "";
+
+  setFormControlsDisabled(refs.diagnosisForm, !editable);
+  setFormControlsDisabled(refs.prescriptionForm, !editable);
+  setFormControlsDisabled(refs.orderForm, !editable);
+  clear(refs.diagnosisList);
+  clear(refs.prescriptionList);
+  clear(refs.orderList);
+  const records = encounter ? getEncounterRecords(patient, encounter.id).slice(1) : [];
+  for (const diagnosis of records.filter((event) => event.type === "condition")) {
+    appendEncounterEntry(refs.diagnosisList, {
+      title: diagnosis.label,
+      meta: [diagnosis.diagnosisRole === "primary" ? "주상병" : "부상병", diagnosis.system, diagnosis.code].filter(Boolean).join(" · "),
+      detail: diagnosis.note,
+      badge: diagnosis.certainty === "provisional" ? "의증" : "확정",
+      entityId: diagnosis.id,
+      editable,
+    });
+  }
+  if (!refs.diagnosisList.childElementCount) refs.diagnosisList.append(element("li", "encounter-entry-empty", editable ? "이번 진료 진단을 추가하세요." : "이번 진료 진단 없음"));
+
+  for (const medication of records.filter((event) => event.type === "medication")) {
+    const rx = medication.prescription ?? {};
+    appendEncounterEntry(refs.prescriptionList, {
+      title: medication.label,
+      meta: [medication.system, medication.code].filter(Boolean).join(" · ") || "코드 없음",
+      detail: [`1회 ${rx.dose ?? "—"}${rx.doseUnit || ""}`, rx.route, rx.frequency, `${rx.durationDays ?? "—"}일`, `총 ${rx.quantity ?? "—"}`, rx.instructions].filter(Boolean).join(" · "),
+      badge: medication.recordStatus === "final" ? "확정 처방" : "처방 초안",
+      entityId: medication.id,
+      editable,
+    });
+  }
+  if (!refs.prescriptionList.childElementCount) refs.prescriptionList.append(element("li", "encounter-entry-empty", editable ? "처방이 필요한 경우 구조화해 추가하세요." : "이번 진료 처방 없음"));
+
+  for (const order of records.filter((event) => event.type === "service-request")) {
+    const evaluation = evaluations
+      .filter((item) => item.rule?.serviceCode === order.code && (!item.rule.serviceSystem || item.rule.serviceSystem === order.system))
+      .sort((left, right) => Number(left.status === "not-applicable") - Number(right.status === "not-applicable")
+        || String(right.rule?.effectiveFrom).localeCompare(String(left.rule?.effectiveFrom)))[0] ?? null;
+    appendEncounterEntry(refs.orderList, {
+      title: order.label,
+      meta: [order.order?.kind, order.system, order.code, order.order?.priority].filter(Boolean).join(" · "),
+      detail: order.order?.instructions,
+      badge: evaluation ? `예비 · ${CLAIM_LANE_LABELS[evaluation.status]}` : "예비 · 기준 확인",
+      entityId: order.id,
+      editable,
+    });
+  }
+  if (!refs.orderList.childElementCount) refs.orderList.append(element("li", "encounter-entry-empty", editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"));
+  renderEncounterContext(patient, encounter, evaluations);
 }
 
 function renderTabs() {
@@ -823,21 +1305,99 @@ function renderTabs() {
   }
 }
 
+function clearPatientWorkspaceUi() {
+  viewedEncounterId = "";
+  copilotBusy = false;
+  copilotRequestController?.abort();
+  copilotRequestController = null;
+  resetPatientForm();
+  refs.patientSearch.value = "";
+  refs.encounterForm.reset();
+  refs.diagnosisForm.reset();
+  refs.prescriptionForm.reset();
+  refs.orderForm.reset();
+  refs.eventForm.reset();
+  refs.ruleForm.reset();
+  refs.fhirImport.value = "";
+  refs.importEmr.value = "";
+  refs.encounterDate.value = today();
+  refs.eventDate.value = today();
+  refs.ruleEffectiveFrom.value = today();
+  refs.patientBirthDate.max = today();
+  refs.diagnosisSystem.value = "urn:kr:kcd";
+  refs.selectedPatientName.textContent = "";
+  refs.selectedPatientMeta.textContent = "";
+  refs.lastSavedAt.textContent = "";
+  refs.encounterTitle.textContent = "오늘 외래 진료";
+  refs.encounterStatus.dataset.status = "none";
+  refs.encounterStatusText.textContent = QUEUE_LABELS.none;
+  refs.encounterFormMessage.textContent = "";
+  refs.eventFormMessage.textContent = "";
+  refs.eventCount.textContent = "0건";
+  refs.copilotMode.textContent = "규칙 기반";
+  refs.returnCurrentEncounter.hidden = true;
+  refs.checkInPatient.hidden = true;
+  refs.startEncounter.hidden = true;
+  refs.saveEncounterDraft.hidden = true;
+  refs.completeEncounter.hidden = true;
+  refs.signEncounter.hidden = true;
+  refs.reopenEncounter.hidden = true;
+  refs.cancelEncounter.hidden = true;
+  refs.runCopilot.disabled = true;
+  for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = true;
+  setFormControlsDisabled(refs.diagnosisForm, true);
+  setFormControlsDisabled(refs.prescriptionForm, true);
+  setFormControlsDisabled(refs.orderForm, true);
+  for (const node of [
+    refs.safetyAlerts,
+    refs.patientMetrics,
+    refs.clinicalSummary,
+    refs.copilotContent,
+    refs.nextWorkList,
+    refs.diagnosisList,
+    refs.prescriptionList,
+    refs.orderList,
+    refs.encounterClaimSummary,
+    refs.recentEncounterList,
+    refs.encounterGraphSummary,
+    refs.eventFilters,
+    refs.eventTimeline,
+    refs.clinicalGraph,
+    refs.graphEvidenceList,
+    refs.claimBoard,
+    refs.ruleVersionList,
+    refs.clinicalJourney,
+    refs.visitQuestions,
+  ]) clear(node);
+}
+
 function renderWorkspace() {
   const patient = selectedPatient();
   refs.workspaceEmpty.hidden = Boolean(patient);
   refs.workspaceContent.hidden = !patient;
-  if (!patient) return;
+  if (!patient) {
+    clearPatientWorkspaceUi();
+    return;
+  }
   const evaluations = claimEvaluations(patient);
+  const encounter = currentEncounter(patient);
+  const preflightEvaluations = claimEvaluations(patient, {
+    includeCurrentDraft: encounter?.recordStatus === "draft",
+    encounterId: encounter?.id ?? "",
+    asOf: encounter?.date ?? today(),
+  });
   refs.selectedPatientName.textContent = patient.name;
   refs.selectedPatientMeta.textContent = [
     patient.mrn || "등록번호 없음",
     patient.birthDate ? displayDate(patient.birthDate) : "생년월일 미상",
-    ageFromBirthDate(patient.birthDate),
+    patientAgeLabel(patient),
     SEX_LABELS[patient.sex],
+    patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "혈액형 미상",
+    INSURANCE_LABELS[patient.insuranceType],
   ].filter(Boolean).join(" · ");
   refs.lastSavedAt.textContent = state.demo ? "데모 · 저장 안 됨" : "저장 " + displayTimestamp(state.updatedAt);
   renderSafety(patient);
+  renderEncounter(patient, preflightEvaluations);
   renderMetrics(patient, evaluations);
   renderSummary(patient);
   renderCopilot(patient, evaluations);
@@ -862,10 +1422,60 @@ function render() {
 
 function resetPatientForm() {
   refs.patientForm.reset();
+  refs.patientAgeYears.disabled = false;
   refs.patientFormMode.value = "create";
   refs.patientFormMessage.textContent = "";
   refs.cancelPatientEdit.hidden = true;
   refs.patientComposer.querySelector("summary span").textContent = "새 환자 등록";
+}
+
+function isClearedEmrState(candidate) {
+  return candidate?.demo === false
+    && !candidate.storageError
+    && !candidate.recoveryRaw
+    && candidate.selectedPatientId === ""
+    && candidate.selectedEncounterId === ""
+    && Array.isArray(candidate.patients)
+    && candidate.patients.length === 0
+    && Array.isArray(candidate.audit)
+    && candidate.audit.length === 0
+    && Array.isArray(candidate.rules)
+    && candidate.rules.every(({ sample }) => sample === true);
+}
+
+function adoptClearedEmrState(cleared) {
+  stateGeneration += 1;
+  state = cleared;
+  savedState = cleared;
+  briefCache.clear();
+  lastFhirReport = null;
+  render();
+}
+
+function patientFormHasPendingInput() {
+  return refs.patientFormMode.value !== "create" || [
+    refs.patientMrn,
+    refs.patientName,
+    refs.patientBirthDate,
+    refs.patientAgeYears,
+    refs.patientPhone,
+    refs.patientAddress,
+    refs.patientEmergencyName,
+    refs.patientEmergencyRelation,
+    refs.patientEmergencyPhone,
+    refs.patientMemo,
+  ].some((input) => String(input.value ?? "").trim())
+    || refs.patientSex.value !== "unknown"
+    || refs.patientBloodType.value !== "unknown"
+    || refs.patientInsuranceType.value !== "unknown";
+}
+
+function encounterFormHasUnsavedInput() {
+  try {
+    return preserveEncounterDraftIfChanged(state) !== state;
+  } catch {
+    return true;
+  }
 }
 
 function beginPatientEdit() {
@@ -875,8 +1485,17 @@ function beginPatientEdit() {
   refs.patientMrn.value = patient.mrn;
   refs.patientName.value = patient.name;
   refs.patientBirthDate.value = patient.birthDate;
+  refs.patientAgeYears.value = patient.birthDate ? ageFromBirthDate(patient.birthDate).replace(/\D/g, "") : patient.ageYears ?? "";
+  refs.patientAgeYears.disabled = Boolean(patient.birthDate);
   refs.patientSex.value = patient.sex;
   refs.patientPhone.value = patient.phone;
+  refs.patientAddress.value = patient.address;
+  refs.patientBloodType.value = patient.bloodType;
+  refs.patientInsuranceType.value = patient.insuranceType;
+  refs.patientEmergencyName.value = patient.emergencyContact?.name ?? "";
+  refs.patientEmergencyRelation.value = patient.emergencyContact?.relation ?? "";
+  refs.patientEmergencyPhone.value = patient.emergencyContact?.phone ?? "";
+  refs.patientMemo.value = patient.memo;
   refs.patientFormMessage.textContent = "";
   refs.cancelPatientEdit.hidden = false;
   refs.patientComposer.querySelector("summary span").textContent = "환자 정보 편집";
@@ -951,6 +1570,8 @@ async function runCopilot() {
     return;
   }
   copilotBusy = true;
+  const controller = new AbortController();
+  copilotRequestController = controller;
   renderCopilot(patient, evaluations);
   setStatus("규칙 기반 초안을 먼저 만들었습니다. 이름·등록번호·전화·자유메모를 제외한 구조화 차트를 로컬 AI에 보냅니다.");
   try {
@@ -960,6 +1581,7 @@ async function runCopilot() {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify(request.payload),
+      signal: controller.signal,
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "로컬 AI를 사용할 수 없습니다.");
@@ -976,42 +1598,57 @@ async function runCopilot() {
     briefCache.set(patient.id, restoreCopilotEvidenceIds(result, request.aliasToEventId));
     setStatus("로컬 AI 초안을 만들었습니다. 의료진 검토 전 확정 기록이 아닙니다.", "success");
   } catch (error) {
-    setStatus((error instanceof Error ? error.message : "로컬 AI 연결 실패") + " 규칙 기반 초안을 유지합니다.");
+    if (!controller.signal.aborted) {
+      setStatus((error instanceof Error ? error.message : "로컬 AI 연결 실패") + " 규칙 기반 초안을 유지합니다.");
+    }
   } finally {
-    copilotBusy = false;
-    const current = selectedPatient();
-    if (current) {
-      const currentEvaluations = claimEvaluations(current);
-      renderCopilot(current, currentEvaluations);
-      renderJourney(current, briefCache.get(current.id));
+    if (copilotRequestController === controller) {
+      copilotRequestController = null;
+      copilotBusy = false;
+      const current = selectedPatient();
+      if (current) {
+        const currentEvaluations = claimEvaluations(current);
+        renderCopilot(current, currentEvaluations);
+        renderJourney(current, briefCache.get(current.id));
+      }
     }
   }
 }
 
 refs.patientSearch.addEventListener("input", renderPatients);
 
-refs.patientList.addEventListener("click", (event) => {
+refs.patientList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-patient-id]");
   if (!button) return;
+  if (refs.patientFormMode.value !== "create" && refs.patientFormMode.value !== button.dataset.patientId) {
+    setStatus("현재 환자 정보 편집을 저장하거나 취소한 뒤 다른 환자를 선택하세요.", "error");
+    return;
+  }
   try {
-    const candidate = selectPatient(state, button.dataset.patientId);
+    const expectedRevision = state.revision;
+    const expectedGeneration = stateGeneration;
+    const base = preserveEncounterDraftIfChanged(state);
+    const candidate = selectPatient(base, button.dataset.patientId);
     if (state.demo) {
       state = candidate;
     } else {
-      const saved = saveEmrState(candidate);
+      const saved = await saveEmrState(candidate, undefined, expectedRevision);
+      assertCurrentStateGeneration(expectedGeneration);
       state = saved;
       savedState = saved;
     }
+    viewedEncounterId = "";
     eventFilter = "all";
-    activeTab = "overview";
+    activeTab = "encounter";
     render();
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "환자 선택을 저장하지 못했습니다.", "error");
   }
 });
 
-refs.patientForm.addEventListener("submit", (event) => {
+refs.patientForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!reportFormValidity(refs.patientForm)) return;
   refs.patientFormMessage.textContent = "";
   const mrn = refs.patientMrn.value.trim();
   const name = refs.patientName.value.trim();
@@ -1029,14 +1666,27 @@ refs.patientForm.addEventListener("submit", (event) => {
     mrn,
     name,
     birthDate: refs.patientBirthDate.value,
+    ageYears: refs.patientBirthDate.value ? null : refs.patientAgeYears.value,
     sex: refs.patientSex.value,
     phone: refs.patientPhone.value,
+    address: refs.patientAddress.value,
+    bloodType: refs.patientBloodType.value,
+    insuranceType: refs.patientInsuranceType.value,
+    emergencyContact: {
+      name: refs.patientEmergencyName.value,
+      relation: refs.patientEmergencyRelation.value,
+      phone: refs.patientEmergencyPhone.value,
+    },
+    memo: refs.patientMemo.value,
   };
   try {
+    if (mode !== "create" && mode !== state.selectedPatientId) {
+      throw new Error("편집 대상 환자가 바뀌었습니다. 편집을 취소하고 다시 시작하세요.");
+    }
     if (mode === "create") {
-      applyMutation((current) => addPatient(current, payload), "환자를 등록했습니다.");
+      await applyMutation((current) => addPatient(current, payload), "환자를 등록했습니다.");
     } else {
-      applyMutation((current) => updatePatient(current, mode, payload), "환자 정보를 수정했습니다.");
+      await applyMutation((current) => updatePatient(current, mode, payload), "환자 정보를 수정했습니다.");
     }
     resetPatientForm();
     refs.patientComposer.open = false;
@@ -1047,9 +1697,225 @@ refs.patientForm.addEventListener("submit", (event) => {
 
 refs.cancelPatientEdit.addEventListener("click", resetPatientForm);
 refs.editPatient.addEventListener("click", beginPatientEdit);
+refs.patientBirthDate.addEventListener("change", () => {
+  const calculated = ageFromBirthDate(refs.patientBirthDate.value).replace(/\D/g, "");
+  refs.patientAgeYears.disabled = Boolean(refs.patientBirthDate.value);
+  if (calculated) refs.patientAgeYears.value = calculated;
+  else if (!refs.patientBirthDate.value) refs.patientAgeYears.value = "";
+});
 
-refs.eventForm.addEventListener("submit", (event) => {
+refs.queueFilters.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-queue-filter]");
+  if (!button) return;
+  queueFilter = button.dataset.queueFilter;
+  renderPatients();
+});
+
+refs.recentEncounterList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-view-encounter]");
+  const patient = selectedPatient();
+  if (!button || !patient) return;
+  try {
+    const expectedRevision = state.revision;
+    const expectedGeneration = stateGeneration;
+    const preserved = preserveEncounterDraftIfChanged(state);
+    if (preserved !== state) {
+      if (state.demo) state = { ...preserved, demo: true };
+      else {
+        const saved = await saveEmrState(preserved, undefined, expectedRevision);
+        assertCurrentStateGeneration(expectedGeneration);
+        state = saved;
+        savedState = saved;
+      }
+    }
+    viewedEncounterId = button.dataset.viewEncounter;
+    activeTab = "encounter";
+    render();
+    document.getElementById("panel-encounter")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "과거 진료를 열지 못했습니다.", "error");
+  }
+});
+
+refs.returnCurrentEncounter.addEventListener("click", () => {
+  viewedEncounterId = "";
+  render();
+});
+
+refs.checkInPatient.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  if (!patient) return;
+  try {
+    viewedEncounterId = "";
+    await applyMutation((current) => checkInPatient(current, patient.id, {
+      date: today(),
+      department: refs.encounterDepartment.value,
+      clinician: refs.encounterClinician.value,
+      room: refs.encounterRoom.value,
+    }), "오늘 진료에 접수했습니다.");
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "접수에 실패했습니다.";
+  }
+});
+
+refs.startEncounter.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => startEncounter(current, patient.id, encounter.id), "진료를 시작했습니다.");
+    refs.chiefComplaint.focus();
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 시작하지 못했습니다.";
+  }
+});
+
+refs.encounterForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!reportFormValidity(refs.encounterForm)) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => saveEncounterDraft(current, patient.id, encounter.id, encounterDraftFromForm()), "SOAP·진료 초안을 저장했습니다.", { preserveDraft: false });
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 초안을 저장하지 못했습니다.";
+  }
+});
+
+refs.completeEncounter.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, encounterDraftFromForm()), "진료를 완료했습니다. 최종 검토 후 서명하세요.", { preserveDraft: false });
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 완료 조건을 확인하세요.";
+  }
+});
+
+refs.signEncounter.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  if (!window.confirm("SOAP·진단·처방·오더를 확정하고 로컬 서명할까요? 서명 후 직접 수정할 수 없습니다.")) return;
+  try {
+    await applyMutation((current) => signEncounter(current, patient.id, encounter.id, encounter.clinician), "진료를 완료·서명했습니다.");
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 서명에 실패했습니다.";
+  }
+});
+
+refs.reopenEncounter.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => reopenEncounter(current, patient.id, encounter.id), "서명 전 진료를 다시 열었습니다.");
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 다시 열지 못했습니다.";
+  }
+});
+
+refs.cancelEncounter.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  const reason = window.prompt("진료 취소 사유를 입력하세요. 연결된 초안도 취소됩니다.");
+  if (reason === null) return;
+  try {
+    await applyMutation((current) => cancelEncounter(current, patient.id, encounter.id, reason), "진료를 취소했습니다.");
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 취소하지 못했습니다.";
+  }
+});
+
+refs.diagnosisForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!reportFormValidity(refs.diagnosisForm)) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => addEncounterDiagnosis(current, patient.id, encounter.id, {
+      diagnosisRole: refs.diagnosisRole.value,
+      code: refs.diagnosisCode.value,
+      system: refs.diagnosisSystem.value,
+      label: refs.diagnosisLabel.value,
+      certainty: refs.diagnosisCertainty.value === "confirmed" ? "confirmed" : "provisional",
+    }), "진단 초안을 추가했습니다.");
+    refs.diagnosisForm.reset();
+    refs.diagnosisSystem.value = "urn:kr:kcd";
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진단을 추가하지 못했습니다.";
+  }
+});
+
+refs.prescriptionForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!reportFormValidity(refs.prescriptionForm)) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => addEncounterPrescription(current, patient.id, encounter.id, {
+      code: refs.medicationCode.value,
+      system: refs.medicationSystem.value,
+      label: refs.medicationName.value,
+      dose: refs.medicationDose.value,
+      doseUnit: refs.medicationDoseUnit.value,
+      route: refs.medicationRoute.value,
+      frequency: refs.medicationFrequency.value,
+      durationDays: refs.medicationDurationDays.value,
+      quantity: refs.medicationQuantity.value,
+      instructions: refs.medicationInstructions.value,
+    }), "처방 초안을 추가했습니다.");
+    refs.prescriptionForm.reset();
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "처방을 추가하지 못했습니다.";
+  }
+});
+
+refs.orderForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!reportFormValidity(refs.orderForm)) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => addEncounterOrder(current, patient.id, encounter.id, {
+      kind: refs.orderKind.value,
+      code: refs.orderCode.value,
+      system: refs.orderSystem.value,
+      label: refs.orderLabel.value,
+      priority: refs.orderPriority.value,
+      instructions: refs.orderInstructions.value,
+    }), "오더 초안을 추가했습니다.");
+    refs.orderForm.reset();
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "오더를 추가하지 못했습니다.";
+  }
+});
+
+async function removeEncounterItemFromClick(event) {
+  const button = event.target.closest("[data-remove-encounter-item]");
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!button || !patient || !encounter) return;
+  try {
+    await applyMutation((current) => removeEncounterItem(current, patient.id, encounter.id, button.dataset.removeEncounterItem), "진료 초안 항목을 삭제했습니다.");
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 항목을 삭제하지 못했습니다.";
+  }
+}
+
+refs.diagnosisList.addEventListener("click", removeEncounterItemFromClick);
+refs.prescriptionList.addEventListener("click", removeEncounterItemFromClick);
+refs.orderList.addEventListener("click", removeEncounterItemFromClick);
+
+refs.eventForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!reportFormValidity(refs.eventForm)) return;
   const patient = selectedPatient();
   refs.eventFormMessage.textContent = "";
   if (!patient) return;
@@ -1058,7 +1924,7 @@ refs.eventForm.addEventListener("submit", (event) => {
     return;
   }
   try {
-    applyMutation((current) => appendPatientEvent(current, patient.id, {
+    await applyMutation((current) => appendPatientEvent(current, patient.id, {
       type: refs.eventType.value,
       date: refs.eventDate.value,
       system: refs.eventSystem.value,
@@ -1067,8 +1933,8 @@ refs.eventForm.addEventListener("submit", (event) => {
       value: refs.eventValue.value,
       unit: refs.eventUnit.value,
       note: refs.eventNote.value,
-      source: { kind: "manual", label: "직접 입력" },
-    }), "확정 차트에 기록을 추가했습니다.");
+      source: state.demo ? { kind: "demo", label: "데모 입력" } : { kind: "manual", label: "직접 입력 · 검토 대기" },
+    }), state.demo ? "데모 차트에 기록을 추가했습니다." : "검토 대기 기록을 추가했습니다. 확정 진료 사실·AI·급여 근거에는 포함되지 않습니다.");
     refs.eventForm.reset();
     refs.eventDate.value = today();
   } catch (error) {
@@ -1084,27 +1950,29 @@ refs.eventFilters.addEventListener("click", (event) => {
   if (patient) renderTimeline(patient);
 });
 
-refs.eventTimeline.addEventListener("click", (event) => {
+refs.eventTimeline.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-remove-event]");
   const patient = selectedPatient();
   if (!button || !patient) return;
   const record = patient.events.find((item) => item.id === button.dataset.removeEvent);
-  if (!window.confirm("‘" + (record?.label ?? "이 기록") + "’을 삭제할까요? 이 작업은 감사 이력에 남습니다.")) return;
-  applyMutation((current) => removePatientEvent(current, patient.id, button.dataset.removeEvent), "임상 이벤트를 삭제했습니다.");
+  const reason = window.prompt("‘" + (record?.label ?? "이 기록") + "’을 취소할 사유를 입력하세요. 원문과 사유는 감사 이력에 남습니다.");
+  if (reason === null) return;
+  try {
+    await applyMutation((current) => removePatientEvent(current, patient.id, button.dataset.removeEvent, reason), "임상 이벤트를 취소했습니다.");
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "임상 이벤트를 취소하지 못했습니다.", "error");
+  }
 });
 
-refs.ruleForm.addEventListener("submit", (event) => {
+refs.ruleForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!reportFormValidity(refs.ruleForm)) return;
   refs.ruleFormMessage.textContent = "";
-  if (!refs.ruleForm.checkValidity()) {
-    refs.ruleForm.reportValidity();
-    return;
-  }
   const applicabilityCodes = refs.ruleApplicabilityCodes.value.split(",").map((value) => value.trim()).filter(Boolean);
   const evidenceCodes = refs.ruleEvidenceCodes.value.split(",").map((value) => value.trim()).filter(Boolean);
   const lookbackDays = refs.ruleEvidenceLookbackDays.value ? Number.parseInt(refs.ruleEvidenceLookbackDays.value, 10) : 0;
   try {
-    applyMutation((current) => addClaimRule(current, {
+    await applyMutation((current) => addClaimRule(current, {
       ruleSetId: refs.ruleSetId.value,
       version: refs.ruleVersion.value,
       title: refs.ruleTitle.value,
@@ -1135,6 +2003,21 @@ refs.ruleForm.addEventListener("submit", (event) => {
     refs.ruleEffectiveFrom.value = today();
   } catch (error) {
     refs.ruleFormMessage.textContent = error instanceof Error ? error.message : "규칙 저장에 실패했습니다.";
+  }
+});
+
+refs.ruleVersionList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-retire-rule]");
+  if (!button) return;
+  const input = refs.ruleVersionList.querySelector(`[data-rule-end-date="${CSS.escape(button.dataset.retireRule)}"]`);
+  if (!input?.reportValidity() || !input.value) return;
+  try {
+    await applyMutation(
+      (current) => retireClaimRule(current, button.dataset.retireRule, input.value),
+      `급여 규칙 버전 종료일을 ${input.value}로 저장했습니다.`,
+    );
+  } catch (error) {
+    refs.ruleFormMessage.textContent = error instanceof Error ? error.message : "규칙 종료일을 저장하지 못했습니다.";
   }
 });
 
@@ -1182,7 +2065,8 @@ for (const button of document.querySelectorAll("[data-board-scope]")) {
 
 function loadDemo() {
   state = createDemoEmrState();
-  activeTab = "overview";
+  viewedEncounterId = "";
+  activeTab = "encounter";
   eventFilter = "all";
   briefCache.clear();
   render();
@@ -1193,6 +2077,7 @@ refs.loadDemo.addEventListener("click", loadDemo);
 refs.exitDemo.addEventListener("click", () => {
   savedState = loadEmrState();
   state = savedState;
+  viewedEncounterId = "";
   briefCache.clear();
   const url = new URL(window.location.href);
   url.searchParams.delete("demo");
@@ -1203,12 +2088,16 @@ refs.exitDemo.addEventListener("click", () => {
 });
 
 refs.fhirImport.addEventListener("change", async () => {
+  const expectedGeneration = stateGeneration;
   try {
     const bundle = await readJsonFile(refs.fhirImport.files?.[0], 2 * 1024 * 1024);
+    assertCurrentStateGeneration(expectedGeneration);
     const result = parseEmrFhirBundle(bundle);
     lastFhirReport = result.provenance;
     renderFhirReport();
-    const base = state.demo ? loadEmrState() : state;
+    const persistedBase = state.demo ? loadEmrState() : state;
+    const expectedRevision = persistedBase.revision;
+    const base = state.demo ? persistedBase : preserveEncounterDraftIfChanged(state);
     if (base.storageError) throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 복원 또는 삭제하세요.");
     const patient = result.patient;
     if (base.patients.some((item) => item.id === patient.id || (patient.mrn && item.mrn === patient.mrn))) {
@@ -1222,13 +2111,15 @@ refs.fhirImport.addEventListener("change", async () => {
       new Date().toISOString(),
       patient.id,
     );
-    const saved = saveEmrState(candidate);
+    const saved = await saveEmrState(candidate, undefined, expectedRevision);
+    assertCurrentStateGeneration(expectedGeneration);
     state = saved;
     savedState = saved;
-    activeTab = "overview";
+    viewedEncounterId = "";
+    activeTab = "encounter";
     briefCache.clear();
     render();
-    setStatus("FHIR R4에서 환자 1명과 임상기록 " + patient.events.length + "건을 가져왔습니다. 미지원 " + result.provenance.unsupported + "건.", "success");
+    setStatus("FHIR R4에서 환자 1명과 임상기록 " + patient.events.length + "건을 가져왔습니다. 외부 미검증 기록은 확정 요약·AI·급여 근거에서 제외하며 미지원 " + result.provenance.unsupported + "건입니다.", "success");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "FHIR 가져오기에 실패했습니다.", "error");
   } finally {
@@ -1237,18 +2128,28 @@ refs.fhirImport.addEventListener("change", async () => {
 });
 
 refs.importEmr.addEventListener("change", async () => {
+  const expectedGeneration = stateGeneration;
   try {
     const backup = await readJsonFile(refs.importEmr.files?.[0]);
+    assertCurrentStateGeneration(expectedGeneration);
     const parsed = parseEmrBackup(backup);
-    if (!window.confirm("현재 브라우저의 환자 기록과 기관 규칙을 이 백업으로 교체할까요? 기존 데이터는 백업 없이는 복구할 수 없습니다.")) {
+    if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 출처를 직접 확인했나요? 현재 브라우저 기록과 기관 규칙을 교체하면 기존 데이터는 별도 백업 없이는 복구할 수 없습니다.")) {
       setStatus("백업 복원을 취소했습니다.");
       return;
     }
-    let candidate = { ...parsed, demo: false };
+    const persistedState = state.demo ? savedState : state;
+    const restoreRevision = persistedState.storageError ? Date.now() * 1_000 : persistedState.revision;
+    let candidate = { ...parsed, revision: restoreRevision, demo: false };
     candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`);
-    const saved = saveEmrState(candidate);
+    const saved = persistedState.storageError && persistedState.recoveryRaw
+      ? await recoverEmrState(candidate, persistedState.recoveryRaw)
+      : await saveEmrState(candidate, undefined, persistedState.revision, { allowSignedRecordReplacement: true });
+    assertCurrentStateGeneration(expectedGeneration);
     state = saved;
     savedState = saved;
+    viewedEncounterId = "";
+    lastFhirReport = null;
+    resetPatientForm();
     briefCache.clear();
     render();
     setStatus("VitaGraph EMR 백업을 복원했습니다.", "success");
@@ -1271,6 +2172,20 @@ function exportBackup() {
 
 refs.exportEmr.addEventListener("click", exportBackup);
 refs.exportEmrSecondary.addEventListener("click", exportBackup);
+refs.exportFhir.addEventListener("click", () => {
+  const patient = selectedPatient();
+  if (!patient) {
+    setStatus("FHIR로 내보낼 환자를 먼저 선택하세요.", "error");
+    return;
+  }
+  try {
+    const bundle = exportPatientFhirBundle(patient);
+    downloadJson(bundle, `vitagraph-fhir-${today()}.json`);
+    setStatus("선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.", "success");
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "FHIR 내보내기에 실패했습니다.", "error");
+  }
+});
 refs.exportRecoveryRaw.addEventListener("click", () => {
   if (!state.recoveryRaw) {
     setStatus("내보낼 손상 저장 원본이 없습니다.");
@@ -1280,22 +2195,11 @@ refs.exportRecoveryRaw.addEventListener("click", () => {
   setStatus("손상 저장 원본을 변경 없이 내보냈습니다.", "success");
 });
 
-refs.wipeEmr.addEventListener("click", () => {
+refs.wipeEmr.addEventListener("click", async () => {
   if (!window.confirm("이 브라우저의 VitaGraph EMR 환자 기록과 기관 규칙을 모두 삭제할까요? 백업 없이는 복구할 수 없습니다.")) return;
   try {
-    clearEmrState();
-    savedState = createEmptyEmrState();
-    state = savedState;
-    briefCache.clear();
-    lastFhirReport = null;
-    refs.fhirImport.value = "";
-    refs.importEmr.value = "";
-    refs.patientForm.reset();
-    refs.eventForm.reset();
-    refs.ruleForm.reset();
-    refs.eventDate.value = today();
-    refs.ruleEffectiveFrom.value = today();
-    render();
+    const cleared = await clearEmrState();
+    adoptClearedEmrState(cleared);
     setStatus("이 브라우저의 VitaGraph EMR 기록을 모두 삭제했습니다.", "success");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "로컬 기록을 삭제하지 못했습니다.", "error");
@@ -1303,8 +2207,21 @@ refs.wipeEmr.addEventListener("click", () => {
 });
 
 window.addEventListener("storage", (event) => {
-  if (event.key !== EMR_STORAGE_KEY || state.demo) return;
+  if (event.key !== EMR_STORAGE_KEY) return;
   const latest = loadEmrState();
+  if (isClearedEmrState(latest)) {
+    adoptClearedEmrState(latest);
+    setStatus("다른 탭에서 전체 삭제한 기록을 이 탭에서도 폐기했습니다.", "success");
+    return;
+  }
+  if (state.demo) {
+    savedState = latest;
+    return;
+  }
+  if (patientFormHasPendingInput() || encounterFormHasUnsavedInput()) {
+    setStatus("다른 탭에서 기록이 변경됐습니다. 현재 미저장 입력을 보존했습니다. 내용을 확인한 뒤 새로고침하세요.", "error");
+    return;
+  }
   state = latest;
   savedState = latest;
   briefCache.clear();
@@ -1319,6 +2236,9 @@ refs.runCopilot.addEventListener("click", runCopilot);
 
 refs.eventDate.value = today();
 refs.ruleEffectiveFrom.value = today();
+refs.encounterDate.value = today();
+refs.patientBirthDate.max = today();
+refs.diagnosisSystem.value = "urn:kr:kcd";
 render();
 if (!state.demo && state.storageError) {
   setStatus("로컬 저장을 읽지 못했습니다. 손상 원본을 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.", "error");

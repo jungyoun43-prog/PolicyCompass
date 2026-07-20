@@ -1,4 +1,92 @@
-# VitaGraph Design System
+# Design
+
+VitaGraph 제품·UI·데이터 경계의 단일 설계 기준입니다.
+
+## 0. Canonical Two-App Product Architecture
+
+This section is normative. When a later patient or clinical detail conflicts with it, this two-app boundary wins.
+
+### Product hierarchy and personas
+
+- **Clinical app — primary product:** `/emr` is the physician-centered system of work. Physicians and authorized clinical staff select a patient, document the Encounter, review chart facts, use the selected patient's VitaGraph projection, run pre-claim checks, and explicitly export a patient-safe transfer file. Clinical facts remain owned by the EMR record.
+- **Patient app — personal companion:** `/patient` plus `/map`, `/connections`, `/insights`, and `/journey` are one personal VitaGraph app for a patient or caregiver. It manages only that person's health map, relationship context, visit brief, and local Journey. It must not expose EMR queues, SOAP, clinicians, claims, audit history, or institutional controls.
+- **Gateway — neutral and stateless:** `/` only asks which app to open. It has no data-entry controls, scripts, storage access, PHI, role detection, or background routing. The physician action is visually primary and links to `/emr`; the personal action links to `/patient`.
+- The two apps are separate products with a narrow file handoff, not two tabs over one shared browser record. They must not read each other's `localStorage` or `sessionStorage`, pass health data in URLs, use `BroadcastChannel` for chart exchange, or silently synchronize through a server.
+
+### Route ownership
+
+| Route | Owner | Purpose | Data boundary |
+|---|---|---|---|
+| `/` | Gateway | Explicit role choice | Stateless; no PHI or storage |
+| `/emr` | Clinical app | Primary physician EMR workspace | Full local clinical sandbox record |
+| `/emr?demo=1` | Clinical app | Labelled synthetic evaluation record | Demo only; never real patient data on a public preview |
+| `/patient` | Patient app | Personal VitaGraph landing and start | Personal app state only |
+| `/map` | Patient app | Personal record input and health map | Personal app state and explicit file import |
+| `/connections` | Patient app | Condition relationship explorer | Patient-safe condition context only |
+| `/insights` | Patient app | Visit brief and questions | Personal app state only |
+| `/journey` | Patient app | Explicit local snapshots | Personal Journey storage only |
+
+`.html` aliases are compatibility routes, not separate products. Brand links may return to `/` for role switching, but role switching never transfers data.
+
+### Explicit patient-file handoff
+
+The only sanctioned bridge is a manually downloaded and manually selected JSON file with `schema: "vitagraph-patient-transfer"` and `version: 1`. Export always scopes to the clinician's currently selected patient. Import never inspects EMR storage.
+
+The v1 object is an exact allowlist:
+
+```text
+{
+  schema: "vitagraph-patient-transfer",
+  version: 1,
+  exportedAt: <canonical ISO-8601 instant>,
+  transferCode: <128-bit random Crockford Base32 code>,
+  scope: "patient-vita-graph",
+  trust: "unsigned-local-export",
+  healthMap: {
+    conditions: [{ id, label, recordedOn, basis: "confirmed-condition" }],
+    measurements: [{ key, code, label, value, unit, observedOn, basis: "final-observation" }]
+  },
+  summary: { includedConditions, includedMeasurements }
+}
+```
+
+- `conditions` contains only supported, confirmed KCD condition codes that the patient app can represent. The KCD system and structured code are authoritative; a free-text label cannot override them. `measurements` contains only final LOINC observations with an allowed code, canonical unit, bounded value, and observation date. Split systolic/diastolic events are never combined by date.
+- `transferCode` is freshly generated for every export from at least 128 bits of Web Crypto randomness. The clinician sees patient name plus code before download and gives the code to the patient through a different channel. The patient must confirm the same code before any map/session mutation. This mitigates accidental file handoff only; it does not authenticate a patient or institution, sign the file, prevent replay, or bind multiple exports to one Journey profile.
+- The file excludes all identifiers and demographics, including name, chart number/MRN, FHIR Patient identity, birth date, age, sex, phone, address, insurance, emergency contact, and blood type.
+- It also excludes internal patient/Encounter/event/resource IDs, chief concern, SOAP, free text, clinician/department/room/signature, medications, allergies, procedures, orders, claims, reimbursement rules/results, audit events, AI output, revisions, and actor metadata.
+- The source allowlist is positive: `encounter` facts require a non-empty Encounter ID that resolves to the same patient's finished, locally signed Encounter; only `manual` facts may stand alone, after explicit clinician “검토·확정”. Draft, provisional, differential, refuted, cancelled, entered-in-error, orphaned, unsupported, demo, imported, copilot-generated, and external-unverified facts are omitted. Raw imported FHIR facts remain ineligible for patient transfer.
+- Unknown keys, an unsupported schema/version/scope/trust value, invalid transfer code/counts, malformed or future dates, invalid systems/codes/units/ranges, unsupported condition or measurement IDs, and an oversized file fail closed. A valid import replaces only the current unsaved map after complete validation and recipient-code confirmation; existing Journey history changes only through a separate explicit save action.
+- The personal app accepts only this transfer schema. Generic patient-side FHIR fallback is intentionally absent so multi-patient Bundles cannot silently merge. Clinical FHIR import/export remains owned by `/emr`.
+- The file still contains sensitive personal health information. It is plain, unencrypted, and unsigned JSON. `trust: "unsigned-local-export"` means the patient app cannot verify origin, authorship, or valid-value tampering without institution-managed cryptographic keys.
+
+### Security limitations and production decisions
+
+Current separation is a product and code boundary, not a security boundary. All routes share one origin, and browser storage is plaintext to code running on that origin. The local sandbox has no authentication, RBAC, encrypted clinical database, tamper-resistant audit service, institutional backup, account recovery, or server-side retention enforcement.
+
+The transfer file creates additional risks: it can be copied, opened, altered, delivered to the wrong person, or imported into the wrong personal record. Removing identity fields follows minimum-necessary disclosure, but it also removes an automated recipient-match check. The one-time code and selected-patient confirmation reduce accidental mismatch only. A receiver must compare the code and source out of band. Existing Journey entries trigger a separate same-person warning because one-time codes cannot identify a stable patient profile.
+
+Production cannot proceed until owners answer and test these questions:
+
+- Should clinical and personal apps use separate origins/subdomains to create a real browser security boundary?
+- Which identity provider, clinician roles, break-glass rules, session controls, and authorization audit apply?
+- Who may export, how is patient consent recorded, and what retention/deletion policy covers transfer files?
+- Will transfers be encrypted for the intended recipient and cryptographically signed so origin and tampering can be verified?
+- How are wrong-patient delivery and import prevented without embedding identifiers in the minimum dataset?
+- What clinician attestation workflow promotes imported or manually entered drafts into confirmed/final chart facts?
+- Which accessibility fallback is required when file download/upload or browser persistence is unavailable?
+- Which privacy, medical-law, security, clinical-safety, and regulatory reviews approve real-patient deployment?
+
+### Two-app acceptance criteria
+
+- `GET /` and `HEAD /` return the role gateway. It contains explicit links to `/emr` and `/patient`, presents EMR as primary, and contains no `script`, form/input control, storage call, PHI field, or automatic redirect.
+- `GET /patient` returns the personal landing. `/map`, `/connections`, `/insights`, and `/journey` remain working patient routes; their navigation contains no EMR workflow controls.
+- `GET /emr` remains the physician workspace. Its VitaGraph and patient export use only the currently selected EMR patient and never read patient-app storage.
+- Clinical-to-personal exchange works only through an explicit `vitagraph-patient-transfer` v1 download and explicit import. There is no direct storage sharing, background sync, URL payload, or implicit role coupling.
+- Export uses the exact allowlist above and excludes every prohibited field. Only confirmed conditions and final observations from a locally signed Encounter or explicit manual clinician confirmation qualify; raw FHIR, generic import, copilot, demo, draft, provisional, refuted, cancelled, or external-unverified facts do not.
+- Import validates the complete object before mutation, rejects unknown or malformed content, communicates unsigned/unencrypted risk, and stores accepted data only inside the personal app boundary.
+- Demo records cannot be exported. Patient transfer and institutional FHIR exports reject stale cross-tab revisions and unsaved form state; successful real-patient exports append a local audit event before download.
+- Desktop and 390px layouts identify both roles without horizontal overflow; both actions are keyboard reachable, at least 44px high, and have visible focus.
+- Build, route, model, transfer-boundary, keyboard/content, and security-header tests pass before release.
 
 ## 1. Atmosphere & Identity
 
@@ -99,8 +187,10 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 
 ### Application shell
-- All routes use the same white atlas background: restrained coral light at the upper right and cyan light at the lower left; page-specific backgrounds are not allowed.
-- Header: one 1480px content rail, 80px height, brand at left and explicit 시작, 건강 지도, 연결 보기, 진료 준비, 기록 navigation. Every route uses the identical `app-header → app-header__inner → app-brand + app-nav + app-header__action` contract; only the active navigation state changes. On compact layouts, the brand and action stay in the first row while the same five navigation links scroll in a dedicated second row.
+- All surfaces use the same white atlas foundation with restrained coral and cyan light. The gateway, patient app, and clinical app may tune density and hierarchy within those shared tokens.
+- Gateway shell: one quiet brand rail and two explicit role actions. It has no application navigation because no data-bearing app is active yet.
+- Patient shell: `/patient`, `/map`, `/connections`, `/insights`, and `/journey` use the same 1480px rail and explicit 시작, 건강 지도, 연결 보기, 진료 준비, 기록 navigation. The patient landing's active route is `/patient`; no EMR control appears in this navigation.
+- Clinical shell: `/emr` uses its physician-centered queue, Encounter, and module navigation. It reuses brand/tokens but must not imitate the patient shell or depend on patient-app state.
 - Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
 - Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
 - Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.
@@ -114,9 +204,9 @@ Micro feedback uses 140ms ease-out. Panel transitions use 260ms ease-in-out. Emp
 
 Strategy: shadows. Raised panels use a cool tinted shadow and white surface. Inner grouping relies on spacing and subtle tonal shifts. Borders are limited to interactive controls and data lines, not used as the primary panel-depth mechanism.
 
-## 8. Paid MVP Product Contract
+## 8. Personal Companion Product Contract
 
-VitaGraph is a visit-preparation product, not a diagnostic graph demo. Its first paying audience is a Korean-speaking adult who manages multiple chronic health topics for themselves or a parent. Their job is: “turn scattered measurements, symptoms, and known conditions into one page I can use at the next appointment.”
+Within the patient app, VitaGraph is a visit-preparation companion, not a diagnostic graph demo. Its consumer audience is a Korean-speaking adult who manages multiple chronic health topics for themselves or a parent. Their job is: “turn scattered measurements, symptoms, and known conditions into one page I can use at the next appointment.” This companion contract does not override `/emr` as the primary product and clinical source of truth.
 
 The activation path is one outcome-first sequence:
 
@@ -149,7 +239,7 @@ Generated imagery owns atmosphere, empathy, and the landing focal scene. HTML an
 
 Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. VitaGraph keeps its own coral/cyan/lime/violet system and does not copy brand imagery, layouts, or claims.
 
-## 11. Landing Narrative
+## 11. Patient Landing Narrative
 
 1. State the appointment problem and the one-page outcome above the fold.
 2. Offer two 44px actions: view a labeled sample and start with an empty record.
@@ -169,7 +259,7 @@ Research date: 2026-07-17.
 - Extracted: Function’s benefit-to-process-to-trust sales order; Guava’s records/timeline structure; Oura’s one-question-per-screen hierarchy; Exist’s statistical honesty; Apple’s image-led restraint.
 - Rejected: celebrity authority, countdowns, unverified medical detection claims, score proliferation, generated fake product screenshots, and compliance badges the implementation cannot substantiate.
 
-## 13. Release Acceptance
+## 13. Patient App Release Acceptance
 
 - At 390px, the first screen identifies the buyer, appointment job, one-page outcome, sample action, and private-start action without horizontal overflow.
 - Primary actions are at least 44px high and have visible keyboard focus.
@@ -185,8 +275,8 @@ Research date: 2026-07-17.
 
 - Status: Active
 - Last refreshed: 2026-07-19
-- Primary product surfaces: existing personal-health routes plus `/emr`, a physician-centered local outpatient EMR workspace.
-- Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/fhir-import.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
+- Primary product surface: `/emr`, a physician-centered local outpatient EMR workspace. `/patient` and its feature routes are the separate personal VitaGraph companion; `/` is the stateless role gateway.
+- Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/patient-transfer.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
 
 ### Brand
 

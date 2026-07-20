@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="검사 수치와 증상, 알고 있는 질환을 다음 진료에서 확인할 한 장의 질문 브리프로 정리하는 VitaGraph"
+      content="의료기관에서 받은 건강 기록과 직접 남긴 신호를 개인 건강 지도와 진료 질문으로 정리하는 VitaGraph Personal"
     />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#ffffff" />
-    <title>VitaGraph | 진료 전에, 내 건강 기록을 질문 목록으로</title>
+    <title>VitaGraph Personal | 내 건강 기록을 내가 이어 보는 공간</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/visit-prep-hero.png" type="image/png" />
     <link rel="stylesheet" href="/foundation.css" />
@@ -20,32 +20,32 @@
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/" aria-label="VitaGraph 시작 화면으로 이동">
+        <a class="app-brand" href="/patient" aria-label="VitaGraph Personal 시작 화면으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
-          <span>VitaGraph</span>
+          <span>VitaGraph Personal</span>
         </a>
         <nav class="app-nav" aria-label="주요 화면">
-          <a href="/" aria-current="page" data-main-link>시작</a>
+          <a href="/patient" aria-current="page" data-main-link>시작</a>
           <a href="/map">건강 지도</a>
           <a href="/connections">연결 보기</a>
           <a href="/insights">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map">무료 베타</a>
+        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
       </div>
     </header>
 
     <main class="page-shell landing-shell" id="mainContent">
       <section class="landing-hero" aria-labelledby="landingTitle">
         <div class="landing-hero__copy">
-          <p class="eyebrow">FOUNDING BETA · LOCAL FIRST</p>
-          <h1 id="landingTitle">진료 전에, 내 건강 기록을 <em>질문 목록</em>으로.</h1>
+          <p class="eyebrow">VITAGRAPH PERSONAL · LOCAL FIRST</p>
+          <h1 id="landingTitle">내 건강 기록을 <em>내가 이어 보는</em> 공간.</h1>
           <p class="landing-hero__lead">
-            검사 수치·증상·알고 있는 질환을 한 번 정리하면, 몸 지도와 연결 관계,
-            다음 진료에서 확인할 한 장의 브리프로 이어집니다.
+            의료기관에서 받은 VitaGraph 파일과 내가 남긴 증상·검사 수치를 한곳에서
+            연결하고, 다음 진료에서 확인할 질문까지 준비합니다.
           </p>
           <div class="landing-actions">
-            <a class="landing-button landing-button--primary" href="/map">내 기록으로 준비하기</a>
+            <a class="landing-button landing-button--primary" href="/map#import-record">기록 파일 가져오기</a>
             <a class="landing-button landing-button--secondary" href="/map?sample=1">예시 기록으로 먼저 보기</a>
           </div>
           <p class="landing-hero__note">로그인 없음 · 원문 서버 전송 없음 · 진단·처방 아님</p>
@@ -68,7 +68,7 @@
         </article>
         <article>
           <span>02</span>
-          <div><strong>FHIR R4 일부 지원</strong><p>Condition·Observation JSON을 최대 2MB까지 읽습니다.</p></div>
+          <div><strong>전용 JSON만 허용</strong><p>VitaGraph 환자 전달 v1만 읽고 일반 FHIR와 다른 JSON은 거부합니다.</p></div>
         </article>
         <article>
           <span>03</span>
@@ -123,7 +123,7 @@
           <p>기록 입력부터 진료 질문과 변화 저장까지, 한 방향으로 이어집니다.</p>
         </header>
         <ol class="workflow__steps">
-          <li><span>01</span><div><h3>기록 입력</h3><p>직접 적거나 FHIR JSON을 이 브라우저에서 불러옵니다.</p></div></li>
+          <li><span>01</span><div><h3>기록 가져오기</h3><p>VitaGraph 환자 전달 파일을 열거나 내 신호를 직접 적습니다.</p></div></li>
           <li><span>02</span><div><h3>신호 확인</h3><p>자동으로 표시된 항목과 이미 알고 있는 질환을 구분합니다.</p></div></li>
           <li><span>03</span><div><h3>질문 준비</h3><p>다음 진료에서 확인할 질문과 그 이유를 한 장으로 봅니다.</p></div></li>
           <li><span>04</span><div><h3>변화 저장</h3><p>원할 때만 현재 기기의 Journey에 시점을 남깁니다.</p></div></li>
@@ -135,7 +135,7 @@
           <p class="eyebrow">DATA BOUNDARY</p>
           <h2 id="dataTitle">건강 기록이 어디에 머무는지 숨기지 않습니다.</h2>
           <p>
-            계정과 클라우드 동기화는 아직 없습니다. 입력은 현재 브라우저 세션에서 처리되고,
+            받은 파일은 내가 보관하며, 가져온 내용은 현재 브라우저 세션에서 처리됩니다.
             직접 저장한 Journey만 이 기기의 로컬 저장소에 남습니다.
           </p>
         </header>
@@ -143,26 +143,26 @@
           <div><dt>원문 처리</dt><dd>애플리케이션 서버 전송 없음</dd></div>
           <div><dt>지속 저장</dt><dd>저장 버튼을 누른 Journey만</dd></div>
           <div><dt>삭제</dt><dd>개별 기록 또는 전체 기록</dd></div>
-          <div><dt>기기 이동</dt><dd>자동 동기화 없음</dd></div>
+          <div><dt>기기 이동</dt><dd>내 JSON 파일로 직접 이동</dd></div>
         </dl>
         <p class="data-boundary__warning">공용 기기에서는 Journey 저장을 권하지 않습니다. 브라우저 데이터를 지우면 로컬 기록도 사라질 수 있습니다.</p>
       </section>
 
       <section class="beta" aria-labelledby="betaTitle">
         <div class="beta__copy">
-          <p class="eyebrow">FOUNDING BETA</p>
-          <h2 id="betaTitle">먼저 결과물을 검증하고, 그다음 결제를 엽니다.</h2>
+          <p class="eyebrow">MY HEALTH COPY</p>
+          <h2 id="betaTitle">내 기록은 내가 들고, 필요한 만큼만 씁니다.</h2>
           <p>
-            정식 베타의 가격 가설은 월 6,900원입니다. 계정·암호화 동기화·결제·운영 정책이
-            준비되기 전인 지금은 무료이며 결제를 받지 않습니다.
+            의료기관의 업무 화면과 개인 공간은 분리되어 있습니다. 환자 전달 파일을 직접 받아
+            VitaGraph Personal에서 열고, 내 증상과 질문을 이어서 관리합니다.
           </p>
-          <a class="landing-button landing-button--primary" href="/map">무료 베타 시작</a>
+          <a class="landing-button landing-button--primary" href="/map#import-record">내 기록 가져오기</a>
         </div>
-        <article class="beta-plan" aria-label="VitaGraph Founding Beta 제공 범위">
-          <div class="beta-plan__price"><span>현재</span><strong>무료</strong><small>정식 베타 전</small></div>
+        <article class="beta-plan" aria-label="VitaGraph Personal 데이터 경계">
+          <div class="beta-plan__price"><span>원칙</span><strong>개인 보관</strong><small>계정 없이 사용</small></div>
           <div class="beta-plan__columns">
-            <section><h3>지금 작동함</h3><ul><li>건강 지도</li><li>연결 관계 보기</li><li>진료 질문 브리프</li><li>로컬 Journey</li></ul></section>
-            <section><h3>유료 출시 전 필요</h3><ul><li>계정과 복구</li><li>암호화 동기화</li><li>결제·해지·환불</li><li>운영자·법적 정책</li></ul></section>
+            <section><h3>개인 공간에서</h3><ul><li>건강 지도</li><li>연결 관계 보기</li><li>진료 질문 브리프</li><li>로컬 Journey</li></ul></section>
+            <section><h3>가져오지 않음</h3><ul><li>의료기관 내부 메모</li><li>청구·감사 정보</li><li>다른 환자 기록</li><li>의료기관 업무 상태</li></ul></section>
           </div>
         </article>
       </section>
@@ -174,15 +174,14 @@
           <p>예시 기록과 내 기록은 명확히 구분됩니다.</p>
         </div>
         <div class="landing-actions">
-          <a class="landing-button landing-button--primary" href="/map">내 기록으로 준비하기</a>
+          <a class="landing-button landing-button--primary" href="/map#import-record">기록 파일 가져오기</a>
           <a class="landing-button landing-button--secondary" href="/map?sample=1">예시로 먼저 보기</a>
-          <a class="landing-button landing-button--secondary" href="/emr?demo=1">임상 EMR 샘플 보기</a>
         </div>
       </section>
     </main>
 
     <footer class="app-footer">
-      <span>VitaGraph Founding Beta</span>
+      <span>VitaGraph Personal</span>
       <a href="#data-boundary">데이터 처리 안내</a>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>

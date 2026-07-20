@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="내 건강 지도의 변화를 날짜별로 비교하는 로컬 Patient Journey" />
+    <meta name="description" content="내 건강 지도의 변화를 날짜별로 비교하고 직접 백업하는 VitaGraph Personal 기록" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#ffffff" />
-    <title>VitaGraph | Patient Journey</title>
+    <title>건강 기록 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/controls.css" />
@@ -19,18 +19,18 @@
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+        <a class="app-brand" href="/patient" aria-label="VitaGraph Personal 시작 화면으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
-          <span>VitaGraph</span>
+          <span>VitaGraph Personal</span>
         </a>
         <nav class="app-nav" aria-label="주요 화면">
-          <a href="/" data-main-link>시작</a>
+          <a href="/patient" data-main-link>시작</a>
           <a href="/map">건강 지도</a>
           <a href="/connections">연결 보기</a>
           <a href="/insights">진료 준비</a>
           <a href="/journey" aria-current="page">기록</a>
         </nav>
-        <a class="app-header__action" href="/map">건강 지도</a>
+        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
       </div>
     </header>
 
@@ -41,7 +41,7 @@
           <h1 id="journeyPageTitle">한 장면이 아니라 변화를 봅니다.</h1>
         </div>
         <p class="page-hero__lead">
-          Health Map에서 저장한 건강 지도를 날짜순으로 비교합니다. 이 기록은 서버가 아니라 현재 브라우저의 이 기기에만 저장됩니다.
+          건강 지도에서 저장한 장면을 날짜순으로 비교합니다. 이 기록은 서버가 아니라 현재 브라우저의 이 기기에만 저장됩니다.
         </p>
       </section>
 
@@ -65,7 +65,7 @@
         <div class="journey-empty" id="journeyEmpty" hidden>
           <span>01</span>
           <h3>아직 비교할 기록이 없습니다.</h3>
-          <p>Health Map에서 데이터를 분석한 뒤 “Journey에 저장”을 누르면 첫 시점이 생깁니다.</p>
+          <p>건강 지도에서 데이터를 분석한 뒤 “Journey에 저장”을 누르면 첫 시점이 생깁니다.</p>
           <a class="primary-button" href="/map">첫 지도 만들기</a>
         </div>
         <div class="timeline" id="journeyTimeline" aria-label="건강 지도 시간선"></div>
@@ -97,7 +97,7 @@
     </main>
 
     <footer class="app-footer">
-      <span>VitaGraph prototype</span>
+      <span>VitaGraph Personal</span>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>
   </body>

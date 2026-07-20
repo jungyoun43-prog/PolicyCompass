@@ -153,6 +153,11 @@ body.emr-page {
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
+.clinical-button--patient-transfer {
+  border-color: color-mix(in srgb, var(--data-cyan) 44%, var(--line));
+  background: color-mix(in srgb, var(--data-cyan) 9%, var(--surface));
+}
+
 .clinical-button--danger {
   border-color: color-mix(in srgb, var(--urgent) 36%, var(--line));
   color: var(--urgent);
@@ -163,6 +168,57 @@ body.emr-page {
   border-color: transparent;
   background: var(--surface-soft);
   padding: var(--space-2) var(--space-3);
+}
+
+.patient-transfer-guidance {
+  display: flex;
+  min-height: 44px;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 28%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--data-cyan) 5%, var(--surface));
+  padding: var(--space-2) var(--space-4);
+}
+
+.patient-transfer-guidance > div {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.patient-transfer-guidance b {
+  flex: none;
+  font-size: 0.7rem;
+}
+
+.patient-transfer-guidance span,
+.patient-transfer-guidance p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.patient-transfer-guidance p {
+  max-width: 34rem;
+  color: var(--ink);
+  font-weight: 700;
+  text-align: right;
+}
+
+.patient-transfer-guidance p:empty {
+  display: none;
+}
+
+.patient-transfer-guidance p[data-tone="error"] {
+  color: var(--urgent);
+}
+
+.patient-transfer-guidance p[data-tone="success"] {
+  color: color-mix(in srgb, var(--data-lime) 62%, var(--ink));
 }
 
 .trust-strip {
@@ -1468,15 +1524,27 @@ body.emr-page {
   font-weight: 700;
 }
 
-.event-remove {
+.event-actions {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.event-remove,
+.event-confirm {
   min-width: 44px;
   min-height: 44px;
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
   font-size: 0.62rem;
+}
+
+.event-confirm {
+  border-color: color-mix(in srgb, var(--data-cyan) 45%, var(--line));
+  color: color-mix(in srgb, var(--data-cyan) 70%, var(--ink));
+  font-weight: 750;
 }
 
 .graph-guidance,
@@ -2180,6 +2248,23 @@ body.emr-page {
 
   .command-actions .clinical-button {
     width: 100%;
+  }
+
+  .patient-transfer-guidance,
+  .patient-transfer-guidance > div {
+    align-items: flex-start;
+  }
+
+  .patient-transfer-guidance {
+    flex-direction: column;
+  }
+
+  .patient-transfer-guidance > div {
+    flex-direction: column;
+  }
+
+  .patient-transfer-guidance p {
+    text-align: left;
   }
 
   .trust-strip {

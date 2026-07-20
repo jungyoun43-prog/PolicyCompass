@@ -9,7 +9,7 @@
     />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#ffffff" />
-    <title>VitaGraph | 내 몸의 연결 지도</title>
+    <title>건강 지도 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/body-atlas-v4.webp" type="image/webp" />
     <link rel="stylesheet" href="/foundation.css" />
@@ -26,18 +26,18 @@
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+        <a class="app-brand" href="/patient" aria-label="VitaGraph Personal 시작 화면으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
-          <span>VitaGraph</span>
+          <span>VitaGraph Personal</span>
         </a>
         <nav class="app-nav" aria-label="주요 화면">
-          <a href="/" data-main-link>시작</a>
+          <a href="/patient" data-main-link>시작</a>
           <a href="/map" aria-current="page">건강 지도</a>
           <a href="/connections">연결 보기</a>
           <a href="/insights">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map">건강 지도</a>
+        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
       </div>
     </header>
 
@@ -72,14 +72,15 @@
           </div>
 
           <form id="healthForm" novalidate>
-            <section class="import-box" aria-labelledby="fhirImportTitle">
+            <section class="import-box" id="import-record" aria-labelledby="fhirImportTitle">
               <div class="import-heading">
-                <div><span class="import-tag">FHIR R4</span><h3 id="fhirImportTitle">병원 기록 JSON 가져오기</h3></div>
-                <label class="import-button" for="fhirFile">파일 선택</label>
-                <input id="fhirFile" type="file" accept=".json,application/json,application/fhir+json" />
+                <div><span class="import-tag">VITAGRAPH JSON</span><h3 id="fhirImportTitle">내 건강 기록 가져오기</h3></div>
+                <input id="fhirFile" type="file" accept=".json,application/json" aria-describedby="recordImportHelp recordImportWarning" />
+                <label class="import-button" for="fhirFile">기록 파일 선택</label>
               </div>
-              <p>Condition·Observation 일부만 이 브라우저에서 읽습니다. 서버 전송 없음.</p>
-              <div class="import-result" id="fhirResult" hidden></div>
+              <p id="recordImportHelp">의료기관 EMR에서 받은 <code>vitagraph-patient-transfer</code> v1 JSON만 읽습니다. 화면에 표시되는 일회성 확인 코드를 의료기관 안내와 대조하세요.</p>
+              <p class="import-warning" id="recordImportWarning"><strong>민감한 건강정보:</strong> 본인 기기에서만 열어 주세요. 파일 원문은 서버 전송 없음.</p>
+              <div class="import-result" id="fhirResult" role="status" aria-live="polite" hidden></div>
             </section>
 
             <div class="field-heading">
@@ -89,7 +90,7 @@
               </button>
             </div>
             <p class="demo-mode" id="demoMode" role="status" hidden>
-              예시 데이터 보는 중 · 세션과 Journey에 저장되지 않음
+              예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
             </p>
             <textarea
               id="healthNote"
@@ -326,7 +327,7 @@
     </main>
 
     <footer class="app-footer">
-      <span>VitaGraph prototype</span>
+      <span>VitaGraph Personal</span>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>
 

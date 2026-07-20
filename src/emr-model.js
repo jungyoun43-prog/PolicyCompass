@@ -496,6 +496,56 @@ export function appendPatientEvent(stateInput, patientId, eventInput, now = new 
   };
 }
 
+export function confirmPatientEvent(stateInput, patientId, eventId, now = new Date().toISOString()) {
+  const state = normalizeEmrState(stateInput);
+  const confirmedOn = localCalendarDate(new Date(now), KOREA_TIMEZONE_OFFSET_MINUTES);
+  let confirmed = null;
+  const patients = state.patients.map((patient) => {
+    if (patient.id !== patientId) return patient;
+    const target = patient.events.find((event) => event.id === eventId);
+    if (!target) throw new Error("확정할 기록을 찾을 수 없습니다.");
+    if (target.type === "encounter" || target.encounterId) throw new Error("진료 연결 기록은 해당 진료의 완료·서명 흐름에서만 확정할 수 있습니다.");
+    if (target.recordStatus !== "draft") throw new Error("검토 대기 중인 기록만 확정할 수 있습니다.");
+    if (target.source?.kind !== "manual") throw new Error("직접 입력한 기록만 이 흐름에서 확정할 수 있습니다.");
+    if (target.date > confirmedOn) throw new Error("미래 날짜 기록은 확정할 수 없습니다.");
+    if (["condition", "observation"].includes(target.type) && (!target.system || !target.code)) {
+      throw new Error("진단·측정 기록을 확정하려면 코드와 코드 시스템이 필요합니다.");
+    }
+    if (target.type === "observation" && target.value === "") {
+      throw new Error("측정 기록을 확정하려면 결과값이 필요합니다.");
+    }
+    confirmed = normalizePatientEvent({
+      ...target,
+      recordStatus: "final",
+      ...(target.type === "condition" ? {
+        certainty: "confirmed",
+        clinicalStatus: target.status,
+        verificationStatus: "confirmed",
+      } : {}),
+      source: { kind: "manual", label: "직접 입력 · 의료진 검토 확정" },
+    });
+    assertCanonicalEventLifecycle(confirmed);
+    return {
+      ...patient,
+      events: patient.events.map((event) => event.id === eventId ? confirmed : event),
+      updatedAt: validTimestamp(now),
+    };
+  });
+  if (!confirmed) throw new Error("확정할 기록을 찾을 수 없습니다.");
+  return {
+    ...state,
+    revision: state.revision + 1,
+    demo: false,
+    patients,
+    audit: [...state.audit, audit("patient.event.confirmed", now, {
+      patientId,
+      entityId: eventId,
+      detail: `${confirmed.type}:${confirmed.code || confirmed.label}`,
+    })].slice(-1_000),
+    updatedAt: validTimestamp(now),
+  };
+}
+
 export function removePatientEvent(stateInput, patientId, eventId, reasonInput = "", now = new Date().toISOString()) {
   const state = normalizeEmrState(stateInput);
   const reason = cleanText(reasonInput, "", 500);

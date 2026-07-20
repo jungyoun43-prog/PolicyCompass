@@ -6,6 +6,7 @@ import {
   addPatient,
   appendPatientEvent,
   clinicalContextFingerprint,
+  confirmPatientEvent,
   createClinicalGraph,
   createCopilotRequest,
   createDemoEmrState,
@@ -106,6 +107,48 @@ test("환자와 임상 이벤트를 정규화해 감사 이력과 함께 추가�
   assert.equal(voided.audit.at(-1).entityId, "event-1");
   assert.equal(next.patients[0].events[0].recordStatus, "draft");
   assert.throws(() => removePatientEvent(voided, patient.id, "event-1", "재취소"), /이미 취소/);
+});
+
+test("직접 입력 과거자료는 의료진 검토 후에만 확정 차트 사실이 된다", () => {
+  let state = addPatient(createEmptyEmrState("2026-07-19T10:00:00.000Z"), {
+    id: "patient-confirm",
+    mrn: "CONFIRM-1",
+    name: "확정 환자",
+  }, "2026-07-19T10:00:00.000Z");
+  state = appendPatientEvent(state, "patient-confirm", {
+    id: "manual-hba1c",
+    type: "observation",
+    system: "http://loinc.org",
+    code: "4548-4",
+    label: "당화혈색소",
+    value: 7.1,
+    unit: "%",
+    date: "2026-07-19",
+    source: { kind: "manual", label: "직접 입력 · 검토 대기" },
+  }, "2026-07-19T10:01:00.000Z");
+  assert.equal(state.patients[0].events[0].recordStatus, "draft");
+
+  const confirmed = confirmPatientEvent(state, "patient-confirm", "manual-hba1c", "2026-07-19T10:02:00.000Z");
+  assert.equal(confirmed.patients[0].events[0].recordStatus, "final");
+  assert.equal(confirmed.patients[0].events[0].source.label, "직접 입력 · 의료진 검토 확정");
+  assert.equal(confirmed.audit.at(-1).action, "patient.event.confirmed");
+  assert.throws(() => confirmPatientEvent(confirmed, "patient-confirm", "manual-hba1c"), /검토 대기/);
+
+  const futureDraft = appendPatientEvent(confirmed, "patient-confirm", {
+    id: "future-observation",
+    type: "observation",
+    system: "http://loinc.org",
+    code: "2089-1",
+    label: "미래 LDL",
+    value: 120,
+    unit: "mg/dL",
+    date: "2026-07-21",
+    source: { kind: "manual", label: "직접 입력" },
+  }, "2026-07-19T10:03:00.000Z");
+  assert.throws(
+    () => confirmPatientEvent(futureDraft, "patient-confirm", "future-observation", "2026-07-19T10:04:00.000Z"),
+    /미래 날짜/,
+  );
 });
 
 test("진료가 선택된 상태에서도 새 환자를 등록하고 저장할 수 있다", async () => {

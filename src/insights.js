@@ -2,12 +2,15 @@ import { createVisitBrief } from "/insight-model.js";
 
 const sessionKey = "vitagraph-scene";
 
-function readVisibleIds() {
+function readSession() {
   try {
     const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
-    return Array.isArray(stored?.visibleIds) ? stored.visibleIds : [];
+    return {
+      visibleIds: Array.isArray(stored?.visibleIds) ? stored.visibleIds : [],
+      isDemo: stored?.isDemo === true,
+    };
   } catch {
-    return [];
+    return { visibleIds: [], isDemo: false };
   }
 }
 
@@ -74,8 +77,12 @@ function renderSignals(signals) {
   list.replaceChildren(...items);
 }
 
-const brief = createVisitBrief(readVisibleIds());
+const session = readSession();
+const brief = createVisitBrief(session.visibleIds);
 const hasQuestions = brief.questions.length > 0;
+
+const demoMode = document.querySelector("#personalDemoMode");
+if (demoMode) demoMode.hidden = !session.isDemo;
 
 document.querySelector("#coverage").textContent = brief.coverage;
 document.querySelector("#questionCount").textContent = brief.countLabel;

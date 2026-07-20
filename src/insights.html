@@ -6,7 +6,7 @@
     <meta name="description" content="건강 지도에 남긴 신호를 진료실에서 바로 확인할 질문 브리프로 정리합니다." />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#ffffff" />
-    <title>진료 준비 브리프 | VitaGraph</title>
+    <title>진료 준비 브리프 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/insights.css" />
@@ -17,18 +17,18 @@
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+        <a class="app-brand" href="/patient" aria-label="VitaGraph Personal 시작 화면으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
-          <span>VitaGraph</span>
+          <span>VitaGraph Personal</span>
         </a>
         <nav class="app-nav" aria-label="주요 화면">
-          <a href="/" data-main-link>시작</a>
+          <a href="/patient" data-main-link>시작</a>
           <a href="/map">건강 지도</a>
           <a href="/connections">연결 보기</a>
           <a href="/insights" aria-current="page">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map">건강 지도</a>
+        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
       </div>
     </header>
 
@@ -50,6 +50,10 @@
           </div>
         </div>
       </section>
+
+      <p class="demo-mode" id="personalDemoMode" role="status" hidden>
+        예시 데이터로 만든 질문 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
+      </p>
 
       <section class="insight-status" aria-label="현재 브리프 범위">
         <div>
@@ -74,7 +78,7 @@
             <span class="brief-empty__index" aria-hidden="true">00</span>
             <div>
               <h3>먼저 건강 기록을 연결해 주세요.</h3>
-              <p>Health Map에서 증상·수치·기존 진단을 입력하면, 여기에서 진료 질문과 확인 이유를 정리합니다.</p>
+              <p>건강 지도에서 증상·수치·기존 진단을 입력하면, 여기에서 진료 질문과 확인 이유를 정리합니다.</p>
               <a class="brief-action brief-action--primary" href="/map">건강 지도 시작</a>
             </div>
           </div>
@@ -104,7 +108,7 @@
     </main>
 
     <footer class="app-footer">
-      <span>VitaGraph private beta</span>
+      <span>VitaGraph Personal</span>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>
   </body>

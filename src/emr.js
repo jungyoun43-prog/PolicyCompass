@@ -5,6 +5,7 @@ import {
   appendPatientEvent,
   clinicalContextFingerprint,
   clearEmrState,
+  confirmPatientEvent,
   createClinicalGraph,
   createCopilotRequest,
   createDemoEmrState,
@@ -28,6 +29,10 @@ import {
 } from "./emr-model.js";
 import { parseEmrFhirBundle } from "./emr-fhir.js";
 import { exportPatientFhirBundle } from "./emr-fhir-export.js";
+import {
+  createPatientTransferPackage,
+  patientTransferFilename,
+} from "./patient-transfer.js";
 import {
   addEncounterDiagnosis,
   addEncounterOrder,
@@ -72,6 +77,7 @@ const AUDIT_LABELS = {
   "patient.created": "환자 등록",
   "patient.updated": "환자 정보 변경",
   "patient.event.added": "임상 이벤트 추가",
+  "patient.event.confirmed": "과거자료 검토·확정",
   "patient.event.voided": "임상 이벤트 취소",
   "encounter.checked-in": "오늘 진료 접수",
   "encounter.started": "진료 시작",
@@ -90,6 +96,8 @@ const AUDIT_LABELS = {
   "claim-rule.saved": "급여 규칙 저장",
   "claim-rule.retired": "급여 규칙 종료일 설정",
   "fhir.imported": "FHIR 가져오기",
+  "fhir.exported": "의료기관용 FHIR 내보내기",
+  "patient.transfer.exported": "환자용 VitaGraph 전달",
   "backup.restored": "백업 복원",
   "demo.loaded": "샘플 워크스페이스 열기",
 };
@@ -279,6 +287,8 @@ const refs = {
   importEmr: byId("importEmr"),
   exportEmr: byId("exportEmr"),
   exportFhir: byId("exportFhir"),
+  exportPatientTransfer: byId("exportPatientTransfer"),
+  patientTransferStatus: byId("patientTransferStatus"),
   exportEmrSecondary: byId("exportEmrSecondary"),
   wipeEmr: byId("wipeEmr"),
   exportRecoveryRaw: byId("exportRecoveryRaw"),
@@ -491,7 +501,7 @@ function reportFormValidity(form) {
   return false;
 }
 
-async function applyMutation(mutator, message, { preserveDraft = true } = {}) {
+async function applyMutation(mutator, message, { preserveDraft = true, announce = true } = {}) {
   const wasDemo = state.demo;
   const expectedRevision = state.revision;
   const expectedGeneration = stateGeneration;
@@ -510,7 +520,7 @@ async function applyMutation(mutator, message, { preserveDraft = true } = {}) {
   }
   briefCache.clear();
   render();
-  setStatus(message + (wasDemo ? " · 데모 변경은 저장되지 않습니다." : ""), "success");
+  if (announce) setStatus(message + (wasDemo ? " · 데모 변경은 저장되지 않습니다." : ""), "success");
 }
 
 function createEmptyMessage(text, className = "summary-empty") {
@@ -770,11 +780,20 @@ function renderTimeline(patient) {
     item.append(body);
     const isLockedEncounterRecord = Boolean(event.encounterId) || event.type === "encounter";
     if (!isLockedEncounterRecord && event.recordStatus !== "entered-in-error") {
+      const actions = element("div", "event-actions");
+      if (event.recordStatus === "draft" && event.source?.kind === "manual") {
+        const confirm = element("button", "event-confirm", "검토·확정");
+        confirm.type = "button";
+        confirm.dataset.confirmEvent = event.id;
+        confirm.setAttribute("aria-label", event.label + " 기록 검토 후 확정");
+        actions.append(confirm);
+      }
       const remove = element("button", "event-remove", event.recordStatus === "draft" ? "폐기" : "취소");
       remove.type = "button";
       remove.dataset.removeEvent = event.id;
       remove.setAttribute("aria-label", event.label + " 기록 취소");
-      item.append(remove);
+      actions.append(remove);
+      item.append(actions);
     }
     refs.eventTimeline.append(item);
   }
@@ -1514,6 +1533,22 @@ function downloadJson(value, filename) {
   downloadText(JSON.stringify(value, null, 2), filename, "application/json;charset=utf-8");
 }
 
+function setPatientTransferStatus(message, tone = "") {
+  refs.patientTransferStatus.textContent = message;
+  if (tone) refs.patientTransferStatus.dataset.tone = tone;
+  else delete refs.patientTransferStatus.dataset.tone;
+}
+
+function currentExportBlocker() {
+  if (state.storageError) return "손상된 로컬 저장을 정리하기 전에는 내보낼 수 없습니다.";
+  if (patientFormHasPendingInput() || encounterFormHasUnsavedInput()) return "미저장 환자·진료 입력을 먼저 저장하거나 취소한 뒤 내보내세요.";
+  const persisted = loadEmrState();
+  if (persisted.storageError) return "현재 저장 상태를 확인할 수 없어 내보내기를 차단했습니다.";
+  if (isClearedEmrState(persisted)) return "다른 탭에서 전체 삭제가 적용되어 내보내기를 차단했습니다.";
+  if (persisted.revision !== state.revision) return "다른 탭의 최신 변경을 먼저 반영한 뒤 내보내세요.";
+  return "";
+}
+
 function downloadText(value, filename, type = "text/plain;charset=utf-8") {
   const blob = new Blob([value], { type });
   const url = URL.createObjectURL(blob);
@@ -1521,9 +1556,12 @@ function downloadText(value, filename, type = "text/plain;charset=utf-8") {
   link.href = url;
   link.download = filename;
   document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  }
 }
 
 async function readJsonFile(file, maximumBytes = 5 * 1024 * 1024) {
@@ -1937,9 +1975,16 @@ refs.eventForm.addEventListener("submit", async (event) => {
     }), state.demo ? "데모 차트에 기록을 추가했습니다." : "검토 대기 기록을 추가했습니다. 확정 진료 사실·AI·급여 근거에는 포함되지 않습니다.");
     refs.eventForm.reset();
     refs.eventDate.value = today();
+    refs.eventSystem.value = "urn:kr:kcd";
   } catch (error) {
     refs.eventFormMessage.textContent = error instanceof Error ? error.message : "기록 추가에 실패했습니다.";
   }
+});
+
+refs.eventType.addEventListener("change", () => {
+  refs.eventSystem.value = refs.eventType.value === "condition"
+    ? "urn:kr:kcd"
+    : refs.eventType.value === "observation" ? "http://loinc.org" : "";
 });
 
 refs.eventFilters.addEventListener("click", (event) => {
@@ -1951,9 +1996,24 @@ refs.eventFilters.addEventListener("click", (event) => {
 });
 
 refs.eventTimeline.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-remove-event]");
   const patient = selectedPatient();
-  if (!button || !patient) return;
+  if (!patient) return;
+  const confirmButton = event.target.closest("[data-confirm-event]");
+  if (confirmButton) {
+    const record = patient.events.find((item) => item.id === confirmButton.dataset.confirmEvent);
+    if (!window.confirm(`‘${record?.label ?? "이 기록"}’의 코드·값·날짜·출처를 대조했고 확정 차트 사실로 전환할까요? 이 확인은 법적 전자서명이 아닙니다.`)) return;
+    try {
+      await applyMutation(
+        (current) => confirmPatientEvent(current, patient.id, confirmButton.dataset.confirmEvent),
+        "과거자료를 의료진 검토 완료 기록으로 확정했습니다.",
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "과거자료를 확정하지 못했습니다.", "error");
+    }
+    return;
+  }
+  const button = event.target.closest("[data-remove-event]");
+  if (!button) return;
   const record = patient.events.find((item) => item.id === button.dataset.removeEvent);
   const reason = window.prompt("‘" + (record?.label ?? "이 기록") + "’을 취소할 사유를 입력하세요. 원문과 사유는 감사 이력에 남습니다.");
   if (reason === null) return;
@@ -2172,16 +2232,76 @@ function exportBackup() {
 
 refs.exportEmr.addEventListener("click", exportBackup);
 refs.exportEmrSecondary.addEventListener("click", exportBackup);
-refs.exportFhir.addEventListener("click", () => {
+refs.exportPatientTransfer.addEventListener("click", async () => {
+  const patient = selectedPatient();
+  if (!patient) {
+    const message = "환자용 파일로 내보낼 환자를 먼저 선택하세요.";
+    setPatientTransferStatus(message, "error");
+    return;
+  }
+  if (state.demo) {
+    setPatientTransferStatus("샘플 환자는 환자 전달 파일로 내보낼 수 없습니다. 로컬 실제 기록에서 선택하세요.", "error");
+    return;
+  }
+  const blocker = currentExportBlocker();
+  if (blocker) {
+    setPatientTransferStatus(blocker, "error");
+    return;
+  }
+  try {
+    const exportedAt = new Date().toISOString();
+    const transferPackage = createPatientTransferPackage(patient, exportedAt);
+    const { includedConditions, includedMeasurements } = transferPackage.summary;
+    if (!window.confirm(
+      `${patient.name} 환자의 최소 건강정보를 내보낼까요?\n\n전달 확인 코드: ${transferPackage.transferCode}\n확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개\n\n환자명과 코드를 대조하세요. 코드는 파일과 다른 경로로 환자에게 안내해야 합니다.`,
+    )) {
+      setPatientTransferStatus("환자용 파일 내보내기를 취소했습니다.");
+      return;
+    }
+    await applyMutation(
+      (current) => appendStateAudit(
+        current,
+        "patient.transfer.exported",
+        `확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개`,
+        new Date().toISOString(),
+        patient.id,
+      ),
+      "환자 전달 내보내기 이력을 저장했습니다.",
+      { preserveDraft: false, announce: false },
+    );
+    downloadJson(transferPackage, patientTransferFilename(exportedAt));
+    const message = `${patient.name} 환자용 JSON을 내보냈습니다. 전달 확인 코드 ${transferPackage.transferCode} · 확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개. 코드는 별도 경로로 안내하세요.`;
+    setPatientTransferStatus(message, "success");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "환자용 VitaGraph JSON 내보내기에 실패했습니다.";
+    setPatientTransferStatus(message, "error");
+  }
+});
+refs.exportFhir.addEventListener("click", async () => {
   const patient = selectedPatient();
   if (!patient) {
     setStatus("FHIR로 내보낼 환자를 먼저 선택하세요.", "error");
     return;
   }
+  if (!state.demo) {
+    const blocker = currentExportBlocker();
+    if (blocker) {
+      setStatus(blocker, "error");
+      return;
+    }
+  }
   try {
     const bundle = exportPatientFhirBundle(patient);
+    if (!window.confirm(`${patient.name} 환자의 식별정보와 임상기록이 포함된 의료기관용 FHIR를 내보낼까요? 환자 앱 전달에는 사용하지 마세요.`)) return;
+    if (!state.demo) {
+      await applyMutation(
+        (current) => appendStateAudit(current, "fhir.exported", "의료기관용 FHIR R4", new Date().toISOString(), patient.id),
+        "FHIR 내보내기 이력을 저장했습니다.",
+        { preserveDraft: false, announce: false },
+      );
+    }
     downloadJson(bundle, `vitagraph-fhir-${today()}.json`);
-    setStatus("선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.", "success");
+    setStatus(`선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.${state.demo ? " · 합성 데모 파일" : ""}`, "success");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "FHIR 내보내기에 실패했습니다.", "error");
   }
@@ -2235,6 +2355,7 @@ window.addEventListener("storage", (event) => {
 refs.runCopilot.addEventListener("click", runCopilot);
 
 refs.eventDate.value = today();
+refs.eventSystem.value = "urn:kr:kcd";
 refs.ruleEffectiveFrom.value = today();
 refs.encounterDate.value = today();
 refs.patientBirthDate.max = today();

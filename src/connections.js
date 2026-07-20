@@ -28,6 +28,7 @@ const elements = {
   detailCare: document.querySelector("#explorerDetailCare"),
   evidenceList: document.querySelector("#explorerEvidenceList"),
   empty: document.querySelector("#sceneEmpty"),
+  demoMode: document.querySelector("#personalDemoMode"),
 };
 
 function readSession() {
@@ -39,9 +40,10 @@ function readSession() {
     return {
       visibleIds,
       activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? ""),
+      isDemo: stored?.isDemo === true,
     };
   } catch {
-    return { visibleIds: [], activeId: "" };
+    return { visibleIds: [], activeId: "", isDemo: false };
   }
 }
 
@@ -125,7 +127,10 @@ function renderEmptyDetail() {
 
 function saveSession() {
   try {
+    const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
+    const preserved = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
     sessionStorage.setItem(sessionKey, JSON.stringify({
+      ...preserved,
       visibleIds: state.visibleIds,
       activeId: state.activeId,
     }));
@@ -358,4 +363,5 @@ window.addEventListener("resize", () => {
   if (updateSceneFraming()) renderGraph();
 });
 updateSceneFraming();
+if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
 renderGraph();

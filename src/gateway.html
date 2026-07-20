@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="의료진 EMR과 개인 VitaGraph 중 사용할 공간을 선택합니다. 이 화면은 건강정보를 입력하거나 저장하지 않습니다."
+    />
+    <title>VitaGraph | 사용할 공간 선택</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23F05A47' d='M8 8h22v22H8z'/%3E%3Cpath fill='%2318B8C9' d='M34 34h22v22H34z'/%3E%3Cpath fill='%23A7C934' d='M34 8h22v22H34z'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/shell.css" />
+    <link rel="stylesheet" href="/gateway.css" />
+  </head>
+  <body class="gateway-page">
+    <a class="skip-link" href="#mainContent">역할 선택으로 건너뛰기</a>
+
+    <header class="gateway-header">
+      <div class="gateway-header__inner">
+        <a class="app-brand" href="/" aria-current="page">
+          <span class="app-brand__mark" aria-hidden="true"></span>
+          <span>VitaGraph</span>
+        </a>
+        <p class="gateway-header__status">데이터 입력 없음</p>
+      </div>
+    </header>
+
+    <main class="gateway-shell" id="mainContent">
+      <section class="gateway-intro" aria-labelledby="gatewayTitle">
+        <div>
+          <p class="gateway-eyebrow">CLINICAL EMR + PERSONAL VITAGRAPH</p>
+          <h1 id="gatewayTitle">사용할 공간을 선택하세요.</h1>
+        </div>
+        <p class="gateway-intro__lead">
+          의료진은 EMR에서 진료기록과 선택 환자의 VitaGraph를 함께 다룹니다. 개인은 EMR 없이 자신의
+          VitaGraph 정보만 관리합니다.
+        </p>
+      </section>
+
+      <section class="role-grid" aria-label="VitaGraph 역할 선택">
+        <article class="role-card role-card--clinical">
+          <div class="role-card__topline">
+            <span class="role-card__icon" aria-hidden="true">EMR</span>
+            <span class="role-card__badge">PRIMARY · 의료진</span>
+          </div>
+          <div>
+            <p class="role-card__kicker">진료의 기준 공간</p>
+            <h2>의료진 EMR</h2>
+            <p class="role-card__summary">
+              환자 선택부터 Encounter, SOAP, 처방·오더, 급여 점검과 환자별 VitaGraph까지 한 흐름에서
+              확인합니다.
+            </p>
+          </div>
+          <ul class="role-card__features" aria-label="의료진 EMR 주요 기능">
+            <li>선택 환자의 임상 기록과 관계 지도</li>
+            <li>진료 완료·로컬 서명·근거 추적</li>
+            <li>환자용 최소 정보 파일 내보내기</li>
+          </ul>
+          <a class="role-action role-action--primary" href="/emr" data-main-link>
+            의료진 EMR 열기
+            <span aria-hidden="true">→</span>
+          </a>
+          <p class="role-card__caution">로컬 평가용 샌드박스 · 인증된 운영 EMR 아님</p>
+        </article>
+
+        <article class="role-card role-card--patient">
+          <div class="role-card__topline">
+            <span class="role-card__icon" aria-hidden="true">VG</span>
+            <span class="role-card__badge">PERSONAL · 개인</span>
+          </div>
+          <div>
+            <p class="role-card__kicker">내 건강정보를 보는 공간</p>
+            <h2>개인 VitaGraph</h2>
+            <p class="role-card__summary">
+              EMR 화면이나 병원 운영 기능 없이, 내가 보관할 건강 지도와 연결 정보, 진료 준비 기록만
+              다룹니다.
+            </p>
+          </div>
+          <ul class="role-card__features" aria-label="개인 VitaGraph 주요 기능">
+            <li>개인 건강 지도와 질환 연결 보기</li>
+            <li>진료 질문 브리프와 Journey</li>
+            <li>환자용 파일을 직접 선택해 가져오기</li>
+          </ul>
+          <a class="role-action role-action--secondary" href="/patient">
+            개인 VitaGraph 열기
+            <span aria-hidden="true">→</span>
+          </a>
+          <p class="role-card__caution">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
+        </article>
+      </section>
+
+      <section class="handoff-panel" aria-labelledby="handoffTitle">
+        <div class="handoff-panel__copy">
+          <p class="gateway-eyebrow">EXPLICIT FILE HANDOFF</p>
+          <h2 id="handoffTitle">두 앱은 환자용 파일로만 연결됩니다.</h2>
+          <p>
+            의료진이 선택 환자의 허용된 확정 항목만 내보내고, 개인이 그 파일을 직접 선택해 가져옵니다.
+            다른 앱의 브라우저 저장소를 읽거나 백그라운드로 동기화하지 않습니다.
+          </p>
+        </div>
+        <ol class="handoff-steps" aria-label="환자용 파일 전달 순서">
+          <li><span>1</span><strong>의료진 확인</strong><small>확정된 최소 항목 선택</small></li>
+          <li><span>2</span><strong>파일 전달</strong><small>암호화되지 않은 JSON 주의</small></li>
+          <li><span>3</span><strong>개인이 가져오기</strong><small>명시적 파일 선택만 허용</small></li>
+        </ol>
+      </section>
+
+      <aside class="gateway-boundary" aria-label="데이터 경계 안내">
+        <strong>이 선택 화면은 무상태입니다.</strong>
+        <span>건강정보 입력란, 브라우저 저장, 서버 전송, 자동 역할 감지가 없습니다.</span>
+      </aside>
+    </main>
+
+    <footer class="gateway-footer">
+      <span>VitaGraph local evaluation</span>
+      <span>실제 환자정보 입력 전 기관 보안·개인정보 검토 필요</span>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,413 @@
+.gateway-page {
+  background:
+    radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 31rem),
+    radial-gradient(circle at 4% 96%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 32rem),
+    var(--surface);
+}
+
+.gateway-header {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+.gateway-header__inner,
+.gateway-shell,
+.gateway-footer {
+  width: min(100% - var(--page-gutter), 1160px);
+  margin-inline: auto;
+}
+
+.gateway-header__inner {
+  display: flex;
+  min-height: var(--header-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.gateway-header__status {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.gateway-shell {
+  padding-block: clamp(var(--space-10), 7vw, 88px) var(--space-12);
+}
+
+.gateway-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+  gap: clamp(var(--space-8), 7vw, 88px);
+  align-items: end;
+  margin-bottom: clamp(var(--space-8), 5vw, 56px);
+}
+
+.gateway-eyebrow,
+.role-card__kicker {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+}
+
+.gateway-intro h1 {
+  max-width: 12ch;
+  margin: var(--space-3) 0 0;
+  font-size: clamp(3rem, 6vw, 5.9rem);
+  font-weight: 790;
+  letter-spacing: -0.07em;
+  line-height: 1.04;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.gateway-intro__lead {
+  max-width: 37rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: var(--space-5);
+}
+
+.role-card {
+  display: flex;
+  min-width: 0;
+  min-height: 31rem;
+  flex-direction: column;
+  gap: var(--space-6);
+  border-radius: calc(var(--radius-panel) + var(--space-2));
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  box-shadow: var(--shadow-panel);
+}
+
+.role-card--clinical {
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 16rem),
+    #1b1a20;
+  color: var(--surface);
+}
+
+.role-card--patient {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, var(--data-cyan));
+}
+
+.role-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.role-card__icon {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.role-card--clinical .role-card__icon {
+  background: color-mix(in srgb, var(--surface) 13%, transparent);
+}
+
+.role-card__badge {
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.role-card--clinical .role-card__badge,
+.role-card--clinical .role-card__summary,
+.role-card--clinical .role-card__caution {
+  color: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.role-card__kicker {
+  margin-bottom: var(--space-2);
+}
+
+.role-card--clinical .role-card__kicker {
+  color: color-mix(in srgb, var(--accent) 80%, var(--surface));
+}
+
+.role-card h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-weight: 770;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+}
+
+.role-card__summary {
+  max-width: 38rem;
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  line-height: 1.72;
+  word-break: keep-all;
+}
+
+.role-card__features {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.role-card__features li {
+  position: relative;
+  padding-left: var(--space-5);
+  font-size: 0.875rem;
+}
+
+.role-card__features li::before {
+  position: absolute;
+  top: 0.72em;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--data-cyan);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.role-card--clinical .role-card__features li::before {
+  background: var(--accent);
+}
+
+.role-action {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: auto;
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-5);
+  font-weight: 750;
+  text-decoration: none;
+  transition: transform 140ms ease-out, filter 140ms ease-out, background-color 140ms ease-out;
+}
+
+.role-action--primary {
+  background: var(--accent);
+  color: var(--surface);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.role-action--secondary {
+  border: 1px solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.role-action:hover,
+.role-action:focus-visible {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+}
+
+.role-action:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.role-action:focus-visible,
+.app-brand:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--data-cyan) 65%, var(--surface));
+  outline-offset: 3px;
+}
+
+.role-card__caution {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.handoff-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(var(--space-8), 6vw, 72px);
+  align-items: center;
+  margin-top: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--surface-soft) 78%, transparent);
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+}
+
+.handoff-panel h2 {
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+  letter-spacing: -0.045em;
+  line-height: 1.22;
+  word-break: keep-all;
+}
+
+.handoff-panel__copy > p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
+.handoff-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.handoff-steps li {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-height: 9rem;
+  border-radius: calc(var(--radius-control) + var(--space-1));
+  background: var(--surface);
+  padding: var(--space-4);
+}
+
+.handoff-steps span {
+  display: inline-flex;
+  width: var(--space-6);
+  height: var(--space-6);
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-3);
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.handoff-steps strong {
+  font-size: 0.875rem;
+}
+
+.handoff-steps small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.gateway-boundary {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface));
+  padding: var(--space-4) var(--space-5);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.gateway-boundary strong {
+  flex: none;
+  color: var(--ink);
+}
+
+.gateway-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-top: 1px solid var(--line);
+  padding: var(--space-6) 0 var(--space-10);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 800px) {
+  .gateway-intro,
+  .role-grid,
+  .handoff-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .gateway-intro {
+    gap: var(--space-5);
+  }
+
+  .gateway-intro h1 {
+    max-width: 14ch;
+    font-size: clamp(2.7rem, 10vw, 4.5rem);
+  }
+
+  .role-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .gateway-header__status {
+    max-width: 10.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gateway-shell {
+    padding-top: var(--space-8);
+  }
+
+  .gateway-intro h1 {
+    max-width: none;
+    font-size: clamp(2.5rem, 13vw, 3.8rem);
+  }
+
+  .role-card {
+    gap: var(--space-5);
+    border-radius: var(--radius-panel);
+    padding: var(--space-6);
+  }
+
+  .handoff-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .handoff-steps li {
+    min-height: 0;
+  }
+
+  .gateway-boundary,
+  .gateway-footer {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .role-action {
+    transition: none;
+  }
+}

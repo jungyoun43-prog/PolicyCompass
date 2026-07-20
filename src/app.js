@@ -1,6 +1,6 @@
 import { CONDITIONS, inferConditionIds } from "/data.js";
-import { parseFhirBundle } from "/fhir-import.js";
 import { createJourneySnapshot, normalizeJourney } from "/journey-model.js";
+import { parsePatientTransferPackage } from "/patient-transfer.js";
 import {
   createBodyModel,
   createDetailModel,
@@ -56,6 +56,41 @@ const state = {
   isDemo: false,
 };
 
+function readScene() {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "null");
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) return null;
+    const visibleIds = Array.isArray(stored.visibleIds) ? [...new Set(stored.visibleIds)].filter((id) => CONDITIONS[id]) : [];
+    const declaredIds = Array.isArray(stored.declaredIds)
+      ? [...new Set(stored.declaredIds)].filter((id) => CONDITIONS[id])
+      : visibleIds;
+    const activeId = visibleIds.includes(stored.activeId) ? stored.activeId : (visibleIds[0] ?? "");
+    const measurements = Array.isArray(stored.measurements)
+      ? stored.measurements.filter((item) => item && typeof item === "object" && typeof item.key === "string").slice(0, 1_000)
+      : [];
+    return {
+      declaredIds,
+      visibleIds,
+      activeId,
+      measurements,
+      observedAt: typeof stored.observedAt === "string" ? stored.observedAt : "",
+      source: typeof stored.source === "string" && stored.source ? stored.source.slice(0, 240) : "직접 입력",
+      isDemo: stored.isDemo === true,
+      note: typeof stored.note === "string" ? stored.note.slice(0, 4_000) : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+const restoredScene = readScene();
+if (restoredScene) {
+  Object.assign(state, restoredScene);
+  elements.note.value = restoredScene.note || measurementNote(restoredScene.measurements);
+  elements.demoMode.hidden = !state.isDemo;
+  for (const chip of elements.chips) chip.setAttribute("aria-pressed", String(state.declaredIds.includes(chip.dataset.condition)));
+}
+
 function renderList(target, items) {
   target.replaceChildren(
     ...items.map((item) => {
@@ -92,13 +127,15 @@ function renderSummary() {
 
 function persistScene() {
   try {
-    if (state.isDemo) {
-      sessionStorage.removeItem(sessionKey);
-      return;
-    }
     sessionStorage.setItem(sessionKey, JSON.stringify({
+      declaredIds: state.declaredIds,
       visibleIds: state.visibleIds,
       activeId: state.activeId,
+      measurements: state.measurements,
+      observedAt: state.observedAt,
+      source: state.source,
+      isDemo: state.isDemo,
+      note: elements.note.value,
     }));
   } catch {
     // The map remains usable when session storage is unavailable.
@@ -117,15 +154,104 @@ function leaveDemoMode({ clearResults = false } = {}) {
     state.observedAt = "";
   }
   renderAll();
+  persistScene();
 }
 
 function measurementNote(measurements) {
   return measurements.map(({ label, value, unit }) => `${label} ${value}${unit ? ` ${unit}` : ""}`).join(", ");
 }
 
-function importFhirFile(file) {
-  if (file.size > 2 * 1024 * 1024) throw new RangeError("2MB 이하의 FHIR JSON 파일만 가져올 수 있습니다.");
-  return file.text().then((text) => parseFhirBundle(JSON.parse(text)));
+function displayText(value) {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (!value || typeof value !== "object") return "";
+  return value.label ?? value.name ?? value.display ?? value.organizationName ?? "";
+}
+
+function provenanceLabel(provenance) {
+  const source = [
+    provenance?.sourceLabel,
+    provenance?.organization,
+    provenance?.source,
+    provenance?.author,
+    provenance?.format,
+  ].map(displayText).find(Boolean);
+  return `${source || "VitaGraph 환자 전달 파일"} · 서명되지 않은 사본`;
+}
+
+function formatObservedAt(value) {
+  if (!value) return "기준 시점 없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Intl.DateTimeFormat("ko-KR", isDateOnly
+    ? { dateStyle: "medium", timeZone: "UTC" }
+    : { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function importedConditionLabels(imported) {
+  const labels = (imported.conditions ?? []).map((condition) => {
+    if (typeof condition === "string") return condition;
+    const label = condition?.sourceLabel ?? condition?.label ?? condition?.display ?? CONDITIONS[condition?.id]?.label ?? "";
+    return condition?.recordedAt ? `${label} · ${String(condition.recordedAt).slice(0, 10)}` : label;
+  }).filter(Boolean);
+  if (labels.length > 0) return labels;
+  return (imported.conditionIds ?? []).map((id) => CONDITIONS[id]?.label ?? id).filter(Boolean);
+}
+
+function previewRow(label, value) {
+  const row = document.createElement("div");
+  const term = document.createElement("dt");
+  const description = document.createElement("dd");
+  term.textContent = label;
+  description.textContent = value;
+  row.append(term, description);
+  return row;
+}
+
+function renderImportPreview({ file, imported }) {
+  const conditionLabels = importedConditionLabels(imported);
+  const measurementLabels = (imported.measurements ?? []).map(({ label, value, unit, observedAt }) => {
+    const date = observedAt ? ` · ${String(observedAt).slice(0, 10)}` : "";
+    return `${label} ${value}${unit ? ` ${unit}` : ""}${date}`;
+  });
+  const linkedCount = state.declaredIds.length + state.measurements.length;
+  const heading = document.createElement("strong");
+  heading.className = "import-result__title";
+  heading.textContent = `${linkedCount}개 건강 항목을 연결했습니다.`;
+  const details = document.createElement("dl");
+  details.className = "import-preview";
+  details.append(
+    previewRow("파일", file.name),
+    previewRow("형식", "VitaGraph 환자 전달 JSON v1"),
+    previewRow("출처", provenanceLabel(imported.provenance)),
+    previewRow("전달 확인 코드", imported.provenance.transferCode),
+    ...(imported.provenance?.exportedAt
+      ? [previewRow("내보낸 시각", formatObservedAt(imported.provenance.exportedAt))]
+      : []),
+    previewRow("기준 시점", formatObservedAt(imported.observedAt)),
+    previewRow("질환·신호", conditionLabels.join(" · ") || "연결된 항목 없음"),
+    previewRow("측정값", measurementLabels.join(" · ") || "포함된 측정값 없음"),
+  );
+  if (Number.isFinite(imported.provenance?.supported) || Number.isFinite(imported.provenance?.unsupported)) {
+    details.append(previewRow(
+      "처리 범위",
+      `${imported.provenance?.supported ?? 0}개 지원 · ${imported.provenance?.unsupported ?? 0}개 지원 범위 밖`,
+    ));
+  }
+  const note = document.createElement("p");
+  note.className = "import-result__note";
+  note.textContent = "환자용으로 전달된 사본이며 원본 의료기록을 변경하지 않습니다. 확인 코드는 오전달 사고만 줄이며 환자 인증이나 전자서명이 아닙니다. 파일에는 전자서명이 없어 발행기관·값 변조를 검증하지 못합니다.";
+  elements.fhirResult.className = "import-result is-success";
+  elements.fhirResult.replaceChildren(heading, details, note);
+}
+
+async function importHealthRecord(file) {
+  if (file.size > 2 * 1024 * 1024) throw new RangeError("2MB 이하의 JSON 기록 파일만 가져올 수 있습니다.");
+  const payload = JSON.parse(await file.text());
+  if (payload?.schema !== "vitagraph-patient-transfer") {
+    throw new TypeError("VitaGraph 환자 전달 JSON v1 파일만 가져올 수 있습니다.");
+  }
+  return parsePatientTransferPackage(payload);
 }
 
 function renderBody() {
@@ -277,30 +403,62 @@ elements.resetButton.addEventListener("click", () => {
   for (const chip of elements.chips) chip.setAttribute("aria-pressed", "false");
   elements.formError.hidden = true;
   renderAll();
+  try {
+    sessionStorage.removeItem(sessionKey);
+  } catch {
+    // Reset still clears the current view when session storage is unavailable.
+  }
 });
 
 elements.fhirFile.addEventListener("change", async () => {
   const [file] = elements.fhirFile.files;
   if (!file) return;
-  leaveDemoMode({ clearResults: true });
   elements.fhirResult.hidden = false;
   elements.fhirResult.className = "import-result is-loading";
   elements.fhirResult.textContent = "기록 구조를 확인하는 중…";
   try {
-    const imported = await importFhirFile(file);
-    state.declaredIds = imported.conditionIds;
-    state.measurements = imported.measurements;
+    const imported = await importHealthRecord(file);
+    const transferCode = imported.provenance?.transferCode;
+    if (!window.confirm(`전달 확인 코드\n${transferCode}\n\n의료기관에서 파일과 다른 경로로 안내받은 코드와 정확히 같습니까? 다르면 가져오지 마세요.`)) {
+      elements.fhirResult.className = "import-result";
+      elements.fhirResult.textContent = "전달 확인 코드 대조를 취소했습니다. 현재 지도와 Journey는 바뀌지 않았습니다.";
+      return;
+    }
+    let journeyCount = 0;
+    try {
+      journeyCount = normalizeJourney(JSON.parse(localStorage.getItem(journeyKey) ?? "[]")).length;
+    } catch {
+      journeyCount = 0;
+    }
+    if (journeyCount > 0 && !window.confirm(
+      `이 기기에 Journey ${journeyCount}건이 있습니다. 지금 파일이 같은 사람의 기록인지 직접 확인했습니까?\n\n다른 사람 기록이면 취소하고 Journey 화면에서 기존 기록을 백업·삭제하세요.`,
+    )) {
+      elements.fhirResult.className = "import-result";
+      elements.fhirResult.textContent = "기존 Journey와의 대상자 대조를 취소했습니다. 저장된 기록은 바뀌지 않았습니다.";
+      return;
+    }
+    const hasCurrentMap = !state.isDemo && (state.visibleIds.length > 0 || state.measurements.length > 0 || elements.note.value.trim());
+    if (hasCurrentMap && !window.confirm("현재 저장 전 건강 지도를 이 파일 내용으로 교체할까요? Journey 기록은 자동 변경되지 않습니다.")) {
+      elements.fhirResult.className = "import-result";
+      elements.fhirResult.textContent = "현재 지도 교체를 취소했습니다.";
+      return;
+    }
+    leaveDemoMode({ clearResults: true });
+    state.declaredIds = (imported.conditionIds ?? []).filter((id) => CONDITIONS[id]);
+    state.measurements = imported.measurements ?? [];
     state.observedAt = imported.observedAt;
-    state.source = imported.provenance.format;
+    state.source = provenanceLabel(imported.provenance);
     for (const chip of elements.chips) chip.setAttribute("aria-pressed", String(state.declaredIds.includes(chip.dataset.condition)));
-    const note = measurementNote(imported.measurements);
-    if (note) elements.note.value = note;
+    elements.note.value = measurementNote(state.measurements);
     analyze();
-    elements.fhirResult.className = "import-result is-success";
-    elements.fhirResult.textContent = `${imported.provenance.supported}개 항목 연결 · ${imported.provenance.unsupported}개는 지원 범위 밖`;
+    renderImportPreview({ file, imported });
   } catch (error) {
     elements.fhirResult.className = "import-result is-error";
-    elements.fhirResult.textContent = error instanceof SyntaxError ? "JSON 형식을 읽을 수 없습니다." : error.message;
+    elements.fhirResult.textContent = error instanceof SyntaxError
+      ? "JSON 형식을 읽을 수 없습니다. VitaGraph 환자 전달 JSON v1 파일인지 확인해 주세요."
+      : error instanceof Error ? error.message : "기록 파일을 가져오지 못했습니다.";
+  } finally {
+    elements.fhirFile.value = "";
   }
 });
 

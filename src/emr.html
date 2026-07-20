@@ -18,7 +18,7 @@
 
     <header class="app-header clinical-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/" aria-label="VitaGraph 메인으로 이동">
+        <a class="app-brand" href="/emr" aria-label="VitaGraph Clinical EMR 홈으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
           <span>VitaGraph <b>Clinical</b></span>
         </a>
@@ -47,12 +47,21 @@
           <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
           <input class="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" />
           <label class="clinical-button" for="fhirImport">FHIR 가져오기</label>
-          <button class="clinical-button" id="exportFhir" type="button">선택 환자 FHIR</button>
+          <button class="clinical-button clinical-button--patient-transfer" id="exportPatientTransfer" type="button" aria-describedby="patientTransferGuidance">환자용 VitaGraph JSON</button>
+          <button class="clinical-button" id="exportFhir" type="button">의료기관용 FHIR</button>
           <button class="clinical-button" id="exportEmr" type="button">백업 내보내기</button>
           <input class="visually-hidden" id="importEmr" type="file" accept=".json,application/json" />
           <label class="clinical-button" for="importEmr">백업 복원</label>
         </div>
       </section>
+
+      <div class="patient-transfer-guidance" id="patientTransferGuidance">
+        <div>
+          <b>환자 앱 전달용</b>
+          <span>선택 환자의 지원되는 최종·확정 사실만 JSON에 포함합니다. 다운로드 전에 환자명과 일회성 전달 확인 코드를 대조하고, 코드는 파일과 다른 경로로 환자에게 안내하세요.</span>
+        </div>
+        <p id="patientTransferStatus" role="status" aria-live="polite"></p>
+      </div>
 
       <details class="fhir-import-report" id="fhirImportReport" hidden>
         <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary"></span></summary>
@@ -381,7 +390,7 @@
               <div class="chart-layout">
                 <section class="clinical-card event-composer" aria-labelledby="eventFormTitle">
                   <div class="card-heading">
-                    <div><p class="rail-eyebrow">HISTORICAL ENTRY</p><h3 id="eventFormTitle">과거자료 검토 대기 기록</h3></div>
+                    <div><p class="rail-eyebrow">HISTORICAL ENTRY</p><h3 id="eventFormTitle">과거자료 입력·검토</h3></div>
                     <span class="source-badge source-badge--draft">DRAFT</span>
                   </div>
                   <form id="eventForm" novalidate autocomplete="off" spellcheck="false">
@@ -393,12 +402,13 @@
                       <label>코드<input id="eventCode" maxlength="80" placeholder="KCD·LOINC·EDI 또는 내부코드" /></label>
                       <label>이름<input id="eventLabel" required maxlength="100" placeholder="예: 혈압" /></label>
                     </div>
-                    <label>코드 시스템<input id="eventSystem" maxlength="300" placeholder="예: http://loinc.org · 내부코드는 urn:기관명:코드체계" /></label>
+                    <label>코드 시스템<input id="eventSystem" maxlength="300" value="urn:kr:kcd" placeholder="예: urn:kr:kcd · http://loinc.org" /></label>
                     <div class="form-pair form-pair--value">
                       <label>값<input id="eventValue" maxlength="80" placeholder="예: 148/94" /></label>
                       <label>단위<input id="eventUnit" maxlength="40" placeholder="예: mmHg" /></label>
                     </div>
                     <label>기록 메모<textarea id="eventNote" rows="4" maxlength="2000" placeholder="의료진이 확인한 맥락과 근거"></textarea></label>
+                    <p class="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자 전달 후보가 됩니다.</p>
                     <p class="form-message" id="eventFormMessage" role="alert"></p>
                     <button class="clinical-button clinical-button--primary" type="submit">검토 대기 기록 추가</button>
                   </form>
@@ -419,7 +429,6 @@
               <section class="clinical-card graph-workspace" aria-labelledby="clinicalGraphTitle">
                 <div class="card-heading">
                   <div><p class="rail-eyebrow">VITAGRAPH CLINICAL VIEW</p><h3 id="clinicalGraphTitle">임상기록 관계 지도</h3></div>
-                  <a class="text-action" href="/connections" target="_blank" rel="noreferrer">기존 질환 탐색 열기</a>
                 </div>
                 <p class="graph-guidance">질환, 검사, 약물, 알레르기, 처치를 원본 차트 출처와 함께 봅니다. 점선은 코드·표시명 기반 추론이며 차트 사실이 아닙니다. 급여 위험은 별도 보드에서만 표시됩니다.</p>
                 <div class="clinical-graph-layout">
@@ -486,7 +495,6 @@
                 <section class="clinical-card" aria-labelledby="clinicalJourneyTitle">
                   <div class="card-heading">
                     <div><p class="rail-eyebrow">CLINICAL JOURNEY</p><h3 id="clinicalJourneyTitle">환자 변화 타임라인</h3></div>
-                    <a class="text-action" href="/journey" target="_blank" rel="noreferrer">개인 건강 Journey 열기</a>
                   </div>
                   <ol class="clinical-journey" id="clinicalJourney"></ol>
                 </section>

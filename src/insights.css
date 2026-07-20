@@ -6,6 +6,23 @@
   margin-bottom: var(--space-8);
 }
 
+.insights-page .page-hero__eyebrow,
+.insights-page .eyebrow {
+  color: color-mix(in srgb, var(--accent) 68%, var(--ink));
+}
+
+.insights-page .page-hero__lead,
+.brief-empty p,
+.signal-item p,
+.method-card > p:last-child {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.insights-page .app-nav a {
+  transition: transform 140ms ease-out;
+}
+
 .brief-action {
   display: inline-flex;
   min-height: calc(var(--space-10) + var(--space-1));
@@ -19,7 +36,7 @@
   line-height: 1.5;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 140ms ease-out, filter 140ms ease-out, background-color 140ms ease-out;
+  transition: transform 140ms ease-out, filter 140ms ease-out;
 }
 
 .brief-action--primary {
@@ -201,6 +218,8 @@
 .question-detail dd {
   margin: 0;
   color: var(--muted);
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .brief-empty {
@@ -339,6 +358,7 @@
 
   .brief-rail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 
   .insight-status {
@@ -393,6 +413,19 @@
 
   .brief-empty {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .insights-page .skip-link,
+  .insights-page .app-nav a,
+  .insights-page .app-header__action,
+  .insights-page .brief-action {
+    transition: none;
   }
 }
 

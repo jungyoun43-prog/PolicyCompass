@@ -9,6 +9,7 @@
     "dev": "npm run build && node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "smoke:emr": "node scripts/emr-browser-smoke.mjs",
+    "smoke:handoff": "node scripts/two-app-browser-smoke.mjs",
     "start": "node scripts/render-server.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },

@@ -98,20 +98,22 @@ VitaGraph feels like a bright clinical atlas rather than a hospital portal. The 
 
 | Role | Token | Value | Usage |
 |---|---|---|---|
-| Surface/primary | `--surface` | `#FFFFFF` | Page background |
-| Surface/soft | `--surface-soft` | `#F6F7FB` | Input and graph canvases |
+| Surface/primary | `--surface` | `#FBFAF7` | Warm page background |
+| Surface/soft | `--surface-soft` | `#F3F1EB` | Input and graph canvases |
 | Surface/raised | `--surface-raised` | `#FFFFFF` | Main panels |
-| Text/primary | `--ink` | `#15141A` | Headlines and body |
-| Text/secondary | `--muted` | `#6C6974` | Guidance and metadata |
-| Border/subtle | `--line` | `#E7E5EC` | Controls and dividers |
-| Interactive | `--accent` | `#F05A47` | Primary actions and focus |
-| Data/cyan | `--data-cyan` | `#18B8C9` | Respiratory and monitoring nodes |
-| Data/lime | `--data-lime` | `#A7C934` | Nutrition and lifestyle nodes |
-| Data/violet | `--data-violet` | `#8B72E8` | Neurologic and mental-health nodes |
-| Data/amber | `--data-amber` | `#F0A72E` | Metabolic caution nodes |
-| Status/urgent | `--urgent` | `#C93838` | Emergency guidance only |
+| Text/primary | `--ink` | `#123C3B` | Headlines, body, and primary actions |
+| Text/secondary | `--muted` | `#5E6D69` | Guidance and metadata |
+| Border/subtle | `--line` | `#D9DED8` | Decorative dividers |
+| Border/control | `--line-strong` | `#758882` | Input and interactive boundaries |
+| Interactive | `--accent` | `#0B6663` | Focus, selected state, and active emphasis |
+| Data/cyan | `--data-cyan` | `#247F87` | Respiratory and monitoring nodes |
+| Data/lime | `--data-lime` | `#668A45` | Nutrition and lifestyle nodes |
+| Data/violet | `--data-violet` | `#71688F` | Neurologic and mental-health nodes |
+| Data/amber | `--data-amber` | `#B66B12` | Metabolic caution nodes on light surfaces |
+| Status/amber-on-dark | `--status-amber-on-dark` | `#E5A857` | Small caution labels on dark surfaces |
+| Status/urgent | `--urgent` | `#B4232D` | Emergency guidance only |
 
-Coral is the sole interaction accent. Cyan, lime, violet, and amber are reserved for semantic graph encoding. No color may be used to claim a diagnosis.
+Deep teal is the sole interaction accent. Cyan, lime, violet, and amber are reserved for semantic graph encoding; the lighter amber token exists only to preserve text contrast on dark surfaces. No color may be used to claim a diagnosis.
 
 ## 3. Typography
 
@@ -141,7 +143,7 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 ### Surface panel
 - Structure: semantic section with title, optional controls, and content.
-- Radius: 24px. Padding: 24px.
+- Radius: 18px. Padding: 24px.
 - States: default, focus-within, loading, empty, error.
 - Accessibility: visible headings, landmark labels, no color-only status.
 
@@ -187,14 +189,14 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 
 
 ### Application shell
-- All surfaces use the same white atlas foundation with restrained coral and cyan light. The gateway, patient app, and clinical app may tune density and hierarchy within those shared tokens.
+- All surfaces use the same warm off-white clinical foundation with deep-teal interaction, restrained data color, and low elevation. The gateway, patient app, and clinical app may tune density and hierarchy within those shared tokens.
 - Gateway shell: one quiet brand rail and two explicit role actions. It has no application navigation because no data-bearing app is active yet.
 - Patient shell: `/patient`, `/map`, `/connections`, `/insights`, and `/journey` use the same 1480px rail and explicit 시작, 건강 지도, 연결 보기, 진료 준비, 기록 navigation. The patient landing's active route is `/patient`; no EMR control appears in this navigation.
 - Clinical shell: `/emr` uses its physician-centered queue, Encounter, and module navigation. It reuses brand/tokens but must not imitate the patient shell or depend on patient-app state.
 - Page hero: each route begins on the same 1480px rail with 40px top and 48px bottom breathing room. A mono eyebrow, display heading, and bounded supporting copy create a shared start line.
 - Primary workspace: Health Map has a balanced two-column input/body row. Full-width relationship and detail surfaces follow below; no empty third column is permitted.
 - Landing density: the product landing pairs its statement with a live-looking graph vignette, a four-part capability rail, and a concrete workflow preview before supporting detail.
-- Landing graph vignette: all conceptual nodes use the same 44px dot and place one persistent label below the circle. The central record node is distinguished by coral, not by a larger size or text inside the circle; edges stop at each dot boundary.
+- Landing graph vignette: all conceptual nodes use the same 44px dot and place one persistent label below the circle. The central record node is distinguished by the interaction accent, not by a larger size or text inside the circle; edges stop at each dot boundary.
 
 ## 6. Motion & Interaction
 
@@ -237,7 +239,7 @@ Generated imagery owns atmosphere, empathy, and the landing focal scene. HTML an
 - Body atlas: the existing generated mannequin remains a neutral navigation base; all user state is semantic overlay content.
 - Controls, forms, pricing, trust statements, charts, focus states, and responsive behavior remain native UI.
 
-Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. VitaGraph keeps its own coral/cyan/lime/violet system and does not copy brand imagery, layouts, or claims.
+Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. VitaGraph keeps its own deep-teal/cyan/lime/violet system and does not copy brand imagery, layouts, or claims.
 
 ## 11. Patient Landing Narrative
 
@@ -338,7 +340,7 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 
 ### Visual language
 
-- Color: keep existing coral interaction accent and cyan/lime/violet/amber data palette. Reimbursement states add semantic text and icons; red is reserved for hard safety/error states, never routine claim risk.
+- Color: use the shared deep-teal interaction accent and restrained cyan/lime/violet/amber data palette. Reimbursement states add semantic text and icons; red is reserved for hard safety/error states, never routine claim risk.
 - Typography: existing Noto/Pretendard stack; compact 12–14px operational metadata and 16–22px patient/work headings.
 - Spacing/layout rhythm: existing 4px scale; desktop cockpit uses a 280px patient rail plus fluid workspace; boards scroll horizontally without shrinking cards below 260px.
 - Shape/radius/elevation: reuse control and panel radii; reduce shadow depth inside dense clinical workspaces.

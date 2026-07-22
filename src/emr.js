@@ -247,6 +247,7 @@ const refs = {
   orderInstructions: byId("orderInstructions"),
   orderList: byId("orderList"),
   encounterClaimSummary: byId("encounterClaimSummary"),
+  encounterSignoffSummary: byId("encounterSignoffSummary"),
   recentEncounterList: byId("recentEncounterList"),
   encounterGraphSummary: byId("encounterGraphSummary"),
   eventForm: byId("eventForm"),
@@ -503,6 +504,15 @@ function copilotRequestFingerprint(request) {
 function setStatus(message, tone = "") {
   refs.workspaceStatus.textContent = message;
   refs.workspaceStatus.className = "workspace-status" + (tone ? " is-" + tone : "");
+}
+
+function restoreWorkflowFocus(...targets) {
+  queueMicrotask(() => {
+    const target = targets
+      .map((item) => typeof item === "string" ? byId(item) : item)
+      .find((item) => item && !item.disabled && item.getClientRects().length > 0);
+    target?.focus({ preventScroll: true });
+  });
 }
 
 async function withStateTransition(operation) {
@@ -1282,6 +1292,10 @@ function renderEncounterClaims(patient, evaluations) {
   }
   refs.encounterClaimSummary.append(countRow);
   const attention = evaluations.filter((item) => attentionStatuses.has(item.status)).slice(0, 3);
+  refs.encounterSignoffSummary.textContent = attention.length
+    ? `서명 전 확인 ${attention.length}건 · 오른쪽 청구 조정 위험에서 근거를 검토하세요.`
+    : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요.";
+  refs.encounterSignoffSummary.dataset.tone = attention.length ? "attention" : "ready";
   for (const evaluation of attention) {
     const card = element("article", "claim-mini-risk");
     card.append(
@@ -1940,6 +1954,7 @@ refs.checkInPatient.addEventListener("click", async () => {
       clinician: refs.encounterClinician.value,
       room: refs.encounterRoom.value,
     }), "오늘 진료에 접수했습니다.");
+    restoreWorkflowFocus(refs.startEncounter, refs.encounterStatus);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "접수에 실패했습니다.";
   }
@@ -1965,6 +1980,7 @@ refs.encounterForm.addEventListener("submit", async (event) => {
   if (!patient || !encounter) return;
   try {
     await applyMutation((current) => saveEncounterDraft(current, patient.id, encounter.id, encounterDraftFromForm()), "SOAP·진료 초안을 저장했습니다.", { preserveDraft: false });
+    restoreWorkflowFocus(refs.saveEncounterDraft, refs.encounterStatus);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 초안을 저장하지 못했습니다.";
   }
@@ -1977,6 +1993,7 @@ refs.completeEncounter.addEventListener("click", async () => {
   if (blockClinicalContextChange()) return;
   try {
     await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, encounterDraftFromForm()), "진료를 완료했습니다. 최종 검토 후 서명하세요.", { preserveDraft: false });
+    restoreWorkflowFocus(refs.signEncounter, refs.encounterStatus);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 완료 조건을 확인하세요.";
   }
@@ -1989,6 +2006,7 @@ refs.signEncounter.addEventListener("click", async () => {
   if (!window.confirm("SOAP·측정·진단·처방·오더를 확정하고 로컬 서명할까요? 서명 후 직접 수정할 수 없습니다.")) return;
   try {
     await applyMutation((current) => signEncounter(current, patient.id, encounter.id, encounter.clinician), "진료를 완료·서명했습니다.");
+    restoreWorkflowFocus(refs.encounterStatus, "tab-chart");
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 서명에 실패했습니다.";
   }
@@ -2000,6 +2018,7 @@ refs.reopenEncounter.addEventListener("click", async () => {
   if (!patient || !encounter) return;
   try {
     await applyMutation((current) => reopenEncounter(current, patient.id, encounter.id), "서명 전 진료를 다시 열었습니다.");
+    restoreWorkflowFocus(refs.chiefComplaint, refs.saveEncounterDraft);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 다시 열지 못했습니다.";
   }
@@ -2014,6 +2033,7 @@ refs.cancelEncounter.addEventListener("click", async () => {
   if (reason === null) return;
   try {
     await applyMutation((current) => cancelEncounter(current, patient.id, encounter.id, reason), "진료를 취소했습니다.");
+    restoreWorkflowFocus(refs.encounterStatus, refs.checkInPatient);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 취소하지 못했습니다.";
   }
@@ -2273,7 +2293,6 @@ document.addEventListener("click", (event) => {
     switchTab(openTab.dataset.openTab, true);
     return;
   }
-  if (event.target.closest("[data-load-demo]")) loadDemo();
 });
 
 document.querySelector(".workspace-tabs").addEventListener("keydown", (event) => {

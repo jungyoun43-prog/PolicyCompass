@@ -1,0 +1,52 @@
+/* Supportive hierarchy shared by patient-facing entry points. */
+.patient-presentation {
+  min-width: 0;
+}
+
+.patient-presentation__identity {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  border: var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface-raised) 86%, var(--data-cyan));
+  padding: var(--space-1) var(--space-3);
+  color: var(--accent);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.patient-presentation__panel {
+  border: var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-raised) 94%, var(--data-cyan));
+  box-shadow: var(--shadow-panel);
+}
+
+.patient-presentation__assurance {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: 58ch;
+  color: var(--muted);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.patient-presentation__assurance::before {
+  flex: 0 0 auto;
+  color: var(--data-lime);
+  content: "✓";
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .patient-presentation__identity {
+    font-size: 0.68rem;
+  }
+
+  .patient-presentation__assurance {
+    font-size: 0.72rem;
+  }
+}

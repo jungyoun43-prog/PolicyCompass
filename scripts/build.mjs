@@ -11,6 +11,8 @@ const cssAssets = [
   "responsive",
   "explorer",
   "journey",
+  "clinician-hierarchy",
+  "patient-presentation",
   "landing",
   "gateway",
   "insights",

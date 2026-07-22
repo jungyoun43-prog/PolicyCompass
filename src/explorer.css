@@ -152,8 +152,8 @@
 
 .scene-controls button {
   display: grid;
-  min-width: var(--space-10);
-  min-height: var(--space-10);
+  min-width: 44px;
+  min-height: 44px;
   place-items: center;
   border: 0;
   background: transparent;
@@ -539,8 +539,8 @@
   }
 
   .scene-controls button {
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .scene-controls .reset-scene {

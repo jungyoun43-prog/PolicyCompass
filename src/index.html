@@ -8,7 +8,7 @@
       content="몸의 신호, 질환의 연결, 확인할 관리 항목을 한 화면에서 탐색하는 개인 건강 관계 지도"
     />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#fbfaf7" />
     <title>건강 지도 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/body-atlas-v4.webp" type="image/webp" />
@@ -19,10 +19,11 @@
     <link rel="stylesheet" href="/portal.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/responsive.css" />
+    <link rel="stylesheet" href="/clinician-hierarchy.css" />
     <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/app.js"></script>
   </head>
-  <body class="map-page">
+  <body class="map-page clinician-hierarchy">
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
@@ -41,8 +42,8 @@
       </div>
     </header>
 
-    <main class="page-shell map-shell" id="mainContent">
-      <section class="page-hero map-hero" aria-labelledby="pageTitle">
+    <main class="page-shell map-shell clinician-hierarchy__workspace" id="mainContent">
+      <section class="page-hero map-hero clinician-hierarchy__summary" aria-labelledby="pageTitle">
         <div>
           <p class="page-hero__eyebrow">PERSONAL HEALTH RELATION MAP</p>
           <h1 id="pageTitle">내 몸의 신호를 연결해서 보기</h1>
@@ -52,7 +53,7 @@
             기록한 증상과 검사 수치를 신체 부위, 관련 질환, 확인할 관리 항목으로
             이어 봅니다.
           </p>
-          <p class="page-hero__note">
+          <p class="page-hero__note" data-route-context>
             진단 결과가 아닌 대화 준비용 지도입니다. 최종 판단은 의료진과 함께하세요.
           </p>
           <div class="page-hero__actions">
@@ -61,7 +62,7 @@
         </div>
       </section>
 
-      <div class="dashboard">
+      <div class="dashboard clinician-hierarchy__groups">
         <aside class="panel input-panel" aria-labelledby="inputTitle">
           <div class="panel-heading">
             <div>
@@ -103,6 +104,10 @@
               예: 혈압 148/94, 공복혈당 132, 속쓰림, 무릎 통증
             </p>
 
+            <p class="form-error" id="formError" role="alert" hidden>
+              증상이나 수치를 입력하거나 질환을 하나 이상 선택해 주세요.
+            </p>
+
             <fieldset class="signal-fieldset">
               <legend>이미 알고 있는 질환</legend>
               <div class="chip-grid" id="conditionChips">
@@ -117,10 +122,6 @@
               </div>
             </fieldset>
 
-            <p class="form-error" id="formError" role="alert" hidden>
-              증상이나 수치를 입력하거나 질환을 하나 이상 선택해 주세요.
-            </p>
-
             <div class="form-actions">
               <button class="primary-button" id="analyzeButton" type="submit">
                 건강 지도 업데이트
@@ -129,6 +130,7 @@
                 비우기
               </button>
             </div>
+
           </form>
 
           <div class="detected-summary" aria-live="polite">

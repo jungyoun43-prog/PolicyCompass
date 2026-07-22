@@ -183,30 +183,11 @@ body.emr-page {
   transition: transform 140ms ease-out, border-color 140ms ease-out, filter 140ms ease-out;
 }
 
-.clinical-button:hover,
-.clinical-button:focus-visible,
-.text-action:hover,
-.text-action:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
-  transform: translateY(-1px);
-}
-
 .command-actions input:focus-visible + label,
 .emr-page summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 46%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
-}
-
-.clinical-button:active,
-.text-action:active {
-  transform: scale(0.98);
-}
-
-.clinical-button:disabled {
-  cursor: not-allowed;
-  filter: grayscale(1);
-  opacity: 0.48;
-  transform: none;
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .clinical-button--primary {
@@ -490,7 +471,7 @@ body.emr-page {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 3px;
   margin-bottom: var(--space-3);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 11px;
   background: var(--surface-soft);
   padding: 3px;
@@ -520,7 +501,7 @@ body.emr-page {
 .emr-page textarea {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 10px;
   outline: none;
   background: var(--surface-soft);
@@ -556,7 +537,7 @@ body.emr-page {
 
 .patient-composer {
   margin-bottom: var(--space-3);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: var(--surface);
 }
@@ -743,7 +724,7 @@ body.emr-page {
 .patient-workspace {
   min-width: 0;
   min-height: 680px;
-  overflow: hidden;
+  overflow: clip;
   border-radius: 20px;
 }
 
@@ -780,16 +761,22 @@ body.emr-page {
 
 .workspace-empty > p:not(.rail-eyebrow) {
   max-width: 35rem;
-  margin: 0 0 var(--space-5);
+  margin: 0;
   color: var(--muted);
   word-break: keep-all;
 }
 
 .patient-safety-header {
+  position: sticky;
+  z-index: 18;
+  top: calc(var(--header-height) + var(--space-2));
   min-height: 100px;
   align-items: center;
   border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   padding: var(--space-5) var(--space-6);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--ink) 7%, transparent);
+  backdrop-filter: blur(14px);
 }
 
 .patient-identity h2 {
@@ -929,7 +916,7 @@ body.emr-page {
   flex: none;
   gap: var(--space-2);
   align-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
   background: var(--surface-soft);
   padding: var(--space-1) var(--space-3);
@@ -1067,6 +1054,24 @@ body.emr-page {
 
 .encounter-save-bar .form-message {
   padding-inline: var(--space-2);
+}
+
+.encounter-save-context {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.encounter-signoff-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.encounter-signoff-summary[data-tone="attention"] {
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
 }
 
 .entry-boundary,
@@ -2180,6 +2185,99 @@ body.emr-page {
   width: min(calc(100% - var(--space-8)), 1600px);
 }
 
+/* Clinical labels and provenance stay readable at the 12px operational floor. */
+.emr-page :is(
+  .clinical-command > div:first-child > p:last-child,
+  .command-title .page-hero__eyebrow,
+  .emr-utility-heading,
+  .emr-utility-heading span,
+  .patient-transfer-guidance span,
+  .patient-transfer-guidance p,
+  .fhir-import-report summary,
+  .fhir-import-report summary span,
+  .fhir-import-report li,
+  .trust-strip b,
+  .trust-strip > p,
+  .rail-eyebrow,
+  .rail-count,
+  .source-badge,
+  .queue-filters button,
+  .form-fieldset legend,
+  .field-help,
+  form label,
+  .form-message,
+  .patient-list small,
+  .patient-list em,
+  .rail-empty p,
+  .patient-identity > div > span,
+  .patient-header-actions > span,
+  .safety-chip,
+  .workspace-tabs button,
+  .encounter-state,
+  .soap-field > span,
+  .soap-field > span b,
+  .entry-boundary,
+  .context-guidance,
+  .context-summary:empty::before,
+  .context-list:empty::before,
+  .context-summary > *,
+  .context-list > li,
+  .claim-mini-count,
+  .metric-card span,
+  .metric-card small,
+  .summary-item small,
+  .summary-item span,
+  .summary-empty,
+  .draft-warning,
+  .copilot-section li,
+  .copilot-citations,
+  .question-citations,
+  .copilot-provenance span,
+  .next-work-item span,
+  .next-work-item p,
+  .event-filters button,
+  .event-row > time,
+  .event-type-badge,
+  .event-row__body p,
+  .event-source,
+  .event-remove,
+  .event-confirm,
+  .graph-guidance,
+  .claim-intro > p,
+  .data-control-card > p,
+  .graph-legend span,
+  .graph-evidence b,
+  .graph-evidence span,
+  .scope-switch button,
+  .rule-trust-note,
+  .claim-lane header span,
+  .claim-card b,
+  .claim-card code,
+  .claim-patient,
+  .claim-card p,
+  .claim-evidence,
+  .claim-rule-version,
+  .claim-manual-note,
+  .claim-facts span,
+  .claim-source,
+  .claim-empty,
+  .rule-composer summary small,
+  .rule-version-summary b,
+  .rule-version-summary span,
+  .rule-version-actions label,
+  .journey-day time,
+  .journey-day li,
+  .visit-question-list li::before,
+  .visit-question-list .question-citations,
+  .audit-list time,
+  .audit-list span,
+  .data-facts dt,
+  .data-facts dd,
+  .clinical-header .app-header__action
+) {
+  font-size: var(--font-size-caption);
+}
+
 @media (max-width: 1180px) {
   .clinical-command {
     grid-template-columns: 1fr;
@@ -2511,8 +2609,8 @@ body.emr-page {
   .patient-header-actions,
   .command-actions,
   .clinical-footer,
-  .clinical-button,
-  .text-action {
+.clinical-button,
+.text-action {
     display: none !important;
   }
 
@@ -2531,7 +2629,7 @@ body.emr-page {
   }
 
   .patient-safety-header {
-    border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   }
 
   .workspace-panel[hidden] {

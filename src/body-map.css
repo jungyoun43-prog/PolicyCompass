@@ -70,8 +70,8 @@
   position: absolute;
   z-index: 3;
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   place-items: center;
   border: 0;

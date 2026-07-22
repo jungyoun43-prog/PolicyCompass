@@ -113,15 +113,6 @@
   color: var(--ink);
 }
 
-.landing-button:hover,
-.landing-button:focus-visible {
-  filter: brightness(1.16);
-}
-
-.landing-button:active {
-  transform: scale(0.98);
-}
-
 .landing-hero__note {
   margin: var(--space-4) 0 0;
   color: var(--muted);
@@ -367,7 +358,7 @@
 }
 
 .data-boundary .eyebrow {
-  color: var(--data-amber);
+  color: var(--status-amber-on-dark);
 }
 
 .data-boundary h2 {

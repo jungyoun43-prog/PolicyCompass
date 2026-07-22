@@ -8,16 +8,18 @@
       content="내 건강 신호와 질환, 확인할 관리 항목을 자유롭게 탐색하는 관계 지도"
     />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#fbfaf7" />
     <title>연결 보기 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/explorer.css" />
+    <link rel="stylesheet" href="/controls.css" />
+    <link rel="stylesheet" href="/clinician-hierarchy.css" />
     <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/connections.js"></script>
   </head>
-  <body class="explorer-page">
+  <body class="explorer-page clinician-hierarchy">
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
@@ -36,8 +38,8 @@
       </div>
     </header>
 
-    <main class="page-shell explorer-shell" id="mainContent">
-      <section class="page-hero explorer-intro" aria-labelledby="explorerTitle">
+    <main class="page-shell explorer-shell clinician-hierarchy__workspace" id="mainContent">
+      <section class="page-hero explorer-intro clinician-hierarchy__summary" aria-labelledby="explorerTitle">
         <div>
           <p class="page-hero__eyebrow">CONNECTION EXPLORER</p>
           <h1 id="explorerTitle">질환 관계를 자유롭게 탐색하세요</h1>
@@ -46,7 +48,7 @@
           <p class="page-hero__lead">
             질환 노드와 질환 사이의 관계만 이 장면에 표시합니다. 노드를 선택하면 옆에서 검사·식사·관리 메모를 읽을 수 있습니다.
           </p>
-          <div class="scene-status" aria-live="polite">
+          <div class="scene-status" data-route-context aria-live="polite">
             <span id="sceneNodeCount">0개 질환</span>
             <strong id="sceneFocus">선택 대기</strong>
           </div>
@@ -57,7 +59,7 @@
         예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
       </p>
 
-      <section class="explorer-workspace" aria-label="건강 관계 탐색 장면">
+      <section class="explorer-workspace clinician-hierarchy__groups" aria-label="건강 관계 탐색 장면">
         <div class="scene-shell">
           <div class="scene-legend" aria-label="그래프 범례">
             <span><i class="legend-dot condition-dot"></i>질환 노드</span>

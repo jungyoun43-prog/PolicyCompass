@@ -8,12 +8,14 @@
       content="의료기관에서 받은 건강 기록과 직접 남긴 신호를 개인 건강 지도와 진료 질문으로 정리하는 VitaGraph Personal"
     />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Personal | 내 건강 기록을 내가 이어 보는 공간</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/visit-prep-hero.png" type="image/png" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/patient-presentation.css" />
     <link rel="stylesheet" href="/landing.css" />
+    <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/shell.css" />
   </head>
   <body class="landing-page">
@@ -36,19 +38,19 @@
     </header>
 
     <main class="page-shell landing-shell" id="mainContent">
-      <section class="landing-hero" aria-labelledby="landingTitle">
+      <section class="landing-hero patient-presentation" aria-labelledby="landingTitle">
         <div class="landing-hero__copy">
-          <p class="eyebrow">VITAGRAPH PERSONAL · LOCAL FIRST</p>
+          <p class="eyebrow patient-presentation__identity">VITAGRAPH PERSONAL · 내 기록 공간</p>
           <h1 id="landingTitle">내 건강 기록을 <em>내가 이어 보는</em> 공간.</h1>
           <p class="landing-hero__lead">
             의료기관에서 받은 VitaGraph 파일과 내가 남긴 증상·검사 수치를 한곳에서
             연결하고, 다음 진료에서 확인할 질문까지 준비합니다.
           </p>
+          <p class="landing-hero__note patient-presentation__assurance" data-route-context>이 기기에서 처리 · 로그인 없음 · 원문 서버 전송 없음 · 진단·처방 아님</p>
           <div class="landing-actions">
             <a class="landing-button landing-button--primary" href="/map#import-record">기록 파일 가져오기</a>
             <a class="landing-button landing-button--secondary" href="/map?sample=1">예시 기록으로 먼저 보기</a>
           </div>
-          <p class="landing-hero__note">로그인 없음 · 원문 서버 전송 없음 · 진단·처방 아님</p>
         </div>
         <figure class="landing-hero__visual">
           <img

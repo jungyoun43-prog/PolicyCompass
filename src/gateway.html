@@ -14,7 +14,9 @@
     />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/shell.css" />
+    <link rel="stylesheet" href="/patient-presentation.css" />
     <link rel="stylesheet" href="/gateway.css" />
+    <link rel="stylesheet" href="/controls.css" />
   </head>
   <body class="gateway-page">
     <a class="skip-link" href="#mainContent">역할 선택으로 건너뛰기</a>
@@ -25,14 +27,14 @@
           <span class="app-brand__mark" aria-hidden="true"></span>
           <span>VitaGraph</span>
         </a>
-        <p class="gateway-header__status">데이터 입력 없음</p>
+        <p class="gateway-header__status" data-route-context>데이터 입력 없음</p>
       </div>
     </header>
 
     <main class="gateway-shell" id="mainContent">
-      <section class="gateway-intro" aria-labelledby="gatewayTitle">
+      <section class="gateway-intro patient-presentation" aria-labelledby="gatewayTitle">
         <div>
-          <p class="gateway-eyebrow">CLINICAL EMR + PERSONAL VITAGRAPH</p>
+          <p class="gateway-eyebrow patient-presentation__identity">VITAGRAPH · 역할 선택</p>
           <h1 id="gatewayTitle">사용할 공간을 선택하세요.</h1>
         </div>
         <p class="gateway-intro__lead">
@@ -67,7 +69,7 @@
           <p class="role-card__caution">로컬 평가용 샌드박스 · 인증된 운영 EMR 아님</p>
         </article>
 
-        <article class="role-card role-card--patient">
+        <article class="role-card role-card--patient patient-presentation__panel">
           <div class="role-card__topline">
             <span class="role-card__icon" aria-hidden="true">VG</span>
             <span class="role-card__badge">PERSONAL · 개인</span>
@@ -89,7 +91,7 @@
             개인 VitaGraph 열기
             <span aria-hidden="true">→</span>
           </a>
-          <p class="role-card__caution">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
+          <p class="role-card__caution patient-presentation__assurance">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
         </article>
       </section>
 

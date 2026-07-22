@@ -1,0 +1,62 @@
+/* Shared dense information hierarchy for record-heavy Personal workspaces. */
+.clinician-hierarchy__workspace {
+  min-width: 0;
+}
+
+.clinician-hierarchy__summary {
+  border-bottom: var(--border-subtle);
+  padding-bottom: var(--space-6);
+}
+
+.clinician-hierarchy__summary :where(h1, p),
+.clinician-hierarchy__groups > * {
+  min-width: 0;
+}
+
+.clinician-hierarchy__summary :where(.page-hero__eyebrow, .panel-index, .eyebrow) {
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.clinician-hierarchy__groups {
+  gap: var(--space-4);
+}
+
+.clinician-hierarchy__groups :where(.panel, .scene-shell, .explorer-detail, .question-panel, .brief-rail, .snapshot-content, .change-columns article) {
+  border: var(--border-subtle);
+  box-shadow: none;
+}
+
+.clinician-hierarchy__groups :where(.panel-heading, .brief-section-heading, .journey-heading) {
+  margin-bottom: var(--space-4);
+}
+
+.clinician-hierarchy__groups :where(h2, h3) {
+  line-height: 1.35;
+}
+
+.clinician-hierarchy__groups :where(.field-hint, .scene-hint, .journey-storage-note, .question-detail, .signal-item p) {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 620px) {
+  .clinician-hierarchy__summary {
+    padding-bottom: var(--space-5);
+  }
+
+  .clinician-hierarchy__summary :where(h1, p),
+  .clinician-hierarchy__groups,
+  .clinician-hierarchy__groups > * {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .clinician-hierarchy__groups {
+    gap: var(--space-3);
+  }
+}

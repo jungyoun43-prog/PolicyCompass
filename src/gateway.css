@@ -154,7 +154,7 @@
 }
 
 .role-card--clinical .role-card__kicker {
-  color: color-mix(in srgb, var(--accent) 80%, var(--surface));
+  color: color-mix(in srgb, var(--accent) 70%, var(--surface));
 }
 
 .role-card h2 {
@@ -229,19 +229,8 @@
   color: var(--ink);
 }
 
-.role-action:hover,
-.role-action:focus-visible {
-  filter: brightness(1.08);
-  transform: translateY(-2px);
-}
-
-.role-action:active {
-  transform: translateY(0) scale(0.99);
-}
-
-.role-action:focus-visible,
 .app-brand:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--data-cyan) 65%, var(--surface));
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 

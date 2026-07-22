@@ -50,26 +50,9 @@
   color: var(--ink);
 }
 
-.brief-action:hover,
-.brief-action:focus-visible {
-  filter: brightness(1.16);
-}
-
-.brief-action:active {
-  transform: scale(0.98);
-}
-
-.brief-action:disabled {
-  background: var(--surface-soft);
-  color: var(--muted);
-  cursor: not-allowed;
-  filter: none;
-}
-
-.brief-action:focus-visible,
 .insight-status a:focus-visible,
 .brief-empty a:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: var(--space-1);
 }
 
@@ -307,7 +290,7 @@
 }
 
 .method-card .eyebrow {
-  color: var(--data-amber);
+  color: var(--status-amber-on-dark);
 }
 
 .method-card ol {

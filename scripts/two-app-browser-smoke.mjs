@@ -1,13 +1,14 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
 const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.HANDOFF_CHROME_DEBUG_PORT ?? "9226", 10);
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-handoff-smoke-"));
+const reportPath = process.env.HANDOFF_SMOKE_REPORT ?? join("artifacts", "smoke", "handoff-smoke-report.json");
 const browser = spawn(chrome, [
   "--headless",
   "--no-sandbox",
@@ -266,7 +267,7 @@ try {
   assert(gatewayLayout.actions.length === 2 && gatewayLayout.actions.every(({ top, bottom, display }) => top >= 0 && bottom <= 844 && display !== "none"), `Both role actions were not visible within 390×844: ${JSON.stringify(gatewayLayout)}`);
   assert(gatewayLayout.cautions.length === 2 && gatewayLayout.cautions.every(({ top, bottom, display }) => top >= 0 && bottom <= 844 && display !== "none"), `Both safety cautions were not visible within 390×844: ${JSON.stringify(gatewayLayout)}`);
 
-  process.stdout.write(`${JSON.stringify({
+  const result = {
     transferCode: transfer.transferCode,
     conditions: transfer.healthMap.conditions.length,
     measurements: transfer.healthMap.measurements.length,
@@ -277,7 +278,12 @@ try {
     connectionsLinked: true,
     visitBriefLinked: true,
     gatewayMobileReady: true,
-  })}\n`);
+  };
+  const temporaryReportPath = `${reportPath}.${process.pid}.tmp`;
+  await mkdir(dirname(reportPath), { recursive: true });
+  await writeFile(temporaryReportPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  await rename(temporaryReportPath, reportPath);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
 } finally {
   client?.close();
   browser.kill("SIGTERM");

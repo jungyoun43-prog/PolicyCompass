@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="VitaGraph 관계 지도와 급여 적합성 칸반을 결합한 로컬 임상 EMR 워크스페이스" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Clinical | 로컬 AI 보조 EMR</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%2315141a%27/%3E%3Cpath d=%27M19 32h26M32 19v26%27 stroke=%27%23fff%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/shell.css" />
     <link rel="stylesheet" href="/emr.css" />
+    <link rel="stylesheet" href="/controls.css" />
     <script type="module" src="/emr.js"></script>
   </head>
   <body class="emr-page">
@@ -43,7 +44,6 @@
           <p>접수부터 SOAP, 진단, 처방, 오더, 서명까지 한 화면에서 기록합니다.</p>
         </div>
         <div class="command-actions" aria-label="로컬 데이터 작업">
-          <button class="clinical-button clinical-button--demo" id="loadDemo" type="button">샘플 환자 보기</button>
           <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
           <details class="emr-utilities" id="emrUtilities">
             <summary class="clinical-button">데이터 작업</summary>
@@ -91,7 +91,7 @@
           <b>DEMO</b>
           <span>가상 환자 · 저장되지 않음</span>
         </div>
-        <p>이 화면은 현장 검증용 로컬 샌드박스입니다. 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않습니다.</p>
+        <p data-route-context>이 화면은 현장 검증용 로컬 샌드박스입니다. 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않습니다.</p>
       </section>
 
       <p class="workspace-status" id="workspaceStatus" role="status" aria-live="polite"></p>
@@ -167,6 +167,7 @@
           <div class="rail-empty" id="patientListEmpty">
             <b>등록된 환자 없음</b>
             <p>새 환자를 등록하거나, 샘플·FHIR·백업을 불러오세요.</p>
+            <button class="clinical-button clinical-button--demo" id="loadDemo" type="button">샘플 워크스페이스 열기</button>
           </div>
         </aside>
 
@@ -176,7 +177,6 @@
             <p class="rail-eyebrow">NO PATIENT SELECTED</p>
             <h2>환자 한 명을 선택하면 임상 흐름이 열립니다.</h2>
             <p>차트, VitaGraph, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
-            <button class="clinical-button clinical-button--demo" data-load-demo type="button">샘플 워크스페이스 열기</button>
           </div>
 
           <div id="workspaceContent" hidden>
@@ -214,7 +214,7 @@
                         <p class="rail-eyebrow">ACTIVE ENCOUNTER</p>
                         <h3 id="encounterTitle">오늘 외래 진료</h3>
                       </div>
-                      <div class="encounter-state" id="encounterStatus" data-status="none" aria-live="polite">
+                      <div class="encounter-state" id="encounterStatus" data-status="none" aria-live="polite" tabindex="-1">
                         <span class="encounter-state__dot" aria-hidden="true"></span>
                         <b id="encounterStatusText">미접수</b>
                       </div>
@@ -339,7 +339,10 @@
                   </section>
 
                   <div class="encounter-save-bar">
-                    <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
+                    <div class="encounter-save-context">
+                      <p class="encounter-signoff-summary" id="encounterSignoffSummary">서명 전 안전·급여 점검을 불러오는 중입니다.</p>
+                      <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
+                    </div>
                     <div class="encounter-save-actions">
                       <button class="clinical-button" id="cancelEncounter" type="button" hidden>진료 취소</button>
                       <button class="clinical-button" id="reopenEncounter" type="button" hidden>서명 전 재개</button>

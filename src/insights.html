@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="건강 지도에 남긴 신호를 진료실에서 바로 확인할 질문 브리프로 정리합니다." />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#fbfaf7" />
     <title>진료 준비 브리프 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/insights.css" />
+    <link rel="stylesheet" href="/controls.css" />
+    <link rel="stylesheet" href="/clinician-hierarchy.css" />
     <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/insights.js"></script>
   </head>
-  <body class="insights-page">
+  <body class="insights-page clinician-hierarchy">
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="app-header">
       <div class="app-header__inner">
@@ -32,8 +34,8 @@
       </div>
     </header>
 
-    <main class="page-shell insight-shell" id="mainContent">
-      <section class="page-hero insight-hero" aria-labelledby="insightTitle">
+    <main class="page-shell insight-shell clinician-hierarchy__workspace" id="mainContent">
+      <section class="page-hero insight-hero clinician-hierarchy__summary" aria-labelledby="insightTitle">
         <div>
           <p class="page-hero__eyebrow">VISIT PREP · LOCAL RULES</p>
           <h1 id="insightTitle">진료실에서 바로 꺼내 보는 질문 브리프</h1>
@@ -55,7 +57,7 @@
         예시 데이터로 만든 질문 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
       </p>
 
-      <section class="insight-status" aria-label="현재 브리프 범위">
+      <section class="insight-status" data-route-context aria-label="현재 브리프 범위">
         <div>
           <b>현재 브리프</b>
           <span id="questionCount">0개 질문</span>
@@ -64,7 +66,7 @@
         <a href="/map">입력 신호 수정</a>
       </section>
 
-      <div class="brief-layout">
+      <div class="brief-layout clinician-hierarchy__groups">
         <section class="question-panel" aria-labelledby="questionTitle">
           <header class="brief-section-heading">
             <div>

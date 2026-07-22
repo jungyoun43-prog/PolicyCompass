@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
 const appUrl = process.env.EMR_URL ?? "http://127.0.0.1:4173";
@@ -12,6 +12,7 @@ const [viewportWidth, viewportHeight] = (process.env.CHROME_WINDOW_SIZE ?? "1440
   .map((value) => Number.parseInt(value, 10));
 const koreaToday = new Date(Date.now() + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-emr-smoke-"));
+const reportPath = process.env.EMR_SMOKE_REPORT ?? join("artifacts", "smoke", "emr-smoke-report.json");
 const browser = spawn(chrome, [
   "--headless",
   "--no-sandbox",
@@ -343,8 +344,10 @@ try {
 
   await evaluate("document.querySelector('[data-tab=\"encounter\"]').click(); document.getElementById('checkInPatient').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '대기'", "Patient check-in did not create a waiting encounter.");
+  assert(await evaluate("document.activeElement === document.getElementById('startEncounter')"), "Check-in did not move focus to the next valid clinical action.");
   await evaluate("document.getElementById('startEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '진료 중'", "Encounter did not start.");
+  assert(await evaluate("document.activeElement === document.getElementById('chiefComplaint')"), "Encounter start did not move focus into documentation.");
   await evaluate([
     "document.getElementById('encounterDepartment').value = '내과'",
     "document.getElementById('encounterClinician').value = '스모크 의사'",
@@ -385,6 +388,7 @@ try {
     "document.getElementById('encounterForm').requestSubmit()",
   ].join(";"));
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('초안을 저장')", "SOAP draft did not save.");
+  assert(await evaluate("document.activeElement === document.getElementById('saveEncounterDraft')"), "Draft save did not preserve workflow focus.");
 
   await evaluate([
     "document.getElementById('vitalValue').value = '149/93'",
@@ -485,8 +489,10 @@ try {
 
   await evaluate("document.getElementById('completeEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Encounter did not complete.");
+  assert(await evaluate("document.activeElement === document.getElementById('signEncounter')"), "Completion did not move focus to final review and signature.");
   await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
+  assert(await evaluate("document.activeElement === document.getElementById('encounterStatus')"), "Signature did not restore focus to the updated encounter status.");
   assert(await evaluate(`(() => {
     const state = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
     const patient = state.patients.find(({ mrn }) => mrn === 'SMOKE-001');
@@ -857,7 +863,7 @@ try {
   assert(/다른 탭.*변경/.test(staleWriteAfterWipe), "A stale browser tab revived patient data after full wipe.");
   assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.length === 0"), "Rejected stale write changed the full-wipe tombstone.");
 
-  console.log(JSON.stringify({
+  const result = {
     demoPatient: "김비타",
     graphNodes: demoGraphNodes,
     claimLanes: 6,
@@ -879,7 +885,12 @@ try {
     corruptStorageBackupRestored: true,
     fullWipeClearedMetadata: true,
     hostileTextEscaped: true,
-  }));
+  };
+  const temporaryReportPath = `${reportPath}.${process.pid}.tmp`;
+  await mkdir(dirname(reportPath), { recursive: true });
+  await writeFile(temporaryReportPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  await rename(temporaryReportPath, reportPath);
+  console.log(JSON.stringify(result));
 } finally {
   client?.close();
   for (const extraClient of extraClients) extraClient.close();

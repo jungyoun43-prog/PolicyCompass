@@ -7,8 +7,9 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>건강 기록 | VitaGraph Personal</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/explorer.css" />
     <link rel="stylesheet" href="/journey.css" />
@@ -38,7 +39,18 @@
     <main class="page-shell journey-shell clinician-hierarchy__workspace" id="mainContent">
       <section class="page-hero journey-intro clinician-hierarchy__summary" aria-labelledby="journeyPageTitle">
         <div>
-          <p class="page-hero__eyebrow">PATIENT JOURNEY</p>
+          <div class="signal-kicker">
+            <span class="signal-thread signal-thread--quiet" aria-hidden="true">
+              <svg viewBox="0 0 76 22" focusable="false">
+                <path class="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
+              </svg>
+            </span>
+            <span class="page-hero__eyebrow signal-kicker__label">PATIENT JOURNEY</span>
+          </div>
           <h1 id="journeyPageTitle">한 장면이 아니라 변화를 봅니다.</h1>
         </div>
         <p class="page-hero__lead" data-route-context>
@@ -52,12 +64,6 @@
             <p class="panel-index">LOCAL SNAPSHOTS</p>
             <h2 id="journeyTitle">나의 건강 지도 기록</h2>
           </div>
-          <div class="journey-empty" id="journeyEmpty" hidden>
-            <span>01</span>
-            <h3>아직 비교할 기록이 없습니다.</h3>
-            <p>건강 지도에서 데이터를 분석한 뒤 “Journey에 저장”을 누르면 첫 시점이 생깁니다.</p>
-            <a class="primary-button" href="/map">첫 지도 만들기</a>
-          </div>
           <div class="journey-data-actions" aria-label="Journey 데이터 관리">
             <button class="secondary-button" id="exportJourney" type="button" disabled>JSON 내보내기</button>
             <button class="secondary-button" id="importJourneyTrigger" type="button" aria-controls="journeyImport">JSON 가져오기</button>
@@ -69,16 +75,72 @@
           이 기록은 다른 기기와 자동 동기화되지 않습니다. 브라우저 데이터를 지우면 함께 삭제되므로, 기기를 옮기기 전 JSON 파일로 내보내세요. 가져오기는 현재 기록 전체를 교체합니다.
         </p>
         <p class="journey-transfer-status" id="journeyTransferStatus" role="status" aria-live="polite"></p>
+        <div class="journey-empty" id="journeyEmpty" data-first-use hidden>
+          <p class="panel-index">FIRST SNAPSHOT · 01</p>
+          <h3>첫 기록을 남기면 다음 시점부터 변화가 이어집니다.</h3>
+          <div class="journey-first-actions">
+            <a class="journey-first-action journey-first-action--primary primary-button" href="/map#import-record">
+              <span>첫 지도 만들기</span><small>내 기록 가져오기 · 이 브라우저에서 처리</small>
+            </a>
+            <a class="journey-first-action" href="/map?sample=1">
+              <span>예시로 흐름 보기</span><small>현재 탭에서만 유지 · Journey 저장 안 됨</small>
+            </a>
+          </div>
+          <p>현재 지도에 있는 신호와 측정값만 로컬 기준점으로 저장합니다. VitaGraph는 기록 차이를 보여 주지만 원인·호전·악화를 판단하지 않습니다.</p>
+          <ol class="journey-first-steps" aria-label="첫 Journey 기록 만들기">
+            <li><span>1</span><div><b>기록 연결</b><small>직접 입력하거나 지원되는 환자 전달 JSON 가져오기</small></div></li>
+            <li><span>2</span><div><b>대상자·시점 확인</b><small>파일 출처와 기록 날짜를 직접 대조</small></div></li>
+            <li><span>3</span><div><b>Journey에 저장</b><small>다음 기록부터 같은 항목의 차이를 비교</small></div></li>
+          </ol>
+          <p class="journey-first-safety">예시는 실제 기록으로 저장되지 않습니다. 기존 Journey 백업이 있다면 위의 “JSON 가져오기”로 복원할 수 있습니다.</p>
+        </div>
         <div class="timeline" id="journeyTimeline" aria-label="건강 지도 시간선"></div>
       </section>
 
       <section class="journey-comparison" id="journeyComparison" aria-live="polite">
         <div>
           <p class="panel-index">CHANGE SUMMARY</p>
-          <h2 id="comparisonTitle">두 시점을 선택하세요</h2>
+          <h2 id="comparisonTitle">최근 두 시점 비교</h2>
           <p id="comparisonCopy">기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.</p>
         </div>
         <div class="comparison-detail">
+          <div class="journey-story-grid" aria-label="최근 기록 변화 이야기">
+            <article class="journey-story-card journey-story-card--changed" data-story-section="changed">
+              <span class="journey-story-card__step" aria-hidden="true">01</span>
+              <p class="panel-index">WHAT CHANGED</p>
+              <h3>기록에서 관찰된 변화</h3>
+              <div class="journey-story-list" id="journeyChanges">
+                <p class="journey-story-empty">기록이 두 개 이상이면 관찰된 차이를 여기에 정리합니다.</p>
+              </div>
+            </article>
+
+            <article class="journey-story-card journey-story-card--context" data-story-section="context">
+              <span class="journey-story-card__step" aria-hidden="true">02</span>
+              <p class="panel-index">POSSIBLE CONTEXT</p>
+              <h3>함께 살펴볼 수 있는 맥락</h3>
+              <p class="journey-story-guardrail">가능한 추론 맥락 · 인과관계나 이번 변화의 원인 아님</p>
+              <div class="journey-context-list" id="journeyContexts">
+                <p class="journey-story-empty">현재 기록의 신호 조합에 연결되는 일반 근거만 표시합니다.</p>
+              </div>
+            </article>
+
+            <article class="journey-story-card journey-story-card--next" data-story-section="next">
+              <span class="journey-story-card__step" aria-hidden="true">03</span>
+              <p class="panel-index">REVIEW NEXT</p>
+              <h3>다음 기록에서 확인할 것</h3>
+              <div class="journey-story-list" id="journeyNextReviews">
+                <p class="journey-story-empty">기준점이 생기면 다음에 대조할 항목을 정리합니다.</p>
+              </div>
+            </article>
+
+            <article class="journey-story-card journey-story-card--prior" data-story-section="comparison">
+              <span class="journey-story-card__step" aria-hidden="true">04</span>
+              <p class="panel-index">PRIOR SNAPSHOT</p>
+              <h3>이전 시점과 비교 범위</h3>
+              <p id="journeyPriorComparison">아직 이전 시점이 없습니다.</p>
+            </article>
+          </div>
+
           <div class="change-columns">
             <article><span class="change-mark added">+</span><h3>새로 표시</h3><div id="addedSignals"></div></article>
             <article><span class="change-mark steady">=</span><h3>계속 표시</h3><div id="steadySignals"></div></article>

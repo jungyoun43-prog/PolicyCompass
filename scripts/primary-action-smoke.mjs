@@ -10,8 +10,8 @@ const links = [
   { from: "/", selector: ".role-card--clinical .role-action", path: "/emr", hash: "" },
   { from: "/patient", selector: ".landing-actions .landing-button--primary", path: "/map", hash: "#import-record" },
   { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#import-record" },
-  { from: "/insights", selector: "#briefEmpty .brief-action--primary", path: "/map", hash: "" },
-  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "" },
+  { from: "/insights", selector: "#briefEmpty .brief-action--primary", path: "/map", hash: "#import-record" },
+  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#import-record" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-primary-actions-"));
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -7,8 +7,9 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>진료 준비 브리프 | VitaGraph Personal</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/insights.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/clinician-hierarchy.css" />
@@ -37,7 +38,18 @@
     <main class="page-shell insight-shell clinician-hierarchy__workspace" id="mainContent">
       <section class="page-hero insight-hero clinician-hierarchy__summary" aria-labelledby="insightTitle">
         <div>
-          <p class="page-hero__eyebrow">VISIT PREP · LOCAL RULES</p>
+          <div class="signal-kicker">
+            <span class="signal-thread signal-thread--quiet" aria-hidden="true">
+              <svg viewBox="0 0 76 22" focusable="false">
+                <path class="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
+              </svg>
+            </span>
+            <span class="page-hero__eyebrow signal-kicker__label">VISIT PREP · LOCAL RULES</span>
+          </div>
           <h1 id="insightTitle">진료실에서 바로 꺼내 보는 질문 브리프</h1>
         </div>
         <div class="page-hero__aside">
@@ -66,6 +78,47 @@
         <a href="/map">입력 신호 수정</a>
       </section>
 
+      <section class="visit-story" aria-labelledby="visitStoryTitle">
+        <header class="visit-story__heading">
+          <div>
+            <p class="eyebrow">VISIT STORY</p>
+            <h2 id="visitStoryTitle">기록을 진료 대화의 순서로 읽기</h2>
+          </div>
+          <p>관찰된 기록 차이와 일반적인 참고 맥락을 분리해 보여 줍니다.</p>
+        </header>
+        <div class="visit-story__grid">
+          <article class="story-card story-card--changed" data-story-section="changed">
+            <span class="story-card__step" aria-hidden="true">01</span>
+            <p class="story-card__eyebrow">WHAT CHANGED</p>
+            <h3>이번 기록에서 달라진 점</h3>
+            <div class="story-list" id="insightChanges"></div>
+          </article>
+
+          <article class="story-card story-card--context" data-story-section="context">
+            <span class="story-card__step" aria-hidden="true">02</span>
+            <p class="story-card__eyebrow">POSSIBLE CONTEXT</p>
+            <h3>함께 살펴볼 수 있는 맥락</h3>
+            <p class="story-card__guardrail">가능한 추론 맥락 · 인과관계나 현재 변화의 원인 아님</p>
+            <div class="story-context-list" id="insightContexts"></div>
+          </article>
+
+          <article class="story-card story-card--next" data-story-section="next">
+            <span class="story-card__step" aria-hidden="true">03</span>
+            <p class="story-card__eyebrow">REVIEW NEXT</p>
+            <h3>다음 진료에서 확인할 것</h3>
+            <div class="story-list" id="insightNextReviews"></div>
+          </article>
+
+          <article class="story-card story-card--comparison" data-story-section="comparison">
+            <span class="story-card__step" aria-hidden="true">04</span>
+            <p class="story-card__eyebrow">PRIOR SNAPSHOT</p>
+            <h3>이전 저장 기록과 비교</h3>
+            <p id="insightComparison"></p>
+            <a href="/journey">전체 Journey 보기</a>
+          </article>
+        </div>
+      </section>
+
       <div class="brief-layout clinician-hierarchy__groups">
         <section class="question-panel" aria-labelledby="questionTitle">
           <header class="brief-section-heading">
@@ -76,12 +129,26 @@
             <p id="printDate" class="print-date"></p>
           </header>
 
-          <div class="brief-empty" id="briefEmpty" hidden>
+          <div class="brief-empty" id="briefEmpty" data-first-use hidden>
             <span class="brief-empty__index" aria-hidden="true">00</span>
             <div>
-              <h3>먼저 건강 기록을 연결해 주세요.</h3>
-              <p>건강 지도에서 증상·수치·기존 진단을 입력하면, 여기에서 진료 질문과 확인 이유를 정리합니다.</p>
-              <a class="brief-action brief-action--primary" href="/map">건강 지도 시작</a>
+              <p class="eyebrow">FIRST BRIEF</p>
+              <h3>기록 하나로 첫 질문 브리프를 만들어 보세요.</h3>
+              <p>직접 입력하거나 지원되는 환자 전달 JSON을 가져오면, 기록에 있는 신호만 질문과 비교 기준으로 정리합니다.</p>
+              <div class="first-use-actions">
+                <a class="first-use-action first-use-action--primary brief-action brief-action--primary" href="/map#import-record">
+                  <span>건강 지도 시작</span><small>내 기록 가져오기 · 브라우저 안에서 처리</small>
+                </a>
+                <a class="first-use-action" href="/map?sample=1">
+                  <span>예시로 먼저 보기</span><small>현재 탭에서만 유지 · Journey 저장 안 됨</small>
+                </a>
+              </div>
+              <ol class="first-use-steps" aria-label="첫 질문 브리프 만들기">
+                <li><span>1</span><div><b>기록 연결</b><small>증상·수치·알고 있는 질환을 현재 지도에 표시</small></div></li>
+                <li><span>2</span><div><b>질문 확인</b><small>왜 확인하는지와 어떤 입력에서 나온 질문인지 대조</small></div></li>
+                <li><span>3</span><div><b>필요한 것만 준비</b><small>진료실에서 보여 줄 질문을 인쇄하거나 화면으로 확인</small></div></li>
+              </ol>
+              <p class="first-use-safety">가져오기 전 대상자와 파일 출처를 직접 확인하세요. 예시는 실제 건강 기록으로 저장되지 않습니다.</p>
             </div>
           </div>
 

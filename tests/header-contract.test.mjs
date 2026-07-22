@@ -49,16 +49,32 @@ test("게이트웨이는 의료진 EMR과 개인 VitaGraph 진입점을 분리�
   assert.match(html, /두 앱은 환자용 파일로만 연결됩니다/);
 });
 
-test("EMR 헤더는 임상 워크스페이스 안에서만 이동한다", async () => {
+test("EMR 헤더는 환자 화면 탭을 중복하지 않고 전역 작업만 제공한다", async () => {
   const html = await readFile("src/emr.html", "utf8");
   const header = html.match(/<header class="app-header clinical-header">([\s\S]*?)<\/header>/)?.[0] ?? "";
   const hrefs = [...header.matchAll(/\bhref="([^"]+)"/g)].map(([, href]) => href);
 
   assert.match(header, /class="app-brand" href="\/emr"/);
-  assert.ok(hrefs.filter((href) => href.startsWith("#")).length >= 1);
+  assert.match(header, /class="app-header__action" href="#patientComposer">환자 추가<\/a>/);
+  assert.doesNotMatch(header, /class="app-nav clinical-nav"/);
+  assert.doesNotMatch(header, /data-tab-target/);
+  assert.deepEqual(hrefs, ["/emr", "#patientComposer"]);
   for (const route of ["/patient", "/map", "/connections", "/insights", "/journey"]) {
     assert.equal(hrefs.includes(route), false, route);
   }
+});
+
+test("EMR 환자 화면은 한 개의 탭 목록과 일관된 명칭을 사용한다", async () => {
+  const html = await readFile("src/emr.html", "utf8");
+  const tablists = [...html.matchAll(/<div class="workspace-tabs" role="tablist"[\s\S]*?<\/div>/g)];
+
+  assert.equal(tablists.length, 1);
+  const tablist = tablists[0][0];
+  assert.equal((tablist.match(/role="tab"/g) ?? []).length, 7);
+  for (const label of ["오늘 진료", "환자 요약", "과거 기록", "VitaGraph", "급여 보드", "Journey", "감사·데이터"]) {
+    assert.match(tablist, new RegExp(`>${label}<\\/button>`));
+  }
+  assert.doesNotMatch(tablist, />차트<\/button>|>급여 칸반<\/button>/);
 });
 
 test("페이지 타이틀은 강제 줄바꿈 없이 반응형으로 흐른다", async () => {

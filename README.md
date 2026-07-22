@@ -63,13 +63,21 @@ VitaGraph의 노드는 원 차트 출처를 표시합니다. 코드·표시명�
 npm test
 npm run smoke:emr
 npm run smoke:handoff
+npm run smoke:first-use-patient
+npm run smoke:first-use-clinician
+npm run smoke:graph-discovery
 ```
 
 - `npm test`: 빌드, 모델, FHIR, 급여 규칙, 백업, 라우트, 보안 헤더 검증
 - `npm run smoke:emr`: 실행 중인 로컬 서버와 Chrome을 사용해 데모, 환자 인구정보, Encounter 진료기록, 그래프, 칸반, 동시 저장 충돌·복구를 실제 브라우저에서 검증
 - `npm run smoke:handoff`: EMR에서 확정 기록을 환자용 JSON으로 내보내고, 코드 확인 전 취소의 원자성과 승인 후 개인 지도·Connections·진료 브리프 연결을 실제 브라우저에서 검증
+- `npm run smoke:first-use-patient`: 개인 첫 화면부터 Map, Connections, Insights, Journey까지 키보드·세션 유지·앱 경계를 네 가지 화면 크기로 검증
+- `npm run smoke:first-use-clinician`: 얇은 임상 헤더, 단일 환자 탭, 환자 안전 맥락과 점진적 노출을 네 가지 화면 크기로 검증
+- `npm run smoke:graph-discovery`: Map과 Connections의 범례, 사용 안내, 선택 상태, 기록·추론 구분, 다음 행동을 검증
 
 Chrome 경로가 다르면 `CHROME_BIN`을 지정할 수 있습니다. 스모크 테스트 기본 URL은 `http://127.0.0.1:4173`이며 `EMR_URL`로 바꿀 수 있습니다.
+
+자동 검증이 확인할 수 없는 이해도·신뢰·실제 업무 효율은 [USABILITY.md](USABILITY.md)의 개인 사용자·의료진 과업으로 별도 확인합니다. 실제 환자정보 대신 가상 기록만 사용합니다.
 
 ## 중요한 제한
 

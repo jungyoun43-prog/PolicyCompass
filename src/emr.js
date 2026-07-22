@@ -128,6 +128,16 @@ const QUEUE_LABELS = {
   external: "외부 완료·미검증",
 };
 
+const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
+  none: ["visit-context"],
+  waiting: ["visit-context"],
+  "in-progress": ["visit-context", "soap"],
+  completed: [],
+  signed: [],
+  legacy: [],
+  external: [],
+});
+
 const GRAPH_COLORS = {
   condition: "var(--accent)",
   observation: "var(--data-cyan)",
@@ -332,6 +342,8 @@ let copilotRequestController = null;
 let aiCapability = { checked: false, configured: false, model: "" };
 let lastFhirReport = null;
 const briefCache = new Map();
+const workflowDisclosureSessionState = new Map();
+const pendingWorkflowDisclosureSync = new WeakMap();
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -437,6 +449,61 @@ function currentEncounter(patient) {
       return (priority[left.status] ?? 9) - (priority[right.status] ?? 9)
         || String(right.arrivedAt).localeCompare(String(left.arrivedAt));
     })[0] ?? null;
+}
+
+function workflowDisclosureKey(disclosure, patient, encounter, status) {
+  const name = disclosure.dataset.workflowDisclosure;
+  if (name === "historical-entry") return `${patient.id}:patient:${name}`;
+  return `${patient.id}:${encounter?.id ?? "no-encounter"}:${status}:${name}`;
+}
+
+function defaultWorkflowDisclosureOpen(disclosure, status) {
+  const name = disclosure.dataset.workflowDisclosure;
+  if (name === "historical-entry") return false;
+  return (WORKFLOW_DISCLOSURE_DEFAULTS[status] ?? []).includes(name);
+}
+
+function syncWorkflowDisclosures(patient, encounter, status) {
+  for (const disclosure of document.querySelectorAll("details[data-workflow-disclosure]")) {
+    const key = workflowDisclosureKey(disclosure, patient, encounter, status);
+    const nextOpen = workflowDisclosureSessionState.has(key)
+      ? workflowDisclosureSessionState.get(key)
+      : defaultWorkflowDisclosureOpen(disclosure, status);
+    if (disclosure.open === nextOpen) continue;
+    pendingWorkflowDisclosureSync.set(disclosure, nextOpen);
+    disclosure.open = nextOpen;
+  }
+}
+
+function setWorkflowDisclosureSummary(name, text, tone = "") {
+  const summary = document.querySelector(`[data-disclosure-summary="${name}"]`);
+  if (!summary) return;
+  summary.textContent = text;
+  if (tone) summary.dataset.tone = tone;
+  else delete summary.dataset.tone;
+}
+
+function renderWorkflowDisclosureSummaries(encounter, status, records) {
+  const contextValues = encounter
+    ? [encounter.date, encounter.department, encounter.clinician, encounter.room, encounter.chiefComplaint]
+    : [];
+  const contextCount = contextValues.filter((value) => String(value ?? "").trim()).length;
+  const contextTone = status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : "";
+  setWorkflowDisclosureSummary("visit-context", status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`, contextTone);
+
+  const soapCount = Object.values(encounter?.soap ?? {}).filter((value) => String(value ?? "").trim()).length;
+  const soapTone = status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : "";
+  setWorkflowDisclosureSummary("soap", status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`, soapTone);
+
+  const counts = {
+    measurements: records.filter((event) => event.type === "observation").length,
+    diagnoses: records.filter((event) => event.type === "condition").length,
+    prescriptions: records.filter((event) => event.type === "medication").length,
+    orders: records.filter((event) => event.type === "service-request").length,
+  };
+  for (const [name, count] of Object.entries(counts)) {
+    setWorkflowDisclosureSummary(name, `${count}건`, count ? "ready" : "");
+  }
 }
 
 function preserveEncounterDraftIfChanged(stateInput) {
@@ -1455,6 +1522,8 @@ function renderEncounter(patient, evaluations) {
     });
   }
   if (!refs.orderList.childElementCount) refs.orderList.append(element("li", "encounter-entry-empty", editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"));
+  renderWorkflowDisclosureSummaries(encounter, status, records);
+  syncWorkflowDisclosures(patient, encounter, status);
   renderEncounterContext(patient, encounter, evaluations);
 }
 
@@ -1465,10 +1534,6 @@ function renderTabs() {
     tab.tabIndex = selected ? 0 : -1;
   }
   for (const panel of document.querySelectorAll("[data-panel]")) panel.hidden = panel.dataset.panel !== activeTab;
-  for (const link of document.querySelectorAll("[data-tab-target]")) {
-    if (link.dataset.tabTarget === activeTab) link.setAttribute("aria-current", "page");
-    else link.removeAttribute("aria-current");
-  }
 }
 
 function clearPatientWorkspaceUi() {
@@ -2281,13 +2346,6 @@ document.addEventListener("click", (event) => {
     switchTab(tab.dataset.tab);
     return;
   }
-  const headerTab = event.target.closest("[data-tab-target]");
-  if (headerTab) {
-    event.preventDefault();
-    switchTab(headerTab.dataset.tabTarget);
-    document.querySelector(".patient-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
   const openTab = event.target.closest("[data-open-tab]");
   if (openTab) {
     switchTab(openTab.dataset.openTab, true);
@@ -2295,14 +2353,36 @@ document.addEventListener("click", (event) => {
   }
 });
 
+for (const disclosure of document.querySelectorAll("details[data-workflow-disclosure]")) {
+  disclosure.addEventListener("toggle", () => {
+    if (pendingWorkflowDisclosureSync.has(disclosure)
+      && pendingWorkflowDisclosureSync.get(disclosure) === disclosure.open) {
+      pendingWorkflowDisclosureSync.delete(disclosure);
+      return;
+    }
+    pendingWorkflowDisclosureSync.delete(disclosure);
+    const patient = selectedPatient();
+    if (!patient) return;
+    const encounter = currentEncounter(patient);
+    const status = encounterQueueStatus(encounter);
+    workflowDisclosureSessionState.set(
+      workflowDisclosureKey(disclosure, patient, encounter, status),
+      disclosure.open,
+    );
+  });
+}
+
 document.querySelector(".workspace-tabs").addEventListener("keydown", (event) => {
-  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-  const tabs = [...document.querySelectorAll("[data-tab]")];
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll(".workspace-tabs [role='tab']")];
   const focusedTab = event.target.closest("[data-tab]");
   const focusedIndex = tabs.indexOf(focusedTab);
   const current = focusedIndex >= 0 ? focusedIndex : tabs.findIndex((tab) => tab.dataset.tab === activeTab);
-  const direction = event.key === "ArrowRight" ? 1 : -1;
-  const next = tabs[(current + direction + tabs.length) % tabs.length];
+  const next = event.key === "Home"
+    ? tabs[0]
+    : event.key === "End"
+      ? tabs.at(-1)
+      : tabs[(current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
   event.preventDefault();
   switchTab(next.dataset.tab, true);
 });

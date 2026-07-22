@@ -92,6 +92,14 @@ Production cannot proceed until owners answer and test these questions:
 
 VitaGraph feels like a bright clinical atlas rather than a hospital portal. The signature is a white full-body field threaded into a vivid health graph, so body regions and related conditions feel like one explorable system. The product communicates possibility and clarity while avoiding diagnostic certainty.
 
+### Connected life signals
+
+The recurring VitaGraph signature is a small thread of connected nodes. A solid path and filled node mean a fact present in the person's record; a dashed cyan path and outlined node mean a relationship inferred from labelled literature or keyword context. This motif appears in brand kickers, graph legends, and first-use paths so the identity also teaches the product's evidence model.
+
+- Use the shared `.signal-kicker` and `.signal-thread` contract instead of inventing page-specific medical icons.
+- Always pair record/inference color with line style, fill, text, and accessible naming. Color alone never communicates evidence status.
+- Keep the motif restrained: one signature moment per hero or major graph surface. It must not resemble an ECG trace, DNA helix, medical cross, or AI sparkle, because those shapes imply capabilities VitaGraph does not claim.
+
 ## 2. Color
 
 ### Palette

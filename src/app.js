@@ -279,11 +279,14 @@ function renderBody() {
     hotspot.classList.add("is-active", `tone-${first.tone}`);
     if (isCurrent) hotspot.classList.add("is-current");
     hotspot.setAttribute("aria-pressed", String(isCurrent));
-    hotspot.setAttribute("aria-label", `${captionTitle}: ${labels.join(", ")}. 이 영역의 질환 정보 보기`);
+    hotspot.setAttribute(
+      "aria-label",
+      `${captionTitle}: ${labels.join(", ")}. ${isCurrent ? "현재 선택됨. " : ""}이 영역의 질환 정보 보기`,
+    );
     hotspot.title = labels.join(", ");
     caption?.classList.add("is-active", `tone-${first.tone}`);
     if (isCurrent) caption?.classList.add("is-current");
-    if (captionStatus) captionStatus.textContent = labels.join(" · ");
+    if (captionStatus) captionStatus.textContent = `${isCurrent ? "선택됨 · " : ""}${labels.join(" · ")}`;
   }
 
   elements.mapStatus.textContent = model.statusText;

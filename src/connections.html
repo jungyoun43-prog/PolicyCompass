@@ -10,8 +10,9 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>연결 보기 | VitaGraph Personal</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/detail.css" />
     <link rel="stylesheet" href="/explorer.css" />
     <link rel="stylesheet" href="/controls.css" />
@@ -38,17 +39,28 @@
       </div>
     </header>
 
-    <main class="page-shell explorer-shell clinician-hierarchy__workspace" id="mainContent">
+    <main class="page-shell explorer-shell clinician-hierarchy__workspace" id="mainContent" data-graph-discovery="connections">
       <section class="page-hero explorer-intro clinician-hierarchy__summary" aria-labelledby="explorerTitle">
         <div>
-          <p class="page-hero__eyebrow">CONNECTION EXPLORER</p>
+          <div class="signal-kicker">
+            <span class="signal-thread" aria-hidden="true">
+              <svg viewBox="0 0 76 22">
+                <path class="signal-thread__line" d="M4 14 C17 14 20 6 33 6" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C47 6 50 16 72 12" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="4" cy="14" r="3" />
+                <circle class="signal-thread__node" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="72" cy="12" r="3" />
+              </svg>
+            </span>
+            <span class="page-hero__eyebrow signal-kicker__label">CONNECTION EXPLORER</span>
+          </div>
           <h1 id="explorerTitle">질환 관계를 자유롭게 탐색하세요</h1>
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
             질환 노드와 질환 사이의 관계만 이 장면에 표시합니다. 노드를 선택하면 옆에서 검사·식사·관리 메모를 읽을 수 있습니다.
           </p>
-          <div class="scene-status" data-route-context aria-live="polite">
+          <div class="scene-status" data-route-context data-selection-state aria-live="polite">
             <span id="sceneNodeCount">0개 질환</span>
             <strong id="sceneFocus">선택 대기</strong>
           </div>
@@ -59,24 +71,41 @@
         예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
       </p>
 
+      <section class="explorer-first-use" aria-labelledby="explorerGuideTitle" data-graph-instructions>
+        <div class="explorer-first-use__heading">
+          <p class="panel-index">FIRST EXPLORATION</p>
+          <h2 id="explorerGuideTitle">처음이라면 세 단계로 살펴보세요</h2>
+        </div>
+        <ol>
+          <li><b>1</b><span><strong>노드 선택</strong>클릭하거나 Tab으로 이동한 뒤 Enter를 누릅니다.</span></li>
+          <li><b>2</b><span><strong>직접 관계 확인</strong>선명해진 점선을 따라 이웃 질환과 관계 이름을 봅니다.</span></li>
+          <li><b>3</b><span><strong>근거 읽기</strong>오른쪽 패널에서 관계 설명과 문헌 출처를 확인합니다.</span></li>
+        </ol>
+      </section>
+
       <section class="explorer-workspace clinician-hierarchy__groups" aria-label="건강 관계 탐색 장면">
         <div class="scene-shell">
-          <div class="scene-legend" aria-label="그래프 범례">
-            <span><i class="legend-dot condition-dot"></i>질환 노드</span>
-            <span><i class="legend-dot focus-dot"></i>선택한 중심</span>
-            <span><i class="legend-line"></i>관계 근거</span>
+          <div class="scene-legend" aria-labelledby="sceneLegendTitle" data-graph-legend>
+            <strong class="scene-legend__title" id="sceneLegendTitle">지도 표기</strong>
+            <span><i class="legend-dot condition-dot" aria-hidden="true"></i>직접 선택·가져온 질환</span>
+            <span><i class="legend-dot inferred-dot" aria-hidden="true"></i>입력 신호에서 찾은 후보</span>
+            <span><i class="legend-dot focus-dot" aria-hidden="true">✓</i>현재 선택 · 이중 링</span>
+            <span id="relationshipMeaning" data-relationship-meaning><i class="legend-line legend-line--inferred" aria-hidden="true"></i>문헌 기반 추론 관계 · 환자 기록 사실 아님</span>
           </div>
-          <div class="scene-controls" aria-label="장면 확대 및 재배치">
-            <button id="zoomOut" type="button" aria-label="축소">−</button>
-            <button class="reset-scene" id="resetScene" type="button">재배치</button>
-            <button id="zoomIn" type="button" aria-label="확대">+</button>
+          <div class="scene-controls" aria-label="지도 확대, 축소 및 초기화" aria-describedby="sceneInteractionHelp">
+            <button id="zoomOut" type="button" aria-label="지도 축소" aria-controls="networkScene">−</button>
+            <output id="zoomLevel" aria-label="현재 확대 비율">100%</output>
+            <button id="zoomIn" type="button" aria-label="지도 확대" aria-controls="networkScene">+</button>
+            <button class="reset-scene" id="resetScene" type="button" aria-controls="networkScene">초기 화면</button>
           </div>
           <svg
             class="network-scene"
             id="networkScene"
             viewBox="0 0 1180 720"
             role="group"
+            tabindex="0"
             aria-label="질환 관계 노드 연결 지도"
+            aria-describedby="sceneInteractionHelp relationshipMeaning"
           >
             <g id="sceneViewport">
               <g id="sceneEdges" aria-hidden="true"></g>
@@ -89,7 +118,7 @@
             <p>건강 지도에서 직접 입력하거나 VitaGraph 환자 전달 파일을 가져오면 실제 신호만 이 장면에 표시됩니다.</p>
             <a class="primary-button" href="/map#import-record">건강 지도에서 시작</a>
           </div>
-          <p class="scene-hint">노드를 선택하면 직접 연결된 관계가 선명해집니다 · 드래그로 이동 · 휠로 확대</p>
+          <p class="scene-hint" id="sceneInteractionHelp">노드 클릭·Enter: 선택 · 노드 드래그: 위치 조정 · 빈 공간 드래그 또는 지도를 선택한 뒤 방향키: 화면 이동 · 휠이나 −/+: 확대·축소 · 0: 초기 화면</p>
         </div>
 
         <aside class="explorer-detail" aria-live="polite" aria-labelledby="explorerDetailTitle">
@@ -98,6 +127,7 @@
             <span class="detail-tone" id="explorerDetailTone"></span>
             <h2 id="explorerDetailTitle">질환 노드를 선택하세요</h2>
           </div>
+          <p class="evidence-kind" id="explorerEvidenceKind">선택한 노드의 기록 근거 유형이 여기에 표시됩니다.</p>
           <p class="explorer-detail-summary" id="explorerDetailSummary">
             선택한 질환의 검사·식사·관리 메모를 이 패널에서 확인할 수 있습니다.
           </p>
@@ -118,9 +148,15 @@
             <ul id="explorerDetailCare"></ul>
           </section>
           <section>
-            <h3>관련 연결과 근거</h3>
+            <h3>관련 관계의 문헌 근거</h3>
             <div class="evidence-list" id="explorerEvidenceList"></div>
           </section>
+          <div class="explorer-next-step">
+            <p class="panel-index">NEXT · VISIT PREP</p>
+            <h3>선택한 내용을 진료 질문으로 이어 보세요.</h3>
+            <p>현재 지도와 확인 항목을 다음 진료에서 물어볼 질문으로 정리합니다.</p>
+            <a class="primary-button" href="/insights" data-next-action>다음: 진료 준비 질문 만들기</a>
+          </div>
         </aside>
       </section>
     </main>

@@ -8,11 +8,9 @@
       content="의료진 EMR과 개인 VitaGraph 중 사용할 공간을 선택합니다. 이 화면은 건강정보를 입력하거나 저장하지 않습니다."
     />
     <title>VitaGraph | 사용할 공간 선택</title>
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23F05A47' d='M8 8h22v22H8z'/%3E%3Cpath fill='%2318B8C9' d='M34 34h22v22H34z'/%3E%3Cpath fill='%23A7C934' d='M34 8h22v22H34z'/%3E%3C/svg%3E"
-    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/shell.css" />
     <link rel="stylesheet" href="/patient-presentation.css" />
     <link rel="stylesheet" href="/gateway.css" />
@@ -34,7 +32,18 @@
     <main class="gateway-shell" id="mainContent">
       <section class="gateway-intro patient-presentation" aria-labelledby="gatewayTitle">
         <div>
-          <p class="gateway-eyebrow patient-presentation__identity">VITAGRAPH · 역할 선택</p>
+          <p class="gateway-eyebrow patient-presentation__identity signal-kicker">
+            <span class="signal-thread" aria-hidden="true">
+              <svg viewBox="0 0 76 22" focusable="false">
+                <path class="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
+              </svg>
+            </span>
+            <span class="signal-kicker__label">VITAGRAPH · 역할 선택</span>
+          </p>
           <h1 id="gatewayTitle">사용할 공간을 선택하세요.</h1>
         </div>
         <p class="gateway-intro__lead">

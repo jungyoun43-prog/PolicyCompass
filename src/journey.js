@@ -1,5 +1,11 @@
 import { CONDITIONS } from "/data.js";
-import { compareSnapshots, createJourneyBackup, normalizeJourney, parseJourneyBackup } from "/journey-model.js";
+import {
+  compareSnapshots,
+  createJourneyBackup,
+  createJourneyNarrative,
+  normalizeJourney,
+  parseJourneyBackup,
+} from "/journey-model.js";
 
 const storageKey = "vitagraph-journey";
 const elements = {
@@ -7,6 +13,9 @@ const elements = {
   title: document.querySelector("#comparisonTitle"), copy: document.querySelector("#comparisonCopy"),
   added: document.querySelector("#addedSignals"), steady: document.querySelector("#steadySignals"), removed: document.querySelector("#removedSignals"),
   measurementChanges: document.querySelector("#measurementChanges"),
+  comparison: document.querySelector("#journeyComparison"),
+  storyChanges: document.querySelector("#journeyChanges"), contexts: document.querySelector("#journeyContexts"),
+  nextReviews: document.querySelector("#journeyNextReviews"), priorComparison: document.querySelector("#journeyPriorComparison"),
   clear: document.querySelector("#clearJourney"), export: document.querySelector("#exportJourney"),
   importTrigger: document.querySelector("#importJourneyTrigger"), importInput: document.querySelector("#journeyImport"),
   transferStatus: document.querySelector("#journeyTransferStatus"),
@@ -39,6 +48,89 @@ function measurementText(value, unit) {
   return `${numberFormatter.format(value)}${unit ? ` ${unit}` : ""}`;
 }
 
+function textElement(tagName, className, text) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = text;
+  return element;
+}
+
+function renderStoryItems(target, items, emptyText) {
+  if (items.length === 0) {
+    target.replaceChildren(textElement("p", "journey-story-empty", emptyText));
+    return;
+  }
+
+  target.replaceChildren(...items.map((item) => {
+    const entry = document.createElement("article");
+    entry.className = "journey-story-item";
+    entry.dataset.kind = item.kind ?? "review";
+    entry.append(
+      textElement("strong", "", item.title),
+      textElement("p", "", item.detail),
+    );
+    if (item.measurement) {
+      entry.append(textElement(
+        "span",
+        "journey-story-value",
+        `${measurementText(item.measurement.before, item.measurement.unit)} → ${measurementText(item.measurement.after, item.measurement.unit)}`,
+      ));
+    }
+    return entry;
+  }));
+}
+
+function renderStoryContexts(contexts) {
+  if (contexts.length === 0) {
+    elements.contexts.replaceChildren(textElement(
+      "p",
+      "journey-story-empty",
+      "현재 신호 조합에서 연결할 수 있는 일반 참고 근거가 없습니다.",
+    ));
+    return;
+  }
+
+  elements.contexts.replaceChildren(...contexts.map((context) => {
+    const entry = document.createElement("article");
+    entry.className = "journey-context-item";
+    const meta = document.createElement("div");
+    meta.append(
+      textElement("span", "journey-context-tag", context.category),
+      textElement("span", "journey-context-tag journey-context-tag--caution", "가능성 · 인과 아님"),
+    );
+    const source = textElement("a", "journey-context-source", `${context.sourceTitle} ↗`);
+    source.href = context.sourceUrl;
+    source.target = "_blank";
+    source.rel = "noreferrer";
+    source.setAttribute("aria-label", `${context.title} 일반 참고 근거: ${context.sourceTitle}, 새 창`);
+    entry.append(
+      meta,
+      textElement("strong", "", `${context.title} · ${context.label}`),
+      textElement("p", "", context.rationale),
+      textElement("small", "journey-context-guardrail", context.guardrail),
+      source,
+    );
+    return entry;
+  }));
+}
+
+function renderNarrative(before, after) {
+  const narrative = createJourneyNarrative(before, after);
+  elements.comparison.dataset.storyState = narrative.state;
+  renderStoryItems(
+    elements.storyChanges,
+    narrative.observations,
+    "아직 비교할 기록이 없습니다. 첫 기록을 저장하면 기준점으로 표시합니다.",
+  );
+  renderStoryContexts(narrative.contexts);
+  renderStoryItems(
+    elements.nextReviews,
+    narrative.nextReviews,
+    "기준점이 생기면 같은 항목을 다시 확인할 순서를 제안합니다.",
+  );
+  elements.priorComparison.textContent = narrative.comparisonSummary;
+}
+
 function renderMeasurementChanges(changes) {
   elements.measurementChanges.replaceChildren();
   if (changes.length === 0) {
@@ -65,13 +157,17 @@ function renderMeasurementChanges(changes) {
 }
 
 function renderComparison() {
+  const after = journey.at(-1) ?? null;
+  const before = journey.length > 1 ? journey.at(-2) : null;
+  renderNarrative(before, after);
+
   if (journey.length < 2) {
-    elements.title.textContent = journey.length === 1 ? "첫 기준점이 저장됐어요" : "두 시점을 선택하세요";
+    elements.title.textContent = journey.length === 1 ? "첫 기준점이 저장됐어요" : "비교할 기록이 아직 없어요";
     elements.copy.textContent = journey.length === 1 ? "다음 기록을 저장하면 무엇이 달라졌는지 비교합니다." : "기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.";
     conditionPills(elements.added, [], "비교 대기"); conditionPills(elements.steady, [], "비교 대기"); conditionPills(elements.removed, [], "비교 대기");
     renderMeasurementChanges([]); return;
   }
-  const before = journey.at(-2); const after = journey.at(-1); const changes = compareSnapshots(before, after);
+  const changes = compareSnapshots(before, after);
   elements.title.textContent = `${before.date} → ${after.date}`;
   elements.copy.textContent = "최근 두 기록에 포함된 신호의 차이입니다. 임상적 변화로 해석하지 않습니다.";
   conditionPills(elements.added, changes.added, "새 신호 없음"); conditionPills(elements.steady, changes.unchanged, "유지 신호 없음"); conditionPills(elements.removed, changes.removed, "빠진 신호 없음");

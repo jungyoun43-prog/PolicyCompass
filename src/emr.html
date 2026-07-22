@@ -7,8 +7,9 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Clinical | 로컬 AI 보조 EMR</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%2315141a%27/%3E%3Cpath d=%27M19 32h26M32 19v26%27 stroke=%27%23fff%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/shell.css" />
     <link rel="stylesheet" href="/emr.css" />
     <link rel="stylesheet" href="/controls.css" />
@@ -23,15 +24,6 @@
           <span class="app-brand__mark" aria-hidden="true"></span>
           <span>VitaGraph <b>Clinical</b></span>
         </a>
-        <nav class="app-nav clinical-nav" aria-label="임상 워크스페이스">
-          <a href="#encounter" data-tab-target="encounter" aria-current="page">진료</a>
-          <a href="#overview" data-tab-target="overview">환자 요약</a>
-          <a href="#chart" data-tab-target="chart">과거 기록</a>
-          <a href="#graph" data-tab-target="graph">VitaGraph</a>
-          <a href="#claims" data-tab-target="claims">급여 보드</a>
-          <a href="#journey" data-tab-target="journey">Journey</a>
-          <a href="#data" data-tab-target="data">감사·데이터</a>
-        </nav>
         <a class="app-header__action" href="#patientComposer">환자 추가</a>
       </div>
     </header>
@@ -39,7 +31,18 @@
     <main class="emr-shell" id="mainContent">
       <section class="clinical-command" aria-labelledby="emrTitle">
         <div class="command-title">
-          <p class="page-hero__eyebrow">TODAY · LOCAL CLINICAL WORKSPACE</p>
+          <div class="signal-kicker">
+            <span class="signal-thread signal-thread--quiet" aria-hidden="true">
+              <svg viewBox="0 0 76 22" focusable="false">
+                <path class="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
+              </svg>
+            </span>
+            <span class="page-hero__eyebrow signal-kicker__label">TODAY · LOCAL CLINICAL WORKSPACE</span>
+          </div>
           <h1 id="emrTitle">오늘 진료</h1>
           <p>접수부터 SOAP, 진단, 처방, 오더, 서명까지 한 화면에서 기록합니다.</p>
         </div>
@@ -180,29 +183,31 @@
           </div>
 
           <div id="workspaceContent" hidden>
-            <header class="patient-safety-header">
-              <div class="patient-identity">
-                <p class="rail-eyebrow">SELECTED PATIENT</p>
-                <div>
-                  <h2 id="selectedPatientName">—</h2>
-                  <span id="selectedPatientMeta">—</span>
+            <div class="patient-workspace-navigation" data-safety-persistent>
+              <header class="patient-safety-header">
+                <div class="patient-identity">
+                  <p class="rail-eyebrow">SELECTED PATIENT</p>
+                  <div>
+                    <h2 id="selectedPatientName">—</h2>
+                    <span id="selectedPatientMeta">—</span>
+                  </div>
                 </div>
-              </div>
-              <div class="safety-alerts" id="safetyAlerts" aria-label="환자 안전 알림"></div>
-              <div class="patient-header-actions">
-                <button class="clinical-button" id="editPatient" type="button">환자 정보 편집</button>
-                <span id="lastSavedAt">저장 대기</span>
-              </div>
-            </header>
+                <div class="safety-alerts" id="safetyAlerts" aria-label="환자 안전 알림"></div>
+                <div class="patient-header-actions">
+                  <button class="clinical-button" id="editPatient" type="button">환자 정보 편집</button>
+                  <span id="lastSavedAt">저장 대기</span>
+                </div>
+              </header>
 
-            <div class="workspace-tabs" role="tablist" aria-label="선택 환자 화면">
-              <button id="tab-encounter" type="button" role="tab" aria-selected="true" aria-controls="panel-encounter" data-tab="encounter">오늘 진료</button>
-              <button id="tab-overview" type="button" role="tab" aria-selected="false" aria-controls="panel-overview" data-tab="overview">환자 요약</button>
-              <button id="tab-chart" type="button" role="tab" aria-selected="false" aria-controls="panel-chart" data-tab="chart">차트</button>
-              <button id="tab-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph" data-tab="graph">VitaGraph</button>
-              <button id="tab-claims" type="button" role="tab" aria-selected="false" aria-controls="panel-claims" data-tab="claims">급여 칸반</button>
-              <button id="tab-journey" type="button" role="tab" aria-selected="false" aria-controls="panel-journey" data-tab="journey">Journey</button>
-              <button id="tab-data" type="button" role="tab" aria-selected="false" aria-controls="panel-data" data-tab="data">감사·데이터</button>
+              <div class="workspace-tabs" role="tablist" aria-label="선택 환자 화면" aria-orientation="horizontal">
+                <button id="tab-encounter" type="button" role="tab" aria-selected="true" aria-controls="panel-encounter" data-tab="encounter" tabindex="0">오늘 진료</button>
+                <button id="tab-overview" type="button" role="tab" aria-selected="false" aria-controls="panel-overview" data-tab="overview" tabindex="-1">환자 요약</button>
+                <button id="tab-chart" type="button" role="tab" aria-selected="false" aria-controls="panel-chart" data-tab="chart" tabindex="-1">과거 기록</button>
+                <button id="tab-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph" data-tab="graph" tabindex="-1">VitaGraph</button>
+                <button id="tab-claims" type="button" role="tab" aria-selected="false" aria-controls="panel-claims" data-tab="claims" tabindex="-1">급여 보드</button>
+                <button id="tab-journey" type="button" role="tab" aria-selected="false" aria-controls="panel-journey" data-tab="journey" tabindex="-1">Journey</button>
+                <button id="tab-data" type="button" role="tab" aria-selected="false" aria-controls="panel-data" data-tab="data" tabindex="-1">감사·데이터</button>
+              </div>
             </div>
 
             <section class="workspace-panel encounter-panel" id="panel-encounter" role="tabpanel" aria-labelledby="tab-encounter" data-panel="encounter">
@@ -227,118 +232,131 @@
                   </section>
 
                   <form class="encounter-form" id="encounterForm" novalidate autocomplete="off" spellcheck="false">
-                    <section class="clinical-card encounter-details" aria-labelledby="encounterDetailsTitle">
-                      <div class="card-heading">
-                        <div><p class="rail-eyebrow">VISIT CONTEXT</p><h3 id="encounterDetailsTitle">진료 기본정보</h3></div>
-                        <span class="source-badge">CLINICIAN ENTRY</span>
+                    <details class="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context">
+                      <summary class="workflow-disclosure__summary">
+                        <span class="workflow-disclosure__heading"><span class="rail-eyebrow">VISIT CONTEXT</span><span class="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level="3">진료 기본정보</span></span>
+                        <span class="workflow-disclosure__signals"><span class="source-badge">CLINICIAN ENTRY</span><span class="workflow-disclosure__meta" data-disclosure-summary="visit-context">입력 전</span></span>
+                      </summary>
+                      <div class="workflow-disclosure__body">
+                        <fieldset class="form-fieldset form-fieldset--plain">
+                          <legend class="visually-hidden">진료 기본정보 입력</legend>
+                          <div class="encounter-meta-grid">
+                            <label>진료일<input id="encounterDate" name="date" type="date" required /></label>
+                            <label>진료과<input id="encounterDepartment" name="department" maxlength="80" placeholder="예: 내과" /></label>
+                            <label>담당 의료진<input id="encounterClinician" name="clinician" maxlength="80" placeholder="예: 김의사" /></label>
+                            <label>진료실<input id="encounterRoom" name="room" maxlength="40" placeholder="예: 1진료실" /></label>
+                          </div>
+                          <label>주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows="2" maxlength="2000" placeholder="환자의 표현과 증상 시작 시점을 기록하세요."></textarea></label>
+                        </fieldset>
                       </div>
-                      <fieldset class="form-fieldset form-fieldset--plain">
-                        <legend class="visually-hidden">진료 기본정보 입력</legend>
-                        <div class="encounter-meta-grid">
-                          <label>진료일<input id="encounterDate" name="date" type="date" required /></label>
-                          <label>진료과<input id="encounterDepartment" name="department" maxlength="80" placeholder="예: 내과" /></label>
-                          <label>담당 의료진<input id="encounterClinician" name="clinician" maxlength="80" placeholder="예: 김의사" /></label>
-                          <label>진료실<input id="encounterRoom" name="room" maxlength="40" placeholder="예: 1진료실" /></label>
-                        </div>
-                        <label>주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows="2" maxlength="2000" placeholder="환자의 표현과 증상 시작 시점을 기록하세요."></textarea></label>
-                      </fieldset>
-                    </section>
+                    </details>
 
-                    <section class="clinical-card soap-card" aria-labelledby="soapTitle">
-                      <div class="card-heading">
-                        <div><p class="rail-eyebrow">SOAP NOTE</p><h3 id="soapTitle">진료 기록</h3></div>
-                        <span class="source-badge">DRAFT</span>
+                    <details class="clinical-card soap-card workflow-disclosure" aria-labelledby="soapTitle" data-workflow-disclosure="soap">
+                      <summary class="workflow-disclosure__summary">
+                        <span class="workflow-disclosure__heading"><span class="rail-eyebrow">SOAP NOTE</span><span class="workflow-disclosure__title" id="soapTitle" role="heading" aria-level="3">진료 기록</span></span>
+                        <span class="workflow-disclosure__signals"><span class="source-badge">DRAFT</span><span class="workflow-disclosure__meta" data-disclosure-summary="soap">0/4 작성</span></span>
+                      </summary>
+                      <div class="workflow-disclosure__body">
+                        <div class="soap-grid">
+                          <label class="soap-field" data-soap="subjective"><span><b>S</b> Subjective · 주관적 소견</span><textarea id="soapSubjective" name="soapSubjective" rows="6" maxlength="8000" placeholder="주호소, 현병력, 관련 증상, 환자 진술"></textarea></label>
+                          <label class="soap-field" data-soap="objective"><span><b>O</b> Objective · 객관적 소견</span><textarea id="soapObjective" name="soapObjective" rows="6" maxlength="8000" placeholder="활력징후, 신체검진, 검사 결과"></textarea></label>
+                          <label class="soap-field" data-soap="assessment"><span><b>A</b> Assessment · 평가</span><textarea id="soapAssessment" name="soapAssessment" rows="6" maxlength="8000" placeholder="임상 평가와 감별 판단 근거"></textarea></label>
+                          <label class="soap-field" data-soap="plan"><span><b>P</b> Plan · 계획</span><textarea id="soapPlan" name="soapPlan" rows="6" maxlength="8000" placeholder="치료, 검사, 교육, 추적 계획"></textarea></label>
+                        </div>
                       </div>
-                      <div class="soap-grid">
-                        <label class="soap-field" data-soap="subjective"><span><b>S</b> Subjective · 주관적 소견</span><textarea id="soapSubjective" name="soapSubjective" rows="6" maxlength="8000" placeholder="주호소, 현병력, 관련 증상, 환자 진술"></textarea></label>
-                        <label class="soap-field" data-soap="objective"><span><b>O</b> Objective · 객관적 소견</span><textarea id="soapObjective" name="soapObjective" rows="6" maxlength="8000" placeholder="활력징후, 신체검진, 검사 결과"></textarea></label>
-                        <label class="soap-field" data-soap="assessment"><span><b>A</b> Assessment · 평가</span><textarea id="soapAssessment" name="soapAssessment" rows="6" maxlength="8000" placeholder="임상 평가와 감별 판단 근거"></textarea></label>
-                        <label class="soap-field" data-soap="plan"><span><b>P</b> Plan · 계획</span><textarea id="soapPlan" name="soapPlan" rows="6" maxlength="8000" placeholder="치료, 검사, 교육, 추적 계획"></textarea></label>
-                      </div>
-                    </section>
+                    </details>
 
                   </form>
 
-                  <section class="clinical-card clinical-entry-card vital-card" aria-labelledby="vitalTitle">
-                    <div class="card-heading">
-                      <div><p class="rail-eyebrow">VITAL SIGNS · RESULTS</p><h3 id="vitalTitle">진료 측정</h3></div>
-                      <span class="source-badge">LOINC · ENCOUNTER</span>
+                  <details class="clinical-card clinical-entry-card vital-card workflow-disclosure" aria-labelledby="vitalTitle" data-workflow-disclosure="measurements">
+                    <summary class="workflow-disclosure__summary">
+                      <span class="workflow-disclosure__heading"><span class="rail-eyebrow">VITAL SIGNS · RESULTS</span><span class="workflow-disclosure__title" id="vitalTitle" role="heading" aria-level="3">진료 측정</span></span>
+                      <span class="workflow-disclosure__signals"><span class="source-badge">LOINC · ENCOUNTER</span><span class="workflow-disclosure__meta" data-disclosure-summary="measurements">0건</span></span>
+                    </summary>
+                    <div class="workflow-disclosure__body">
+                      <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
+                      <form class="inline-clinical-form" id="vitalForm" novalidate autocomplete="off" spellcheck="false">
+                        <div class="vital-form-grid">
+                          <label>측정 항목<select id="vitalPreset" name="preset" required></select></label>
+                          <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
+                          <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
+                          <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
+                          <button class="clinical-button clinical-button--primary" type="submit">측정 추가</button>
+                        </div>
+                      </form>
+                      <ul class="clinical-entry-list" id="vitalList" aria-label="이번 진료 측정 목록" aria-live="polite"></ul>
                     </div>
-                    <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
-                    <form class="inline-clinical-form" id="vitalForm" novalidate autocomplete="off" spellcheck="false">
-                      <div class="vital-form-grid">
-                        <label>측정 항목<select id="vitalPreset" name="preset" required></select></label>
-                        <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
-                        <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
-                        <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
-                        <button class="clinical-button clinical-button--primary" type="submit">측정 추가</button>
-                      </div>
-                    </form>
-                    <ul class="clinical-entry-list" id="vitalList" aria-label="이번 진료 측정 목록" aria-live="polite"></ul>
-                  </section>
+                  </details>
 
-                  <section class="clinical-card clinical-entry-card" aria-labelledby="diagnosisTitle">
-                    <div class="card-heading">
-                      <div><p class="rail-eyebrow">DIAGNOSIS</p><h3 id="diagnosisTitle">진단</h3></div>
-                      <span class="source-badge">KCD · MANUAL</span>
+                  <details class="clinical-card clinical-entry-card workflow-disclosure" aria-labelledby="diagnosisTitle" data-workflow-disclosure="diagnoses">
+                    <summary class="workflow-disclosure__summary">
+                      <span class="workflow-disclosure__heading"><span class="rail-eyebrow">DIAGNOSIS</span><span class="workflow-disclosure__title" id="diagnosisTitle" role="heading" aria-level="3">진단</span></span>
+                      <span class="workflow-disclosure__signals"><span class="source-badge">KCD · MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="diagnoses">0건</span></span>
+                    </summary>
+                    <div class="workflow-disclosure__body">
+                      <form class="inline-clinical-form" id="diagnosisForm" novalidate autocomplete="off" spellcheck="false">
+                        <div class="diagnosis-form-grid">
+                          <label>구분<select id="diagnosisRole" name="role"><option value="primary">주상병</option><option value="secondary">부상병</option></select></label>
+                          <label>진단 코드<input id="diagnosisCode" name="code" maxlength="80" placeholder="예: I10" required /></label>
+                          <label class="clinical-system-field">코드 시스템<input id="diagnosisSystem" name="system" maxlength="300" value="urn:kr:kcd" placeholder="KCD 또는 기관 코드체계 URI" /></label>
+                          <label class="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxlength="160" placeholder="예: 본태성 고혈압" required /></label>
+                          <label>확실성<select id="diagnosisCertainty" name="certainty"><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
+                          <button class="clinical-button clinical-button--primary" type="submit">진단 추가</button>
+                        </div>
+                      </form>
+                      <ul class="clinical-entry-list" id="diagnosisList" aria-label="이번 진료 진단 목록" aria-live="polite"></ul>
                     </div>
-                    <form class="inline-clinical-form" id="diagnosisForm" novalidate autocomplete="off" spellcheck="false">
-                      <div class="diagnosis-form-grid">
-                        <label>구분<select id="diagnosisRole" name="role"><option value="primary">주상병</option><option value="secondary">부상병</option></select></label>
-                        <label>진단 코드<input id="diagnosisCode" name="code" maxlength="80" placeholder="예: I10" required /></label>
-                        <label class="clinical-system-field">코드 시스템<input id="diagnosisSystem" name="system" maxlength="300" value="urn:kr:kcd" placeholder="KCD 또는 기관 코드체계 URI" /></label>
-                        <label class="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxlength="160" placeholder="예: 본태성 고혈압" required /></label>
-                        <label>확실성<select id="diagnosisCertainty" name="certainty"><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
-                        <button class="clinical-button clinical-button--primary" type="submit">진단 추가</button>
-                      </div>
-                    </form>
-                    <ul class="clinical-entry-list" id="diagnosisList" aria-label="이번 진료 진단 목록" aria-live="polite"></ul>
-                  </section>
+                  </details>
 
-                  <section class="clinical-card clinical-entry-card" aria-labelledby="prescriptionTitle">
-                    <div class="card-heading">
-                      <div><p class="rail-eyebrow">PRESCRIPTION RECORD</p><h3 id="prescriptionTitle">처방 기록</h3></div>
-                      <span class="source-badge">CLINICIAN DECISION</span>
+                  <details class="clinical-card clinical-entry-card workflow-disclosure" aria-labelledby="prescriptionTitle" data-workflow-disclosure="prescriptions">
+                    <summary class="workflow-disclosure__summary">
+                      <span class="workflow-disclosure__heading"><span class="rail-eyebrow">PRESCRIPTION RECORD</span><span class="workflow-disclosure__title" id="prescriptionTitle" role="heading" aria-level="3">처방 기록</span></span>
+                      <span class="workflow-disclosure__signals"><span class="source-badge">CLINICIAN DECISION</span><span class="workflow-disclosure__meta" data-disclosure-summary="prescriptions">0건</span></span>
+                    </summary>
+                    <div class="workflow-disclosure__body">
+                      <p class="entry-boundary">의료진이 결정한 처방을 기록하는 로컬 초안입니다. 의약품 추천이나 전자처방전 전송 기능이 아닙니다.</p>
+                      <form class="inline-clinical-form" id="prescriptionForm" novalidate autocomplete="off" spellcheck="false">
+                        <div class="prescription-form-grid">
+                          <label>약품 코드<input id="medicationCode" name="code" maxlength="80" placeholder="EDI 또는 기관 코드" /></label>
+                          <label class="clinical-system-field">코드 시스템<input id="medicationSystem" name="system" maxlength="300" placeholder="EDI 또는 기관 코드체계 URI" /></label>
+                          <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
+                          <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
+                          <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
+                          <label>투여 경로<input id="medicationRoute" name="route" maxlength="60" placeholder="예: 경구" /></label>
+                          <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
+                          <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
+                          <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
+                          <label class="clinical-instructions-field">복약 안내<input id="medicationInstructions" name="instructions" maxlength="500" placeholder="식전·식후, 주의사항 등 의료진 지시" /></label>
+                          <button class="clinical-button clinical-button--primary" type="submit">처방 추가</button>
+                        </div>
+                      </form>
+                      <ul class="clinical-entry-list" id="prescriptionList" aria-label="이번 진료 처방 목록" aria-live="polite"></ul>
                     </div>
-                    <p class="entry-boundary">의료진이 결정한 처방을 기록하는 로컬 초안입니다. 의약품 추천이나 전자처방전 전송 기능이 아닙니다.</p>
-                    <form class="inline-clinical-form" id="prescriptionForm" novalidate autocomplete="off" spellcheck="false">
-                      <div class="prescription-form-grid">
-                        <label>약품 코드<input id="medicationCode" name="code" maxlength="80" placeholder="EDI 또는 기관 코드" /></label>
-                        <label class="clinical-system-field">코드 시스템<input id="medicationSystem" name="system" maxlength="300" placeholder="EDI 또는 기관 코드체계 URI" /></label>
-                        <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
-                        <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
-                        <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
-                        <label>투여 경로<input id="medicationRoute" name="route" maxlength="60" placeholder="예: 경구" /></label>
-                        <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
-                        <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
-                        <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
-                        <label class="clinical-instructions-field">복약 안내<input id="medicationInstructions" name="instructions" maxlength="500" placeholder="식전·식후, 주의사항 등 의료진 지시" /></label>
-                        <button class="clinical-button clinical-button--primary" type="submit">처방 추가</button>
-                      </div>
-                    </form>
-                    <ul class="clinical-entry-list" id="prescriptionList" aria-label="이번 진료 처방 목록" aria-live="polite"></ul>
-                  </section>
+                  </details>
 
-                  <section class="clinical-card clinical-entry-card" aria-labelledby="orderTitle">
-                    <div class="card-heading">
-                      <div><p class="rail-eyebrow">ORDERS</p><h3 id="orderTitle">검사·처치·의뢰 오더</h3></div>
-                      <span class="source-badge">MANUAL</span>
+                  <details class="clinical-card clinical-entry-card workflow-disclosure" aria-labelledby="orderTitle" data-workflow-disclosure="orders">
+                    <summary class="workflow-disclosure__summary">
+                      <span class="workflow-disclosure__heading"><span class="rail-eyebrow">ORDERS</span><span class="workflow-disclosure__title" id="orderTitle" role="heading" aria-level="3">검사·처치·의뢰 오더</span></span>
+                      <span class="workflow-disclosure__signals"><span class="source-badge">MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="orders">0건</span></span>
+                    </summary>
+                    <div class="workflow-disclosure__body">
+                      <form class="inline-clinical-form" id="orderForm" novalidate autocomplete="off" spellcheck="false">
+                        <div class="order-form-grid">
+                          <label>오더 유형<select id="orderKind" name="kind"><option value="laboratory">검사</option><option value="imaging">영상</option><option value="procedure">처치</option><option value="referral">의뢰</option></select></label>
+                          <label>오더 코드<input id="orderCode" name="code" maxlength="80" placeholder="EDI·LOINC·기관 코드" /></label>
+                          <label class="clinical-system-field">코드 시스템<input id="orderSystem" name="system" maxlength="300" placeholder="표준 또는 기관 코드체계 URI" /></label>
+                          <label class="clinical-label-field">오더명<input id="orderLabel" name="label" maxlength="160" required placeholder="예: 흉부 X-ray" /></label>
+                          <label>우선순위<select id="orderPriority" name="priority"><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
+                          <label class="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxlength="500" placeholder="검사 목적·부위·주의사항" /></label>
+                          <button class="clinical-button clinical-button--primary" type="submit">오더 추가</button>
+                        </div>
+                      </form>
+                      <ul class="clinical-entry-list" id="orderList" aria-label="이번 진료 오더 목록" aria-live="polite"></ul>
                     </div>
-                    <form class="inline-clinical-form" id="orderForm" novalidate autocomplete="off" spellcheck="false">
-                      <div class="order-form-grid">
-                        <label>오더 유형<select id="orderKind" name="kind"><option value="laboratory">검사</option><option value="imaging">영상</option><option value="procedure">처치</option><option value="referral">의뢰</option></select></label>
-                        <label>오더 코드<input id="orderCode" name="code" maxlength="80" placeholder="EDI·LOINC·기관 코드" /></label>
-                        <label class="clinical-system-field">코드 시스템<input id="orderSystem" name="system" maxlength="300" placeholder="표준 또는 기관 코드체계 URI" /></label>
-                        <label class="clinical-label-field">오더명<input id="orderLabel" name="label" maxlength="160" required placeholder="예: 흉부 X-ray" /></label>
-                        <label>우선순위<select id="orderPriority" name="priority"><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
-                        <label class="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxlength="500" placeholder="검사 목적·부위·주의사항" /></label>
-                        <button class="clinical-button clinical-button--primary" type="submit">오더 추가</button>
-                      </div>
-                    </form>
-                    <ul class="clinical-entry-list" id="orderList" aria-label="이번 진료 오더 목록" aria-live="polite"></ul>
-                  </section>
+                  </details>
 
-                  <div class="encounter-save-bar">
+                  <section class="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
+                    <h3 class="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
                     <div class="encounter-save-context">
                       <p class="encounter-signoff-summary" id="encounterSignoffSummary">서명 전 안전·급여 점검을 불러오는 중입니다.</p>
                       <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
@@ -350,7 +368,7 @@
                       <button class="clinical-button" id="completeEncounter" type="button">진료 완료</button>
                       <button class="clinical-button clinical-button--primary" id="signEncounter" type="button">검토 후 서명</button>
                     </div>
-                  </div>
+                  </section>
                 </div>
 
                 <aside class="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
@@ -417,31 +435,33 @@
 
             <section class="workspace-panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" data-panel="chart" hidden>
               <div class="chart-layout">
-                <section class="clinical-card event-composer" aria-labelledby="eventFormTitle">
-                  <div class="card-heading">
-                    <div><p class="rail-eyebrow">HISTORICAL ENTRY</p><h3 id="eventFormTitle">과거자료 입력·검토</h3></div>
-                    <span class="source-badge source-badge--draft">DRAFT</span>
+                <details class="clinical-card event-composer workflow-disclosure" aria-labelledby="eventFormTitle" data-workflow-disclosure="historical-entry">
+                  <summary class="workflow-disclosure__summary">
+                    <span class="workflow-disclosure__heading"><span class="rail-eyebrow">HISTORICAL ENTRY</span><span class="workflow-disclosure__title" id="eventFormTitle" role="heading" aria-level="3">과거자료 입력·검토</span></span>
+                    <span class="workflow-disclosure__signals"><span class="source-badge source-badge--draft">DRAFT</span><span class="workflow-disclosure__meta">필요할 때 열기</span></span>
+                  </summary>
+                  <div class="workflow-disclosure__body">
+                    <form id="eventForm" novalidate autocomplete="off" spellcheck="false">
+                      <div class="form-pair">
+                        <label>기록 유형<select id="eventType" required><option value="condition">진단·문제</option><option value="observation">검사·측정</option><option value="medication">약물</option><option value="allergy">알레르기</option><option value="procedure">수술·처치</option><option value="symptom">증상</option><option value="note">진료 메모</option></select></label>
+                        <label>기록일<input id="eventDate" type="date" required /></label>
+                      </div>
+                      <div class="form-pair">
+                        <label>코드<input id="eventCode" maxlength="80" placeholder="KCD·LOINC·EDI 또는 내부코드" /></label>
+                        <label>이름<input id="eventLabel" required maxlength="100" placeholder="예: 혈압" /></label>
+                      </div>
+                      <label>코드 시스템<input id="eventSystem" maxlength="300" value="urn:kr:kcd" placeholder="예: urn:kr:kcd · http://loinc.org" /></label>
+                      <div class="form-pair form-pair--value">
+                        <label>값<input id="eventValue" maxlength="80" placeholder="예: 148/94" /></label>
+                        <label>단위<input id="eventUnit" maxlength="40" placeholder="예: mmHg" /></label>
+                      </div>
+                      <label>기록 메모<textarea id="eventNote" rows="4" maxlength="2000" placeholder="의료진이 확인한 맥락과 근거"></textarea></label>
+                      <p class="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자 전달 후보가 됩니다.</p>
+                      <p class="form-message" id="eventFormMessage" role="alert"></p>
+                      <button class="clinical-button clinical-button--primary" type="submit">검토 대기 기록 추가</button>
+                    </form>
                   </div>
-                  <form id="eventForm" novalidate autocomplete="off" spellcheck="false">
-                    <div class="form-pair">
-                      <label>기록 유형<select id="eventType" required><option value="condition">진단·문제</option><option value="observation">검사·측정</option><option value="medication">약물</option><option value="allergy">알레르기</option><option value="procedure">수술·처치</option><option value="symptom">증상</option><option value="note">진료 메모</option></select></label>
-                      <label>기록일<input id="eventDate" type="date" required /></label>
-                    </div>
-                    <div class="form-pair">
-                      <label>코드<input id="eventCode" maxlength="80" placeholder="KCD·LOINC·EDI 또는 내부코드" /></label>
-                      <label>이름<input id="eventLabel" required maxlength="100" placeholder="예: 혈압" /></label>
-                    </div>
-                    <label>코드 시스템<input id="eventSystem" maxlength="300" value="urn:kr:kcd" placeholder="예: urn:kr:kcd · http://loinc.org" /></label>
-                    <div class="form-pair form-pair--value">
-                      <label>값<input id="eventValue" maxlength="80" placeholder="예: 148/94" /></label>
-                      <label>단위<input id="eventUnit" maxlength="40" placeholder="예: mmHg" /></label>
-                    </div>
-                    <label>기록 메모<textarea id="eventNote" rows="4" maxlength="2000" placeholder="의료진이 확인한 맥락과 근거"></textarea></label>
-                    <p class="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자 전달 후보가 됩니다.</p>
-                    <p class="form-message" id="eventFormMessage" role="alert"></p>
-                    <button class="clinical-button clinical-button--primary" type="submit">검토 대기 기록 추가</button>
-                  </form>
-                </section>
+                </details>
 
                 <section class="clinical-card event-timeline-card" aria-labelledby="eventTimelineTitle">
                   <div class="card-heading">

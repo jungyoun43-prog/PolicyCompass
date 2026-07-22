@@ -17,10 +17,12 @@ const elements = {
   focus: document.querySelector("#sceneFocus"),
   zoomIn: document.querySelector("#zoomIn"),
   zoomOut: document.querySelector("#zoomOut"),
+  zoomLevel: document.querySelector("#zoomLevel"),
   reset: document.querySelector("#resetScene"),
   detailTone: document.querySelector("#explorerDetailTone"),
   detailSystem: document.querySelector("#explorerDetailSystem"),
   detailTitle: document.querySelector("#explorerDetailTitle"),
+  evidenceKind: document.querySelector("#explorerEvidenceKind"),
   detailSummary: document.querySelector("#explorerDetailSummary"),
   detailRelation: document.querySelector("#explorerDetailRelation"),
   detailChecks: document.querySelector("#explorerDetailChecks"),
@@ -37,13 +39,17 @@ function readSession() {
     const visibleIds = Array.isArray(stored?.visibleIds)
       ? stored.visibleIds.filter((id) => CONDITIONS[id])
       : [];
+    const declaredIds = Array.isArray(stored?.declaredIds)
+      ? stored.declaredIds.filter((id) => CONDITIONS[id] && visibleIds.includes(id))
+      : visibleIds;
     return {
       visibleIds,
+      declaredIds,
       activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? ""),
       isDemo: stored?.isDemo === true,
     };
   } catch {
-    return { visibleIds: [], activeId: "", isDemo: false };
+    return { visibleIds: [], declaredIds: [], activeId: "", isDemo: false };
   }
 }
 
@@ -52,6 +58,8 @@ const state = {
   selectedNodeId: "",
   scene: null,
   zoom: 1,
+  pan: { x: 0, y: 0 },
+  panDrag: null,
   drag: null,
 };
 
@@ -79,6 +87,11 @@ function renderConditionDetail(id) {
   elements.detailTone.className = `detail-tone tone-${detail.tone}`;
   elements.detailSystem.textContent = detail.system;
   elements.detailTitle.textContent = detail.title;
+  const isRecorded = state.declaredIds.includes(id);
+  elements.evidenceKind.className = `evidence-kind evidence-kind--${isRecorded ? "recorded" : "inferred"}`;
+  elements.evidenceKind.textContent = isRecorded
+    ? "개인 기록 근거 · 직접 선택하거나 가져온 질환 항목"
+    : "입력 신호에서 찾은 확인 후보 · 진단으로 기록된 사실이 아님";
   elements.detailSummary.textContent = detail.summary;
   elements.detailRelation.textContent = detail.relation;
   renderList(elements.detailChecks, detail.checks);
@@ -92,6 +105,9 @@ function renderConditionDetail(id) {
     const neighborId = relation.a === id ? relation.b : relation.a;
     const heading = document.createElement("strong");
     heading.textContent = `${CONDITIONS[neighborId].label} · ${relation.category}`;
+    const kind = document.createElement("span");
+    kind.className = "evidence-card__kind";
+    kind.textContent = "문헌 기반 추론 관계 · 환자 기록 사실 아님";
     const rationale = document.createElement("p");
     rationale.textContent = relation.rationale;
     const source = document.createElement("a");
@@ -99,7 +115,7 @@ function renderConditionDetail(id) {
     source.target = "_blank";
     source.rel = "noreferrer";
     source.textContent = `${relation.sourceTitle} ↗`;
-    card.append(heading, rationale, source);
+    card.append(heading, kind, rationale, source);
     return card;
   }));
   if (evidence.length === 0) {
@@ -114,6 +130,8 @@ function renderEmptyDetail() {
   elements.detailTone.className = "detail-tone";
   elements.detailSystem.textContent = "연결 지도";
   elements.detailTitle.textContent = "질환 노드를 선택하세요";
+  elements.evidenceKind.className = "evidence-kind";
+  elements.evidenceKind.textContent = "개인 기록 근거와 문헌 기반 추론 관계를 구분해 표시합니다.";
   elements.detailSummary.textContent = "질환 관계는 그래프에서, 검사·식사·관리 메모는 이 패널에서 분리해 읽습니다.";
   elements.detailRelation.textContent = "Health Map에서 연결한 질환이 이 장면에 표시됩니다.";
   renderList(elements.detailChecks, ["증상 발생 시점", "검사실 결과", "복용 중인 약"]);
@@ -172,7 +190,7 @@ function relationLine(edge, positions) {
   const isActive = edge.source === state.activeId || edge.target === state.activeId;
   const path = svgElement("path", {
     d: `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`,
-    class: `scene-edge${isActive ? " is-active" : " is-muted"}`,
+    class: `scene-edge is-inferred${isActive ? " is-active" : " is-muted"}`,
     "data-edge-id": edge.id,
   });
   const caption = svgElement("g", {
@@ -219,27 +237,29 @@ function moveNode(nodeId, point) {
 
 function nodeGroup(node) {
   const isSelected = node.id === state.activeId || node.id === state.selectedNodeId;
+  const isRecorded = state.declaredIds.includes(node.id);
   const isRelated = state.scene.edges.some((edge) => (
     (edge.source === state.activeId && edge.target === node.id)
     || (edge.target === state.activeId && edge.source === node.id)
   ));
   const isStandalone = node.relationCount === 0;
   const selectionDescription = isSelected
-    ? "선택한 중심 질환"
+    ? "현재 선택됨, 중심 질환"
     : isRelated
       ? "선택한 질환과 직접 연결됨"
       : isStandalone
         ? "현재 지도 안에 직접 연결된 질환 없음"
         : "다른 질환과 연결됨";
   const group = svgElement("g", {
-    class: "network-node condition-node",
+    class: `network-node condition-node ${isRecorded ? "is-recorded" : "is-inferred"}`,
     transform: `translate(${node.x} ${node.y})`,
     tabindex: "0",
     role: "button",
     "data-tone": node.tone,
     "data-node-id": node.id,
     "data-relation-count": node.relationCount,
-    "aria-label": `${node.label}, ${node.subtitle}. ${selectionDescription}.`,
+    "data-evidence-kind": isRecorded ? "recorded" : "inferred",
+    "aria-label": `${node.label}, ${node.subtitle}. ${isRecorded ? "직접 선택하거나 가져온 질환 항목" : "입력 신호에서 찾은 확인 후보, 진단 사실 아님"}. ${selectionDescription}.`,
     "aria-pressed": String(isSelected),
   });
   if (isSelected) group.classList.add("is-selected");
@@ -249,9 +269,29 @@ function nodeGroup(node) {
 
   group.append(
     svgElement("circle", { class: "node-halo", r: node.radius + 16 }),
+    svgElement("circle", { class: "node-selection-ring", r: node.radius + 10 }),
     svgElement("circle", { class: "node-core", r: node.radius }),
     svgElement("circle", { class: "node-orbit", r: 5 }),
   );
+  const selectionBadge = svgElement("g", { class: "node-selection-badge", "aria-hidden": "true" });
+  const selectionText = svgElement("text", {
+    x: 0,
+    y: -(node.radius + 24),
+    "text-anchor": "middle",
+    "dominant-baseline": "middle",
+  });
+  selectionText.textContent = "✓ 선택됨";
+  selectionBadge.append(
+    svgElement("rect", {
+      x: -38,
+      y: -(node.radius + 36),
+      width: 76,
+      height: 24,
+      rx: 12,
+    }),
+    selectionText,
+  );
+  group.append(selectionBadge);
   const title = svgElement("text", {
     class: "node-title",
     y: node.radius + 28,
@@ -284,6 +324,7 @@ function nodeGroup(node) {
     select();
   });
   group.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
     state.drag = { nodeId: node.id, moved: false };
     group.setPointerCapture(event.pointerId);
   });
@@ -295,6 +336,9 @@ function nodeGroup(node) {
   group.addEventListener("pointerup", () => {
     window.setTimeout(() => { state.drag = null; }, 0);
   });
+  group.addEventListener("pointercancel", () => {
+    state.drag = null;
+  });
   return group;
 }
 
@@ -305,7 +349,7 @@ function renderSceneElements() {
   );
   elements.nodes.replaceChildren(...state.scene.nodes.map(nodeGroup));
   elements.count.textContent = `${state.scene.nodes.length}개 질환 · ${state.scene.edges.length}개 관계`;
-  elements.focus.textContent = state.activeId ? `${CONDITIONS[state.activeId]?.label} 중심` : "선택 대기";
+  elements.focus.textContent = state.activeId ? `${CONDITIONS[state.activeId]?.label} 선택됨 · 중심` : "선택 대기";
 }
 
 function renderGraph() {
@@ -331,11 +375,42 @@ function renderGraph() {
   renderConditionDetail(state.activeId);
 }
 
-function setZoom(nextZoom) {
-  state.zoom = Math.max(0.72, Math.min(1.55, nextZoom));
+function applyViewportTransform() {
   const offsetX = sceneSize.width * (1 - state.zoom) / 2;
   const offsetY = sceneSize.height * (1 - state.zoom) / 2;
-  elements.viewport.setAttribute("transform", `translate(${offsetX} ${offsetY}) scale(${state.zoom})`);
+  elements.viewport.setAttribute(
+    "transform",
+    `translate(${offsetX + state.pan.x} ${offsetY + state.pan.y}) scale(${state.zoom})`,
+  );
+  elements.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+  elements.zoomOut.disabled = state.zoom <= 0.72;
+  elements.zoomIn.disabled = state.zoom >= 1.55;
+}
+
+function setZoom(nextZoom) {
+  state.zoom = Math.max(0.72, Math.min(1.55, nextZoom));
+  applyViewportTransform();
+}
+
+function setPan(nextX, nextY) {
+  const horizontalLimit = sceneSize.width * 0.38;
+  const verticalLimit = sceneSize.height * 0.38;
+  state.pan.x = Math.max(-horizontalLimit, Math.min(horizontalLimit, nextX));
+  state.pan.y = Math.max(-verticalLimit, Math.min(verticalLimit, nextY));
+  applyViewportTransform();
+}
+
+function resetCamera() {
+  state.zoom = 1;
+  state.pan = { x: 0, y: 0 };
+  applyViewportTransform();
+}
+
+function scenePointFromEvent(event) {
+  const point = elements.scene.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  return point.matrixTransform(elements.scene.getScreenCTM().inverse());
 }
 
 function updateSceneFraming() {
@@ -351,17 +426,56 @@ function updateSceneFraming() {
 elements.zoomIn.addEventListener("click", () => setZoom(state.zoom + 0.12));
 elements.zoomOut.addEventListener("click", () => setZoom(state.zoom - 0.12));
 elements.reset.addEventListener("click", () => {
-  setZoom(1);
+  resetCamera();
   renderGraph();
 });
+elements.scene.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || event.target.closest?.(".network-node")) return;
+  const point = scenePointFromEvent(event);
+  state.panDrag = { pointerId: event.pointerId, point, origin: { ...state.pan } };
+  elements.scene.setPointerCapture(event.pointerId);
+  elements.scene.classList.add("is-panning");
+});
+elements.scene.addEventListener("pointermove", (event) => {
+  if (state.panDrag?.pointerId !== event.pointerId) return;
+  const point = scenePointFromEvent(event);
+  setPan(
+    state.panDrag.origin.x + point.x - state.panDrag.point.x,
+    state.panDrag.origin.y + point.y - state.panDrag.point.y,
+  );
+});
+const finishPan = (event) => {
+  if (state.panDrag?.pointerId !== event.pointerId) return;
+  state.panDrag = null;
+  elements.scene.classList.remove("is-panning");
+};
+elements.scene.addEventListener("pointerup", finishPan);
+elements.scene.addEventListener("pointercancel", finishPan);
 elements.scene.addEventListener("wheel", (event) => {
   event.preventDefault();
   setZoom(state.zoom + (event.deltaY < 0 ? 0.08 : -0.08));
 }, { passive: false });
+elements.scene.addEventListener("keydown", (event) => {
+  if (event.target !== elements.scene) return;
+  const panStep = 36;
+  if (event.key === "ArrowLeft") setPan(state.pan.x + panStep, state.pan.y);
+  else if (event.key === "ArrowRight") setPan(state.pan.x - panStep, state.pan.y);
+  else if (event.key === "ArrowUp") setPan(state.pan.x, state.pan.y + panStep);
+  else if (event.key === "ArrowDown") setPan(state.pan.x, state.pan.y - panStep);
+  else if (event.key === "+" || event.key === "=") setZoom(state.zoom + 0.12);
+  else if (event.key === "-" || event.key === "_") setZoom(state.zoom - 0.12);
+  else if (event.key === "0") resetCamera();
+  else return;
+  event.preventDefault();
+});
 
 window.addEventListener("resize", () => {
-  if (updateSceneFraming()) renderGraph();
+  if (updateSceneFraming()) {
+    resetCamera();
+    renderGraph();
+  }
 });
 updateSceneFraming();
+applyViewportTransform();
 if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
 renderGraph();

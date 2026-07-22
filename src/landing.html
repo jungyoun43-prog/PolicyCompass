@@ -10,9 +10,10 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Personal | 내 건강 기록을 내가 이어 보는 공간</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/visit-prep-hero.png" type="image/png" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/patient-presentation.css" />
     <link rel="stylesheet" href="/landing.css" />
     <link rel="stylesheet" href="/controls.css" />
@@ -40,7 +41,18 @@
     <main class="page-shell landing-shell" id="mainContent">
       <section class="landing-hero patient-presentation" aria-labelledby="landingTitle">
         <div class="landing-hero__copy">
-          <p class="eyebrow patient-presentation__identity">VITAGRAPH PERSONAL · 내 기록 공간</p>
+          <p class="eyebrow patient-presentation__identity signal-kicker">
+            <span class="signal-thread" aria-hidden="true">
+              <svg viewBox="0 0 76 22" focusable="false">
+                <path class="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
+              </svg>
+            </span>
+            <span class="signal-kicker__label">VITAGRAPH PERSONAL · 내 기록 공간</span>
+          </p>
           <h1 id="landingTitle">내 건강 기록을 <em>내가 이어 보는</em> 공간.</h1>
           <p class="landing-hero__lead">
             의료기관에서 받은 VitaGraph 파일과 내가 남긴 증상·검사 수치를 한곳에서
@@ -61,6 +73,36 @@
             alt="집에서 건강 기록을 살피며 다음 진료를 준비하는 보호자"
           />
         </figure>
+      </section>
+
+      <section class="patient-start-path" aria-labelledby="patientStartTitle" data-first-use="patient">
+        <header>
+          <p class="eyebrow">FIRST VISIT · 4 STEPS</p>
+          <h2 id="patientStartTitle">처음이라면 이 순서만 따라가세요.</h2>
+          <p>파일이 없어도 예시 기록으로 전체 흐름을 먼저 확인할 수 있습니다. 예시는 내 기록과 섞이지 않습니다.</p>
+        </header>
+        <ol aria-label="VitaGraph Personal 첫 사용 순서">
+          <li data-first-use-step="record">
+            <span class="patient-start-path__signal" aria-hidden="true">01</span>
+            <div><strong>기록 선택</strong><p>환자용 파일을 가져오거나 안전한 예시를 엽니다.</p></div>
+          </li>
+          <li data-first-use-step="map">
+            <span class="patient-start-path__signal" aria-hidden="true">02</span>
+            <div><strong>신호 확인</strong><p>지도에서 기록된 항목과 직접 선택한 항목을 구분합니다.</p></div>
+          </li>
+          <li data-first-use-step="connections">
+            <span class="patient-start-path__signal" aria-hidden="true">03</span>
+            <div><strong>연결 살펴보기</strong><p>기록 근거와 키워드 기반 추론 관계를 따로 읽습니다.</p></div>
+          </li>
+          <li data-first-use-step="prepare">
+            <span class="patient-start-path__signal" aria-hidden="true">04</span>
+            <div><strong>다음 진료 준비</strong><p>확인할 질문을 고르고 원할 때만 Journey에 저장합니다.</p></div>
+          </li>
+        </ol>
+        <div class="patient-start-path__actions">
+          <a class="landing-button landing-button--primary" href="/map?sample=1">예시로 4단계 시작</a>
+          <a class="text-action" href="/map#import-record">내 파일로 시작 <span aria-hidden="true">→</span></a>
+        </div>
       </section>
 
       <section class="fact-strip" aria-label="제품 데이터 처리 방식">

@@ -1,0 +1,90 @@
+/*
+ * VitaGraph connected life signals
+ *
+ * Reusable contract:
+ *   .signal-kicker                       label + compact brand motif
+ *   .signal-thread                       code-native SVG motif container
+ *   .signal-thread__line                 recorded signal path
+ *   .signal-thread__line--inferred       inferred relationship path
+ *   .signal-thread__node                 signal point
+ *   .signal-thread__node--recorded       user-entered or imported evidence
+ *   .signal-thread__node--inferred       relationship suggested by the map
+ */
+
+.signal-kicker {
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  width: fit-content;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.signal-kicker__label {
+  line-height: 1.35;
+}
+
+.signal-thread {
+  display: inline-grid;
+  width: 76px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  color: var(--accent);
+}
+
+.signal-thread svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.signal-thread__line {
+  fill: none;
+  stroke: color-mix(in srgb, currentColor 74%, var(--line));
+  stroke-linecap: round;
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
+}
+
+.signal-thread__line--inferred {
+  stroke: color-mix(in srgb, var(--data-cyan) 72%, var(--line));
+  stroke-dasharray: 4 4;
+}
+
+.signal-thread__node {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+
+.signal-thread__node--recorded {
+  fill: currentColor;
+}
+
+.signal-thread__node--inferred {
+  fill: var(--surface);
+  stroke: var(--data-cyan);
+  stroke-dasharray: 2.4 1.8;
+}
+
+.signal-thread--quiet {
+  color: color-mix(in srgb, var(--accent) 62%, var(--muted));
+  opacity: 0.82;
+}
+
+@media (max-width: 520px) {
+  .signal-kicker {
+    gap: var(--space-2);
+    font-size: 0.6875rem;
+  }
+
+  .signal-thread {
+    width: 64px;
+  }
+}

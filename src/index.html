@@ -10,9 +10,10 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>건강 지도 | VitaGraph Personal</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2728%27 fill=%27%23f05a47%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%279%27 fill=%27white%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
     <link rel="preload" as="image" href="/assets/body-atlas-v4.webp" type="image/webp" />
     <link rel="stylesheet" href="/foundation.css" />
+    <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/controls.css" />
     <link rel="stylesheet" href="/body-map.css" />
     <link rel="stylesheet" href="/body-index.css" />
@@ -45,7 +46,18 @@
     <main class="page-shell map-shell clinician-hierarchy__workspace" id="mainContent">
       <section class="page-hero map-hero clinician-hierarchy__summary" aria-labelledby="pageTitle">
         <div>
-          <p class="page-hero__eyebrow">PERSONAL HEALTH RELATION MAP</p>
+          <div class="signal-kicker">
+            <span class="signal-thread" aria-hidden="true">
+              <svg viewBox="0 0 76 22">
+                <path class="signal-thread__line" d="M4 14 C17 14 20 6 33 6" />
+                <path class="signal-thread__line signal-thread__line--inferred" d="M33 6 C47 6 50 16 72 12" />
+                <circle class="signal-thread__node signal-thread__node--recorded" cx="4" cy="14" r="3" />
+                <circle class="signal-thread__node" cx="33" cy="6" r="3" />
+                <circle class="signal-thread__node signal-thread__node--inferred" cx="72" cy="12" r="3" />
+              </svg>
+            </span>
+            <span class="page-hero__eyebrow signal-kicker__label">PERSONAL HEALTH RELATION MAP</span>
+          </div>
           <h1 id="pageTitle">내 몸의 신호를 연결해서 보기</h1>
         </div>
         <div class="page-hero__aside">
@@ -62,7 +74,7 @@
         </div>
       </section>
 
-      <div class="dashboard clinician-hierarchy__groups">
+      <div class="dashboard clinician-hierarchy__groups" data-graph-discovery="map">
         <aside class="panel input-panel" aria-labelledby="inputTitle">
           <div class="panel-heading">
             <div>
@@ -152,7 +164,40 @@
             <span class="map-status" id="mapStatus">분석 대기</span>
           </div>
 
-          <div class="body-stage" aria-describedby="bodyKeyText">
+          <section class="map-first-use" aria-labelledby="mapInstructionsTitle" data-graph-instructions>
+            <div class="map-first-use__heading">
+              <p class="panel-index">FIRST LOOK</p>
+              <h3 id="mapInstructionsTitle">처음이라면 이렇게 보세요</h3>
+            </div>
+            <ol id="mapInstructions">
+              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 기록을 가져옵니다.</span></li>
+              <li><b>2</b><span>색 있는 신체 표식을 선택해 관련 신호를 확인합니다.</span></li>
+              <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
+            </ol>
+          </section>
+
+          <section class="map-legend" aria-labelledby="mapLegendTitle" data-graph-legend>
+            <div class="map-legend__heading">
+              <p class="panel-index">MAP LEGEND</p>
+              <h3 id="mapLegendTitle">지도 표기</h3>
+            </div>
+            <ul class="map-legend__items">
+              <li>
+                <i class="map-legend__symbol map-legend__symbol--recorded" aria-hidden="true"></i>
+                <span><strong>기록 신호</strong><small>직접 입력하거나 가져온 건강 항목</small></span>
+              </li>
+              <li id="mapRelationshipMeaning" data-relationship-meaning>
+                <i class="map-legend__symbol map-legend__symbol--inferred" aria-hidden="true"></i>
+                <span><strong>추론 관계</strong><small>기록과 문헌을 바탕으로 지도에서 제안 · 진단 아님</small></span>
+              </li>
+              <li>
+                <i class="map-legend__symbol map-legend__symbol--selected" aria-hidden="true">✓</i>
+                <span><strong>현재 선택</strong><small>이중 테두리와 체크로 함께 표시</small></span>
+              </li>
+            </ul>
+          </section>
+
+          <div class="body-stage" aria-describedby="mapInstructions mapRelationshipMeaning bodyKeyText">
             <div class="human-figure" aria-label="신체 부위별 건강 신호">
               <img
                 class="human-figure__image"
@@ -231,26 +276,26 @@
             <div class="body-caption" data-area="dermatology"><span class="body-caption__title">피부·알레르기</span><span class="body-caption__department">피부과·알레르기내과</span><span class="body-caption__status">현재 기록에 없음</span></div>
           </div>
 
-          <div class="body-key" aria-live="polite">
-            <span class="body-key__selection">
+          <div class="body-key">
+            <span class="body-key__selection" role="status" aria-live="polite" data-selection-state>
               <span class="key-swatch" id="bodyKeySwatch" aria-hidden="true"></span>
               <span id="bodyKeyText">입력 신호를 분석하면 관련 부위가 표시됩니다.</span>
             </span>
-            <span class="body-key__legend"><i class="body-key__dot body-key__dot--active" aria-hidden="true"></i>기록과 연결됨</span>
+            <span class="body-key__legend"><i class="body-key__dot body-key__dot--active" aria-hidden="true"></i>기록과 연결됨 · 지도 제안, 진단 아님</span>
             <span class="body-key__legend"><i class="body-key__dot" aria-hidden="true"></i>현재 기록에 없음</span>
           </div>
         </section>
 
         <section class="panel connection-portal" aria-labelledby="graphTitle">
           <div class="connection-copy">
-            <p class="panel-index">CONNECTION EXPLORER</p>
-            <h2 id="graphTitle">연결은 더 넓은 장면에서 탐색하세요.</h2>
+            <p class="panel-index">NEXT · CONNECTION EXPLORER</p>
+            <h2 id="graphTitle">다음은 관계와 근거를 확인할 차례입니다.</h2>
             <p>
-              질환들이 고정된 칸이 아니라 관계의 힘에 따라 흩어집니다. 노드를 끌어 움직이고,
-              검사·식사·관리 메모는 선택한 질환의 상세 패널에서 읽어보세요.
+              기록에서 찾은 건강 항목과 문헌을 바탕으로 제안한 관계를 구분해 보여 줍니다.
+              노드를 선택하고, 왜 연결됐는지 출처와 함께 확인해 보세요.
             </p>
             <div class="connection-actions">
-              <a class="primary-button" href="/connections" data-connections-link>전체 화면에서 탐색</a>
+              <a class="primary-button" href="/connections" data-connections-link data-next-action>다음: 관계와 근거 확인하기</a>
               <span><strong id="graphPreviewCount">0개</strong> 질환을 연결할 준비가 됐어요</span>
             </div>
           </div>

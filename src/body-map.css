@@ -4,6 +4,159 @@
     var(--surface-raised);
 }
 
+.map-first-use,
+.map-legend {
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--surface));
+  padding: var(--space-3) var(--space-4);
+}
+
+.map-first-use {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.28fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.map-first-use__heading .panel-index,
+.map-legend__heading .panel-index {
+  margin-bottom: 2px;
+  font-size: 0.625rem;
+}
+
+.map-first-use h3,
+.map-legend h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.map-first-use ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-first-use li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.map-first-use li b {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+}
+
+.map-legend {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.28fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-4);
+  background: var(--surface);
+}
+
+.map-legend__items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-legend__items li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.map-legend__items span {
+  display: grid;
+  min-width: 0;
+}
+
+.map-legend__items strong {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.map-legend__items small {
+  color: var(--muted);
+  font-size: 0.625rem;
+  line-height: 1.45;
+}
+
+.map-legend__symbol {
+  position: relative;
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  color: var(--accent);
+  font-style: normal;
+  font-size: 0.625rem;
+  font-weight: 900;
+}
+
+.map-legend__symbol--recorded {
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 4px var(--surface);
+}
+
+.map-legend__symbol--inferred {
+  height: 0;
+  border-top: 2px dashed var(--data-cyan);
+}
+
+.map-legend__symbol--inferred::before,
+.map-legend__symbol--inferred::after {
+  position: absolute;
+  top: -4px;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--data-cyan);
+  border-radius: 50%;
+  background: var(--surface);
+  content: "";
+}
+
+.map-legend__symbol--inferred::before { left: -1px; }
+.map-legend__symbol--inferred::after { right: -1px; }
+
+.map-legend__symbol--selected {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px currentColor;
+}
+
+.map-page .connection-preview path {
+  stroke-dasharray: 7 6;
+}
+
 .body-stage {
   position: relative;
   min-height: 540px;
@@ -149,6 +302,26 @@
   transform: scale(1.18);
 }
 
+.body-hotspot.is-current::after {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--surface);
+  color: currentColor;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 18%, transparent);
+  content: "✓";
+  font-size: 0.625rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .hotspot-neuro {
   top: 8.5%;
   left: 50%;
@@ -210,12 +383,33 @@
 }
 
 @media (max-width: 780px) {
+  .map-first-use,
+  .map-legend {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
   .human-figure {
     inset-inline: 16%;
   }
 }
 
 @media (max-width: 520px) {
+  .map-first-use,
+  .map-legend {
+    padding: var(--space-3);
+  }
+
+  .map-first-use ol,
+  .map-legend__items {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .map-legend__items small {
+    font-size: 0.6875rem;
+  }
+
   .body-stage {
     min-height: 500px;
   }

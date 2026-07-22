@@ -1,4 +1,5 @@
 import { CONDITIONS } from "./data.js";
+import { createJourneyNarrative } from "./journey-model.js";
 
 const QUESTION_RULES = {
   diabetes: [
@@ -136,5 +137,51 @@ export function createVisitBrief(ids = []) {
       : "아직 질문을 만들 입력 신호가 없습니다.",
     countLabel: `${questions.length}개 질문`,
     disclaimer: "이 브리프는 기록 정리용이며 진단·처방·응급 판단을 제공하지 않습니다.",
+  };
+}
+
+function currentDateLabel(value) {
+  if (typeof value !== "string" || !value.trim()) return "현재 지도";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? "현재 지도" : parsed.toISOString().slice(0, 10);
+}
+
+export function createVisitStory(input = {}) {
+  const ids = normalizeIds(input.ids);
+  const measurements = Array.isArray(input.measurements)
+    ? input.measurements.filter((item) => item && typeof item === "object" && item.key).slice(0, 1_000)
+    : [];
+  const current = {
+    id: "current-map",
+    date: currentDateLabel(input.observedAt),
+    conditionIds: ids,
+    measurements,
+    source: String(input.source ?? "현재 건강 지도"),
+  };
+  const hasCurrentData = ids.length > 0 || measurements.length > 0;
+  const isDemo = input.isDemo === true;
+  const previousSnapshot = !isDemo && input.previousSnapshot && typeof input.previousSnapshot === "object"
+    ? input.previousSnapshot
+    : null;
+  const narrative = createJourneyNarrative(previousSnapshot, current);
+  const brief = createVisitBrief(ids);
+  const questionReviews = brief.questions.slice(0, 3).map((question) => ({
+    id: `question-${question.id}`,
+    title: question.question,
+    detail: `${question.sourceLabel} 입력 신호를 바탕으로 만든 진료 확인 질문입니다.`,
+  }));
+
+  return {
+    state: hasCurrentData ? (isDemo ? "demo" : narrative.state) : "empty",
+    hasCurrentData,
+    observations: hasCurrentData ? narrative.observations : [],
+    contexts: hasCurrentData ? narrative.contexts : [],
+    nextReviews: hasCurrentData
+      ? (questionReviews.length > 0 ? questionReviews : narrative.nextReviews)
+      : [],
+    comparison: hasCurrentData && !isDemo ? narrative.comparison : null,
+    comparisonSummary: hasCurrentData
+      ? (isDemo ? "예시 데이터는 저장된 Journey 기록과 비교하지 않습니다." : narrative.comparisonSummary)
+      : "현재 지도에 입력 신호가 없어 이전 기록과 비교하지 않았습니다.",
   };
 }

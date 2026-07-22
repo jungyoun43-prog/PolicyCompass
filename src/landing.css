@@ -119,6 +119,111 @@
   font-size: 0.75rem;
 }
 
+.patient-start-path {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(var(--space-6), 5vw, var(--space-12));
+  align-items: start;
+  margin: var(--space-6) 0 var(--space-10);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background:
+    radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 16rem),
+    var(--surface-raised);
+  padding: clamp(var(--space-5), 4vw, var(--space-8));
+  box-shadow: var(--shadow-panel);
+}
+
+.patient-start-path header {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+.patient-start-path h2 {
+  max-width: 12ch;
+  margin: var(--space-2) 0 var(--space-3);
+  font-size: clamp(1.65rem, 3.3vw, 2.6rem);
+  letter-spacing: -0.05em;
+  line-height: 1.16;
+  word-break: keep-all;
+}
+
+.patient-start-path header > p:last-child {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.patient-start-path ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.patient-start-path li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: var(--space-4);
+  min-height: 86px;
+  align-items: start;
+  padding: var(--space-3) 0 var(--space-4);
+}
+
+.patient-start-path li:not(:last-child)::after {
+  position: absolute;
+  top: 47px;
+  bottom: -3px;
+  left: 20px;
+  width: 2px;
+  background: color-mix(in srgb, var(--accent) 32%, var(--line));
+  content: "";
+}
+
+.patient-start-path__signal {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  font: 750 0.68rem var(--font-mono);
+}
+
+.patient-start-path strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.9rem;
+}
+
+.patient-start-path li p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.patient-start-path__actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.patient-start-path__actions .text-action {
+  margin-top: 0;
+}
+
 .fact-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -498,6 +603,18 @@
 }
 
 @media (max-width: 800px) {
+  .patient-start-path {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-start-path header {
+    position: static;
+  }
+
+  .patient-start-path__actions {
+    grid-column: 1;
+  }
+
   .landing-hero {
     display: flex;
     min-height: 0;

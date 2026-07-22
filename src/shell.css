@@ -185,14 +185,39 @@ body.insights-page {
 }
 
 .app-brand__mark {
+  position: relative;
   width: var(--space-5);
   height: var(--space-5);
   flex: none;
-  border-radius: 7px;
+  border-radius: 50%;
   background:
-    linear-gradient(135deg, var(--accent) 0 48%, transparent 48%),
-    linear-gradient(315deg, var(--data-cyan) 0 48%, var(--data-lime) 48%);
-  box-shadow: 0 7px 18px color-mix(in srgb, var(--accent) 24%, transparent);
+    radial-gradient(circle at 18% 66%, var(--accent) 0 2.5px, transparent 3px),
+    radial-gradient(circle at 50% 28%, var(--data-cyan) 0 2.5px, transparent 3px),
+    radial-gradient(circle at 82% 62%, var(--data-lime) 0 2.5px, transparent 3px);
+}
+
+.app-brand__mark::before,
+.app-brand__mark::after {
+  position: absolute;
+  width: 11px;
+  height: 1.5px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 72%, var(--line));
+  content: "";
+  transform-origin: left center;
+}
+
+.app-brand__mark::before {
+  top: 15px;
+  left: 5px;
+  transform: rotate(-43deg);
+}
+
+.app-brand__mark::after {
+  top: 8px;
+  left: 13px;
+  background: color-mix(in srgb, var(--data-cyan) 72%, var(--line));
+  transform: rotate(35deg);
 }
 
 .app-nav {

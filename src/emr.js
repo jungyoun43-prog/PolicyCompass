@@ -6,7 +6,7 @@ import {
   clinicalContextFingerprint,
   clearEmrState,
   confirmPatientEvent,
-  createClinicalGraph,
+  createClinicalBodyAtlas,
   createClaimPreflightPatient,
   createCopilotRequest,
   createDemoEmrState,
@@ -153,7 +153,6 @@ const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
   external: [],
 });
 
-const SVG_NS = "http://www.w3.org/2000/svg";
 const today = () => localCalendarDate(new Date(), KOREA_TIMEZONE_OFFSET_MINUTES);
 const byId = (id) => document.getElementById(id);
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -265,7 +264,7 @@ const refs = {
   encounterClaimSummary: byId("encounterClaimSummary"),
   encounterSignoffSummary: byId("encounterSignoffSummary"),
   recentEncounterList: byId("recentEncounterList"),
-  encounterGraphSummary: byId("encounterGraphSummary"),
+  encounterBodySummary: byId("encounterBodySummary"),
   eventForm: byId("eventForm"),
   eventType: byId("eventType"),
   eventDate: byId("eventDate"),
@@ -279,18 +278,21 @@ const refs = {
   eventFilters: byId("eventFilters"),
   eventTimeline: byId("eventTimeline"),
   eventCount: byId("eventCount"),
-  clinicalGraph: byId("clinicalGraph"),
-  graphProblemCount: byId("graphProblemCount"),
-  graphRecordCount: byId("graphRecordCount"),
-  graphRelationCount: byId("graphRelationCount"),
-  graphDateRange: byId("graphDateRange"),
-  graphProjectionNotice: byId("graphProjectionNotice"),
-  graphSelection: document.querySelector(".graph-selection"),
-  graphSelectionTitle: byId("graphSelectionTitle"),
-  graphSelectionDetail: byId("graphSelectionDetail"),
-  graphOpenChart: byId("graphOpenChart"),
-  graphEvidenceList: byId("graphEvidenceList"),
-  graphLegend: document.querySelector(".graph-legend"),
+  bodyAreaCount: byId("bodyAreaCount"),
+  bodyVisitCount: byId("bodyVisitCount"),
+  bodyMedicationCount: byId("bodyMedicationCount"),
+  bodySignalAreaCount: byId("bodySignalAreaCount"),
+  bodyUnassignedMedicationCount: byId("bodyUnassignedMedicationCount"),
+  bodyProjectionNotice: byId("bodyProjectionNotice"),
+  bodyAreaControls: [...document.querySelectorAll("[data-body-area]")],
+  bodyDetail: document.querySelector(".clinical-body-detail"),
+  bodyDetailTitle: byId("bodyDetailTitle"),
+  bodyDetailDepartment: byId("bodyDetailDepartment"),
+  bodyDetailCount: byId("bodyDetailCount"),
+  bodyVisitList: byId("bodyVisitList"),
+  bodyMedicationList: byId("bodyMedicationList"),
+  bodyConditionList: byId("bodyConditionList"),
+  bodyDetailBoundary: byId("bodyDetailBoundary"),
   claimResultSummary: byId("claimResultSummary"),
   claimBoard: byId("claimBoard"),
   claimBoardLive: byId("claimBoardLive"),
@@ -352,7 +354,7 @@ let boardScope = "patient";
 let queueFilter = "all";
 let viewedEncounterId = "";
 let clinicalComposerContextKey = "";
-let graphSelectionId = "";
+let bodySelectionAreaId = "";
 let stateTransitionBusy = false;
 let copilotBusy = false;
 let stateGeneration = 0;
@@ -369,12 +371,6 @@ function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text !== undefined) node.textContent = String(text);
-  return node;
-}
-
-function svgElement(tag, attributes = {}) {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
   return node;
 }
 
@@ -941,450 +937,263 @@ function renderTimeline(patient) {
   if (!events.length) refs.eventTimeline.append(createEmptyMessage("선택한 유형의 기록이 없습니다."));
 }
 
-function graphPositions(nodes, edges) {
-  const positions = new Map();
-  const edgeCount = new Map(nodes.map(({ id }) => [id, 0]));
-  for (const edge of edges) {
-    edgeCount.set(edge.from, (edgeCount.get(edge.from) ?? 0) + 1);
-    edgeCount.set(edge.to, (edgeCount.get(edge.to) ?? 0) + 1);
-  }
-  const conditions = nodes
-    .filter(({ type }) => type === "condition")
-    .sort((left, right) => (edgeCount.get(right.id) ?? 0) - (edgeCount.get(left.id) ?? 0)
-      || String(right.date).localeCompare(String(left.date)));
-  const clusters = [];
-  const linkedNonConditions = new Set();
-  let cursorY = 28;
-  for (const condition of conditions) {
-    const relations = edges
-      .filter(({ from, to }) => from === condition.id || to === condition.id)
-      .map((edge) => ({
-        edge,
-        node: nodes.find(({ id }) => id === (edge.from === condition.id ? edge.to : edge.from)),
-      }))
-      .filter(({ node }) => Boolean(node))
-      .sort((left, right) => String(right.node.date).localeCompare(String(left.node.date)));
-    for (const { node } of relations) linkedNonConditions.add(node.id);
-    const relationRows = Math.max(1, Math.ceil(relations.length / 2));
-    const clusterHeight = Math.max(138, 54 + relationRows * 82);
-    const conditionY = cursorY + clusterHeight / 2 + 8;
-    positions.set(condition.id, { x: 450, y: conditionY, zone: "condition" });
-    relations.forEach(({ node }, index) => {
-      const column = index % 2;
-      const row = Math.floor(index / 2);
-      positions.set(node.id, {
-        x: column === 0 ? 148 : 752,
-        y: cursorY + 58 + row * 82,
-        zone: "linked-record",
-      });
-    });
-    clusters.push({ condition, relations, y: cursorY, height: clusterHeight });
-    cursorY += clusterHeight + 18;
-  }
+const BODY_AREA_TONES = Object.freeze({
+  neuro: "violet",
+  mental: "violet",
+  sensory: "amber",
+  cardio: "coral",
+  respiratory: "cyan",
+  digestive: "coral",
+  endocrine: "amber",
+  renal: "cyan",
+  pelvic: "violet",
+  musculoskeletal: "lime",
+  rheumatology: "lime",
+  dermatology: "amber",
+});
+const BODY_TONE_CLASSES = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "tone-amber"];
 
-  const unlinked = nodes
-    .filter(({ type, id }) => type !== "condition" && !linkedNonConditions.has(id))
-    .sort((left, right) => String(right.date).localeCompare(String(left.date)));
-  let unlinkedArea = null;
-  if (unlinked.length) {
-    const columns = 4;
-    const rows = Math.ceil(unlinked.length / columns);
-    const areaHeight = 58 + rows * 82 + 14;
-    unlinkedArea = { y: cursorY, height: areaHeight, hasConditions: conditions.length > 0 };
-    unlinked.forEach((node, index) => {
-      const row = Math.floor(index / columns);
-      const rowStart = row * columns;
-      const rowCount = Math.min(columns, unlinked.length - rowStart);
-      const horizontalStep = 202;
-      const rowWidth = (rowCount - 1) * horizontalStep;
-      positions.set(node.id, {
-        x: 450 - rowWidth / 2 + (index - rowStart) * horizontalStep,
-        y: cursorY + 62 + row * 82,
-        zone: "unlinked-record",
-      });
-    });
-    cursorY += areaHeight + 18;
-  }
-  return {
-    clusters,
-    height: Math.max(360, cursorY + 10),
-    positions,
-    unlinked,
-    unlinkedArea,
-  };
+let renderedBodyContext = { atlas: null, patient: null };
+
+function bodyAreaRecordCount(area) {
+  return area.visits.length + area.medications.length + area.conditions.length;
 }
 
-function graphLabel(value, maximum = 17) {
-  const normalized = String(value ?? "");
-  return normalized.length > maximum ? normalized.slice(0, maximum - 1) + "…" : normalized;
+function bodyAreaStatus(area) {
+  const parts = [];
+  if (area.declaredVisitCount) parts.push(`진료과 확인 진료 ${area.declaredVisitCount}건`);
+  if (area.declaredMedicationCount) parts.push(`확인 진료 처방 ${area.declaredMedicationCount}건`);
+  if (area.classifiedVisitCount) parts.push(`진료명 분류 후보 ${area.classifiedVisitCount}건`);
+  if (area.classifiedMedicationCount) parts.push(`후보 진료 연결 처방 ${area.classifiedMedicationCount}건`);
+  if (area.conditions.length) parts.push(`질환 기반 탐색 신호 ${area.conditions.length}개`);
+  if (area.signalOnly) parts.push("진료 이력 없음");
+  return parts.join(" · ") || "연결 기록 없음";
 }
 
-function appendGraphBackground(layout) {
-  const backgrounds = svgElement("g", { "aria-hidden": "true" });
-  for (const cluster of layout.clusters) {
-    backgrounds.append(svgElement("rect", {
-      class: "clinical-cluster-surface",
-      x: 14,
-      y: cluster.y,
-      width: 872,
-      height: cluster.height,
-      rx: 18,
-    }));
-    const label = svgElement("text", {
-      class: "clinical-cluster-label clinical-cluster-label--primary",
-      x: 34,
-      y: cluster.y + 25,
-    });
-    label.textContent = `중심 문제 · ${graphLabel(cluster.condition.label, 26)}`;
-    const count = svgElement("text", {
-      class: "clinical-cluster-label",
-      x: 866,
-      y: cluster.y + 25,
-      "text-anchor": "end",
-    });
-    count.textContent = `자동 분류 ${cluster.relations.length}개`;
-    backgrounds.append(label, count);
-  }
-  if (layout.unlinkedArea) {
-    backgrounds.append(svgElement("rect", {
-      class: "clinical-cluster-surface clinical-cluster-surface--unlinked",
-      x: 14,
-      y: layout.unlinkedArea.y,
-      width: 872,
-      height: layout.unlinkedArea.height,
-      rx: 18,
-    }));
-    const label = svgElement("text", {
-      class: "clinical-cluster-label",
-      x: 34,
-      y: layout.unlinkedArea.y + 25,
-    });
-    label.textContent = layout.unlinkedArea.hasConditions
-      ? "독립된 확정 기록 · 자동 연결 기준 없음"
-      : "확정 기록 · 중심 문제 기록 없음";
-    backgrounds.append(label);
-  }
-  refs.clinicalGraph.append(backgrounds);
+function bodySourceAction(eventId, label) {
+  const button = element("button", "clinical-body-record__action", "차트 기록으로 이동");
+  button.type = "button";
+  button.dataset.bodySourceEvent = eventId;
+  button.setAttribute("aria-label", `${label} 차트 기록으로 이동`);
+  return button;
 }
 
-function graphPath(from, to) {
-  const fromIsLeft = from.x < to.x;
-  const startX = from.x + (fromIsLeft ? 88 : -88);
-  const endX = to.x + (fromIsLeft ? -102 : 102);
-  const bend = Math.abs(endX - startX) * 0.46;
-  return `M ${startX} ${from.y} C ${startX + (fromIsLeft ? bend : -bend)} ${from.y}, ${endX + (fromIsLeft ? -bend : bend)} ${to.y}, ${endX} ${to.y}`;
+function bodySourceSummary(record = {}) {
+  const source = record.source ?? {};
+  const sourceParts = [
+    source.label || "출처 정보 없음",
+    source.resourceId || "",
+  ].filter(Boolean);
+  return `출처 · ${sourceParts.join(" · ")}`;
 }
 
-function graphRelationLabel(edge, node) {
-  const type = node?.type;
-  if (type === "observation") return "측정 주제";
-  if (type === "medication") return "약물 주제";
-  if (type === "procedure") return "처치 주제";
-  if (type === "symptom") return "증상 주제";
-  return edge.label === "추적" ? "추적 주제" : "기록 주제";
+function bodyRecordShell(record, statusText) {
+  const item = element("li", "clinical-body-record");
+  const top = element("div", "clinical-body-record__top");
+  const status = element("span", "clinical-body-record__status", statusText);
+  if (record.lifecycle) status.dataset.lifecycle = record.lifecycle;
+  top.append(element("b", "", record.label), status);
+  item.append(top);
+  return item;
 }
 
-function appendGraphEdges(graph, layout) {
-  const edgeGroup = svgElement("g", { "aria-label": "자동 분류된 추론 연결" });
-  for (const edge of graph.edges) {
-    const from = layout.positions.get(edge.from);
-    const to = layout.positions.get(edge.to);
-    if (!from || !to) continue;
-    const path = svgElement("path", {
-      class: `clinical-edge${edge.kind === "inferred" ? " clinical-edge--inferred" : ""}`,
-      d: graphPath(from, to),
-      "data-edge-from": edge.from,
-      "data-edge-to": edge.to,
-    });
-    const title = svgElement("title");
-    const fromNode = graph.nodes.find(({ id }) => id === edge.from);
-    const toNode = graph.nodes.find(({ id }) => id === edge.to);
-    const relatedNode = fromNode?.type === "condition" ? toNode : fromNode;
-    title.textContent = `${edge.kind === "inferred" ? "추론 연결" : "명시 관계"} · ${graphRelationLabel(edge, relatedNode)} · ${edge.basis || "관계 출처 없음"}${edge.kind === "inferred" ? " · 차트 사실 또는 의학적 인과 아님" : ""}`;
-    path.append(title);
-    edgeGroup.append(path);
-    const centerX = (from.x + to.x) / 2;
-    const centerY = (from.y + to.y) / 2 - 7;
-    const captionText = `추론 · ${graphRelationLabel(edge, relatedNode)}`;
-    const captionWidth = Math.max(68, captionText.length * 9 + 16);
-    const caption = svgElement("g", {
-      class: "clinical-edge-caption",
-      transform: `translate(${centerX} ${centerY})`,
-      "data-edge-from": edge.from,
-      "data-edge-to": edge.to,
-      "aria-hidden": "true",
-    });
-    const surface = svgElement("rect", {
-      x: captionWidth / -2,
-      y: -11,
-      width: captionWidth,
-      height: 22,
-      rx: 11,
-    });
-    const text = svgElement("text", { y: 4, "text-anchor": "middle" });
-    text.textContent = captionText;
-    caption.append(surface, text);
-    edgeGroup.append(caption);
-  }
-  refs.clinicalGraph.append(edgeGroup);
-}
-
-function appendGraphNode(node, position) {
-  const isCondition = node.type === "condition";
-  const width = isCondition ? 204 : 176;
-  const height = isCondition ? 80 : 68;
-  const group = svgElement("g", {
-    class: "clinical-node",
-    "data-graph-node": node.id,
-    "data-type": node.type,
-    transform: `translate(${position.x} ${position.y})`,
-    tabindex: "0",
-    role: "button",
-    "aria-pressed": "false",
-    "aria-label": `확정 ${(EVENT_LABELS[node.type] ?? node.type)} 기록, ${node.label}, ${displayDate(node.date)}. 상세 보기`,
-  });
-  const title = svgElement("title");
-  title.textContent = `${node.label} · ${node.code || "코드 없음"} · ${displayDate(node.date)} · 확정 차트 기록`;
-  group.append(
-    title,
-    svgElement("rect", {
-      class: "clinical-node__halo",
-      x: width / -2 - 5,
-      y: height / -2 - 5,
-      width: width + 10,
-      height: height + 10,
-      rx: isCondition ? 22 : 18,
-    }),
-    svgElement("rect", {
-      class: "clinical-node__surface",
-      x: width / -2,
-      y: height / -2,
-      width,
-      height,
-      rx: isCondition ? 18 : 14,
-    }),
-    svgElement("circle", {
-      class: "clinical-node__type-mark",
-      cx: width / -2 + 17,
-      cy: height / -2 + 16,
-      r: 4,
-    }),
-  );
-  const type = svgElement("text", {
-    class: "clinical-node__type",
-    x: width / -2 + 28,
-    y: height / -2 + 20,
-  });
-  type.textContent = isCondition ? "중심 문제" : (EVENT_LABELS[node.type] ?? node.type);
-  const label = svgElement("text", { class: "clinical-node__title", y: isCondition ? 8 : 7 });
-  label.textContent = graphLabel(node.label, isCondition ? 18 : 15);
-  const meta = svgElement("text", { class: "clinical-node__meta", y: isCondition ? 29 : 25 });
-  meta.textContent = displayDate(node.date);
-  const selectedMark = svgElement("circle", {
-    class: "clinical-node__selected-mark",
-    cx: width / 2 - 14,
-    cy: height / -2 + 14,
-    r: 9,
-  });
-  const selectedCheck = svgElement("path", {
-    class: "clinical-node__selected-check",
-    d: `M ${width / 2 - 18} ${height / -2 + 14} l 3 3 l 5 -6`,
-  });
-  group.append(type, label, meta, selectedMark, selectedCheck);
-  refs.clinicalGraph.append(group);
-}
-
-function graphDefinitionList(pairs) {
-  const list = element("dl");
-  for (const [term, description] of pairs) {
-    list.append(element("dt", "", term), element("dd", "", description || "확인되지 않음"));
-  }
-  return list;
-}
-
-function renderGraphSelection(graph, patient, nodeId) {
-  const node = graph.nodes.find(({ id }) => id === nodeId);
-  const event = patient.events.find(({ id }) => id === nodeId);
-  if (!node || !event) {
-    refs.graphSelection.dataset.selectionState = "empty";
-    refs.graphSelectionTitle.textContent = "기록을 선택하세요";
-    refs.graphSelectionDetail.replaceChildren(element("p", "", "지도에서 기록을 선택하면 유형, 날짜, 코드, 출처와 연결 해석을 확인할 수 있습니다."));
-    refs.graphOpenChart.disabled = true;
-    refs.graphOpenChart.removeAttribute("data-event-type");
-    refs.graphOpenChart.removeAttribute("data-event-id");
-    return;
-  }
-  const relations = graph.edges.filter(({ from, to }) => from === node.id || to === node.id);
-  const relatedNodes = relations
-    .map((edge) => graph.nodes.find(({ id }) => id === (edge.from === node.id ? edge.to : edge.from)))
-    .filter(Boolean);
-  refs.graphSelection.dataset.selectionState = "selected";
-  refs.graphSelectionTitle.textContent = node.label;
-  clear(refs.graphSelectionDetail);
-  const badges = element("div", "graph-record-badges");
-  badges.append(
-    element("span", "", "확정 차트 기록"),
-    element("span", "", EVENT_LABELS[node.type] ?? node.type),
-  );
-  refs.graphSelectionDetail.append(badges);
-  if (event.value !== "" && event.value !== undefined) {
-    refs.graphSelectionDetail.append(element("p", "graph-selection__value", `${event.value}${event.unit ? ` ${event.unit}` : ""}`));
-  }
-  refs.graphSelectionDetail.append(graphDefinitionList([
-    ["기록일", displayDate(node.date)],
-    ["코드", node.code ? [event.system, node.code].filter(Boolean).join(" · ") : "코드 없음"],
-    ["출처", [event.source?.label || node.source?.label || "출처 없음", event.source?.resourceId].filter(Boolean).join(" · ")],
-  ]));
-  const meaning = element("div", "graph-selection__meaning");
-  meaning.append(element("b", "", "관계 해석"));
-  if (relations.length) {
-    meaning.append(document.createTextNode(
-      node.type === "condition"
-        ? `${relatedNodes.map(({ label }) => label).join(", ")} ${relations.length}건이 코드·표시명 주제로 자동 분류되었습니다. 임상적 관련성은 원문과 진료 맥락으로 다시 확인해야 합니다.`
-        : `${relatedNodes.map(({ label }) => label).join(", ")}와 코드·표시명 주제가 겹쳐 자동 분류되었습니다. 차트가 관계나 인과를 명시한 것은 아닙니다.`,
-    ));
-  } else {
-    meaning.append(document.createTextNode("자동 연결 기준이 확인되지 않았습니다. 관계를 새로 지어내지 않고 독립된 차트 사실로 표시합니다."));
-  }
-  refs.graphSelectionDetail.append(meaning);
-  const next = element("p", "graph-selection__next");
-  next.append(element("b", "", "다음 확인 · "), document.createTextNode("날짜, 코드, 출처를 과거 기록 원문과 대조하세요."));
-  refs.graphSelectionDetail.append(next);
-  refs.graphOpenChart.disabled = false;
-  refs.graphOpenChart.dataset.eventType = node.type;
-  refs.graphOpenChart.dataset.eventId = node.id;
-}
-
-let renderedGraphContext = { graph: { nodes: [], edges: [] }, patient: null };
-
-function selectGraphNode(nodeId, focus = false) {
-  const { graph, patient } = renderedGraphContext;
-  if (!patient || !graph.nodes.some(({ id }) => id === nodeId)) return;
-  graphSelectionId = nodeId;
-  refs.clinicalGraph.dataset.selectionState = "selected";
-  for (const node of refs.clinicalGraph.querySelectorAll("[data-graph-node]")) {
-    const selected = node.dataset.graphNode === nodeId;
-    node.classList.toggle("is-selected", selected);
-    node.setAttribute("aria-pressed", String(selected));
-  }
-  for (const edge of refs.clinicalGraph.querySelectorAll("[data-edge-from][data-edge-to]")) {
-    const active = edge.dataset.edgeFrom === nodeId || edge.dataset.edgeTo === nodeId;
-    edge.classList.toggle("is-active", active);
-    edge.classList.toggle("is-muted", !active);
-  }
-  renderGraphSelection(graph, patient, nodeId);
-  if (focus) refs.clinicalGraph.querySelector(`[data-graph-node="${CSS.escape(nodeId)}"]`)?.focus();
-}
-
-function centerSelectedGraphNode() {
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-    const stage = refs.clinicalGraph.closest(".clinical-graph-stage");
-    const selected = refs.clinicalGraph.querySelector(".clinical-node.is-selected");
-    if (!stage || !selected || stage.scrollWidth <= stage.clientWidth) return;
-    const stageRect = stage.getBoundingClientRect();
-    const selectedRect = selected.getBoundingClientRect();
-    stage.scrollLeft += selectedRect.left + selectedRect.width / 2 - (stageRect.left + stage.clientWidth / 2);
-  }));
-}
-
-function renderGraphEvidence(graph) {
-  clear(refs.graphEvidenceList);
-  if (graph.edges.length) {
-    for (const edge of graph.edges) {
-      const from = graph.nodes.find(({ id }) => id === edge.from);
-      const to = graph.nodes.find(({ id }) => id === edge.to);
-      if (!from || !to) continue;
-      const item = element("li", "graph-relation-note");
-      const link = element("button", "graph-evidence-link");
-      link.type = "button";
-      link.dataset.selectGraphNode = to.id;
-      link.append(
-        element("b", "", `추론 · ${from.label} — ${to.label}`),
-        element("span", "", `${graphRelationLabel(edge, to)} · ${edge.basis || "관계 출처 없음"} · 차트 사실·의학적 인과 아님`),
+function renderBodyVisits(area) {
+  clear(refs.bodyVisitList);
+  const groups = [
+    {
+      kind: "declared",
+      label: "진료과 필드로 확인",
+      associationText: "Encounter 진료과 필드에 단일 진료과로 명시",
+    },
+    {
+      kind: "classified",
+      label: "진료명 기반 분류 후보 · 진료과 이력 확정 아님",
+      associationText: "Encounter 진료명에서 분류한 탐색 후보 · 실제 진료과 배정 아님",
+    },
+  ];
+  for (const group of groups) {
+    const visits = area.visits.filter(({ association }) => association.kind === group.kind);
+    if (!visits.length) continue;
+    refs.bodyVisitList.append(element("li", "clinical-body-list-group-label", group.label));
+    for (const visit of visits) {
+      const item = bodyRecordShell(visit, visit.lifecycleLabel);
+      const visitMeta = [
+        displayDate(visit.date),
+        visit.department || (visit.association.kind === "classified" ? "진료과 필드 없음" : area.department),
+        visit.clinician,
+        visit.room,
+      ].filter(Boolean).join(" · ");
+      item.append(
+        element("p", "", visitMeta),
+        element("small", "", group.associationText),
+        element("small", "clinical-body-record__source", bodySourceSummary(visit)),
+        bodySourceAction(visit.id, visit.label),
       );
-      item.append(link);
-      refs.graphEvidenceList.append(item);
+      refs.bodyVisitList.append(item);
     }
-  } else {
-    const item = element("li", "graph-relation-note graph-relation-note--empty");
-    item.append(
-      element("b", "", "자동 분류된 연결 없음"),
-      element("span", "", "관계를 새로 만들지 않고 각 확정 기록을 독립적으로 표시합니다."),
-    );
-    refs.graphEvidenceList.append(item);
   }
-  const boundary = element("li", "graph-evidence-boundary");
-  boundary.append(
-    element("b", "", `표시 노드 ${graph.projection.visibleRecords}건은 모두 확정 차트 기록`),
-    element("span", "", `${graph.projection.omittedRecords
-      ? `전체 ${graph.projection.totalRecords}건 중 ${graph.projection.omittedRecords}건은 지도에서 생략했습니다. `
-      : ""}각 노드를 선택하면 날짜·코드·원본 출처를 확인할 수 있습니다. 자동 분류 결과는 확정 기록에 추가되지 않습니다.`),
-  );
-  refs.graphEvidenceList.append(boundary);
+  if (!area.visits.length) {
+    refs.bodyVisitList.append(element("li", "clinical-body-empty", "이 영역에 진료과가 확인되거나 분류 후보로 제시된 진료 기록이 없습니다."));
+  }
 }
 
-function renderGraph(patient) {
-  const graph = createClinicalGraph(patient);
-  const layout = graphPositions(graph.nodes, graph.edges);
-  renderedGraphContext = { graph, patient };
-  clear(refs.clinicalGraph);
-  refs.clinicalGraph.setAttribute("viewBox", `0 0 900 ${layout.height}`);
-  refs.clinicalGraph.dataset.selectionState = graph.nodes.length ? "ready" : "empty";
-  refs.graphProblemCount.textContent = `${graph.projection.visibleConditions} / ${graph.projection.totalConditions}개`;
-  refs.graphRecordCount.textContent = `${graph.projection.visibleRecords} / ${graph.projection.totalRecords}건`;
-  refs.graphRelationCount.textContent = `${graph.edges.length}개`;
-  const { from, to } = graph.projection.dateRange;
-  refs.graphDateRange.textContent = from
-    ? from === to ? displayDate(from) : `${displayDate(from)} – ${displayDate(to)}`
-    : "기록 없음";
-  refs.graphProjectionNotice.dataset.totalRecords = String(graph.projection.totalRecords);
-  refs.graphProjectionNotice.dataset.visibleRecords = String(graph.projection.visibleRecords);
-  refs.graphProjectionNotice.dataset.omittedRecords = String(graph.projection.omittedRecords);
-  refs.graphProjectionNotice.dataset.totalConditions = String(graph.projection.totalConditions);
-  refs.graphProjectionNotice.dataset.visibleConditions = String(graph.projection.visibleConditions);
-  refs.graphProjectionNotice.textContent = graph.projection.omittedRecords
-    ? `전체 확정 기록 ${graph.projection.totalRecords}건 중 ${graph.projection.visibleRecords}건을 지도에 표시하고 ${graph.projection.omittedRecords}건은 가독성을 위해 생략했습니다.${graph.projection.omittedConditions ? ` 중심 문제 ${graph.projection.omittedConditions}개도 생략되어 과거 기록에서 확인해야 합니다.` : ""}`
-    : graph.projection.totalRecords
-      ? `전체 확정 기록 ${graph.projection.totalRecords}건을 지도에 모두 표시합니다.`
-      : "관계 지도에 표시할 확정 기록이 없습니다.";
+function prescriptionSummary(prescription = {}) {
+  return [
+    prescription.dose ? `1회 ${prescription.dose}${prescription.doseUnit || ""}` : "",
+    prescription.route,
+    prescription.frequency,
+    prescription.durationDays ? `${prescription.durationDays}일` : "",
+    prescription.quantity ? `총 ${prescription.quantity}` : "",
+    prescription.instructions,
+  ].filter(Boolean).join(" · ");
+}
 
-  if (!graph.nodes.length) {
-    const empty = svgElement("g", { class: "clinical-graph-empty", "aria-hidden": "true" });
-    const title = svgElement("text", { class: "clinical-graph-empty__title", x: 450, y: 168, "text-anchor": "middle" });
-    title.textContent = "관계 지도로 표시할 확정 기록이 없습니다";
-    const body = svgElement("text", { x: 450, y: 200, "text-anchor": "middle" });
-    body.textContent = "과거 기록에서 구조화된 기록을 검토·확정하면 이곳에 나타납니다.";
-    empty.append(title, body);
-    refs.clinicalGraph.append(empty);
-    graphSelectionId = "";
-    renderGraphSelection(graph, patient, "");
-  } else {
-    appendGraphBackground(layout);
-    appendGraphEdges(graph, layout);
-    for (const node of graph.nodes) appendGraphNode(node, layout.positions.get(node.id));
-    const degree = new Map(graph.nodes.map(({ id }) => [id, 0]));
-    for (const edge of graph.edges) {
-      degree.set(edge.from, (degree.get(edge.from) ?? 0) + 1);
-      degree.set(edge.to, (degree.get(edge.to) ?? 0) + 1);
-    }
-    const initial = graph.nodes.find(({ id }) => id === graphSelectionId)
-      ?? [...graph.nodes].sort((left, right) => Number(right.type === "condition") - Number(left.type === "condition")
-        || (degree.get(right.id) ?? 0) - (degree.get(left.id) ?? 0)
-        || String(right.date).localeCompare(String(left.date)))[0];
-    selectGraphNode(initial.id);
+function renderBodyMedications(area) {
+  clear(refs.bodyMedicationList);
+  for (const medication of area.medications) {
+    const item = bodyRecordShell(medication, medication.lifecycleLabel);
+    const detail = prescriptionSummary(medication.prescription)
+      || [medication.code, displayDate(medication.date)].filter(Boolean).join(" · ");
+    item.append(
+      element("p", "", detail || "처방 상세 없음"),
+      element(
+        "small",
+        "",
+        medication.association.encounterAreaKind === "declared"
+          ? `Encounter ID ${medication.encounterId}에 직접 연결 · 진료과 필드 확인`
+          : `Encounter ID ${medication.encounterId}에 직접 연결 · 진료명 기반 진료과 분류 후보 · 진료과 이력 확정 아님`,
+      ),
+      element("small", "clinical-body-record__source", bodySourceSummary(medication)),
+      bodySourceAction(medication.id, medication.label),
+    );
+    refs.bodyMedicationList.append(item);
   }
+  if (!area.medications.length) {
+    refs.bodyMedicationList.append(element("li", "clinical-body-empty", "이 진료과의 진료 ID에 연결된 처방 약물이 없습니다."));
+  }
+}
 
-  clear(refs.graphLegend);
-  for (const item of [
-    ["legend-dot legend-dot--condition", "중심 문제"],
-    ["legend-dot legend-dot--record", "확정 차트 기록"],
-    ["legend-line", "자동 분류 추론"],
-  ]) {
-    const legend = element("span");
-    legend.append(element("i", item[0]), document.createTextNode(item[1]));
-    refs.graphLegend.append(legend);
+function renderBodyConditions(area) {
+  clear(refs.bodyConditionList);
+  for (const condition of area.conditions) {
+    const item = bodyRecordShell(condition, "확정 활성 문제");
+    item.append(
+      element("p", "", [condition.code || "코드 없음", displayDate(condition.date)].join(" · ")),
+      element("small", "", "확정 active 진단의 코드·표시명 기반 탐색 분류 · 진료과 배정 또는 의뢰 판단 아님"),
+      element("small", "clinical-body-record__source", bodySourceSummary(condition)),
+      bodySourceAction(condition.id, condition.label),
+    );
+    refs.bodyConditionList.append(item);
   }
-  renderGraphEvidence(graph);
+  if (!area.conditions.length) {
+    refs.bodyConditionList.append(element("li", "clinical-body-empty", "이 영역에 분류된 확정 활성 문제는 없습니다."));
+  }
+}
+
+function renderClinicalBodyDetail(area) {
+  const { atlas } = renderedBodyContext;
+  refs.bodyDetailTitle.textContent = area.title;
+  refs.bodyDetailDepartment.textContent = area.department;
+  refs.bodyDetailCount.textContent = `${bodyAreaRecordCount(area)}건`;
+  renderBodyVisits(area);
+  renderBodyMedications(area);
+  renderBodyConditions(area);
+  const exclusions = [
+    atlas.totals.unassignedVisits
+      ? `진료과가 모호하거나 확인되지 않은 진료 ${atlas.totals.unassignedVisits}건`
+      : "",
+    atlas.totals.unassignedMedications
+      ? `진료과 연결 정보가 없는 약물 ${atlas.totals.unassignedMedications}건`
+      : "",
+  ].filter(Boolean);
+  refs.bodyDetailBoundary.textContent = `${
+    exclusions.length
+      ? `${exclusions.join("과 ")}은 임의로 배정하지 않아 이 목록에서 제외했습니다. `
+      : ""
+  }약물은 같은 진료 ID가 있을 때만 해당 영역에 표시합니다. 진료명 기반 후보는 확인된 진료과 이력으로 집계하지 않으며, 질환 기반 탐색 신호는 진료과 배정·의뢰 또는 진료 이력이 아닙니다.`;
+}
+
+function syncClinicalBodyControls(area) {
+  const { atlas } = renderedBodyContext;
+  for (const control of refs.bodyAreaControls) {
+    const controlArea = atlas.areas.find(({ id }) => id === control.dataset.bodyArea);
+    if (!controlArea) continue;
+    const isCurrent = controlArea.id === area.id;
+    const tone = BODY_AREA_TONES[controlArea.id] || "cyan";
+    control.classList.remove(
+      "is-active",
+      "is-current",
+      "is-care-record",
+      "is-classification-candidate",
+      "is-candidate-only",
+      "is-condition-signal",
+      "is-signal-only",
+      ...BODY_TONE_CLASSES,
+    );
+    if (controlArea.active) control.classList.add("is-active", `tone-${tone}`);
+    if (controlArea.careActive) control.classList.add("is-care-record");
+    if (controlArea.candidateActive) control.classList.add("is-classification-candidate");
+    if (controlArea.candidateOnly) control.classList.add("is-candidate-only");
+    if (controlArea.signalActive) control.classList.add("is-condition-signal");
+    if (controlArea.signalOnly) control.classList.add("is-signal-only");
+    if (isCurrent) control.classList.add("is-current", `tone-${tone}`);
+    control.setAttribute("aria-pressed", String(isCurrent));
+    control.setAttribute(
+      "aria-label",
+      `${controlArea.department}: ${bodyAreaStatus(controlArea)}${isCurrent ? ". 현재 선택됨" : ". 상세 보기"}`,
+    );
+    control.title = `${controlArea.department} · ${bodyAreaStatus(controlArea)}`;
+    const status = control.querySelector(".body-caption__status");
+    if (status) status.textContent = bodyAreaStatus(controlArea);
+  }
+}
+
+function selectClinicalBodyArea(areaId, focus = false) {
+  const { atlas } = renderedBodyContext;
+  const area = atlas?.areas.find(({ id }) => id === areaId);
+  if (!area) return;
+  bodySelectionAreaId = area.id;
+  syncClinicalBodyControls(area);
+  renderClinicalBodyDetail(area);
+  if (focus) {
+    refs.bodyAreaControls.find((control) => control.dataset.bodyArea === area.id)?.focus();
+  }
+}
+
+function preferredClinicalBodyArea(atlas) {
+  return atlas.areas.find((area) => area.visits.some(({ lifecycle }) => lifecycle === "draft"))
+    || atlas.areas.find((area) => area.visits.length)
+    || atlas.areas.find(({ active }) => active)
+    || atlas.areas[0];
+}
+
+function renderClinicalBody(patient) {
+  const atlas = createClinicalBodyAtlas(patient);
+  const patientChanged = renderedBodyContext.patient?.id !== patient.id;
+  renderedBodyContext = { atlas, patient };
+  refs.bodyAreaCount.textContent = `${atlas.totals.careAreas}개`;
+  refs.bodyVisitCount.textContent = `${atlas.totals.visits}건`;
+  refs.bodyMedicationCount.textContent = `${atlas.totals.medications}건`;
+  refs.bodySignalAreaCount.textContent = `${atlas.totals.signalAreas}개`;
+  refs.bodyUnassignedMedicationCount.textContent = `${atlas.totals.unassignedMedications}건`;
+  const unassignedNotice = [
+    atlas.totals.unassignedVisits
+      ? `진료과를 확인할 수 없는 진료 ${atlas.totals.unassignedVisits}건`
+      : "",
+    atlas.totals.unassignedMedications
+      ? `진료과를 확인할 수 없는 약물 ${atlas.totals.unassignedMedications}건`
+      : "",
+  ].filter(Boolean);
+  const candidateNotice = atlas.totals.classifiedVisits
+    ? ` 진료명 기반 분류 후보 ${atlas.totals.classifiedVisits}건과 연결 처방 ${atlas.totals.classifiedMedications}건은 ${atlas.totals.candidateAreas}개 영역에 이중 윤곽으로 표시하고 확인된 진료과 이력에서 제외했습니다.`
+    : "";
+  refs.bodyProjectionNotice.textContent = atlas.totals.careAreas
+    ? `진료과 필드로 확인된 진료 ${atlas.totals.declaredVisits}건을 ${atlas.totals.careAreas}개 영역에 표시하고, 진료 ID로 연결된 처방 ${atlas.totals.declaredMedications}건을 함께 보여 줍니다.${candidateNotice} 질환 기반 탐색 영역 ${atlas.totals.signalAreas}개는 진료 이력과 분리했습니다.${unassignedNotice.length ? ` ${unassignedNotice.join("과 ")}은 별도로 남겼습니다.` : ""}`
+    : `진료과 필드로 확인된 진료는 없습니다.${candidateNotice} 질환 기반 탐색 영역 ${atlas.totals.signalAreas}개는 진료 이력이 아닌 별도 신호로 표시합니다.${unassignedNotice.length ? ` ${unassignedNotice.join("과 ")}은 임의로 배정하지 않았습니다.` : ""}`;
+  const selected = patientChanged
+    ? preferredClinicalBodyArea(atlas)
+    : atlas.areas.find(({ id }) => id === bodySelectionAreaId) || preferredClinicalBodyArea(atlas);
+  selectClinicalBodyArea(selected.id);
 }
 
 function safeExternalUrl(value) {
@@ -1874,17 +1683,30 @@ function renderEncounterContext(patient, encounter, evaluations) {
   }
   if (!recent.length) refs.recentEncounterList.append(element("li", "", "완료·서명된 이전 진료 없음"));
 
-  clear(refs.encounterGraphSummary);
-  const graph = createClinicalGraph(patient);
-  const types = new Map();
-  for (const node of graph.nodes) types.set(node.type, (types.get(node.type) ?? 0) + 1);
-  const summary = element("div", "graph-mini-facts");
+  clear(refs.encounterBodySummary);
+  const atlas = createClinicalBodyAtlas(patient);
+  const summary = element("div", "body-mini-facts");
   summary.append(
-    element("strong", "", `${graph.projection.visibleRecords}/${graph.projection.totalRecords}개 임상 노드 표시`),
-    element("span", "", `${graph.edges.length}개 추론 관계 · 차트 사실 아님${graph.projection.omittedRecords ? ` · 지도 생략 ${graph.projection.omittedRecords}건` : ""}`),
-    element("small", "", [...types].map(([type, count]) => `${EVENT_LABELS[type] ?? type} ${count}`).join(" · ") || "확정 구조화 기록 없음"),
+    element("strong", "", `${atlas.totals.careAreas}/12개 영역에 진료 연결`),
+    element("span", "", `진료과 확인 진료 ${atlas.totals.declaredVisits}건 · 연결 처방 ${atlas.totals.declaredMedications}건`),
+    element(
+      "small",
+      "",
+      [
+        atlas.totals.classifiedVisits
+          ? `진료명 분류 후보 ${atlas.totals.classifiedVisits}건 · 후보 진료 처방 ${atlas.totals.classifiedMedications}건`
+          : "",
+        `질환 기반 탐색 영역 ${atlas.totals.signalAreas}개 · 진료 이력과 분리`,
+        atlas.totals.unassignedVisits
+          ? `진료과 미확인 진료 ${atlas.totals.unassignedVisits}건 미배정`
+          : "",
+        atlas.totals.unassignedMedications
+          ? `진료과 미지정 약물 ${atlas.totals.unassignedMedications}건 미배정`
+          : "",
+      ].filter(Boolean).join(" · "),
+    ),
   );
-  refs.encounterGraphSummary.append(summary);
+  refs.encounterBodySummary.append(summary);
 }
 
 function renderEncounter(patient, evaluations) {
@@ -2015,6 +1837,8 @@ function renderTabs() {
 
 function clearPatientWorkspaceUi() {
   viewedEncounterId = "";
+  bodySelectionAreaId = "";
+  renderedBodyContext = { atlas: null, patient: null };
   copilotBusy = false;
   copilotRequestController?.abort();
   copilotRequestController = null;
@@ -2067,12 +1891,13 @@ function clearPatientWorkspaceUi() {
     refs.orderList,
     refs.encounterClaimSummary,
     refs.recentEncounterList,
-    refs.encounterGraphSummary,
+    refs.encounterBodySummary,
     refs.eventFilters,
     refs.eventTimeline,
-    refs.clinicalGraph,
-    refs.graphProjectionNotice,
-    refs.graphEvidenceList,
+    refs.bodyProjectionNotice,
+    refs.bodyVisitList,
+    refs.bodyMedicationList,
+    refs.bodyConditionList,
     refs.claimResultSummary,
     refs.claimBoard,
     refs.ruleVersionList,
@@ -2113,7 +1938,7 @@ function renderWorkspace() {
   renderCopilot(patient, evaluations);
   renderNextWork(evaluations);
   renderTimeline(patient);
-  renderGraph(patient);
+  renderClinicalBody(patient);
   renderClaimBoard(patient);
   renderJourney(patient, briefCache.get(patient.id));
 }
@@ -2224,17 +2049,16 @@ function switchTab(tab, focus = false) {
   if (!document.querySelector("[data-panel='" + tab + "']")) return;
   activeTab = tab;
   renderTabs();
-  if (tab === "graph") centerSelectedGraphNode();
   const activeTabButton = byId("tab-" + tab);
   if (focus) activeTabButton?.focus();
   const tabList = activeTabButton?.closest(".workspace-tabs");
   if (!tabList || !activeTabButton || tabList.scrollWidth <= tabList.clientWidth) return;
-  const visibleStart = tabList.scrollLeft;
-  const visibleEnd = visibleStart + tabList.clientWidth;
   const tabStart = activeTabButton.offsetLeft;
-  const tabEnd = tabStart + activeTabButton.offsetWidth;
-  if (tabStart < visibleStart) tabList.scrollLeft = Math.max(0, tabStart - 12);
-  else if (tabEnd > visibleEnd) tabList.scrollLeft = tabEnd - tabList.clientWidth + 12;
+  const centered = tabStart - ((tabList.clientWidth - activeTabButton.offsetWidth) / 2);
+  tabList.scrollLeft = Math.max(0, Math.min(
+    tabList.scrollWidth - tabList.clientWidth,
+    centered,
+  ));
 }
 
 function downloadJson(value, filename) {
@@ -2745,45 +2569,26 @@ refs.eventFilters.addEventListener("click", (event) => {
   if (patient) renderTimeline(patient);
 });
 
-refs.clinicalGraph.addEventListener("click", (event) => {
-  const node = event.target.closest("[data-graph-node]");
-  if (node) selectGraphNode(node.dataset.graphNode);
-});
+for (const control of refs.bodyAreaControls) {
+  control.addEventListener("click", () => {
+    selectClinicalBodyArea(control.dataset.bodyArea);
+    if (control.classList.contains("body-caption") && window.matchMedia("(max-width: 760px)").matches) {
+      window.requestAnimationFrame(() => {
+        const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+        refs.bodyDetail.scrollIntoView({ behavior, block: "center", inline: "nearest" });
+      });
+    }
+  });
+}
 
-refs.clinicalGraph.addEventListener("keydown", (event) => {
-  const node = event.target.closest("[data-graph-node]");
-  if (!node) return;
-  if (["Enter", " "].includes(event.key)) {
-    event.preventDefault();
-    selectGraphNode(node.dataset.graphNode);
-    return;
-  }
-  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
-  const nodes = [...refs.clinicalGraph.querySelectorAll("[data-graph-node]")];
-  const current = nodes.indexOf(node);
-  const previous = ["ArrowLeft", "ArrowUp"].includes(event.key);
-  const next = event.key === "Home"
-    ? nodes[0]
-    : event.key === "End"
-      ? nodes.at(-1)
-      : nodes[(current + (previous ? -1 : 1) + nodes.length) % nodes.length];
-  event.preventDefault();
-  selectGraphNode(next.dataset.graphNode, true);
-});
-
-refs.graphEvidenceList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-select-graph-node]");
+refs.bodyDetail.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-body-source-event]");
   if (!button) return;
-  selectGraphNode(button.dataset.selectGraphNode, true);
-  refs.clinicalGraph.closest(".clinical-graph-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
-
-refs.graphOpenChart.addEventListener("click", () => {
   const patient = selectedPatient();
-  const eventId = refs.graphOpenChart.dataset.eventId;
+  const eventId = button.dataset.bodySourceEvent;
   const record = patient?.events.find(({ id }) => id === eventId);
   if (!patient || !record) {
-    setStatus("선택한 원문 기록을 찾을 수 없습니다. 관계 지도를 다시 열어 기록을 선택하세요.", "error");
+    setStatus("선택한 차트 기록을 찾을 수 없습니다. 신체 지도를 다시 열어 진료과를 선택하세요.", "error");
     return;
   }
   eventFilter = record.type;
@@ -2791,18 +2596,18 @@ refs.graphOpenChart.addEventListener("click", () => {
   switchTab("chart");
   const target = refs.eventTimeline.querySelector(`[data-event-id="${CSS.escape(record.id)}"]`);
   if (!target) {
-    setStatus(`‘${record.label}’ 원문 기록을 현재 필터에서 찾을 수 없습니다.`, "error");
+    setStatus(`‘${record.label}’ 차트 기록을 현재 필터에서 찾을 수 없습니다.`, "error");
     return;
   }
   target.classList.add("is-source-target");
   target.setAttribute("aria-current", "true");
-  target.querySelector(".event-row__body header")?.prepend(element("span", "event-source-target-label", "관계 지도에서 선택한 원문"));
+  target.querySelector(".event-row__body header")?.prepend(element("span", "event-source-target-label", "신체 지도에서 선택한 기록"));
   window.requestAnimationFrame(() => {
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     target.scrollIntoView({ behavior, block: "center", inline: "nearest" });
     target.focus({ preventScroll: true });
   });
-  setStatus(`‘${record.label}’의 정확한 과거 기록으로 이동했습니다. 날짜·코드·출처를 원문과 대조하세요.`, "success");
+  setStatus(`‘${record.label}’ 차트 기록으로 이동했습니다. 날짜·코드·출처 식별자를 확인하세요.`, "success");
 });
 
 refs.eventTimeline.addEventListener("click", async (event) => {

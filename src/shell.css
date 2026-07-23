@@ -76,10 +76,9 @@ body.insights-page {
   .map-page .signal-fieldset { margin-top: var(--space-3); }
   .map-page .signal-fieldset legend { margin-bottom: var(--space-1); }
   .map-page .chip-grid {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: var(--space-1);
-    scrollbar-width: thin;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-bottom: 0;
   }
   .map-page .signal-chip { flex: none; }
 

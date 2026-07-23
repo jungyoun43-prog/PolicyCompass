@@ -5,9 +5,10 @@ import {
   addClaimRule,
   addPatient,
   appendPatientEvent,
+  CLINICAL_BODY_AREAS,
   clinicalContextFingerprint,
   confirmPatientEvent,
-  createClinicalGraph,
+  createClinicalBodyAtlas,
   createCopilotRequest,
   createDemoEmrState,
   createEmptyEmrState,
@@ -198,7 +199,7 @@ test("손상되거나 중복된 EMR 입력은 안전하게 정규화한다", () 
   assert.equal(normalized.rules.length, 1);
 });
 
-test("샘플 EMR은 임상기록·VitaGraph·급여 보드를 확인할 충분한 자료를 제공한다", () => {
+test("샘플 EMR은 임상기록·신체 지도·급여 보드를 확인할 충분한 자료를 제공한다", () => {
   const demo = createDemoEmrState("2026-07-19T10:00:00.000Z");
 
   assert.equal(demo.demo, true);
@@ -255,86 +256,247 @@ test("EMR 백업은 스키마·버전을 검증하며 왕복한다", () => {
   }), /손상|유효하지|이름/);
 });
 
-test("근거가 없는 임상 이벤트에 질환 연결을 지어내지 않는다", () => {
-  const patient = createPatient({
-    id: "p",
-    name: "환자",
+test("임상 신체 지도는 개인 지도와 같은 12개 영역 계약을 쓰고 확정 active 진단 분류를 근거로 공개한다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-contract",
+    name: "신체 지도 환자",
     events: [
-      { id: "dx", type: "condition", code: "I10", label: "고혈압", date: "2026-01-01" },
-      { id: "allergy", type: "allergy", code: "PEN", label: "페니실린 알레르기", date: "2026-01-02" },
-      { id: "knee", type: "symptom", code: "KNEE", label: "무릎 통증", date: "2026-01-03" },
+      { id: "confirmed-hypertension", type: "condition", code: "I10", label: "고혈압", date: "2026-01-01", status: "active", certainty: "confirmed" },
+      { id: "provisional-diabetes", type: "condition", code: "E11", label: "당뇨병 의증", date: "2026-01-02", status: "active", certainty: "provisional", verificationStatus: "provisional" },
+      { id: "draft-migraine", type: "condition", code: "G43", label: "편두통", date: "2026-01-03", recordStatus: "draft", status: "active", certainty: "confirmed" },
     ],
   });
-  const graph = createClinicalGraph(patient);
 
-  assert.equal(graph.edges.length, 0);
+  assert.deepEqual(
+    atlas.areas.map(({ id }) => id),
+    ["neuro", "mental", "sensory", "cardio", "respiratory", "digestive", "endocrine", "renal", "pelvic", "musculoskeletal", "rheumatology", "dermatology"],
+  );
+  assert.equal(atlas.areas.length, CLINICAL_BODY_AREAS.length);
+  assert.deepEqual(atlas.activeAreaIds, ["cardio", "renal"]);
+  assert.deepEqual(atlas.careAreaIds, []);
+  assert.deepEqual(atlas.candidateAreaIds, []);
+  assert.deepEqual(atlas.signalAreaIds, ["cardio", "renal"]);
+  assert.equal(atlas.totals.signalOnlyAreas, 2);
+  assert.deepEqual(atlas.areas.find(({ id }) => id === "cardio").conditions.map(({ id }) => id), ["confirmed-hypertension"]);
+  assert.equal(atlas.areas.find(({ id }) => id === "cardio").evidence[0].kind, "classified");
+  assert.equal(atlas.areas.find(({ id }) => id === "endocrine").conditions.length, 0);
+  assert.equal(atlas.areas.find(({ id }) => id === "neuro").conditions.length, 0);
 });
 
-test("키워드로 만든 그래프 연결은 차트 사실이 아닌 추론과 근거로 표시한다", () => {
-  const patient = createPatient({
-    id: "p",
-    name: "환자",
+test("신체 지도는 명시된 단일 진료과의 Encounter와 직접 연결된 처방만 자동 귀속한다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-assignment",
+    name: "진료과 귀속 환자",
     events: [
-      { id: "dx", type: "condition", code: "I10", label: "고혈압", date: "2026-01-01" },
-      { id: "med", type: "medication", code: "UNKNOWN", label: "고혈압 관련 여부 미상 약물", date: "2026-01-02" },
+      { id: "endocrine-final", type: "encounter", code: "AMB", label: "대사 추적 외래", date: "2026-07-01", department: "내분비내과", status: "finished" },
+      { id: "unmapped-final", type: "encounter", code: "AMB", label: "일반 외래", date: "2026-07-03", department: "통합진료과", status: "finished" },
+      { id: "final-linked-med", type: "medication", code: "MED-A", label: "확정 연결 약", date: "2026-07-01", encounterId: "endocrine-final", status: "active" },
+      { id: "keyword-only-med", type: "medication", code: "MED-C", label: "내분비내과 고혈압 약", date: "2026-07-03", status: "active" },
+      { id: "unmapped-med", type: "medication", code: "MED-D", label: "진료과 미분류 약", date: "2026-07-03", encounterId: "unmapped-final", status: "active" },
     ],
   });
-  const graph = createClinicalGraph(patient);
 
-  assert.equal(graph.edges.length, 1);
-  assert.equal(graph.edges[0].kind, "inferred");
-  assert.match(graph.edges[0].basis, /키워드 기반/);
+  const endocrine = atlas.areas.find(({ id }) => id === "endocrine");
+  assert.deepEqual(atlas.careAreaIds, ["endocrine"]);
+  assert.deepEqual(atlas.candidateAreaIds, []);
+  assert.equal(endocrine.visits[0].association.kind, "declared");
+  assert.equal(endocrine.visits[0].association.sourceField, "department");
+  assert.equal(endocrine.visits[0].lifecycle, "final");
+  assert.equal(endocrine.medications[0].id, "final-linked-med");
+  assert.equal(endocrine.medications[0].lifecycleLabel, "확정 처방");
+  assert.equal(endocrine.medications[0].association.sourceField, "encounterId");
+  assert.equal(endocrine.medications[0].association.encounterAreaKind, "declared");
+  assert.equal(endocrine.declaredVisitCount, 1);
+  assert.equal(endocrine.classifiedVisitCount, 0);
+  assert.equal(endocrine.declaredMedicationCount, 1);
+  assert.equal(endocrine.classifiedMedicationCount, 0);
+  assert.equal(atlas.totals.declaredVisits, 1);
+  assert.equal(atlas.totals.classifiedVisits, 0);
+  assert.equal(atlas.totals.declaredMedications, 1);
+  assert.equal(atlas.totals.classifiedMedications, 0);
+  assert.deepEqual(atlas.unassigned.visits.map(({ id }) => id), ["unmapped-final"]);
+  assert.equal(atlas.unassigned.visits[0].unassignedReason, "department-unmapped");
+  assert.deepEqual(
+    atlas.unassigned.medications.map(({ id }) => id).sort(),
+    ["keyword-only-med", "unmapped-med"],
+  );
+  assert.equal(atlas.unassigned.medications.find(({ id }) => id === "keyword-only-med").unassignedReason, "encounter-not-linked");
+  assert.equal(atlas.unassigned.medications.find(({ id }) => id === "unmapped-med").unassignedReason, "department-unmapped");
 });
 
-test("24건을 넘는 임상 그래프는 중심 문제를 보존하고 전체·표시·생략 범위를 공개한다", () => {
-  const patient = createPatient({
-    id: "graph-limit",
-    name: "그래프 제한 환자",
+test("신체 지도는 import와 FHIR 출처의 진료·처방·질환을 모든 집계에서 제외한다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-source-boundary",
+    name: "출처 경계 환자",
     events: [
-      ...Array.from({ length: 28 }, (_, index) => ({
-        id: `symptom-${index + 1}`,
-        type: "symptom",
-        code: `SYM-${index + 1}`,
-        label: `비연결 증상 ${index + 1}`,
-        date: `2026-07-${String(index + 1).padStart(2, "0")}`,
-      })),
-      { id: "old-condition", type: "condition", code: "Z99", label: "오래된 중심 문제", date: "2020-01-02" },
+      { id: "trusted-encounter", type: "encounter", code: "AMB", label: "순환기 추적", date: "2026-07-05", department: "순환기내과", status: "finished" },
+      { id: "trusted-med", type: "medication", code: "MED-T", label: "검토된 처방", date: "2026-07-05", encounterId: "trusted-encounter", status: "active" },
+      { id: "trusted-condition", type: "condition", code: "G43", label: "편두통", date: "2026-07-05", status: "active", certainty: "confirmed" },
+      { id: "import-encounter", type: "encounter", code: "AMB", label: "신경과 외래", date: "2026-07-04", department: "신경과", status: "finished", source: { kind: "import", label: "백업 복원 · 출처 미검증" } },
+      { id: "import-med", type: "medication", code: "MED-I", label: "미검증 처방", date: "2026-07-04", encounterId: "import-encounter", status: "active", source: { kind: "import", label: "백업 복원 · 출처 미검증" } },
+      { id: "import-condition", type: "condition", code: "E11", label: "미검증 당뇨병", date: "2026-07-04", status: "active", certainty: "confirmed", source: { kind: "import", label: "백업 복원 · 출처 미검증" } },
+      { id: "fhir-encounter", type: "encounter", code: "AMB", label: "신장내과 외래", date: "2026-07-03", department: "신장내과", status: "finished", source: { kind: "fhir", label: "FHIR R4 · Encounter", resourceId: "Encounter/e1" } },
+      { id: "fhir-med", type: "medication", code: "MED-F", label: "외부 FHIR 처방", date: "2026-07-03", encounterId: "fhir-encounter", status: "active", intent: "order", source: { kind: "fhir", label: "FHIR R4 · MedicationRequest", resourceId: "MedicationRequest/m1" } },
+      { id: "fhir-condition", type: "condition", code: "I10", label: "외부 FHIR 고혈압", date: "2026-07-03", status: "active", clinicalStatus: "active", verificationStatus: "confirmed", certainty: "confirmed", source: { kind: "fhir", label: "FHIR R4 · Condition", resourceId: "Condition/c1" } },
     ],
   });
 
-  assert.ok(patient.events.findIndex(({ id }) => id === "old-condition") >= 24);
-  const graph = createClinicalGraph(patient);
+  const projectedIds = [
+    ...atlas.areas.flatMap(({ visits, medications, conditions }) => [...visits, ...medications, ...conditions]),
+    ...atlas.unassigned.visits,
+    ...atlas.unassigned.medications,
+  ].map(({ id }) => id);
+  assert.deepEqual(projectedIds.sort(), ["trusted-condition", "trusted-encounter", "trusted-med"]);
+  assert.deepEqual(atlas.careAreaIds, ["cardio"]);
+  assert.deepEqual(atlas.signalAreaIds, ["neuro"]);
+  assert.equal(atlas.totals.visits, 1);
+  assert.equal(atlas.totals.medications, 1);
+  assert.equal(atlas.totals.conditions, 1);
+  assert.equal(atlas.totals.unassignedVisits, 0);
+  assert.equal(atlas.totals.unassignedMedications, 0);
+});
 
-  assert.equal(graph.nodes.length, 24);
-  assert.ok(graph.nodes.some(({ id }) => id === "old-condition"));
-  assert.equal(graph.edges.length, 0);
-  assert.deepEqual(graph.projection, {
-    limit: 24,
-    totalRecords: 29,
-    visibleRecords: 24,
-    omittedRecords: 5,
-    totalConditions: 1,
-    visibleConditions: 1,
-    omittedConditions: 0,
-    dateRange: { from: "2020-01-02", to: "2026-07-28" },
-    visibleDateRange: { from: "2020-01-02", to: "2026-07-28" },
+test("서명 대기인 draft+finished 진료와 같은 lifecycle의 처방 초안은 진료과에서 유지한다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-signature-pending",
+    name: "서명 대기 환자",
+    events: [
+      { id: "pending-encounter", type: "encounter", code: "AMB", label: "순환기 추적", date: "2026-07-04", department: "순환기내과", recordStatus: "draft", status: "finished", signature: { status: "unsigned" }, source: { kind: "encounter", label: "진료 입력" } },
+      { id: "pending-med", type: "medication", code: "MED-P", label: "서명 대기 처방", date: "2026-07-04", encounterId: "pending-encounter", recordStatus: "draft", status: "active", intent: "order", source: { kind: "encounter", label: "진료 입력", resourceId: "pending-encounter" } },
+    ],
   });
 
-  const conditionOverflow = createClinicalGraph(createPatient({
-    id: "condition-overflow",
-    name: "중심 문제 제한 환자",
-    events: Array.from({ length: 26 }, (_, index) => ({
-      id: `condition-${index + 1}`,
-      type: "condition",
-      code: `Z${String(index + 1).padStart(2, "0")}`,
-      label: `중심 문제 ${index + 1}`,
-      date: `2025-01-${String(index + 1).padStart(2, "0")}`,
-    })),
-  }));
-  assert.equal(conditionOverflow.projection.totalConditions, 26);
-  assert.equal(conditionOverflow.projection.visibleConditions, 24);
-  assert.equal(conditionOverflow.projection.omittedConditions, 2);
-  assert.equal(conditionOverflow.projection.omittedRecords, 2);
+  const cardio = atlas.areas.find(({ id }) => id === "cardio");
+  assert.deepEqual(cardio.visits.map(({ id }) => id), ["pending-encounter"]);
+  assert.equal(cardio.visits[0].lifecycle, "draft");
+  assert.equal(cardio.visits[0].lifecycleLabel, "서명 대기");
+  assert.deepEqual(cardio.medications.map(({ id }) => id), ["pending-med"]);
+  assert.equal(cardio.medications[0].lifecycleLabel, "처방 초안");
+  assert.deepEqual(atlas.careAreaIds, ["cardio"]);
+  assert.equal(atlas.totals.unassignedVisits, 0);
+  assert.equal(atlas.totals.unassignedMedications, 0);
+});
+
+test("진료명 기반 단일 후보는 지도에 분리 노출하고 복수 후보는 자동 귀속하지 않는다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-assignment-candidates",
+    name: "진료과 후보 환자",
+    events: [
+      { id: "label-candidate", type: "encounter", code: "AMB", label: "신경과 외래", date: "2026-07-04", recordStatus: "draft", status: "in-progress" },
+      { id: "label-candidate-med", type: "medication", code: "MED-L", label: "진료명 후보 처방", date: "2026-07-04", encounterId: "label-candidate", recordStatus: "draft", status: "active", intent: "order" },
+      { id: "ambiguous-department", type: "encounter", code: "AMB", label: "복합 외래", date: "2026-07-03", department: "내분비내과·신장내과", status: "finished" },
+      { id: "ambiguous-department-med", type: "medication", code: "MED-D", label: "복수 과 처방", date: "2026-07-03", encounterId: "ambiguous-department", status: "active" },
+      { id: "ambiguous-label", type: "encounter", code: "AMB", label: "신경과·내분비내과 협진", date: "2026-07-02", status: "finished" },
+      { id: "ambiguous-label-med", type: "medication", code: "MED-A", label: "협진 처방", date: "2026-07-02", encounterId: "ambiguous-label", status: "active" },
+    ],
+  });
+
+  assert.deepEqual(atlas.careAreaIds, []);
+  assert.deepEqual(atlas.candidateAreaIds, ["neuro"]);
+  const neuro = atlas.areas.find(({ id }) => id === "neuro");
+  assert.deepEqual(neuro.visits.map(({ id }) => id), ["label-candidate"]);
+  assert.equal(neuro.visits[0].association.kind, "classified");
+  assert.deepEqual(neuro.visits[0].association.candidateAreaIds, ["neuro"]);
+  assert.deepEqual(neuro.medications.map(({ id }) => id), ["label-candidate-med"]);
+  assert.equal(neuro.medications[0].association.encounterAreaKind, "classified");
+  assert.deepEqual(neuro.medications[0].association.candidateAreaIds, ["neuro"]);
+  assert.deepEqual(
+    [neuro.careActive, neuro.candidateActive, neuro.candidateOnly],
+    [false, true, true],
+  );
+  assert.equal(neuro.declaredVisitCount, 0);
+  assert.equal(neuro.classifiedVisitCount, 1);
+  assert.equal(neuro.declaredMedicationCount, 0);
+  assert.equal(neuro.classifiedMedicationCount, 1);
+  assert.deepEqual(
+    atlas.unassigned.visits.map(({ id, unassignedReason }) => [id, unassignedReason]),
+    [
+      ["ambiguous-department", "department-ambiguous"],
+      ["ambiguous-label", "department-ambiguous"],
+    ],
+  );
+  assert.deepEqual(atlas.unassigned.visits[0].association.candidateAreaIds, ["endocrine", "renal"]);
+  assert.deepEqual(atlas.unassigned.visits[1].association.candidateAreaIds, ["neuro", "endocrine"]);
+  assert.deepEqual(
+    atlas.unassigned.medications.map(({ id, unassignedReason }) => [id, unassignedReason]),
+    [
+      ["ambiguous-department-med", "department-ambiguous"],
+      ["ambiguous-label-med", "department-ambiguous"],
+    ],
+  );
+  assert.equal(atlas.totals.careAreas, 0);
+  assert.equal(atlas.totals.candidateAreas, 1);
+  assert.equal(atlas.totals.candidateOnlyAreas, 1);
+  assert.equal(atlas.totals.declaredVisits, 0);
+  assert.equal(atlas.totals.classifiedVisits, 1);
+  assert.equal(atlas.totals.declaredMedications, 0);
+  assert.equal(atlas.totals.classifiedMedications, 1);
+});
+
+test("care·진료명 후보·질환 signal 영역은 겹침과 각 only 상태를 분리한다", () => {
+  const atlas = createClinicalBodyAtlas({
+    id: "body-care-signal-boundary",
+    name: "진료와 신호 분리 환자",
+    events: [
+      { id: "cardio-visit", type: "encounter", code: "AMB", label: "혈압 외래", date: "2026-07-04", department: "순환기내과", status: "finished" },
+      { id: "endocrine-visit", type: "encounter", code: "AMB", label: "대사 외래", date: "2026-07-03", department: "내분비내과", status: "finished" },
+      { id: "neuro-candidate", type: "encounter", code: "AMB", label: "신경과 외래", date: "2026-07-03", status: "finished" },
+      { id: "hypertension", type: "condition", code: "I10", label: "고혈압", date: "2026-07-02", status: "active", certainty: "confirmed" },
+    ],
+  });
+
+  const cardio = atlas.areas.find(({ id }) => id === "cardio");
+  const endocrine = atlas.areas.find(({ id }) => id === "endocrine");
+  const neuro = atlas.areas.find(({ id }) => id === "neuro");
+  const renal = atlas.areas.find(({ id }) => id === "renal");
+  assert.deepEqual(atlas.careAreaIds, ["cardio", "endocrine"]);
+  assert.deepEqual(atlas.candidateAreaIds, ["neuro"]);
+  assert.deepEqual(atlas.signalAreaIds, ["cardio", "renal"]);
+  assert.deepEqual(atlas.activeAreaIds, ["neuro", "cardio", "endocrine", "renal"]);
+  assert.deepEqual(
+    [cardio.careActive, cardio.signalActive, cardio.signalOnly],
+    [true, true, false],
+  );
+  assert.deepEqual(
+    [endocrine.careActive, endocrine.signalActive, endocrine.signalOnly],
+    [true, false, false],
+  );
+  assert.deepEqual(
+    [neuro.careActive, neuro.candidateActive, neuro.candidateOnly, neuro.signalActive],
+    [false, true, true, false],
+  );
+  assert.deepEqual(
+    [renal.careActive, renal.signalActive, renal.signalOnly],
+    [false, true, true],
+  );
+  assert.equal(atlas.totals.activeAreas, 4);
+  assert.equal(atlas.totals.careAreas, 2);
+  assert.equal(atlas.totals.candidateAreas, 1);
+  assert.equal(atlas.totals.candidateOnlyAreas, 1);
+  assert.equal(atlas.totals.signalAreas, 2);
+  assert.equal(atlas.totals.signalOnlyAreas, 1);
+});
+
+test("샘플 환자는 명시 진료와 진료명 후보를 같은 영역에서 구분해 보인다", () => {
+  const patient = createDemoEmrState("2026-07-19T10:00:00.000Z").patients[0];
+  const atlas = createClinicalBodyAtlas(patient);
+  const endocrine = atlas.areas.find(({ id }) => id === "endocrine");
+
+  assert.deepEqual(
+    endocrine.visits.map(({ id }) => id).sort(),
+    ["kim-encounter", "kim-visit-today"],
+  );
+  assert.equal(endocrine.visits.find(({ id }) => id === "kim-visit-today").lifecycleLabel, "진료 중");
+  assert.equal(endocrine.visits.find(({ id }) => id === "kim-encounter").association.kind, "classified");
+  assert.deepEqual(endocrine.medications.map(({ id }) => id), ["kim-visit-med"]);
+  assert.equal(endocrine.medications[0].lifecycleLabel, "처방 초안");
+  assert.deepEqual(atlas.careAreaIds, ["endocrine"]);
+  assert.deepEqual(atlas.candidateAreaIds, ["endocrine"]);
+  assert.equal(endocrine.declaredVisitCount, 1);
+  assert.equal(endocrine.classifiedVisitCount, 1);
+  assert.deepEqual(atlas.unassigned.visits, []);
+  assert.deepEqual(atlas.unassigned.medications.map(({ id }) => id), ["kim-med"]);
+  assert.equal(atlas.totals.unassignedMedications, 1);
 });
 
 test("저장소의 demo 플래그는 실제 로컬 기록을 비영속 데모로 바꾸지 않는다", async () => {

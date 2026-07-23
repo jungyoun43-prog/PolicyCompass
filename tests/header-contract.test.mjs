@@ -71,7 +71,7 @@ test("EMR 환자 화면은 한 개의 탭 목록과 일관된 명칭을 사용�
   assert.equal(tablists.length, 1);
   const tablist = tablists[0][0];
   assert.equal((tablist.match(/role="tab"/g) ?? []).length, 7);
-  for (const label of ["오늘 진료", "환자 요약", "과거 기록", "VitaGraph", "급여 보드", "Journey", "감사·데이터"]) {
+  for (const label of ["오늘 진료", "환자 요약", "과거 기록", "신체 지도", "급여 보드", "Journey", "감사·데이터"]) {
     assert.match(tablist, new RegExp(`>${label}<\\/button>`));
   }
   assert.doesNotMatch(tablist, />차트<\/button>|>급여 칸반<\/button>/);

@@ -49,6 +49,7 @@ const sourceAssets = [
   { route: "/insights.js", file: "src/insights.js", type: "text/javascript; charset=utf-8" },
   { route: "/insight-model.js", file: "src/insight-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/patient-transfer.js", file: "src/patient-transfer.js", type: "text/javascript; charset=utf-8" },
+  { route: "/landing.js", file: "src/landing.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr.js", file: "src/emr.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-model.js", file: "src/emr-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-encounter.js", file: "src/emr-encounter.js", type: "text/javascript; charset=utf-8" },

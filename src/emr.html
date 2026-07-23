@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="VitaGraph 관계 지도와 급여 적합성 칸반을 결합한 로컬 임상 EMR 워크스페이스" />
+    <meta name="description" content="신체·진료과 기록 지도와 급여 적합성 칸반을 결합한 로컬 임상 EMR 워크스페이스" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Clinical | 로컬 AI 보조 EMR</title>
@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/shell.css" />
+    <link rel="stylesheet" href="/body-map.css" />
+    <link rel="stylesheet" href="/body-index.css" />
     <link rel="stylesheet" href="/emr.css" />
     <link rel="stylesheet" href="/controls.css" />
     <script type="module" src="/emr.js"></script>
@@ -179,7 +181,7 @@
             <span class="workspace-empty__mark" aria-hidden="true"></span>
             <p class="rail-eyebrow">NO PATIENT SELECTED</p>
             <h2>환자 한 명을 선택하면 임상 흐름이 열립니다.</h2>
-            <p>차트, VitaGraph, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
+            <p>차트, 신체·진료과 지도, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
           </div>
 
           <div id="workspaceContent" hidden>
@@ -203,7 +205,7 @@
                 <button id="tab-encounter" type="button" role="tab" aria-selected="true" aria-controls="panel-encounter" data-tab="encounter" tabindex="0">오늘 진료</button>
                 <button id="tab-overview" type="button" role="tab" aria-selected="false" aria-controls="panel-overview" data-tab="overview" tabindex="-1">환자 요약</button>
                 <button id="tab-chart" type="button" role="tab" aria-selected="false" aria-controls="panel-chart" data-tab="chart" tabindex="-1">과거 기록</button>
-                <button id="tab-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph" data-tab="graph" tabindex="-1">VitaGraph</button>
+                <button id="tab-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph" data-tab="graph" tabindex="-1">신체 지도</button>
                 <button id="tab-claims" type="button" role="tab" aria-selected="false" aria-controls="panel-claims" data-tab="claims" tabindex="-1">급여 보드</button>
                 <button id="tab-journey" type="button" role="tab" aria-selected="false" aria-controls="panel-journey" data-tab="journey" tabindex="-1">Journey</button>
                 <button id="tab-data" type="button" role="tab" aria-selected="false" aria-controls="panel-data" data-tab="data" tabindex="-1">감사·데이터</button>
@@ -390,12 +392,12 @@
                     <button class="text-action" type="button" data-open-tab="chart">전체 기록 보기</button>
                   </section>
 
-                  <section class="clinical-card context-card context-card--graph" aria-labelledby="encounterGraphTitle">
+                  <section class="clinical-card context-card context-card--body" aria-labelledby="encounterBodyTitle">
                     <div class="card-heading">
-                      <div><p class="rail-eyebrow">VITAGRAPH SIGNALS</p><h3 id="encounterGraphTitle">임상 관계 요약</h3></div>
+                      <div><p class="rail-eyebrow">CARE BY DEPARTMENT</p><h3 id="encounterBodyTitle">진료과 기록 요약</h3></div>
                     </div>
-                    <div class="context-summary" id="encounterGraphSummary" aria-live="polite"></div>
-                    <button class="text-action" type="button" data-open-tab="graph">관계 지도 열기</button>
+                    <div class="context-summary" id="encounterBodySummary" aria-live="polite"></div>
+                    <button class="text-action" type="button" data-open-tab="graph">신체·진료과 지도 열기</button>
                   </section>
                 </aside>
               </div>
@@ -475,41 +477,102 @@
             </section>
 
             <section class="workspace-panel" id="panel-graph" role="tabpanel" aria-labelledby="tab-graph" data-panel="graph" hidden>
-              <section class="clinical-card graph-workspace" aria-labelledby="clinicalGraphTitle">
+              <section class="clinical-card clinical-body-workspace" aria-labelledby="clinicalBodyTitle">
                 <div class="card-heading">
-                  <div><p class="rail-eyebrow">VITAGRAPH CLINICAL VIEW</p><h3 id="clinicalGraphTitle">임상기록 관계 지도</h3></div>
+                  <div><p class="rail-eyebrow">CARE BY DEPARTMENT</p><h3 id="clinicalBodyTitle">신체·진료과 기록 지도</h3></div>
+                  <span class="source-badge">확인·후보 분리</span>
                 </div>
-                <p class="graph-guidance">확정된 임상기록을 중심 문제별로 모아 봅니다. 기록 사이의 점선은 코드·표시명으로 자동 분류한 탐색 보조이며, 의학적 인과나 차트에 명시된 관계가 아닙니다.</p>
-                <div class="clinical-graph-overview" aria-label="관계 지도 요약">
-                  <div><span>중심 문제 표시 / 전체</span><strong id="graphProblemCount">0 / 0개</strong></div>
-                  <div><span>지도 표시 / 전체 기록</span><strong id="graphRecordCount">0 / 0건</strong></div>
-                  <div><span>추론 연결</span><strong id="graphRelationCount">0개</strong></div>
-                  <div class="clinical-graph-overview__range"><span>전체 기록 범위</span><strong id="graphDateRange">—</strong></div>
+                <p class="clinical-body-guidance">전신의 진료과 표식을 선택하면 진료과 필드로 확인된 진료와 해당 처방을 봅니다. 진료명 기반 분류 후보와 질환 기반 탐색 신호는 별도 윤곽으로 구분하며, 확인된 진료 이력이나 의뢰 판단으로 보지 않습니다.</p>
+
+                <div class="clinical-body-overview" aria-label="신체·진료과 지도 요약">
+                  <div><span>진료 연결 영역</span><strong id="bodyAreaCount">0개</strong></div>
+                  <div><span>지도 표시 진료</span><strong id="bodyVisitCount">0건</strong></div>
+                  <div><span>지도 표시 처방</span><strong id="bodyMedicationCount">0건</strong></div>
+                  <div><span>질환 기반 탐색 영역</span><strong id="bodySignalAreaCount">0개</strong></div>
+                  <div><span>진료과 미지정 약물</span><strong id="bodyUnassignedMedicationCount">0건</strong></div>
                 </div>
-                <p class="graph-projection-notice" id="graphProjectionNotice" role="status" aria-live="polite"></p>
-                <div class="clinical-graph-reading" aria-label="관계 지도 읽는 법">
-                  <div class="graph-legend" aria-label="기록과 관계 범례"></div>
-                  <p id="graphInteractionHelp"><b>읽는 법</b> 가운데 문제를 기준으로 자동 분류된 기록만 점선으로 잇습니다. 연결되지 않은 기록도 차트 사실이며 아래 별도 영역에 남습니다. 노드를 선택하면 원본·코드·날짜를 확인할 수 있습니다.</p>
-                </div>
-                <div class="clinical-graph-layout">
-                  <div class="clinical-graph-canvas">
-                    <div class="clinical-graph-stage" data-graph-discovery="clinical">
-                      <svg id="clinicalGraph" viewBox="0 0 900 520" role="group" aria-label="임상기록 관계 지도" aria-describedby="clinicalGraphDesc graphInteractionHelp graphProjectionNotice" data-selection-state="ready"></svg>
-                      <p class="visually-hidden" id="clinicalGraphDesc">질환을 중심으로 배치한 확정 임상기록입니다. 점선은 코드와 표시명 기반의 추론 연결이며 의학적 인과관계가 아닙니다.</p>
+
+                <p class="clinical-body-boundary" id="bodyProjectionNotice" role="status" aria-live="polite">진료과 기록을 불러오는 중입니다.</p>
+
+                <div class="clinical-body-layout">
+                  <div class="clinical-body-map">
+                    <div class="body-stage clinical-body-stage" aria-describedby="bodyMapInstructions bodyProjectionNotice">
+                      <p class="visually-hidden" id="bodyMapInstructions">전신 위 표식이나 아래 진료과 목록을 선택하면 해당 진료와 처방 상세가 표시됩니다.</p>
+                      <div class="human-figure" aria-label="진료과별 신체 기록 지도">
+                        <img
+                          class="human-figure__image"
+                          src="/assets/body-atlas-v4.webp"
+                          width="1024"
+                          height="1536"
+                          alt=""
+                          aria-hidden="true"
+                          decoding="async"
+                        />
+                        <button class="body-hotspot hotspot-neuro" data-body-area="neuro" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">신경과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-mental" data-body-area="mental" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">정신건강의학과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-sensory" data-body-area="sensory" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">안과와 이비인후과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-cardio" data-body-area="cardio" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">순환기내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-respiratory" data-body-area="respiratory" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">호흡기내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-digestive" data-body-area="digestive" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">소화기내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-endocrine" data-body-area="endocrine" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">내분비내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-renal" data-body-area="renal" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">신장내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-pelvic" data-body-area="pelvic" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">산부인과와 비뇨의학과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-musculoskeletal" data-body-area="musculoskeletal" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">정형외과와 재활의학과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-rheumatology" data-body-area="rheumatology" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">류마티스내과 기록 보기</span></button>
+                        <button class="body-hotspot hotspot-dermatology" data-body-area="dermatology" type="button" aria-pressed="false"><span class="body-hotspot__core" aria-hidden="true"></span><span class="visually-hidden">피부과와 알레르기내과 기록 보기</span></button>
+                      </div>
                     </div>
-                    <p class="clinical-graph-pan-hint"><span aria-hidden="true">↔</span> 좁은 화면에서는 지도를 좌우로 움직여 확인하세요.</p>
+
+                    <div class="department-index clinical-department-index" aria-label="진료과별 기록 상태">
+                      <button class="body-caption" data-body-area="neuro" type="button" aria-pressed="false"><span class="body-caption__title">뇌·신경</span><span class="body-caption__department">신경과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="mental" type="button" aria-pressed="false"><span class="body-caption__title">마음·수면</span><span class="body-caption__department">정신건강의학과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="sensory" type="button" aria-pressed="false"><span class="body-caption__title">눈·귀·코</span><span class="body-caption__department">안과·이비인후과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="cardio" type="button" aria-pressed="false"><span class="body-caption__title">심장·혈관</span><span class="body-caption__department">순환기내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="respiratory" type="button" aria-pressed="false"><span class="body-caption__title">폐·호흡</span><span class="body-caption__department">호흡기내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="digestive" type="button" aria-pressed="false"><span class="body-caption__title">위·장·간</span><span class="body-caption__department">소화기내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="endocrine" type="button" aria-pressed="false"><span class="body-caption__title">대사·호르몬</span><span class="body-caption__department">내분비내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="renal" type="button" aria-pressed="false"><span class="body-caption__title">신장·수분</span><span class="body-caption__department">신장내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="pelvic" type="button" aria-pressed="false"><span class="body-caption__title">골반·비뇨</span><span class="body-caption__department">산부인과·비뇨의학과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="musculoskeletal" type="button" aria-pressed="false"><span class="body-caption__title">뼈·관절</span><span class="body-caption__department">정형외과·재활의학과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="rheumatology" type="button" aria-pressed="false"><span class="body-caption__title">면역·관절</span><span class="body-caption__department">류마티스내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                      <button class="body-caption" data-body-area="dermatology" type="button" aria-pressed="false"><span class="body-caption__title">피부·알레르기</span><span class="body-caption__department">피부과·알레르기내과</span><span class="body-caption__status">기록 확인 중</span></button>
+                    </div>
+
+                    <div class="body-key clinical-body-key" aria-label="지도 표기">
+                      <span class="body-key__legend"><i class="body-key__dot body-key__dot--active" aria-hidden="true"></i>진료 기록 연결</span>
+                      <span class="body-key__legend"><i class="body-key__dot clinical-body-key__dot--candidate" aria-hidden="true"></i>진료명 기반 분류 후보</span>
+                      <span class="body-key__legend"><i class="body-key__dot clinical-body-key__dot--signal" aria-hidden="true"></i>질환 기반 탐색 영역 · 진료 이력 아님</span>
+                      <span class="body-key__legend"><i class="body-key__dot" aria-hidden="true"></i>연결 기록 없음</span>
+                      <span class="body-key__legend"><span class="clinical-body-key__selected" aria-hidden="true">✓</span>현재 선택</span>
+                    </div>
                   </div>
-                  <aside class="graph-evidence" aria-labelledby="graphEvidenceTitle">
-                    <section class="graph-selection" aria-live="polite" data-selection-state="empty">
-                      <p class="rail-eyebrow">SELECTED RECORD</p>
-                      <h4 id="graphSelectionTitle">기록을 선택하세요</h4>
-                      <div id="graphSelectionDetail" class="graph-selection__detail"><p>지도에서 기록을 선택하면 유형, 날짜, 코드, 출처와 연결 해석을 확인할 수 있습니다.</p></div>
-                      <button class="clinical-button graph-selection__action" id="graphOpenChart" type="button" disabled>과거 기록에서 원문 확인</button>
+
+                  <aside class="clinical-body-detail" aria-labelledby="bodyDetailTitle" aria-live="polite">
+                    <header class="clinical-body-detail__header">
+                      <div>
+                        <p class="rail-eyebrow">SELECTED DEPARTMENT</p>
+                        <h4 id="bodyDetailTitle">진료과를 선택하세요</h4>
+                        <p id="bodyDetailDepartment">전신 표식이나 진료과 목록을 누르면 기록을 확인할 수 있습니다.</p>
+                      </div>
+                      <span class="source-badge" id="bodyDetailCount">0건</span>
+                    </header>
+
+                    <section class="clinical-body-detail__section" aria-labelledby="bodyVisitTitle">
+                      <div class="clinical-body-detail__heading"><h5 id="bodyVisitTitle">진료·분류 후보</h5><span>진료과 필드 확인 / 진료명 후보</span></div>
+                      <ol id="bodyVisitList" class="clinical-body-record-list"></ol>
                     </section>
-                    <section class="graph-evidence__relations">
-                      <div class="graph-evidence__heading"><div><p class="rail-eyebrow">RELATION EVIDENCE</p><h4 id="graphEvidenceTitle">관계·출처 근거</h4></div><span>점선은 추론</span></div>
-                      <ol id="graphEvidenceList"></ol>
+
+                    <section class="clinical-body-detail__section" aria-labelledby="bodyMedicationTitle">
+                      <div class="clinical-body-detail__heading"><h5 id="bodyMedicationTitle">이 진료의 처방 약물</h5><span>진료 ID로 연결</span></div>
+                      <ol id="bodyMedicationList" class="clinical-body-record-list"></ol>
                     </section>
+
+                    <section class="clinical-body-detail__section" aria-labelledby="bodyConditionTitle">
+                      <div class="clinical-body-detail__heading"><h5 id="bodyConditionTitle">관련 활성 문제</h5><span>탐색용 분류</span></div>
+                      <ol id="bodyConditionList" class="clinical-body-record-list"></ol>
+                    </section>
+
+                    <p class="clinical-body-detail__boundary" id="bodyDetailBoundary">약물은 같은 진료 ID가 있을 때만 해당 과에 표시합니다. 진료과가 모호하거나 연결 정보가 없는 기록은 임의로 배정하지 않습니다.</p>
                   </aside>
                 </div>
               </section>

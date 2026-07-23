@@ -78,7 +78,7 @@
         </figure>
       </section>
 
-      <section class="patient-start-path" aria-labelledby="patientStartTitle" data-first-use="patient">
+      <section class="patient-start-path" aria-labelledby="patientStartTitle" data-first-use="patient" data-reveal>
         <header>
           <p class="eyebrow">FIRST VISIT · 4 STEPS</p>
           <h2 id="patientStartTitle">처음이라면 이 순서만 따라가세요.</h2>
@@ -108,7 +108,7 @@
         </div>
       </section>
 
-      <section class="fact-strip" aria-label="제품 데이터 처리 방식">
+      <section class="fact-strip" aria-label="제품 데이터 처리 방식" data-reveal>
         <article>
           <span>01</span>
           <div><strong>이 브라우저에서 처리</strong><p>입력 원문을 애플리케이션 서버로 보내지 않습니다.</p></div>
@@ -123,7 +123,7 @@
         </article>
       </section>
 
-      <section class="outcome" aria-labelledby="outcomeTitle">
+      <section class="outcome" aria-labelledby="outcomeTitle" data-reveal>
         <header class="section-intro">
           <p class="eyebrow">VISIT PREP</p>
           <h2 id="outcomeTitle">진료실에서 바로 꺼내 볼 순서로 정리합니다.</h2>
@@ -163,7 +163,7 @@
         </article>
       </section>
 
-      <section class="workflow" aria-labelledby="workflowTitle">
+      <section class="workflow" aria-labelledby="workflowTitle" data-reveal>
         <header class="section-intro section-intro--wide">
           <p class="eyebrow">ONE RECORD, ONE CONVERSATION</p>
           <h2 id="workflowTitle">그래프를 만드는 데서 끝내지 않습니다.</h2>
@@ -177,31 +177,17 @@
         </ol>
       </section>
 
-      <section class="data-boundary" id="data-boundary" aria-labelledby="dataTitle">
-        <header>
-          <p class="eyebrow">DATA BOUNDARY</p>
-          <h2 id="dataTitle">건강 기록이 어디에 머무는지 숨기지 않습니다.</h2>
-          <p>
-            받은 파일은 내가 보관하며, 가져온 내용은 현재 브라우저 세션에서 처리됩니다.
-            직접 저장한 Journey만 이 기기의 로컬 저장소에 남습니다.
-          </p>
-        </header>
-        <dl>
-          <div><dt>원문 처리</dt><dd>애플리케이션 서버 전송 없음</dd></div>
-          <div><dt>지속 저장</dt><dd>저장 버튼을 누른 Journey만</dd></div>
-          <div><dt>삭제</dt><dd>개별 기록 또는 전체 기록</dd></div>
-          <div><dt>기기 이동</dt><dd>내 JSON 파일로 직접 이동</dd></div>
-        </dl>
-        <p class="data-boundary__warning">공용 기기에서는 Journey 저장을 권하지 않습니다. 브라우저 데이터를 지우면 로컬 기록도 사라질 수 있습니다.</p>
-      </section>
-
-      <section class="beta" aria-labelledby="betaTitle">
+      <section class="beta" aria-labelledby="betaTitle" data-reveal>
         <div class="beta__copy">
           <p class="eyebrow">MY HEALTH COPY</p>
           <h2 id="betaTitle">내 기록은 내가 들고, 필요한 만큼만 씁니다.</h2>
           <p>
             의료기관의 업무 화면과 개인 공간은 분리되어 있습니다. 환자 전달 파일을 직접 받아
             VitaGraph Personal에서 열고, 내 증상과 질문을 이어서 관리합니다.
+          </p>
+          <p class="beta__boundary" id="data-boundary">
+            <strong>원문은 서버로 보내지 않습니다.</strong>
+            직접 저장한 Journey만 이 기기에 남으며, 공용 기기에서는 저장을 권하지 않습니다.
           </p>
           <a class="landing-button landing-button--primary" href="/map#import-record">내 기록 가져오기</a>
         </div>
@@ -214,7 +200,7 @@
         </article>
       </section>
 
-      <section class="closing" aria-labelledby="closingTitle">
+      <section class="closing" aria-labelledby="closingTitle" data-reveal>
         <div>
           <p class="eyebrow">BEFORE YOUR NEXT VISIT</p>
           <h2 id="closingTitle">다음 진료 전에, 한 번 정리해 보세요.</h2>
@@ -232,5 +218,6 @@
       <a href="#data-boundary">데이터 처리 안내</a>
       <span>의학적 진단이나 처방을 제공하지 않습니다.</span>
     </footer>
+    <script type="module" src="/landing.js"></script>
   </body>
 </html>

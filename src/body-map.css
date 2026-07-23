@@ -418,4 +418,17 @@
     inset: var(--space-4) 13% var(--space-4);
   }
 
+  .human-figure__image {
+    filter:
+      contrast(1.16)
+      saturate(1.1)
+      drop-shadow(0 18px 24px color-mix(in srgb, var(--data-violet) 14%, transparent))
+      drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 12%, transparent));
+  }
+
+  .body-hotspot__core {
+    width: 14px;
+    height: 14px;
+  }
+
 }

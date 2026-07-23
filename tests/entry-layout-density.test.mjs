@@ -26,6 +26,44 @@ test("첫 사용 안내는 데스크톱에서 압축된 두 열, 모바일에서
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.patient-start-path ol\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
 });
 
+test("개인 홈은 데이터 경계를 독립 섹션 대신 개인 보관 안내에 압축한다", async () => {
+  const [html, css] = await Promise.all([
+    readFile("src/landing.html", "utf8"),
+    readFile("src/landing.css", "utf8"),
+  ]);
+
+  const personalCopy = html.match(/<section class="beta"[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.doesNotMatch(html, /<section class="data-boundary"/);
+  assert.match(personalCopy, /class="beta__boundary" id="data-boundary"/);
+  assert.match(personalCopy, /원문은 서버로 보내지 않습니다/);
+  assert.match(personalCopy, /공용 기기에서는 저장을 권하지 않습니다/);
+  assert.doesNotMatch(css, /\.data-boundary\s*\{/);
+});
+
+test("다음 진료 제목은 데스크톱에서 한 줄을 유지한다", async () => {
+  const css = await readFile("src/landing.css", "utf8");
+
+  assert.match(css, /@media \(min-width: 801px\)[\s\S]*?\.closing h2\s*\{[\s\S]*?white-space:\s*nowrap/);
+});
+
+test("개인 홈의 아래 섹션은 동작 줄이기를 존중하는 스크롤 리빌을 사용한다", async () => {
+  const [html, css, script, build] = await Promise.all([
+    readFile("src/landing.html", "utf8"),
+    readFile("src/landing.css", "utf8"),
+    readFile("src/landing.js", "utf8"),
+    readFile("scripts/build.mjs", "utf8"),
+  ]);
+
+  assert.equal((html.match(/\sdata-reveal(?:\s|>)/g) ?? []).length, 6);
+  assert.match(html, /<script type="module" src="\/landing\.js"><\/script>/);
+  assert.match(css, /\.reveal-ready \[data-reveal\]/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*?\[data-reveal\]/);
+  assert.match(script, /IntersectionObserver/);
+  assert.match(script, /observer\.unobserve\(entry\.target\)/);
+  assert.match(script, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(build, /route:\s*"\/landing\.js",\s*file:\s*"src\/landing\.js"/);
+});
+
 test("역할 선택 카드는 데스크톱에서 같은 열 너비와 같은 세로 리듬을 사용한다", async () => {
   const css = await readFile("src/gateway.css", "utf8");
 

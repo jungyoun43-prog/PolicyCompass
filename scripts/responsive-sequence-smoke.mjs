@@ -14,7 +14,7 @@ const viewports = [
 ];
 const routes = [
   { route: "/", selectors: [".gateway-intro", ".role-card--clinical", ".role-card--patient", ".handoff-panel", ".gateway-boundary"] },
-  { route: "/patient", selectors: [".landing-hero", ".fact-strip", ".outcome", ".workflow", ".data-boundary", ".beta", ".closing"] },
+  { route: "/patient", selectors: [".landing-hero", ".fact-strip", ".outcome", ".workflow", ".beta", ".closing"] },
   { route: "/map", selectors: [".map-hero", ".input-panel", ".body-panel", ".connection-portal", ".detail-panel", ".safety-banner"] },
   { route: "/connections", selectors: [".explorer-intro", ".scene-shell", ".explorer-detail"] },
   { route: "/insights", selectors: [".insight-hero", ".insight-status", ".question-panel", ".brief-rail"] },

@@ -11,7 +11,7 @@ const viewports = [
   { width: 1280, height: 800, mobile: false },
   { width: 1600, height: 900, mobile: false },
 ];
-const expectedLabels = ["오늘 진료", "환자 요약", "과거 기록", "VitaGraph", "급여 보드", "Journey", "감사·데이터"];
+const expectedLabels = ["오늘 진료", "환자 요약", "과거 기록", "신체 지도", "급여 보드", "Journey", "감사·데이터"];
 
 const viewportResults = [];
 await runBrowserSmoke({
@@ -61,13 +61,15 @@ await runBrowserSmoke({
   await press("ArrowRight", "ArrowRight");
   await press("ArrowRight", "ArrowRight");
   await press("ArrowRight", "ArrowRight");
-  await waitFor("document.getElementById('tab-graph').getAttribute('aria-selected') === 'true'", "Arrow-key navigation did not reach VitaGraph.");
+  await waitFor("document.getElementById('tab-graph').getAttribute('aria-selected') === 'true'", "Arrow-key navigation did not reach the body map.");
   const keyboardState = await evaluate(`(() => {
     const active = document.activeElement;
     const style = getComputedStyle(active);
     return {
       activeId: active?.id,
-      graphVisible: document.getElementById('panel-graph').hidden === false,
+      bodyMapVisible: document.getElementById('panel-graph').hidden === false,
+      bodyHotspots: document.querySelectorAll('.body-hotspot[data-body-area]').length,
+      bodyCaptions: document.querySelectorAll('.body-caption[data-body-area]').length,
       patientName: document.getElementById('selectedPatientName').textContent.trim(),
       focusVisible: style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 3,
       personalRouteLinks: [...document.querySelectorAll('a[href]')].filter((link) => ['/patient', '/map', '/connections', '/insights', '/journey'].includes(new URL(link.href).pathname)).length,
@@ -75,7 +77,8 @@ await runBrowserSmoke({
       finalReviewPresent: Boolean(document.getElementById('encounterSignoffSummary')),
     };
   })()`);
-  assert(keyboardState.activeId === "tab-graph" && keyboardState.graphVisible, "VitaGraph tab did not retain keyboard focus and panel state.");
+  assert(keyboardState.activeId === "tab-graph" && keyboardState.bodyMapVisible, "Body-map tab did not retain keyboard focus and panel state.");
+  assert(keyboardState.bodyHotspots === 12 && keyboardState.bodyCaptions === 12, "Body map did not expose twelve hotspots and twelve department captions.");
   assert(keyboardState.patientName === "김비타", "Patient identity changed during tab navigation.");
   assert(keyboardState.focusVisible, "Keyboard tab has no visible focus indicator.");
   assert(keyboardState.personalRouteLinks === 0, "Clinician workspace exposes personal-app routes.");
@@ -88,6 +91,7 @@ await runBrowserSmoke({
     viewports: viewportResults,
     singlePatientTablist: true,
     arrowKeyNavigation: true,
+    bodyMapAreas: keyboardState.bodyHotspots,
     persistentSafetyContext: true,
     progressiveDisclosure: keyboardState.progressiveDisclosureCount,
     clinicianPatientBoundary: true,

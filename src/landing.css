@@ -220,6 +220,7 @@
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.55;
+  word-break: keep-all;
 }
 
 .patient-start-path__actions {
@@ -280,10 +281,9 @@
 
 .outcome,
 .workflow,
-.data-boundary,
 .beta,
 .closing {
-  padding: clamp(64px, 6vw, 88px) 0;
+  padding: clamp(52px, 5vw, 72px) 0;
 }
 
 .outcome,
@@ -295,7 +295,6 @@
 }
 
 .section-intro h2,
-.data-boundary h2,
 .beta h2,
 .closing h2 {
   max-width: 11em;
@@ -308,7 +307,6 @@
 }
 
 .section-intro > p:not(.eyebrow),
-.data-boundary header > p:not(.eyebrow),
 .beta__copy > p:not(.eyebrow),
 .closing p:not(.eyebrow) {
   max-width: 32rem;
@@ -460,67 +458,33 @@
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.65;
-}
-
-.data-boundary {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: var(--space-12);
-  align-items: start;
-  border-radius: var(--radius-panel);
-  background: var(--ink);
-  padding-inline: clamp(var(--space-5), 6vw, var(--space-12));
-  color: var(--surface);
-}
-
-.data-boundary .eyebrow {
-  color: var(--status-amber-on-dark);
-}
-
-.data-boundary h2 {
-  max-width: 10em;
-}
-
-.data-boundary header > p:not(.eyebrow),
-.data-boundary__warning {
-  color: color-mix(in srgb, var(--surface) 72%, var(--muted));
-}
-
-.data-boundary dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
-  margin: 0;
-}
-
-.data-boundary dl div {
-  border-top: 1px solid color-mix(in srgb, var(--surface) 22%, transparent);
-  padding-top: var(--space-4);
-}
-
-.data-boundary dt {
-  color: color-mix(in srgb, var(--surface) 60%, var(--muted));
-  font: 700 0.7rem var(--font-mono);
-  letter-spacing: 0.06em;
-}
-
-.data-boundary dd {
-  margin: var(--space-2) 0 0;
-  font-size: 0.9375rem;
-  font-weight: 700;
-}
-
-.data-boundary__warning {
-  grid-column: 2;
-  margin: 0;
-  border-top: 1px solid color-mix(in srgb, var(--surface) 22%, transparent);
-  padding-top: var(--space-4);
-  font-size: 0.75rem;
+  word-break: keep-all;
 }
 
 .beta {
   align-items: start;
   border-bottom: 1px solid var(--line);
+}
+
+.beta__copy > .beta__boundary {
+  margin-top: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 24%, var(--line));
+  border-radius: var(--radius-control);
+  background:
+    linear-gradient(
+      112deg,
+      color-mix(in srgb, var(--data-cyan) 8%, var(--surface)) 0%,
+      color-mix(in srgb, var(--data-cyan) 2%, var(--surface)) 62%,
+      var(--surface) 100%
+    );
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.beta__boundary strong {
+  color: var(--ink);
 }
 
 .beta__copy .landing-button {
@@ -589,6 +553,11 @@
   justify-content: space-between;
 }
 
+.closing > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
 .closing h2 {
   max-width: 10em;
 }
@@ -596,6 +565,30 @@
 .closing .landing-actions {
   flex: none;
   margin-top: 0;
+}
+
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 520ms ease-out,
+    transform 640ms cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+
+.reveal-ready [data-reveal].is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-ready [data-reveal]:not(.is-revealed) {
+  will-change: opacity, transform;
+}
+
+@media (min-width: 801px) {
+  .closing h2 {
+    max-width: none;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 960px) {
@@ -656,25 +649,15 @@
   }
 
   .outcome,
-  .beta,
-  .data-boundary {
+  .beta {
     grid-template-columns: 1fr;
   }
 
   .outcome,
   .workflow,
-  .data-boundary,
   .beta,
   .closing {
     padding: 64px 0;
-  }
-
-  .data-boundary {
-    padding-inline: var(--space-6);
-  }
-
-  .data-boundary__warning {
-    grid-column: auto;
   }
 
   .closing {
@@ -717,7 +700,6 @@
 
   .fact-strip,
   .workflow__steps,
-  .data-boundary dl,
   .beta-plan__columns {
     grid-template-columns: 1fr;
   }
@@ -742,12 +724,21 @@
     padding-inline: var(--space-5);
   }
 
-  .data-boundary,
   .outcome,
   .workflow,
   .beta,
   .closing {
-    padding-block: var(--space-12);
+    padding-block: 48px;
+  }
+
+  .workflow__steps {
+    gap: 0;
+    margin-top: var(--space-5);
+  }
+
+  .workflow__steps li {
+    min-height: 0;
+    padding-block: var(--space-4);
   }
 
   .beta-plan__price {
@@ -760,7 +751,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-button {
+  .landing-button,
+  .reveal-ready [data-reveal] {
+    opacity: 1;
+    transform: none;
     transition: none;
   }
 }

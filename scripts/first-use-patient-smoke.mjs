@@ -66,7 +66,7 @@ await runBrowserSmoke({
   const routeExpectations = [
     ["/map", "[data-graph-discovery=\"map\"]", "map"],
     ["/connections", "[data-graph-discovery=\"connections\"]", "connections"],
-    ["/insights", "[data-story-section=\"changed\"]", "insights"],
+    ["/insights", "#questionCount", "insights"],
     ["/journey", "[data-story-section=\"changed\"]", "journey"],
   ];
   for (const [route, readySelector, name] of routeExpectations) {
@@ -92,6 +92,9 @@ await runBrowserSmoke({
         changed: visible('[data-story-section="changed"]'),
         context: visible('[data-story-section="context"]'),
         next: visible('[data-story-section="next"]'),
+        questions: visible('#questions'),
+        signals: visible('#signals'),
+        visitStoryPresent: Boolean(document.querySelector('.visit-story')),
         firstUse: visible('[data-first-use]'),
       };
     })()`);
@@ -100,6 +103,8 @@ await runBrowserSmoke({
     assert(result.documentWidth <= result.viewportWidth, `${route}: horizontal overflow`);
     if (name === "map" || name === "connections") {
       assert(result.legend && result.instructions && result.relationshipMeaning && result.selectionState && result.nextAction, `${route}: graph discovery affordances are incomplete`);
+    } else if (name === "insights") {
+      assert(result.questions && result.signals && !result.visitStoryPresent, `${route}: focused question brief is incomplete`);
     } else {
       assert(result.changed && result.context && result.next, `${route}: change story is incomplete`);
     }

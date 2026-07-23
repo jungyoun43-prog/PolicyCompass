@@ -20,6 +20,14 @@ const TRANSFER_CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const TRANSFER_CODE_PATTERN = /^VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}$/;
 const KOREA_TIMEZONE_OFFSET_MILLISECONDS = 9 * 60 * 60 * 1_000;
 
+export class PatientTransferCodeError extends TypeError {
+  constructor(code, message) {
+    super(message);
+    this.name = "PatientTransferCodeError";
+    this.code = code;
+  }
+}
+
 const conditionSpecs = [
   { id: "hypertension", label: "고혈압", codeRule: /^I10(?:\..+)?$/i },
   { id: "diabetes", label: "당뇨병", codeRule: /^E1[0-4](?:\..+)?$/i },
@@ -376,6 +384,30 @@ export function parsePatientTransferPackage(value) {
       transferCode,
     },
   };
+}
+
+export function verifyPatientTransferCode(imported, enteredCode) {
+  const expectedCode = assertTransferCode(imported?.provenance?.transferCode);
+  if (typeof enteredCode !== "string" || enteredCode.trim() === "") {
+    throw new PatientTransferCodeError(
+      "missing-transfer-code",
+      "별도로 전달받은 확인 코드를 입력해 주세요.",
+    );
+  }
+  const suppliedCode = enteredCode.trim().toUpperCase();
+  if (!TRANSFER_CODE_PATTERN.test(suppliedCode)) {
+    throw new PatientTransferCodeError(
+      "invalid-transfer-code",
+      "전달 확인 코드 형식을 확인해 주세요.",
+    );
+  }
+  if (suppliedCode !== expectedCode) {
+    throw new PatientTransferCodeError(
+      "mismatched-transfer-code",
+      "별도로 전달받은 확인 코드가 선택한 파일의 코드와 일치하지 않습니다.",
+    );
+  }
+  return imported;
 }
 
 export function patientTransferFilename(exportedAt) {

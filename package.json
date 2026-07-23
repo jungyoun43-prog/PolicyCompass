@@ -12,7 +12,7 @@
     "smoke:handoff": "node scripts/two-app-browser-smoke.mjs",
     "smoke:route-identity": "node scripts/route-identity-smoke.mjs",
     "smoke:responsive-primary": "node scripts/responsive-primary-smoke.mjs",
-    "smoke:responsive-sequence": "node scripts/responsive-sequence-smoke.mjs",
+    "smoke:responsive-sequence": "npm run build && node scripts/responsive-sequence-smoke.mjs",
     "smoke:primary-actions": "node scripts/primary-action-smoke.mjs",
     "smoke:route-context": "node scripts/route-context-smoke.mjs",
     "smoke:a11y": "node scripts/accessibility-smoke.mjs",
@@ -20,6 +20,8 @@
     "smoke:first-use-clinician": "node scripts/first-use-clinician-smoke.mjs",
     "smoke:graph-discovery": "node scripts/graph-discovery-smoke.mjs",
     "smoke:claims": "node scripts/claim-board-drag-smoke.mjs",
+    "gate:pr": "npm run build && node scripts/pr-golden-flow-gate.mjs",
+    "gate:release": "npm run build && node scripts/release-gate.mjs",
     "start": "node scripts/render-server.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },

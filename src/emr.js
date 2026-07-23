@@ -25,6 +25,7 @@ import {
   recoverEmrState,
   removePatientEvent,
   resolveClaimReview,
+  restoreEmrBackupState,
   retireClaimRule,
   saveEmrState,
   selectPatient,
@@ -55,6 +56,14 @@ import {
   startEncounter,
   ENCOUNTER_OBSERVATION_PRESETS,
 } from "./emr-encounter.js";
+import {
+  assertEncounterSignReviewContext,
+  assertEncounterSignReviewFingerprint,
+  assertEncounterSignReviewReady,
+  buildEncounterSignReview,
+  encounterSignReviewFingerprint,
+  encounterSignReviewIdentity,
+} from "./emr-sign-review.js";
 import {
   buildClaimBoard,
   CLAIM_LANE_LABELS,
@@ -228,6 +237,11 @@ const refs = {
   reopenEncounter: byId("reopenEncounter"),
   cancelEncounter: byId("cancelEncounter"),
   encounterFormMessage: byId("encounterFormMessage"),
+  encounterSignReview: byId("encounterSignReview"),
+  encounterSignReviewTitle: byId("encounterSignReviewTitle"),
+  encounterSignReviewContent: byId("encounterSignReviewContent"),
+  encounterSignReviewAcknowledged: byId("encounterSignReviewAcknowledged"),
+  encounterSignReviewAcknowledgementStatus: byId("encounterSignReviewAcknowledgementStatus"),
   vitalForm: byId("vitalForm"),
   vitalPreset: byId("vitalPreset"),
   vitalValue: byId("vitalValue"),
@@ -354,6 +368,8 @@ let boardScope = "patient";
 let queueFilter = "all";
 let viewedEncounterId = "";
 let clinicalComposerContextKey = "";
+let reviewedEncounterSignIdentity = null;
+let reviewedEncounterSignFingerprint = "";
 let bodySelectionAreaId = "";
 let stateTransitionBusy = false;
 let copilotBusy = false;
@@ -1709,6 +1725,119 @@ function renderEncounterContext(patient, encounter, evaluations) {
   refs.encounterBodySummary.append(summary);
 }
 
+function reviewValues(items, format, emptyLabel) {
+  const list = element("ul", "sign-review__values");
+  if (!items.length) list.append(element("li", "sign-review__empty", emptyLabel));
+  for (const item of items) list.append(element("li", "", format(item)));
+  return list;
+}
+
+function sameEncounterSignReviewIdentity(left, right) {
+  return Boolean(left
+    && right
+    && left.patientId
+    && left.encounterId
+    && left.patientId === right.patientId
+    && left.patientMrn === right.patientMrn
+    && left.encounterId === right.encounterId);
+}
+
+function resetEncounterSignReviewAcknowledgement() {
+  reviewedEncounterSignIdentity = null;
+  reviewedEncounterSignFingerprint = "";
+  refs.encounterSignReviewAcknowledged.checked = false;
+}
+
+function renderEncounterSignReview(patient, encounter, records, completed) {
+  refs.encounterSignReview.hidden = !completed;
+  clear(refs.encounterSignReviewContent);
+  if (!completed) {
+    resetEncounterSignReviewAcknowledgement();
+    refs.encounterSignReviewAcknowledged.disabled = true;
+    refs.encounterSignReviewAcknowledgementStatus.textContent = "";
+    refs.signEncounter.disabled = true;
+    refs.signEncounter.removeAttribute("title");
+    return;
+  }
+  const review = buildEncounterSignReview(patient, encounter, records);
+  const activeIdentity = encounterSignReviewIdentity(patient, encounter);
+  const activeFingerprint = encounterSignReviewFingerprint(review);
+  const blockers = [...review.conflicts, ...review.omissions];
+  const acknowledged = sameEncounterSignReviewIdentity(reviewedEncounterSignIdentity, activeIdentity)
+    && reviewedEncounterSignFingerprint === activeFingerprint;
+  if (!acknowledged) resetEncounterSignReviewAcknowledgement();
+  refs.encounterSignReviewAcknowledged.disabled = blockers.length > 0;
+  refs.encounterSignReviewAcknowledged.checked = acknowledged;
+  refs.signEncounter.disabled = blockers.length > 0 || !acknowledged;
+  if (blockers.length) {
+    refs.signEncounter.title = `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.`;
+    refs.encounterSignReviewAcknowledgementStatus.textContent = `누락 ${review.omissions.length}건·충돌 ${review.conflicts.length}건을 해결해야 검토를 완료할 수 있습니다.`;
+  } else if (!acknowledged) {
+    refs.signEncounter.title = "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요.";
+    refs.encounterSignReviewAcknowledgementStatus.textContent = "전체 기록을 확인한 뒤 검토 완료를 선택하면 서명할 수 있습니다.";
+  } else {
+    refs.signEncounter.removeAttribute("title");
+    refs.encounterSignReviewAcknowledgementStatus.textContent = "현재 내용의 검토 완료가 확인됐습니다. 내용이 바뀌면 이 확인은 자동으로 해제됩니다.";
+  }
+  const identity = element("div", "sign-review__identity");
+  identity.append(
+    element("strong", "", review.patient.name),
+    element("span", "", `MRN ${review.patient.mrn}`),
+    element("span", "", `${review.encounter.label} · ${review.encounter.date}`),
+    element("span", "", `Encounter ID ${review.encounter.id}`),
+    element("span", "", `${review.encounter.department} · ${review.encounter.clinician} · ${review.encounter.room}`),
+    element("span", "", `주호소 · ${review.encounter.chiefComplaint}`),
+  );
+  refs.encounterSignReviewContent.append(identity);
+
+  const alerts = element("section", "sign-review__alerts");
+  alerts.setAttribute("aria-label", "서명 전 누락 및 충돌");
+  const findings = [
+    ...review.conflicts.map((item) => ({ ...item, kind: "충돌" })),
+    ...review.omissions.map((item) => ({ ...item, kind: "누락" })),
+  ];
+  if (!findings.length) alerts.append(element("p", "sign-review__ok", "자동 확인에서 누락·이름 일치 충돌을 찾지 못했습니다. 임상적 안전성을 자동 판정한다는 의미는 아닙니다."));
+  for (const finding of findings) {
+    const row = element("div", "sign-review__finding");
+    row.append(element("p", "", `${finding.kind} · ${finding.message}`));
+    const action = element("button", "clinical-button", `${finding.action} — 진료 재개`);
+    action.type = "button";
+    action.dataset.signReviewTarget = finding.target;
+    row.append(action);
+    alerts.append(row);
+  }
+  refs.encounterSignReviewContent.append(alerts);
+
+  const grid = element("div", "sign-review__grid");
+  const addGroup = (title, content) => {
+    const section = element("section", "sign-review__group");
+    section.append(element("h4", "", title), content);
+    grid.append(section);
+  };
+  addGroup("알레르기", reviewValues(review.allergies, (item) => item.label, "기록 없음 · 알레르기 상태를 확인하세요."));
+  addGroup("활성 약물", reviewValues(review.activeMedications, (item) => item.label, "활성 약물 기록 없음"));
+  addGroup("외부·미검증 알레르기", reviewValues(
+    review.unverifiedAllergies,
+    (item) => `${item.label} · ${item.source?.label || "출처 미검증"}`,
+    "외부·미검증 알레르기 기록 없음",
+  ));
+  addGroup("외부·미검증 활성 약물", reviewValues(
+    review.unverifiedActiveMedications,
+    (item) => `${item.label} · ${item.source?.label || "출처 미검증"}`,
+    "외부·미검증 활성 약물 기록 없음",
+  ));
+  addGroup("이번 진료 측정·활력징후", reviewValues(review.measurements, (item) => `${item.label}: ${item.value ?? "—"} ${item.unit ?? ""}`.trim(), "측정 없음"));
+  addGroup("새 처방", reviewValues(review.prescriptions, (item) => `${item.label} · ${prescriptionSummary(item.prescription) || "용법 확인 필요"}`, "새 처방 없음"));
+  addGroup("SOAP", reviewValues(
+    [["S", review.soap.subjective], ["O", review.soap.objective], ["A", review.soap.assessment], ["P", review.soap.plan]],
+    ([part, value]) => `${part} · ${String(value ?? "").trim() || "미입력"}`,
+    "SOAP 없음",
+  ));
+  addGroup("KCD 진단", reviewValues(review.diagnoses, (item) => `${item.diagnosisRole === "primary" ? "주" : "부"} · ${item.system || "시스템 없음"} · ${item.code || "코드 없음"} ${item.label}`, "진단 없음"));
+  addGroup("오더", reviewValues(review.orders, (item) => `${item.order?.kind || "오더"} · ${item.system || "시스템 없음"} · ${item.code || "코드 없음"} ${item.label}`, "오더 없음"));
+  refs.encounterSignReviewContent.append(grid);
+}
+
 function renderEncounter(patient, evaluations) {
   const encounter = currentEncounter(patient);
   const nextComposerContextKey = `${patient?.id ?? ""}:${encounter?.id ?? ""}`;
@@ -1821,6 +1950,7 @@ function renderEncounter(patient, evaluations) {
     });
   }
   if (!refs.orderList.childElementCount) refs.orderList.append(element("li", "encounter-entry-empty", editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"));
+  renderEncounterSignReview(patient, encounter, records, completed);
   renderWorkflowDisclosureSummaries(encounter, status, records);
   syncWorkflowDisclosures(patient, encounter, status);
   renderEncounterContext(patient, encounter, evaluations);
@@ -2018,6 +2148,12 @@ function encounterFormHasUnsavedInput() {
 
 function patientContextHasUnsavedInput() {
   return encounterFormHasUnsavedInput() || manualEventFormHasPendingInput();
+}
+
+function blockUnsafePageExit(event) {
+  if (!patientFormHasPendingInput() && !patientContextHasUnsavedInput()) return;
+  event.preventDefault();
+  event.returnValue = "";
 }
 
 function beginPatientEdit() {
@@ -2373,22 +2509,89 @@ refs.completeEncounter.addEventListener("click", async () => {
   if (blockClinicalContextChange()) return;
   try {
     await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, encounterDraftFromForm()), "진료를 완료했습니다. 최종 검토 후 서명하세요.", { preserveDraft: false });
-    restoreWorkflowFocus(refs.signEncounter, refs.encounterStatus);
+    queueMicrotask(() => {
+      if (refs.encounterSignReviewTitle.getClientRects().length === 0) return;
+      refs.encounterSignReviewTitle.focus();
+      refs.encounterSignReviewTitle.scrollIntoView({ block: "start" });
+    });
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 완료 조건을 확인하세요.";
   }
+});
+
+refs.encounterSignReviewAcknowledged.addEventListener("change", () => {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounterQueueStatus(encounter) !== "completed") {
+    resetEncounterSignReviewAcknowledgement();
+    return;
+  }
+  const records = getEncounterRecords(patient, encounter.id).slice(1);
+  const review = buildEncounterSignReview(patient, encounter, records);
+  if (!refs.encounterSignReviewAcknowledged.checked) {
+    resetEncounterSignReviewAcknowledgement();
+    renderEncounterSignReview(patient, encounter, records, true);
+    return;
+  }
+  try {
+    assertEncounterSignReviewReady(review);
+    reviewedEncounterSignIdentity = encounterSignReviewIdentity(patient, encounter);
+    reviewedEncounterSignFingerprint = encounterSignReviewFingerprint(review);
+    refs.encounterFormMessage.textContent = "";
+  } catch (error) {
+    resetEncounterSignReviewAcknowledgement();
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "누락·충돌을 해결한 뒤 검토를 완료하세요.";
+  }
+  renderEncounterSignReview(patient, encounter, records, true);
 });
 
 refs.signEncounter.addEventListener("click", async () => {
   const patient = selectedPatient();
   const encounter = currentEncounter(patient);
   if (!patient || !encounter) return;
+  try {
+    const review = buildEncounterSignReview(patient, encounter, getEncounterRecords(patient, encounter.id).slice(1));
+    assertEncounterSignReviewContext(reviewedEncounterSignIdentity, patient, encounter);
+    assertEncounterSignReviewReady(review);
+    assertEncounterSignReviewFingerprint(reviewedEncounterSignFingerprint, review);
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "현재 기록을 다시 검토한 뒤 서명하세요.";
+    return;
+  }
   if (!window.confirm("SOAP·측정·진단·처방·오더를 확정하고 로컬 서명할까요? 서명 후 직접 수정할 수 없습니다.")) return;
   try {
-    await applyMutation((current) => signEncounter(current, patient.id, encounter.id, encounter.clinician), "진료를 완료·서명했습니다.");
+    await applyMutation((current) => {
+      const activePatient = current.patients.find(({ id }) => id === current.selectedPatientId) ?? null;
+      const activeEncounter = activePatient?.events.find(({ id }) => id === encounter.id && id === current.selectedEncounterId) ?? null;
+      assertEncounterSignReviewContext(reviewedEncounterSignIdentity, activePatient, activeEncounter);
+      const review = buildEncounterSignReview(
+        activePatient,
+        activeEncounter,
+        getEncounterRecords(activePatient, activeEncounter.id).slice(1),
+      );
+      assertEncounterSignReviewReady(review);
+      assertEncounterSignReviewFingerprint(reviewedEncounterSignFingerprint, review);
+      return signEncounter(current, patient.id, encounter.id, encounter.clinician);
+    }, "진료를 완료·서명했습니다.");
     restoreWorkflowFocus(refs.encounterStatus, "tab-chart");
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 서명에 실패했습니다.";
+  }
+});
+
+refs.encounterSignReview.addEventListener("click", async (event) => {
+  const action = event.target.closest?.("[data-sign-review-target]");
+  if (!action) return;
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter) return;
+  try {
+    await applyMutation((current) => reopenEncounter(current, patient.id, encounter.id), "수정을 위해 서명 전 진료를 다시 열었습니다.");
+    const target = document.getElementById(action.dataset.signReviewTarget);
+    target?.closest("details")?.setAttribute("open", "");
+    restoreWorkflowFocus(target, refs.saveEncounterDraft);
+  } catch (error) {
+    refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 다시 열지 못했습니다.";
   }
 });
 
@@ -2900,13 +3103,16 @@ refs.importEmr.addEventListener("change", async () => {
         return;
       }
       const persistedState = state.demo ? savedState : state;
-      const restoreRevision = persistedState.storageError ? Date.now() * 1_000 : persistedState.revision;
-      let candidate = prepareUnverifiedBackupRestore(parsed, persistedState, new Date().toISOString());
-      candidate = { ...candidate, revision: restoreRevision };
-      candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`);
-      const saved = persistedState.storageError && persistedState.recoveryRaw
-        ? await recoverEmrState(candidate, persistedState.recoveryRaw)
-        : await saveEmrState(candidate, undefined, persistedState.revision, { allowSignedRecordReplacement: true });
+      const restoredAt = new Date().toISOString();
+      let saved;
+      if (persistedState.storageError && persistedState.recoveryRaw) {
+        let candidate = prepareUnverifiedBackupRestore(parsed, persistedState, restoredAt);
+        candidate = { ...candidate, revision: Date.now() * 1_000 };
+        candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`, restoredAt);
+        saved = await recoverEmrState(candidate, persistedState.recoveryRaw);
+      } else {
+        saved = await restoreEmrBackupState(parsed, persistedState, undefined, restoredAt);
+      }
       assertCurrentStateGeneration(expectedGeneration);
       state = saved;
       savedState = saved;
@@ -3058,6 +3264,8 @@ window.addEventListener("storage", (event) => {
     latest.storageError ? "error" : "success",
   );
 });
+
+window.addEventListener("beforeunload", blockUnsafePageExit);
 
 refs.runCopilot.addEventListener("click", runCopilot);
 

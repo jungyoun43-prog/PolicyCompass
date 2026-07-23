@@ -53,6 +53,7 @@ const sourceAssets = [
   { route: "/emr.js", file: "src/emr.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-model.js", file: "src/emr-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-encounter.js", file: "src/emr-encounter.js", type: "text/javascript; charset=utf-8" },
+  { route: "/emr-sign-review.js", file: "src/emr-sign-review.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-fhir.js", file: "src/emr-fhir.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr-fhir-export.js", file: "src/emr-fhir-export.js", type: "text/javascript; charset=utf-8" },
   { route: "/clinical-observations.js", file: "src/clinical-observations.js", type: "text/javascript; charset=utf-8" },

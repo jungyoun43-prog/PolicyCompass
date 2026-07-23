@@ -29,18 +29,21 @@ test("역할 선택은 의료진 우선 순서와 두 공간의 안전 경계를
   assert.doesNotMatch(html, /patient-presentation__panel[^>]*role-card--clinical/);
 });
 
-test("개인 홈은 로컬 데이터 안내 뒤에 가져오기와 예시 행동을 순서대로 둔다", async () => {
+test("개인 홈은 역할·로컬 데이터 안내 뒤에 내 기록과 예시 시작 행동을 둔다", async () => {
   const html = await readFile("src/landing.html", "utf8");
   const hero = html.match(/<section class="landing-hero[\s\S]*?<\/section>/)?.[0] ?? "";
   const identity = hero.indexOf("VITAGRAPH PERSONAL · 내 기록 공간");
   const localCopy = hero.indexOf("이 기기에서 처리");
-  const importAction = hero.indexOf("기록 파일 가져오기");
-  const sampleAction = hero.indexOf("예시 기록으로 먼저 보기");
+  const startAction = hero.indexOf("내 기록으로 시작");
+  const sampleAction = hero.indexOf("예시로 보기");
 
   assert.ok(identity >= 0);
   assert.ok(localCopy > identity);
-  assert.ok(importAction > localCopy);
-  assert.ok(sampleAction > importAction);
+  assert.ok(startAction > localCopy);
+  assert.ok(sampleAction > startAction);
+  assert.equal((hero.match(/data-primary-action/g) ?? []).length, 1);
+  assert.match(hero, /href="\/map#import-record"/);
+  assert.match(hero, /href="\/map\?sample=1"/);
   assert.match(hero, /원문 서버 전송 없음 · 진단·처방 아님/);
 });
 

@@ -72,6 +72,40 @@ test("EMR은 개인 앱 화면으로 직접 이동하는 링크를 노출하지 
   }
 });
 
+test("EMR은 환자·SOAP·임상 입력이 남은 새로고침과 페이지 이탈을 명시적으로 막는다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const script = await (await worker.fetch(new Request("https://example.com/emr.js"))).text();
+
+  assert.match(
+    script,
+    /function blockUnsafePageExit\(event\) \{\s*if \(!patientFormHasPendingInput\(\) && !patientContextHasUnsavedInput\(\)\) return;\s*event\.preventDefault\(\);\s*event\.returnValue = "";\s*\}/,
+  );
+  assert.match(script, /window\.addEventListener\("beforeunload", blockUnsafePageExit\)/);
+});
+
+test("서명 전 검토는 명시적 확인과 내용 fingerprint를 요구하고 완료 뒤 검토 제목으로 이동한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const [html, script] = await Promise.all([
+    worker.fetch(new Request("https://example.com/emr")).then((response) => response.text()),
+    worker.fetch(new Request("https://example.com/emr.js")).then((response) => response.text()),
+  ]);
+
+  assert.match(html, /id="encounterSignReviewTitle" tabindex="-1"/);
+  assert.match(html, /id="encounterSignReviewAcknowledged" type="checkbox"/);
+  assert.match(script, /reviewedEncounterSignFingerprint/);
+  assert.match(script, /assertEncounterSignReviewFingerprint/);
+  assert.match(script, /encounterSignReviewTitle\.focus\(\)/);
+  assert.match(script, /signEncounter\.disabled = blockers\.length > 0 \|\| !acknowledged/);
+});
+
+test("백업 복원은 전용 미검증 복원 경계로 저장하고 일반 save 우회를 사용하지 않는다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const script = await (await worker.fetch(new Request("https://example.com/emr.js"))).text();
+
+  assert.match(script, /restoreEmrBackupState\(parsed, persistedState, undefined, restoredAt\)/);
+  assert.doesNotMatch(script, /allowSignedRecordReplacement/);
+});
+
 test("공개 Worker는 EMR 데이터를 받지 않고 로컬 개발 서버만 코파일럿 프록시를 소유한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const response = await worker.fetch(new Request("https://example.com/api/clinical-copilot", {

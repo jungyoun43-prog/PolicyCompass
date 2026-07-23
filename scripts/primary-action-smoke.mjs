@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,26 @@ const links = [
   { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#import-record" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-primary-actions-"));
+const transferCode = "VG-01234-56789-ABCDE-FGHJK-MNPQRS";
+const transferFixture = join(profile, "patient-transfer.json");
+await writeFile(transferFixture, JSON.stringify({
+  schema: "vitagraph-patient-transfer",
+  version: 1,
+  exportedAt: "2026-07-20T12:34:56.000Z",
+  transferCode,
+  scope: "patient-vita-graph",
+  trust: "unsigned-local-export",
+  healthMap: {
+    conditions: [{
+      id: "hypertension",
+      label: "고혈압",
+      recordedOn: "2026-07-20",
+      basis: "confirmed-condition",
+    }],
+    measurements: [],
+  },
+  summary: { includedConditions: 1, includedMeasurements: 0 },
+}));
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const browser = spawn(chrome, [
   "--headless", "--no-sandbox", "--disable-gpu", "--disable-background-networking",
@@ -58,7 +78,7 @@ try {
   await endpoint();
   const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about%3Ablank`, { method: "PUT" })).json();
   client = new CdpClient(target.webSocketDebuggerUrl);
-  await client.call("Page.enable"); await client.call("Runtime.enable"); await client.call("Network.enable");
+  await client.call("Page.enable"); await client.call("Runtime.enable"); await client.call("Network.enable"); await client.call("DOM.enable");
   await client.call("Network.setBlockedURLs", { urls: ["https://*/*"] });
   await client.call("Emulation.setTimezoneOverride", { timezoneId: "Asia/Seoul" });
   await client.call("Emulation.setLocaleOverride", { locale: "ko-KR" });
@@ -89,10 +109,47 @@ try {
   await evaluate(`document.getElementById('healthNote').value='혈압 148/94';document.getElementById('healthNote').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('analyzeButton').click()`);
   await waitFor("document.getElementById('miniConditionList').children.length > 0", "/map valid primary action did not update state");
 
+  await evaluate("document.getElementById('transferCode').value='';document.getElementById('selectRecordFile').click()");
+  await waitFor("document.activeElement === document.getElementById('transferCode') && document.getElementById('transferCode').getAttribute('aria-invalid') === 'true'", "/map missing transfer code did not focus and identify its field");
+  await evaluate(`document.getElementById('transferCode').value='VG-01234-56789-ABCDE-FGHJK-MNPQRT';document.getElementById('transferCode').dispatchEvent(new Event('input',{bubbles:true}))`);
+  const documentNode = await client.call("DOM.getDocument");
+  const fileInput = await client.call("DOM.querySelector", {
+    nodeId: documentNode.root.nodeId,
+    selector: "#fhirFile",
+  });
+  assert(fileInput.nodeId, "/map patient transfer file input was not available");
+  await client.call("DOM.setFileInputFiles", { nodeId: fileInput.nodeId, files: [transferFixture] });
+  await waitFor("!document.getElementById('importRecordButton').disabled && document.getElementById('recordFileStatus').textContent.includes('patient-transfer.json')", "/map selected transfer file did not reach the explicit import step");
+  await evaluate("window.confirm=()=>true;document.getElementById('importRecordButton').click()");
+  await waitFor("document.activeElement === document.getElementById('transferCode') && document.getElementById('transferCode').getAttribute('aria-invalid') === 'true'", "/map mismatched transfer code did not focus and identify its field");
+  assert(await evaluate("!document.getElementById('importRecordButton').disabled && document.getElementById('recordFileStatus').textContent.includes('patient-transfer.json')"), "/map mismatched transfer code discarded the selected file");
+  await evaluate(`document.getElementById('transferCode').value=${JSON.stringify(transferCode.toLowerCase())};document.getElementById('transferCode').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('importRecordButton').click()`);
+  await waitFor("document.getElementById('fhirResult').classList.contains('is-success') && document.getElementById('miniConditionList').textContent.includes('고혈압')", "/map corrected transfer code did not import the retained file");
+
   await navigate("/insights");
   await waitFor("!document.getElementById('printBrief').disabled", "/insights populated primary action was not enabled");
+  await waitFor("Boolean(document.querySelector('.question-select__input'))", "/insights visit question selection was unavailable");
+  const selectedQuestionId = await evaluate("document.querySelector('[data-question-id]').dataset.questionId");
+  await evaluate("document.querySelector('.question-select').click()");
+  await waitFor("document.querySelector('.question-select__input').checked", "/insights visit question did not expose its selected state");
+  await navigate("/insights");
+  await waitFor(`document.querySelector('[data-question-id="${selectedQuestionId}"] .question-select__input').checked`, "/insights visit question selection was not preserved");
   await evaluate("window.__printInvoked=false;window.print=()=>{window.__printInvoked=true};document.getElementById('printBrief').click()");
   await waitFor("window.__printInvoked === true", "/insights populated primary action did not invoke printing");
+
+  await evaluate(`localStorage.setItem('vitagraph-journey', JSON.stringify([
+    {id:'journey-a',date:'2026-06-01',conditionIds:['hypertension'],measurements:[],source:'직접 입력',createdAt:'2026-06-01T00:00:00.000Z'},
+    {id:'journey-b',date:'2026-07-01',conditionIds:['hypertension','diabetes'],measurements:[],source:'직접 입력',createdAt:'2026-07-01T00:00:00.000Z'}
+  ]))`);
+  await navigate("/journey");
+  await waitFor("!document.getElementById('journeyReviewAction').hidden", "/journey review action was not available for two records");
+  await evaluate(`window.__journeyScrollBehavior='';document.getElementById('journeyComparison').scrollIntoView=({behavior})=>{window.__journeyScrollBehavior=behavior};document.getElementById('reviewJourneyChanges').click()`);
+  await waitFor("document.activeElement === document.getElementById('comparisonTitle')", "/journey review action did not move focus to the comparison");
+  assert(await evaluate("window.__journeyScrollBehavior === 'auto'"), "/journey review action ignored reduced-motion preference");
+  await evaluate("window.confirm=()=>false;document.querySelector('.snapshot-remove').click()");
+  assert(await evaluate("document.querySelectorAll('.snapshot-card').length === 2"), "/journey cancelled delete changed saved records");
+  await evaluate("window.confirm=()=>true;document.querySelector('.snapshot-remove').click()");
+  await waitFor("document.querySelectorAll('.snapshot-card').length === 1", "/journey confirmed delete did not remove one record");
 
   await navigate("/emr");
   await waitFor("Boolean(document.getElementById('encounterDate').value)", "/emr module did not initialize");
@@ -119,7 +176,7 @@ try {
   } else {
     await waitFor(`document.getElementById('encounterStatus').dataset.status === ${JSON.stringify(expectedStatus)}`, `/emr ${activatedEmrAction} did not produce ${expectedStatus}`);
   }
-  console.log(`primary-action behavioral contracts passed: ${links.length + 3} route states; EMR activated ${activatedEmrAction}`);
+  console.log(`primary-action behavioral contracts passed: ${links.length + 4} route states; EMR activated ${activatedEmrAction}`);
 } finally {
   client?.close(); browser.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => browser.once("exit", resolve)), delay(2_000)]);

@@ -20,6 +20,7 @@ import {
   createPatientTransferPackage,
   parsePatientTransferPackage,
   patientTransferFilename,
+  verifyPatientTransferCode,
 } from "../src/patient-transfer.js";
 
 const EXPORTED_AT = "2026-07-20T12:34:56.000Z";
@@ -52,6 +53,28 @@ const PRIVATE_VALUES = [
   "청구-노출금지",
   "감사-노출금지",
 ];
+
+test("선택한 환자 전달 파일은 별도 입력 코드를 정규화한 뒤 일치할 때만 그대로 승인한다", () => {
+  const parsed = parsePatientTransferPackage(
+    createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE),
+  );
+
+  assert.strictEqual(verifyPatientTransferCode(parsed, TRANSFER_CODE), parsed);
+  assert.throws(
+    () => verifyPatientTransferCode(parsed, "VG-01234-56789-ABCDE-FGHJK-MNPQRT"),
+    (error) => error.code === "mismatched-transfer-code" && /일치하지 않습니다/.test(error.message),
+  );
+  assert.throws(
+    () => verifyPatientTransferCode(parsed, ""),
+    (error) => error.code === "missing-transfer-code" && /입력해 주세요/.test(error.message),
+  );
+  assert.throws(
+    () => verifyPatientTransferCode(parsed, "VG-WRONG"),
+    (error) => error.code === "invalid-transfer-code" && /형식/.test(error.message),
+  );
+  assert.strictEqual(verifyPatientTransferCode(parsed, `  ${TRANSFER_CODE.toLowerCase()}  `), parsed);
+  assert.deepEqual(verifyPatientTransferCode(parsed, TRANSFER_CODE), parsed);
+});
 
 function normalizedEvent(input) {
   const event = normalizePatientEvent(input);

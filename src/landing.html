@@ -39,7 +39,7 @@
     </header>
 
     <main class="page-shell landing-shell" id="mainContent">
-      <section class="landing-hero patient-presentation" aria-labelledby="landingTitle">
+      <section class="landing-hero patient-presentation" aria-labelledby="landingTitle" data-entry-experience="patient">
         <div class="landing-hero__copy">
           <p class="eyebrow patient-presentation__identity signal-kicker">
             <span class="signal-thread" aria-hidden="true">
@@ -61,10 +61,13 @@
             의료기관에서 받은 VitaGraph 파일과 내가 남긴 증상·검사 수치를 한곳에서
             연결하고, 다음 진료에서 확인할 질문까지 준비합니다.
           </p>
-          <p class="landing-hero__note patient-presentation__assurance" data-route-context>이 기기에서 처리 · 로그인 없음 · 원문 서버 전송 없음 · 진단·처방 아님</p>
+          <div class="landing-hero__boundary" aria-label="개인 앱의 역할과 저장 방식">
+            <p class="patient-presentation__assurance" data-route-context>개인용 앱입니다 · 의료진의 EMR 업무 공간과 분리 · 임상 기록을 직접 바꾸지 않음 · 이 기기에서 처리 · 원문 서버 전송 없음 · 진단·처방 아님</p>
+            <p><strong>저장은 선택 사항입니다.</strong> Journey에서 직접 저장한 기록만 이 브라우저의 로컬 저장소에 남고, 브라우저 데이터를 지우면 함께 삭제될 수 있습니다.</p>
+          </div>
           <div class="landing-actions">
-            <a class="landing-button landing-button--primary" href="/map#import-record">기록 파일 가져오기</a>
-            <a class="landing-button landing-button--secondary" href="/map?sample=1">예시 기록으로 먼저 보기</a>
+            <a class="landing-button landing-button--primary" href="/map#import-record" data-primary-action>내 기록으로 시작</a>
+            <a class="landing-button landing-button--secondary" href="/map?sample=1">예시로 보기</a>
           </div>
         </div>
         <figure class="landing-hero__visual">

@@ -450,6 +450,116 @@ export function validateEncounterForCompletion(patient, encounterId) {
   return errors;
 }
 
+function signingOmission(code, message, target, action) {
+  return { code, message, target, action };
+}
+
+export function encounterSigningOmissions(patient, encounterId) {
+  const encounter = getEncounter(patient, encounterId);
+  if (!encounter) {
+    return [signingOmission(
+      "encounter-missing",
+      "진료 회차를 찾을 수 없습니다.",
+      "encounterDate",
+      "진료 맥락 확인",
+    )];
+  }
+  const omissions = [];
+  if (!cleanText(patient?.name, 200)) {
+    omissions.push(signingOmission("patient-name", "환자 이름이 없습니다.", "patientName", "환자 정보 수정"));
+  }
+  if (!cleanText(patient?.mrn, 120)) {
+    omissions.push(signingOmission("patient-mrn", "MRN(차트번호)이 없습니다.", "patientMrn", "환자 정보 수정"));
+  }
+  if (!cleanText(encounter.id, 200) || !cleanText(encounter.date, 40)) {
+    omissions.push(signingOmission(
+      "encounter-context",
+      "Encounter 식별자 또는 날짜가 없습니다.",
+      "encounterDate",
+      "진료 맥락 수정",
+    ));
+  }
+  if (!cleanText(encounter.clinician, 120)) {
+    omissions.push(signingOmission(
+      "encounter-clinician",
+      "담당 의료진이 없습니다.",
+      "encounterClinician",
+      "담당 의료진 수정",
+    ));
+  }
+  if (!cleanText(encounter.chiefComplaint)) {
+    omissions.push(signingOmission(
+      "chief-complaint",
+      "주호소가 없습니다.",
+      "chiefComplaint",
+      "주호소 수정",
+    ));
+  }
+  for (const [key, label, target] of [
+    ["subjective", "Subjective", "soapSubjective"],
+    ["objective", "Objective", "soapObjective"],
+    ["assessment", "Assessment", "soapAssessment"],
+    ["plan", "Plan", "soapPlan"],
+  ]) {
+    if (!cleanText(encounter.soap?.[key], 8_000)) {
+      omissions.push(signingOmission(
+        `soap-${key}`,
+        `SOAP ${label}가 비어 있습니다.`,
+        target,
+        "SOAP 수정",
+      ));
+    }
+  }
+  const children = patient.events.filter((event) =>
+    event.encounterId === encounterId && event.recordStatus === "draft");
+  const diagnoses = children.filter((event) => event.type === "condition");
+  if (diagnoses.length === 0) {
+    omissions.push(signingOmission(
+      "diagnosis-required",
+      "KCD 진단이 없습니다.",
+      "diagnosisLabel",
+      "진단 추가",
+    ));
+  }
+  if (diagnoses.length > 0 && diagnoses.filter((event) => event.diagnosisRole === "primary").length !== 1) {
+    omissions.push(signingOmission(
+      "primary-diagnosis-count",
+      "주상병을 정확히 한 건 지정해야 합니다.",
+      "diagnosisLabel",
+      "진단 역할 수정",
+    ));
+  }
+  if (diagnoses.some((event) => !cleanText(event.code, 120) || !cleanText(event.system, 500))) {
+    omissions.push(signingOmission(
+      "diagnosis-coding",
+      "모든 진단에 코드와 코드 시스템이 필요합니다.",
+      "diagnosisLabel",
+      "진단 코드 수정",
+    ));
+  }
+  for (const medication of children.filter((event) => event.type === "medication")) {
+    const prescription = medication.prescription ?? {};
+    if (!(prescription.dose > 0)
+      || !cleanText(prescription.doseUnit, 80)
+      || !cleanText(prescription.route, 80)
+      || !cleanText(prescription.frequency, 120)
+      || !(prescription.durationDays > 0)
+      || !(prescription.quantity > 0)) {
+      omissions.push(signingOmission(
+        `prescription-dosing:${medication.id}`,
+        `${medication.label} 처방의 1회량·단위·경로·빈도·기간·총량을 완성해야 합니다.`,
+        "medicationName",
+        "처방 용법 수정",
+      ));
+    }
+  }
+  return omissions;
+}
+
+export function validateEncounterForSigning(patient, encounterId) {
+  return encounterSigningOmissions(patient, encounterId).map(({ message }) => message);
+}
+
 export function completeEncounter(stateInput, patientId, encounterId, draftPatch = {}, nowInput = new Date().toISOString()) {
   const now = normalizedNow(nowInput);
   let state = saveEncounterDraft(stateInput, patientId, encounterId, draftPatch, now);
@@ -470,6 +580,10 @@ export function signEncounter(stateInput, patientId, encounterId, signerInput = 
   assertTrustedEncounterOrigin(encounter);
   if (encounter.recordStatus !== "draft" || encounter.status !== "finished" || encounter.signature?.status !== "unsigned") {
     throw new Error("완료되어 서명 대기 중인 진료만 서명할 수 있습니다.");
+  }
+  const omissions = encounterSigningOmissions(patient, encounterId);
+  if (omissions.length) {
+    throw new TypeError(`필수 진료기록이 완전하지 않아 서명할 수 없습니다. ${omissions.map(({ message }) => message).join(" ")}`);
   }
   const signer = cleanText(signerInput || encounter.clinician, 120);
   if (!signer) throw new TypeError("서명자 표시명이 필요합니다.");

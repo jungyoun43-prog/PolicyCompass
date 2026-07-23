@@ -27,10 +27,28 @@ test("Health Map은 전용 환자 JSON 로컬 가져오기와 명시적 Journey 
   const landing = await (await worker.fetch(new Request("https://example.com/patient"))).text();
 
   assert.match(html, /id="fhirFile"/);
+  assert.match(html, /id="transferCode"/);
+  assert.doesNotMatch(html, /id="selectRecordFile"[^>]*disabled/);
+  assert.match(html, /id="importRecordButton"[^>]*disabled/);
+  assert.match(html, /코드를 먼저 입력하고 파일을 고른 뒤, 마지막 확인 버튼/);
+  assert.ok(html.indexOf('id="transferCode"') < html.indexOf('id="fhirFile"'));
+  assert.ok(html.indexOf('id="fhirFile"') < html.indexOf('id="importRecordButton"'));
+  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="import-record"'));
   assert.match(html, /서버 전송 없음/);
   assert.match(html, /id="saveJourney"/);
   assert.match(landing, /VitaGraph 환자 전달 v1만 읽고/);
   assert.doesNotMatch(landing, /FHIR R4는 보조/);
+});
+
+test("가져오기 완료 상태에서 환자는 갱신된 건강 지도로 이동할 수 있다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const html = await (await worker.fetch(new Request("https://example.com/map"))).text();
+  const app = await (await worker.fetch(new Request("https://example.com/app.js"))).text();
+
+  assert.match(html, /id="health-map"[^>]*aria-labelledby="bodyTitle"[^>]*tabindex="-1"/);
+  assert.match(app, /mapLink\.href = "#health-map"/);
+  assert.match(app, /mapLink\.textContent = "건강 지도 보기"/);
+  assert.match(app, /elements\.fhirResult\.replaceChildren\(heading, details, note, mapLink\)/);
 });
 
 test("Health Map은 환자 전달 파일만 판별하고 전체 지원 투영을 세션에 보존한다", async () => {
@@ -39,6 +57,9 @@ test("Health Map은 환자 전달 파일만 판별하고 전체 지원 투영을
 
   assert.match(app, /payload\?\.schema !== "vitagraph-patient-transfer"/);
   assert.match(app, /parsePatientTransferPackage\(payload\)/);
+  assert.match(app, /verifyPatientTransferCode\([\s\S]*?await importHealthRecord\(file\),[\s\S]*?normalizedTransferCode\(\)/);
+  assert.match(app, /let pendingTransferFile = null/);
+  assert.match(app, /error instanceof PatientTransferCodeError[\s\S]*?showTransferCodeError\(error\.message\)/);
   assert.doesNotMatch(app, /parseFhirBundle/);
   assert.match(app, /전달 확인 코드/);
   assert.match(app, /state\.declaredIds = \(imported\.conditionIds \?\? \[\]\)\.filter/);

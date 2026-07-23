@@ -389,6 +389,14 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - Disabled: include a reason near the control.
 - Offline: full deterministic workflow remains available; configured model assistance may fail closed to the labelled rule-based brief.
 
+### Accessibility and responsive audit evidence (2026-07-23)
+
+- Assumption: native browser confirmation dialogs provide the accessible, keyboard-operable confirmation boundary for destructive local-only actions; no custom dialog semantics are substituted.
+- Verified by automation: shared skip links and labelled landmarks, visible keyboard focus, labelled controls, status/alert regions, reduced-motion overrides, horizontal-overflow checks, and reachable primary actions at 390×844. The `/map` empty-submit path marks the health-note control `aria-invalid`, retains the entered value, and returns focus to that control for correction.
+- The responsive primary-action gate checks every parent route at 390×844 for visibility within the first viewport, a 44×44px minimum target, keyboard focus and visible focus, unobstructed reachability, and no horizontal clipping. In particular, `/map` checks the visible `건강 지도 업데이트` action.
+- Product evidence is the native markup, shared tokens, and error-recovery behavior. Harness evidence is limited to deterministic DOM, accessibility-tree, viewport, and keyboard assertions; it cannot establish clinical comprehension or WCAG certification.
+- Unverified and release-blocking external gate: the real sessions defined in `USABILITY.md` (three personal users and three clinical or health-information users) remain unperformed. No automated result is treated as a substitute for those sessions.
+
 ### Content voice
 
 - Tone: direct Korean clinical operations language; short labels, complete safety explanations.
@@ -424,6 +432,7 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - A clinician can start an Encounter, save all four SOAP sections, add multiple KCD diagnoses, add prescriptions with dose/frequency/duration/directions, and add laboratory/imaging/procedure orders.
 - A clinician can add, review, remove, sign, export, and patient-transfer eligible structured vital signs without duplicating them as unlinked manual chart events.
 - Unsubmitted measurement, diagnosis, prescription, or order input blocks patient/Encounter switching, completion, import, and export so typed clinical content cannot cross context or disappear silently.
+- Browser refresh or page exit requests confirmation whenever patient edits, Encounter/SOAP changes, unsubmitted clinical items, or manual history input remain unsaved.
 - An unsigned JSON backup restores every clinical event as external/unverified, blocks promotion or local signing of restored drafts, retains the currently installed institution rules, discards the supplied audit trail, and adds one fresh local restore audit event.
 - Finishing and locally signing an Encounter records timestamps and audit actions. Signed content cannot be silently edited.
 - Selected patient and Encounter show diagnoses, medications, allergies, observations, procedures, VitaGraph, Journey, assistance, and source provenance without duplicating the source record.

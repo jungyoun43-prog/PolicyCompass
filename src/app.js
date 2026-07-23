@@ -1,6 +1,10 @@
 import { CONDITIONS, inferConditionIds } from "/data.js";
 import { createJourneySnapshot, normalizeJourney } from "/journey-model.js";
-import { parsePatientTransferPackage } from "/patient-transfer.js";
+import {
+  parsePatientTransferPackage,
+  PatientTransferCodeError,
+  verifyPatientTransferCode,
+} from "/patient-transfer.js";
 import {
   createBodyModel,
   createDetailModel,
@@ -12,6 +16,7 @@ const toneClasses = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "ton
 const sessionKey = "vitagraph-scene";
 const journeyKey = "vitagraph-journey";
 const demoNote = "혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통";
+const transferCodePattern = /^VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}$/;
 
 const elements = {
   form: document.querySelector("#healthForm"),
@@ -42,6 +47,10 @@ const elements = {
   sourceDialog: document.querySelector("#sourceDialog"),
   sourceClose: document.querySelector("#sourceClose"),
   fhirFile: document.querySelector("#fhirFile"),
+  transferCode: document.querySelector("#transferCode"),
+  selectRecordFile: document.querySelector("#selectRecordFile"),
+  importRecordButton: document.querySelector("#importRecordButton"),
+  recordFileStatus: document.querySelector("#recordFileStatus"),
   fhirResult: document.querySelector("#fhirResult"),
   saveJourney: document.querySelector("#saveJourney"),
 };
@@ -55,6 +64,7 @@ const state = {
   source: "직접 입력",
   isDemo: false,
 };
+let pendingTransferFile = null;
 
 function readScene() {
   try {
@@ -208,6 +218,58 @@ function previewRow(label, value) {
   return row;
 }
 
+function normalizedTransferCode() {
+  return elements.transferCode.value.trim().toUpperCase();
+}
+
+function hasValidTransferCodeShape() {
+  return transferCodePattern.test(normalizedTransferCode());
+}
+
+function setImportResult(message, state = "", role = "status") {
+  elements.fhirResult.hidden = false;
+  elements.fhirResult.className = `import-result${state ? ` is-${state}` : ""}`;
+  elements.fhirResult.setAttribute("role", role);
+  elements.fhirResult.textContent = message;
+}
+
+function syncImportControls() {
+  const codeReady = hasValidTransferCodeShape();
+  elements.importRecordButton.disabled = !codeReady || !pendingTransferFile;
+  if (pendingTransferFile) {
+    elements.recordFileStatus.textContent = `선택한 파일: ${pendingTransferFile.name}. 확인하고 가져오기를 누르기 전에는 지도가 바뀌지 않습니다.`;
+  } else if (codeReady) {
+    elements.recordFileStatus.textContent = "확인 코드 형식을 확인했습니다. 이제 기록 파일을 선택하세요.";
+  } else {
+    elements.recordFileStatus.textContent = "확인 코드를 먼저 입력한 뒤 기록 파일을 선택하세요.";
+  }
+}
+
+function clearTransferCodeError() {
+  elements.transferCode.setAttribute("aria-invalid", "false");
+  if (elements.fhirResult.dataset.errorField === "transferCode") {
+    elements.fhirResult.hidden = true;
+    delete elements.fhirResult.dataset.errorField;
+  }
+}
+
+function showTransferCodeError(message) {
+  elements.transferCode.setAttribute("aria-invalid", "true");
+  elements.fhirResult.dataset.errorField = "transferCode";
+  setImportResult(message, "error", "alert");
+  elements.transferCode.focus({ preventScroll: true });
+}
+
+function resetImportFlow({ clearCode = false, hideResult = true } = {}) {
+  pendingTransferFile = null;
+  elements.fhirFile.value = "";
+  if (clearCode) elements.transferCode.value = "";
+  elements.transferCode.setAttribute("aria-invalid", "false");
+  delete elements.fhirResult.dataset.errorField;
+  if (hideResult) elements.fhirResult.hidden = true;
+  syncImportControls();
+}
+
 function renderImportPreview({ file, imported }) {
   const conditionLabels = importedConditionLabels(imported);
   const measurementLabels = (imported.measurements ?? []).map(({ label, value, unit, observedAt }) => {
@@ -241,8 +303,15 @@ function renderImportPreview({ file, imported }) {
   const note = document.createElement("p");
   note.className = "import-result__note";
   note.textContent = "환자용으로 전달된 사본이며 원본 의료기록을 변경하지 않습니다. 확인 코드는 오전달 사고만 줄이며 환자 인증이나 전자서명이 아닙니다. 파일에는 전자서명이 없어 발행기관·값 변조를 검증하지 못합니다.";
+  const mapLink = document.createElement("a");
+  mapLink.className = "primary-button import-result__action";
+  mapLink.href = "#health-map";
+  mapLink.textContent = "건강 지도 보기";
+  elements.fhirResult.hidden = false;
   elements.fhirResult.className = "import-result is-success";
-  elements.fhirResult.replaceChildren(heading, details, note);
+  elements.fhirResult.setAttribute("role", "status");
+  delete elements.fhirResult.dataset.errorField;
+  elements.fhirResult.replaceChildren(heading, details, note, mapLink);
 }
 
 async function importHealthRecord(file) {
@@ -314,14 +383,28 @@ function renderAll() {
   renderDetail();
 }
 
+function clearFormError() {
+  elements.note.setAttribute("aria-invalid", "false");
+  elements.formError.hidden = true;
+}
+
+function showFormError(message, { focusNote = false } = {}) {
+  elements.note.setAttribute("aria-invalid", "true");
+  elements.formError.textContent = message;
+  elements.formError.hidden = false;
+  if (focusNote) elements.note.focus({ preventScroll: true });
+}
+
 function analyze() {
   const note = elements.note.value.trim();
   state.visibleIds = inferConditionIds(note, state.declaredIds);
   state.activeId = normalizeActiveId(state.visibleIds, state.activeId);
-  elements.formError.hidden = state.visibleIds.length > 0;
+  if (state.visibleIds.length > 0) clearFormError();
   if (state.visibleIds.length === 0) {
-    elements.formError.textContent =
-      "자동으로 확인 필요 신호를 찾지 못했습니다. 알고 있는 질환을 선택하거나 검사명을 더 구체적으로 적어 주세요.";
+    showFormError(
+      "자동으로 확인 필요 신호를 찾지 못했습니다. 알고 있는 질환을 선택하거나 검사명을 더 구체적으로 적어 주세요.",
+      { focusNote: true },
+    );
   }
   renderAll();
   persistScene();
@@ -331,8 +414,7 @@ elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
   const hasInput = elements.note.value.trim().length > 0 || state.declaredIds.length > 0;
   if (!hasInput) {
-    elements.formError.textContent = "증상이나 수치를 입력하거나 질환을 하나 이상 선택해 주세요.";
-    elements.formError.hidden = false;
+    showFormError("증상이나 수치를 입력하거나 질환을 하나 이상 선택해 주세요.", { focusNote: true });
     return;
   }
 
@@ -372,7 +454,10 @@ for (const link of elements.connectionsLinks) {
   });
 }
 
-elements.note.addEventListener("input", () => leaveDemoMode({ clearResults: true }));
+elements.note.addEventListener("input", () => {
+  clearFormError();
+  leaveDemoMode({ clearResults: true });
+});
 
 elements.loadDemo.addEventListener("click", () => {
   elements.note.value = demoNote;
@@ -384,10 +469,9 @@ elements.loadDemo.addEventListener("click", () => {
   state.source = "예시 데이터";
   state.isDemo = true;
   elements.demoMode.hidden = false;
-  elements.fhirFile.value = "";
-  elements.fhirResult.hidden = true;
+  resetImportFlow({ clearCode: true });
   for (const chip of elements.chips) chip.setAttribute("aria-pressed", "false");
-  elements.formError.hidden = true;
+  clearFormError();
   analyze();
 });
 
@@ -401,10 +485,9 @@ elements.resetButton.addEventListener("click", () => {
   state.source = "직접 입력";
   state.isDemo = false;
   elements.demoMode.hidden = true;
-  elements.fhirFile.value = "";
-  elements.fhirResult.hidden = true;
+  resetImportFlow({ clearCode: true });
   for (const chip of elements.chips) chip.setAttribute("aria-pressed", "false");
-  elements.formError.hidden = true;
+  clearFormError();
   renderAll();
   try {
     sessionStorage.removeItem(sessionKey);
@@ -413,20 +496,61 @@ elements.resetButton.addEventListener("click", () => {
   }
 });
 
-elements.fhirFile.addEventListener("change", async () => {
+elements.transferCode.addEventListener("input", () => {
+  clearTransferCodeError();
+  syncImportControls();
+});
+
+elements.transferCode.addEventListener("blur", () => {
+  if (elements.transferCode.value.trim()) {
+    elements.transferCode.value = normalizedTransferCode();
+    syncImportControls();
+  }
+});
+
+elements.selectRecordFile.addEventListener("click", () => {
+  if (!hasValidTransferCodeShape()) {
+    const message = elements.transferCode.value.trim()
+      ? "전달 확인 코드 형식을 확인해 주세요."
+      : "별도로 전달받은 확인 코드를 입력해 주세요.";
+    showTransferCodeError(message);
+    return;
+  }
+  elements.fhirFile.value = "";
+  elements.fhirFile.click();
+});
+
+elements.fhirFile.addEventListener("change", () => {
   const [file] = elements.fhirFile.files;
   if (!file) return;
-  elements.fhirResult.hidden = false;
-  elements.fhirResult.className = "import-result is-loading";
-  elements.fhirResult.textContent = "기록 구조를 확인하는 중…";
+  pendingTransferFile = file;
+  elements.fhirResult.hidden = true;
+  syncImportControls();
+});
+
+elements.importRecordButton.addEventListener("click", async () => {
+  if (!elements.transferCode.value.trim()) {
+    showTransferCodeError("별도로 전달받은 확인 코드를 입력해 주세요.");
+    return;
+  }
+  if (!hasValidTransferCodeShape()) {
+    showTransferCodeError("전달 확인 코드 형식을 확인해 주세요.");
+    return;
+  }
+  if (!pendingTransferFile) {
+    setImportResult("가져올 VitaGraph 환자 전달 JSON 파일을 선택해 주세요.", "error", "alert");
+    elements.selectRecordFile.focus({ preventScroll: true });
+    return;
+  }
+
+  const file = pendingTransferFile;
+  clearTransferCodeError();
+  setImportResult("기록 구조와 확인 코드를 검사하는 중…", "loading");
   try {
-    const imported = await importHealthRecord(file);
-    const transferCode = imported.provenance?.transferCode;
-    if (!window.confirm(`전달 확인 코드\n${transferCode}\n\n의료기관에서 파일과 다른 경로로 안내받은 코드와 정확히 같습니까? 다르면 가져오지 마세요.`)) {
-      elements.fhirResult.className = "import-result";
-      elements.fhirResult.textContent = "전달 확인 코드 대조를 취소했습니다. 현재 지도와 Journey는 바뀌지 않았습니다.";
-      return;
-    }
+    const imported = verifyPatientTransferCode(
+      await importHealthRecord(file),
+      normalizedTransferCode(),
+    );
     let journeyCount = 0;
     try {
       journeyCount = normalizeJourney(JSON.parse(localStorage.getItem(journeyKey) ?? "[]")).length;
@@ -436,14 +560,12 @@ elements.fhirFile.addEventListener("change", async () => {
     if (journeyCount > 0 && !window.confirm(
       `이 기기에 Journey ${journeyCount}건이 있습니다. 지금 파일이 같은 사람의 기록인지 직접 확인했습니까?\n\n다른 사람 기록이면 취소하고 Journey 화면에서 기존 기록을 백업·삭제하세요.`,
     )) {
-      elements.fhirResult.className = "import-result";
-      elements.fhirResult.textContent = "기존 Journey와의 대상자 대조를 취소했습니다. 저장된 기록은 바뀌지 않았습니다.";
+      setImportResult("기존 Journey와의 대상자 대조를 취소했습니다. 선택한 파일과 저장된 기록은 바뀌지 않았습니다.");
       return;
     }
     const hasCurrentMap = !state.isDemo && (state.visibleIds.length > 0 || state.measurements.length > 0 || elements.note.value.trim());
     if (hasCurrentMap && !window.confirm("현재 저장 전 건강 지도를 이 파일 내용으로 교체할까요? Journey 기록은 자동 변경되지 않습니다.")) {
-      elements.fhirResult.className = "import-result";
-      elements.fhirResult.textContent = "현재 지도 교체를 취소했습니다.";
+      setImportResult("현재 지도 교체를 취소했습니다. 선택한 파일은 다시 확인할 수 있도록 유지됩니다.");
       return;
     }
     leaveDemoMode({ clearResults: true });
@@ -455,13 +577,17 @@ elements.fhirFile.addEventListener("change", async () => {
     elements.note.value = measurementNote(state.measurements);
     analyze();
     renderImportPreview({ file, imported });
+    resetImportFlow({ clearCode: true, hideResult: false });
   } catch (error) {
-    elements.fhirResult.className = "import-result is-error";
-    elements.fhirResult.textContent = error instanceof SyntaxError
+    if (error instanceof PatientTransferCodeError) {
+      showTransferCodeError(error.message);
+      return;
+    }
+    const message = error instanceof SyntaxError
       ? "JSON 형식을 읽을 수 없습니다. VitaGraph 환자 전달 JSON v1 파일인지 확인해 주세요."
       : error instanceof Error ? error.message : "기록 파일을 가져오지 못했습니다.";
-  } finally {
-    elements.fhirFile.value = "";
+    setImportResult(message, "error", "alert");
+    elements.selectRecordFile.focus({ preventScroll: true });
   }
 });
 
@@ -494,4 +620,5 @@ if (new URLSearchParams(window.location.search).get("sample") === "1") {
   elements.loadDemo.click();
 }
 
+syncImportControls();
 renderAll();

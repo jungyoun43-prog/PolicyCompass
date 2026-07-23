@@ -5,6 +5,9 @@ const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.PATIENT_CHROME_DEBUG_PORT ?? "9231", 10);
 const reportPath = process.env.PATIENT_FIRST_USE_REPORT
   ?? join("artifacts", "smoke", "first-use-patient-report.json");
+const runId = process.env.PR_GATE_RUN_ID ?? `local-${process.pid}`;
+const cell = process.env.PR_GATE_CELL_ID ?? "patient-fresh";
+const profileType = process.env.PR_GATE_PROFILE_TYPE ?? "fresh";
 const viewports = [
   { width: 390, height: 844, mobile: true },
   { width: 768, height: 1024, mobile: false },
@@ -14,6 +17,8 @@ const viewports = [
 
 const viewportResults = [];
 const routeResults = [];
+let keyboardPrimaryActionVerified = false;
+let journeyDataPersistenceVerified = false;
 await runBrowserSmoke({
   appUrl,
   debugPort,
@@ -28,14 +33,29 @@ await runBrowserSmoke({
       const localContext = document.querySelector('[data-route-context]');
       const sample = firstUse?.querySelector('a[href="/map?sample=1"]');
       const imported = firstUse?.querySelector('a[href="/map#import-record"]');
+      const heroPrimary = document.querySelector('[data-primary-action]');
+      const heroSample = document.querySelector('.landing-actions a[href="/map?sample=1"]');
       const rect = firstUse?.getBoundingClientRect();
       const sampleRect = sample?.getBoundingClientRect();
+      const actionBounds = [heroPrimary, heroSample].map((element) => {
+        const bounds = element?.getBoundingClientRect();
+        return bounds ? {
+          text: element.textContent.trim(),
+          path: new URL(element.href).pathname + new URL(element.href).hash + new URL(element.href).search,
+          top: bounds.top,
+          bottom: bounds.bottom,
+          width: bounds.width,
+          height: bounds.height,
+        } : null;
+      });
       return {
         steps: firstUse?.querySelectorAll('[data-first-use-step]').length ?? 0,
         localText: localContext?.textContent.replace(/\\s+/g, ' ').trim() ?? '',
         sampleVisible: Boolean(sampleRect && sampleRect.width > 0 && sampleRect.height > 0),
         importPresent: Boolean(imported),
         firstUseWidth: rect?.width ?? 0,
+        actionBounds,
+        viewportHeight: innerHeight,
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: innerWidth,
         emrLinks: [...document.querySelectorAll('a[href]')].filter((link) => new URL(link.href).pathname === '/emr').length,
@@ -45,19 +65,35 @@ await runBrowserSmoke({
     assert(/이 기기|브라우저/.test(result.localText) && /서버 전송 없음/.test(result.localText), `${viewport.width}x${viewport.height}: local-only context is unclear`);
     assert(result.sampleVisible && result.importPresent, `${viewport.width}x${viewport.height}: safe sample/import entry is missing`);
     assert(result.firstUseWidth > 0 && result.documentWidth <= result.viewportWidth, `${viewport.width}x${viewport.height}: first-use layout overflows`);
+    assert(
+      result.actionBounds.every((action) => action
+        && action.height >= 44
+        && action.width >= 44
+        && action.top >= 0
+        && action.bottom <= result.viewportHeight),
+      `${viewport.width}x${viewport.height}: hero start actions are not both reachable in the first viewport (${JSON.stringify(result.actionBounds)})`,
+    );
+    assert(result.actionBounds[0].text === "내 기록으로 시작" && result.actionBounds[0].path === "/map#import-record",
+      `${viewport.width}x${viewport.height}: private-start action is incorrect`);
+    assert(result.actionBounds[1].text === "예시로 보기" && result.actionBounds[1].path === "/map?sample=1",
+      `${viewport.width}x${viewport.height}: sample action is incorrect`);
     assert(result.emrLinks === 0, `${viewport.width}x${viewport.height}: patient start exposes /emr`);
     viewportResults.push({ viewport: `${viewport.width}x${viewport.height}`, ...result });
   }
 
-  await setViewport(viewports[2]);
+  await setViewport(viewports[0]);
   await navigate("/patient", "Boolean(document.querySelector('[data-first-use=" + JSON.stringify("patient") + "]'))");
-  assert(await tabTo('.patient-start-path a[href="/map?sample=1"]'), "Sample first-use action is not keyboard reachable.");
-  const sampleFocus = await evaluate(`(() => {
-    const style = getComputedStyle(document.activeElement);
-    return style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 3;
-  })()`);
-  assert(sampleFocus, "Sample first-use action has no visible keyboard focus.");
+  for (const selector of ['[data-primary-action]', '.landing-actions a[href="/map?sample=1"]']) {
+    assert(await tabTo(selector), `${selector}: hero action is not keyboard reachable.`);
+    const focusVisible = await evaluate(`(() => {
+      const style = getComputedStyle(document.activeElement);
+      return style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 3;
+    })()`);
+    assert(focusVisible, `${selector}: hero action has no visible keyboard focus.`);
+  }
+  keyboardPrimaryActionVerified = true;
 
+  await setViewport(viewports[2]);
   await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
   await waitFor("Boolean(sessionStorage.getItem('vitagraph-scene'))", "Sample map did not persist in the patient session.");
   const initialScene = await evaluate("JSON.parse(sessionStorage.getItem('vitagraph-scene'))");
@@ -111,9 +147,41 @@ await runBrowserSmoke({
     routeResults.push({ route, ...result });
   }
 
+  await navigate("/map", "Boolean(document.getElementById('healthNote'))");
+  await evaluate(`(() => {
+    const note = document.getElementById('healthNote');
+    note.value = '혈압 148/94';
+    note.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('analyzeButton').click();
+  })()`);
+  await waitFor("document.getElementById('miniConditionList').children.length > 0", "Real patient map did not update before Journey save.");
+  await waitFor("!document.getElementById('saveJourney').disabled", "Journey save did not become available.");
+  await evaluate("document.getElementById('saveJourney').click()");
+  await waitFor("JSON.parse(localStorage.getItem('vitagraph-journey') || '[]').length === 1", "Journey save did not persist one record.");
+  await navigate("/journey", "document.querySelectorAll('.snapshot-card').length === 1");
+  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-journey') || '[]').length === 1"),
+    "Journey record did not persist across patient route navigation.");
+  journeyDataPersistenceVerified = true;
+
+  const localStorageExplanationVerified = viewportResults.every(({ localText }) => (
+    /이 기기|브라우저/.test(localText) && /서버 전송 없음/.test(localText)
+  ));
+  const patientClinicianBoundaryVerified = [...viewportResults, ...routeResults]
+    .every(({ emrLinks }) => emrLinks === 0);
+
   await writeSmokeReport(reportPath, {
     suite: "first-use-patient",
+    runId,
+    cell,
+    profileType,
     generatedAt: new Date().toISOString(),
+    steps: ["responsive-first-use", "keyboard-primary-action", "patient-golden-route-sequence"],
+    productAssertions: {
+      localStorageExplanation: localStorageExplanationVerified,
+      patientClinicianBoundary: patientClinicianBoundaryVerified,
+      keyboardPrimaryAction: keyboardPrimaryActionVerified,
+      journeyDataPersistence: journeyDataPersistenceVerified,
+    },
     viewports: viewportResults,
     routeFlow: routeResults,
     routeSequence: ["/patient", "/map", "/connections", "/insights", "/journey"],

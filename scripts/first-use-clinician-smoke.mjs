@@ -5,6 +5,9 @@ const appUrl = process.env.EMR_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CLINICIAN_CHROME_DEBUG_PORT ?? "9232", 10);
 const reportPath = process.env.CLINICIAN_FIRST_USE_REPORT
   ?? join("artifacts", "smoke", "first-use-clinician-report.json");
+const runId = process.env.PR_GATE_RUN_ID ?? `local-${process.pid}`;
+const cell = process.env.PR_GATE_CELL_ID ?? "clinician-fresh";
+const profileType = process.env.PR_GATE_PROFILE_TYPE ?? "fresh";
 const viewports = [
   { width: 390, height: 844, mobile: true },
   { width: 768, height: 1024, mobile: false },
@@ -22,7 +25,9 @@ await runBrowserSmoke({
 }, async ({ evaluate, navigate, press, setViewport, waitFor }) => {
   for (const viewport of viewports) {
     await setViewport(viewport);
-    await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
+    await navigate("/emr", "Boolean(document.getElementById('eventDate')?.value)");
+    await evaluate("document.getElementById('loadDemo').click()");
+    await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", `${viewport.width}x${viewport.height}: sample workspace did not open`);
     const geometry = await evaluate(`(() => {
       const header = document.querySelector('.clinical-header');
       const action = document.querySelector('.clinical-header .app-header__action');
@@ -56,7 +61,9 @@ await runBrowserSmoke({
   }
 
   await setViewport(viewports[2]);
-  await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
+  await navigate("/emr", "Boolean(document.getElementById('eventDate')?.value)");
+  await evaluate("document.getElementById('loadDemo').click()");
+  await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", "Sample workspace did not open for keyboard validation.");
   await evaluate("document.getElementById('tab-encounter').focus()");
   await press("ArrowRight", "ArrowRight");
   await press("ArrowRight", "ArrowRight");
@@ -74,7 +81,11 @@ await runBrowserSmoke({
       focusVisible: style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 3,
       personalRouteLinks: [...document.querySelectorAll('a[href]')].filter((link) => ['/patient', '/map', '/connections', '/insights', '/journey'].includes(new URL(link.href).pathname)).length,
       progressiveDisclosureCount: document.querySelectorAll('[data-workflow-disclosure], details.encounter-workflow-disclosure').length,
-      finalReviewPresent: Boolean(document.getElementById('encounterSignoffSummary')),
+      finalReviewPresent: Boolean(
+        document.getElementById('encounterSignReview')
+        && document.getElementById('encounterSignReviewAcknowledged')
+        && document.getElementById('encounterSignReviewTitle')?.tabIndex === -1
+      ),
     };
   })()`);
   assert(keyboardState.activeId === "tab-graph" && keyboardState.bodyMapVisible, "Body-map tab did not retain keyboard focus and panel state.");
@@ -87,7 +98,17 @@ await runBrowserSmoke({
 
   await writeSmokeReport(reportPath, {
     suite: "first-use-clinician",
+    runId,
+    cell,
+    profileType,
     generatedAt: new Date().toISOString(),
+    steps: ["responsive-context", "keyboard-workspace-navigation"],
+    productAssertions: {
+      correctPatientContext: true,
+      persistentSafetyContext: true,
+      clinicianPatientBoundary: true,
+      keyboardWorkspaceNavigation: true,
+    },
     viewports: viewportResults,
     singlePatientTablist: true,
     arrowKeyNavigation: true,

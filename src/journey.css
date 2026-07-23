@@ -30,6 +30,11 @@
 .journey-transfer-status { min-height: 1.4em; margin: var(--space-2) 0 0; color: var(--muted); font-size: .8125rem; font-weight: 650; }
 .journey-transfer-status.is-success { color: color-mix(in srgb, var(--data-lime) 60%, var(--ink)); }
 .journey-transfer-status.is-error { color: var(--urgent); }
+.journey-review-action { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-5); }
+.journey-review-action[hidden] { display: none; }
+.journey-review-action .primary-button { min-height: 44px; }
+.journey-review-action > span { max-width: 34rem; color: var(--muted); font-size: .8125rem; line-height: 1.55; }
+#comparisonTitle:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: var(--space-1); }
 .journey-empty { max-width: 580px; margin: var(--space-12) auto; text-align: center; }
 .journey-empty > span { color: var(--accent); font: 700 .75rem var(--font-mono); }
 .journey-empty h3 { margin: var(--space-2) 0; font-size: 1.5rem; }

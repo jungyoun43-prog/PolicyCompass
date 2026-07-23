@@ -38,6 +38,19 @@ test("Health Map은 기록, 추론, 선택 상태와 다음 행동을 한 흐름
   assert.match(appJs, /선택됨 ·/);
 });
 
+test("Health Map 관계 미리보기는 기록 사실과 추론 Connection을 색상 외 형태와 문구로 구분한다", async () => {
+  const portalCss = await readFile("src/portal.css", "utf8");
+
+  assert.match(mapHtml, /preview-node preview-node--recorded/);
+  assert.match(mapHtml, /preview-node preview-node--inferred/);
+  assert.match(mapHtml, /preview-connection preview-connection--inferred/);
+  assert.match(mapHtml, /기록 사실 ·/);
+  assert.match(mapHtml, /추론 후보 ·/);
+  assert.match(portalCss, /\.preview-node--recorded > circle[\s\S]*?fill:\s*var\(--preview-tone\)/);
+  assert.match(portalCss, /\.preview-node--inferred > circle[\s\S]*?fill:\s*var\(--surface\)[\s\S]*?stroke-dasharray/);
+  assert.match(portalCss, /\.preview-connection--inferred[\s\S]*?stroke-dasharray/);
+});
+
 test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내를 제공한다", () => {
   assertDiscoveryContract(connectionsHtml, "connections");
   assert.match(connectionsHtml, /노드 클릭·Enter: 선택/);

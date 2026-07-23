@@ -204,7 +204,7 @@
   font-weight: 700;
 }
 
-.import-box { margin-bottom: var(--space-6); border-radius: 16px; background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface)); padding: var(--space-4); }
+.import-box { margin: var(--space-6) 0 0; border-radius: 16px; background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface)); padding: var(--space-4); }
 .import-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .import-heading > div { min-width: 0; flex: 1; }
 .import-heading h3 { margin: var(--space-1) 0 0; font-size: .875rem; line-height: 1.3; }
@@ -213,6 +213,14 @@
 .import-button { display: inline-flex; min-height: 44px; flex: none; align-items: center; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface); padding: var(--space-2) var(--space-3); cursor: pointer; font-size: .75rem; font-weight: 700; }
 .import-box input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .import-box input:focus-visible + .import-button { outline: 3px solid var(--focus-ring); outline-offset: 3px; box-shadow: 0 0 0 2px var(--surface); }
+.import-box .transfer-code-field { display: grid; gap: var(--space-2); margin-top: var(--space-3); color: var(--ink); font-size: .75rem; font-weight: 700; }
+.import-box .transfer-code-field input { position: static; width: 100%; min-height: 44px; overflow: visible; clip: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0 var(--space-3); color: var(--ink); font: inherit; }
+.import-box .transfer-code-field input[aria-invalid="true"] { border-color: var(--urgent); }
+.import-box .transfer-code-field input:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.import-file-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+.import-file-actions .import-button,
+.import-file-actions .primary-button { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+.record-file-status { min-height: 1.4em; font-weight: 650; line-height: 1.45; }
 .import-warning {
   border: 1px solid color-mix(in srgb, var(--data-amber) 28%, var(--line));
   border-radius: var(--radius-control);
@@ -237,6 +245,7 @@
 .import-preview dt { color: var(--muted); font-weight: 650; }
 .import-preview dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--ink); font-weight: 600; }
 .import-result__note { margin: var(--space-3) 0 0; border-top: 1px solid var(--line); padding-top: var(--space-2); color: var(--muted); font-weight: 550; line-height: 1.5; }
+.import-result__action { margin-top: var(--space-3); }
 .journey-save { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); border: 0; border-radius: var(--radius-control); background: color-mix(in srgb, var(--data-violet) 10%, var(--surface)); padding: var(--space-3) var(--space-4); color: var(--ink); cursor: pointer; text-align: left; }
 .journey-save span { min-width: 0; font-weight: 720; } .journey-save small { flex: none; color: var(--muted); font-size: .6875rem; white-space: nowrap; } .journey-save.is-saved { background: color-mix(in srgb, var(--data-lime) 18%, var(--surface)); }
 
@@ -410,4 +419,9 @@ textarea:focus {
   .form-actions .primary-button,
   .form-actions .secondary-button { width: 100%; min-height: 48px; }
   .journey-save { min-height: 56px; }
+}
+
+@media (max-width: 620px) {
+  .map-page .import-box > .record-file-status { display: block; }
+  .import-file-actions { grid-template-columns: 1fr; }
 }

@@ -1209,6 +1209,132 @@ body.emr-page {
   color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
 }
 
+.sign-review {
+  border: 2px solid color-mix(in srgb, var(--data-amber) 50%, var(--line));
+}
+
+.sign-review__identity,
+.sign-review__grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sign-review__identity {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface));
+  padding: var(--space-3);
+}
+
+.sign-review__identity strong {
+  font-size: 1rem;
+}
+
+.sign-review__alerts {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.sign-review__finding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--data-amber) 13%, var(--surface));
+  padding: var(--space-3);
+}
+
+.sign-review__finding p,
+.sign-review__ok {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.sign-review__grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.sign-review__group {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
+}
+
+.sign-review__group h4 {
+  margin: 0 0 var(--space-2);
+}
+
+.sign-review__values {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  line-height: 1.45;
+}
+
+.sign-review__empty {
+  color: var(--muted);
+}
+
+.sign-review__acknowledgement {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 48px;
+  margin-top: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 45%, var(--line));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface));
+  padding: var(--space-3);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.sign-review__acknowledgement input {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.sign-review__acknowledgement:has(input:disabled) {
+  border-color: color-mix(in srgb, var(--data-amber) 52%, var(--line));
+  background: color-mix(in srgb, var(--data-amber) 10%, var(--surface));
+  color: var(--muted);
+}
+
+.sign-review__acknowledgement-status {
+  min-height: 1.45em;
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.sign-review__acknowledgement-status:not(:empty) {
+  margin-bottom: 0;
+}
+
+.sign-review__identity span:last-child {
+  grid-column: 1 / -1;
+}
+
+#encounterSignReviewTitle:focus-visible {
+  border-radius: var(--radius-control);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+
+@media (max-width: 640px) {
+  .sign-review__finding {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .entry-boundary,
 .context-guidance {
   margin: calc(var(--space-2) * -1) 0 var(--space-4);

@@ -520,6 +520,11 @@ try {
     "document.getElementById('soapAssessment').value = '본태성 고혈압 의심'",
     "document.getElementById('soapPlan').value = '약물치료와 혈액검사 후 30일 뒤 추적'",
   ].join(";"));
+  const dirtyExitGuard = await evaluate(`(() => {
+    const event = new Event('beforeunload', { cancelable: true });
+    return { dispatchResult: window.dispatchEvent(event), returnValue: event.returnValue };
+  })()`);
+  assert(dirtyExitGuard.dispatchResult === false, "Dirty SOAP did not activate the page-exit confirmation boundary.");
   const supplementalFhirBundle = {
     resourceType: "Bundle",
     type: "collection",
@@ -551,6 +556,11 @@ try {
   ].join(";"));
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('초안을 저장')", "SOAP draft did not save.");
   assert(await evaluate("document.activeElement === document.getElementById('saveEncounterDraft')"), "Draft save did not preserve workflow focus.");
+  const cleanExitGuard = await evaluate(`(() => {
+    const event = new Event('beforeunload', { cancelable: true });
+    return { dispatchResult: window.dispatchEvent(event), returnValue: event.returnValue };
+  })()`);
+  assert(cleanExitGuard.dispatchResult === true, "Saved SOAP still activated the page-exit confirmation boundary.");
 
   await evaluate([
     "document.getElementById('vitalValue').value = '149/93'",
@@ -649,9 +659,60 @@ try {
   ].join(";"));
   await waitFor("document.getElementById('orderList').textContent.includes('기본 혈액검사')", "Encounter order did not render.");
 
-  await evaluate("document.getElementById('completeEncounter').click()");
+  await evaluate("document.getElementById('soapObjective').value = ''; document.getElementById('completeEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Encounter did not complete.");
-  assert(await evaluate("document.activeElement === document.getElementById('signEncounter')"), "Completion did not move focus to final review and signature.");
+  await waitFor("document.activeElement === document.getElementById('encounterSignReviewTitle')", "Completion did not move focus to the pre-sign review title.");
+  assert(await evaluate(`document.getElementById('signEncounter').disabled
+    && document.getElementById('encounterSignReviewAcknowledged').disabled
+    && document.getElementById('encounterSignReviewContent').textContent.includes('SOAP Objective가 비어 있습니다.')
+    && document.getElementById('encounterSignReviewContent').textContent.includes('브라우저 테스트 환자')
+    && document.getElementById('encounterSignReviewContent').textContent.includes('SMOKE-001')`), "Incomplete pre-sign review did not block acknowledgement and signature with the current patient context.");
+  await evaluate("document.querySelector('[data-sign-review-target=\"soapObjective\"]').click()");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '진료 중'", "Pre-sign correction did not reopen the Encounter.");
+  assert(await evaluate("document.activeElement === document.getElementById('soapObjective')"), "Pre-sign correction did not focus the missing SOAP field.");
+  await evaluate("document.getElementById('soapObjective').value = '혈압 150/95 mmHg'; document.getElementById('completeEncounter').click()");
+  await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Corrected Encounter did not return to pre-sign review.");
+  await waitFor("document.activeElement === document.getElementById('encounterSignReviewTitle')", "Corrected completion did not return focus to the pre-sign review title.");
+  assert(await evaluate(`!document.getElementById('encounterSignReviewAcknowledged').disabled
+    && !document.getElementById('encounterSignReviewAcknowledged').checked
+    && document.getElementById('signEncounter').disabled`), "Signature became available before explicit review acknowledgement.");
+  await evaluate(`(() => {
+    const acknowledgement = document.getElementById('encounterSignReviewAcknowledged');
+    acknowledgement.checked = true;
+    acknowledgement.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await waitFor("document.getElementById('signEncounter').disabled === false", "Explicit review acknowledgement did not enable signature.");
+  await evaluate(`(async () => {
+    const model = await import('/emr-model.js');
+    const current = model.loadEmrState();
+    const patientId = current.selectedPatientId;
+    const addedAt = new Date().toISOString();
+    const confirmedAt = new Date(Date.now() + 1).toISOString();
+    let changed = model.appendPatientEvent(current, patientId, {
+      id: 'review-fingerprint-allergy',
+      type: 'allergy',
+      label: '라텍스',
+      date: ${JSON.stringify(koreaToday)},
+      status: 'active',
+      clinicalStatus: 'active',
+      verificationStatus: 'confirmed',
+    }, addedAt);
+    changed = model.confirmPatientEvent(changed, patientId, 'review-fingerprint-allergy', confirmedAt);
+    await model.saveEmrState(changed, undefined, current.revision);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'vitagraph-emr-v2',
+      newValue: localStorage.getItem('vitagraph-emr-v2'),
+    }));
+  })()`);
+  await waitFor(`!document.getElementById('encounterSignReviewAcknowledged').checked
+    && document.getElementById('signEncounter').disabled
+    && document.getElementById('encounterSignReviewContent').textContent.includes('라텍스')`, "Changed review content did not invalidate the explicit acknowledgement.");
+  await evaluate(`(() => {
+    const acknowledgement = document.getElementById('encounterSignReviewAcknowledged');
+    acknowledgement.checked = true;
+    acknowledgement.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await waitFor("document.getElementById('signEncounter').disabled === false", "Re-reviewing changed content did not re-enable signature.");
   await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
   assert(await evaluate("document.activeElement === document.getElementById('encounterStatus')"), "Signature did not restore focus to the updated encounter status.");

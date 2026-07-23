@@ -19,6 +19,8 @@ const elements = {
   clear: document.querySelector("#clearJourney"), export: document.querySelector("#exportJourney"),
   importTrigger: document.querySelector("#importJourneyTrigger"), importInput: document.querySelector("#journeyImport"),
   transferStatus: document.querySelector("#journeyTransferStatus"),
+  reviewAction: document.querySelector("#journeyReviewAction"),
+  reviewChanges: document.querySelector("#reviewJourneyChanges"),
 };
 
 function readJourney() {
@@ -193,15 +195,28 @@ function snapshotCard(snapshot, index) {
   }
   const remove = document.createElement("button"); remove.type = "button"; remove.className = "snapshot-remove"; remove.textContent = "삭제";
   remove.setAttribute("aria-label", `${snapshot.date} 기록 삭제`);
-  remove.addEventListener("click", () => { journey = journey.filter(({ id }) => id !== snapshot.id); persistJourney(); render(); });
+  remove.addEventListener("click", () => {
+    if (!window.confirm(`${snapshot.date} Journey 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    journey = journey.filter(({ id }) => id !== snapshot.id);
+    persistJourney();
+    render();
+    setTransferStatus(`${snapshot.date} Journey 기록을 삭제했습니다.`, "success");
+  });
   content.append(meta, signals, measures, remove); article.append(marker, content); return article;
 }
 
 function render() {
   elements.empty.hidden = journey.length > 0; elements.timeline.hidden = journey.length === 0; elements.clear.hidden = journey.length === 0;
+  elements.reviewAction.hidden = journey.length < 2;
   elements.export.disabled = journey.length === 0;
   elements.timeline.replaceChildren(...journey.map(snapshotCard)); renderComparison();
 }
+
+elements.reviewChanges.addEventListener("click", () => {
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  elements.comparison.scrollIntoView({ behavior, block: "start" });
+  elements.title.focus({ preventScroll: true });
+});
 
 elements.export.addEventListener("click", () => {
   const backup = createJourneyBackup(journey);

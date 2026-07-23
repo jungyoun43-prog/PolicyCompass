@@ -1950,7 +1950,7 @@ function assertSignedEncountersPreserved(current, candidate) {
   const candidateSnapshots = signedEncounterSnapshots(candidate);
   for (const [key, snapshot] of currentSnapshots) {
     if (candidateSnapshots.get(key) !== snapshot) {
-      throw new Error("서명된 진료기록은 일반 저장으로 변경하거나 삭제할 수 없습니다. 검증된 백업 복원 또는 정정 절차를 사용하세요.");
+      throw new Error("서명된 진료기록은 일반 저장으로 변경하거나 삭제할 수 없습니다. 전체 백업 교체는 전용 미검증 복원 절차를 사용하세요.");
     }
   }
 }
@@ -1979,19 +1979,29 @@ async function withEmrWriteLock(storage, options, operation) {
   return lockManager.request(EMR_WRITE_LOCK_NAME, { mode: "exclusive" }, operation);
 }
 
-function saveEmrStateUnlocked(stateInput, storage, expectedRevision, options) {
+function saveEmrStateUnlocked(
+  stateInput,
+  storage,
+  expectedRevision,
+  options,
+  preserveSignedEncounters = true,
+) {
   const state = validateCanonicalEmrState({ ...stateInput, demo: false, storageError: "", recoveryRaw: "" });
   const resolvedStorage = storage === undefined ? globalThis.localStorage : storage;
   let currentState = null;
-  const checksCurrentState = expectedRevision !== null && expectedRevision !== undefined;
-  if (checksCurrentState && typeof resolvedStorage?.getItem === "function") {
+  const checksRevision = expectedRevision !== null && expectedRevision !== undefined;
+  if (typeof resolvedStorage?.getItem === "function") {
     const raw = resolvedStorage.getItem(EMR_STORAGE_KEY) ?? "";
     if (raw) {
-      const current = JSON.parse(raw);
-      if (current?.schema !== EMR_SCHEMA || current?.version !== EMR_VERSION) {
-        throw new Error("현재 저장된 EMR 스키마가 달라 덮어쓸 수 없습니다.");
+      try {
+        const current = JSON.parse(raw);
+        if (current?.schema !== EMR_SCHEMA || current?.version !== EMR_VERSION) {
+          throw new Error("현재 저장된 EMR 스키마가 달라 덮어쓸 수 없습니다.");
+        }
+        currentState = validateCanonicalEmrState(current);
+      } catch (error) {
+        if (checksRevision) throw error;
       }
-      currentState = validateCanonicalEmrState(current);
     }
   }
   if (expectedRevision !== null && expectedRevision !== undefined) {
@@ -2003,7 +2013,7 @@ function saveEmrStateUnlocked(stateInput, storage, expectedRevision, options) {
       throw new Error("다른 탭에서 기록이 변경되었습니다. 최신 기록을 다시 불러온 뒤 다시 시도하세요.");
     }
   }
-  if (currentState && options.allowSignedRecordReplacement !== true) assertSignedEncountersPreserved(currentState, state);
+  if (currentState && preserveSignedEncounters) assertSignedEncountersPreserved(currentState, state);
   resolvedStorage?.setItem?.(EMR_STORAGE_KEY, JSON.stringify(state));
   return state;
 }
@@ -2014,6 +2024,29 @@ export async function saveEmrState(stateInput, storage, expectedRevision = null,
     options,
     () => saveEmrStateUnlocked(stateInput, storage, expectedRevision, options),
   );
+}
+
+export async function restoreEmrBackupState(
+  backupStateInput,
+  trustedStateInput,
+  storage,
+  restoredAt = new Date().toISOString(),
+  options = {},
+) {
+  const trustedState = validateCanonicalEmrState(trustedStateInput);
+  const timestamp = validTimestamp(restoredAt);
+  return withEmrWriteLock(storage, options, () => {
+    let candidate = prepareUnverifiedBackupRestore(backupStateInput, trustedState, timestamp);
+    candidate = { ...candidate, revision: trustedState.revision };
+    candidate = appendStateAudit(candidate, "backup.restored", `환자 ${candidate.patients.length}명`, timestamp);
+    return saveEmrStateUnlocked(
+      candidate,
+      storage,
+      trustedState.revision,
+      options,
+      false,
+    );
+  });
 }
 
 function recoverEmrStateUnlocked(stateInput, expectedRawInput, storage, now) {

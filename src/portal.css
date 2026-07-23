@@ -123,6 +123,22 @@
   filter: drop-shadow(0 10px 12px color-mix(in srgb, var(--preview-tone) 20%, transparent));
 }
 
+.preview-node--recorded > circle {
+  fill: var(--preview-tone);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.preview-node--inferred > circle {
+  fill: var(--surface);
+  stroke-dasharray: 4 3;
+}
+
+.preview-connection--inferred {
+  stroke: var(--data-cyan);
+  stroke-dasharray: 7 6;
+}
+
 .preview-node__type,
 .preview-node__label {
   font-family: var(--font-sans);

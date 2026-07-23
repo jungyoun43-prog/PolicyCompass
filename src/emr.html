@@ -357,6 +357,20 @@
                     </div>
                   </details>
 
+                  <section class="clinical-card sign-review" id="encounterSignReview" aria-labelledby="encounterSignReviewTitle" hidden>
+                    <div class="card-heading">
+                      <div><p class="rail-eyebrow">PRE-SIGN SAFETY REVIEW</p><h3 id="encounterSignReviewTitle" tabindex="-1">서명 전 전체 기록 검토</h3></div>
+                      <span class="source-badge">현재 환자 · 현재 진료</span>
+                    </div>
+                    <p class="context-guidance">아래 환자와 Encounter가 맞는지 확인하세요. 누락·충돌 항목은 진료를 다시 열어 수정한 뒤 서명할 수 있습니다.</p>
+                    <div id="encounterSignReviewContent"></div>
+                    <label class="sign-review__acknowledgement" for="encounterSignReviewAcknowledged">
+                      <input id="encounterSignReviewAcknowledged" type="checkbox" aria-describedby="encounterSignReviewAcknowledgementStatus" />
+                      <span>현재 환자·Encounter와 아래 전체 기록을 확인했습니다.</span>
+                    </label>
+                    <p class="sign-review__acknowledgement-status" id="encounterSignReviewAcknowledgementStatus" role="status" aria-live="polite"></p>
+                  </section>
+
                   <section class="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
                     <h3 class="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
                     <div class="encounter-save-context">

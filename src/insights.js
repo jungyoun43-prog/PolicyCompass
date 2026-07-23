@@ -1,6 +1,34 @@
 import { createVisitBrief } from "/insight-model.js";
 
 const sessionKey = "vitagraph-scene";
+const selectedQuestionKey = "vitagraph-selected-visit-question";
+
+function sceneFingerprint(session) {
+  const ids = [...new Set(session.visibleIds)].sort();
+  return `${session.isDemo ? "demo" : "record"}:${ids.join("|")}`;
+}
+
+function readSelectedQuestionId(fingerprint) {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(selectedQuestionKey) ?? "null");
+    return stored?.scene === fingerprint && typeof stored?.questionId === "string"
+      ? stored.questionId
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function saveSelectedQuestionId(fingerprint, id) {
+  try {
+    sessionStorage.setItem(selectedQuestionKey, JSON.stringify({
+      scene: fingerprint,
+      questionId: id,
+    }));
+  } catch {
+    // The selection remains visible for this render if storage is unavailable.
+  }
+}
 
 function readSession() {
   try {
@@ -21,10 +49,31 @@ function createTextElement(tagName, className, text) {
   return element;
 }
 
-function renderQuestions(questions) {
+function renderQuestions(questions, initialSelectionId, fingerprint) {
   const list = document.querySelector("#questions");
+  const status = document.querySelector("#questionSelectionStatus");
+  let selectedId = questions.some(({ id }) => id === initialSelectionId) ? initialSelectionId : "";
+  status.hidden = questions.length === 0;
+
+  function updateSelection(nextId) {
+    selectedId = nextId;
+    for (const entry of list.querySelectorAll("[data-question-id]")) {
+      const isSelected = entry.dataset.questionId === selectedId;
+      entry.classList.toggle("is-selected", isSelected);
+      const radio = entry.querySelector(".question-select__input");
+      const label = entry.querySelector(".question-select__label");
+      radio.checked = isSelected;
+      label.textContent = isSelected ? "준비 질문으로 선택됨" : "이 질문 준비하기";
+    }
+    const selectedQuestion = questions.find(({ id }) => id === selectedId);
+    status.textContent = selectedQuestion
+      ? `준비 질문으로 선택됨: ${selectedQuestion.question}`
+      : "진료에서 먼저 확인할 질문을 하나 선택하세요.";
+  }
+
   const items = questions.map((item, index) => {
     const entry = document.createElement("li");
+    entry.dataset.questionId = item.id;
     const number = createTextElement(
       "span",
       "question-index",
@@ -33,7 +82,10 @@ function renderQuestions(questions) {
     number.setAttribute("aria-hidden", "true");
 
     const copy = document.createElement("div");
-    copy.append(createTextElement("strong", "question-prompt", item.question));
+    const prompt = createTextElement("strong", "question-prompt", item.question);
+    prompt.id = `question-prompt-${item.id}`;
+    const selectedBadge = createTextElement("span", "question-selected-badge", "우선 질문");
+    copy.append(prompt, selectedBadge);
 
     const details = document.createElement("dl");
     details.className = "question-detail";
@@ -43,12 +95,29 @@ function renderQuestions(questions) {
       createTextElement("dt", "", "브리프 근거"),
       createTextElement("dd", "", item.basis),
     );
-    copy.append(details);
+    const selectControl = document.createElement("label");
+    selectControl.className = "question-select";
+    const radio = document.createElement("input");
+    radio.className = "visually-hidden question-select__input";
+    radio.type = "radio";
+    radio.name = "visit-question";
+    radio.value = item.id;
+    const selectLabel = createTextElement("span", "question-select__label", "이 질문 준비하기");
+    selectLabel.id = `question-select-label-${item.id}`;
+    radio.setAttribute("aria-labelledby", `${prompt.id} ${selectLabel.id}`);
+    radio.addEventListener("change", () => {
+      if (!radio.checked) return;
+      saveSelectedQuestionId(fingerprint, item.id);
+      updateSelection(item.id);
+    });
+    selectControl.append(radio, selectLabel);
+    copy.append(details, selectControl);
     entry.append(number, copy);
     return entry;
   });
 
   list.replaceChildren(...items);
+  updateSelection(selectedId);
 }
 
 function renderSignals(signals) {
@@ -80,6 +149,7 @@ function renderSignals(signals) {
 const session = readSession();
 const brief = createVisitBrief(session.visibleIds);
 const hasQuestions = brief.questions.length > 0;
+const fingerprint = sceneFingerprint(session);
 
 const demoMode = document.querySelector("#personalDemoMode");
 if (demoMode) demoMode.hidden = !session.isDemo;
@@ -95,7 +165,7 @@ document.querySelector("#printDate").textContent = `준비일 ${new Intl.DateTim
   day: "numeric",
 }).format(new Date())}`;
 
-renderQuestions(brief.questions);
+renderQuestions(brief.questions, readSelectedQuestionId(fingerprint), fingerprint);
 renderSignals(brief.signals);
 
 const printButton = document.querySelector("#printBrief");

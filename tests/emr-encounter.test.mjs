@@ -10,6 +10,7 @@ import {
   cancelEncounter,
   checkInPatient,
   completeEncounter,
+  encounterSigningOmissions,
   getEncounter,
   getEncounterRecords,
   reopenEncounter,
@@ -20,6 +21,7 @@ import {
   startEncounter,
   updateEncounterItem,
   validateEncounterForCompletion,
+  validateEncounterForSigning,
   ENCOUNTER_OBSERVATION_PRESETS,
 } from "../src/emr-encounter.js";
 import {
@@ -33,6 +35,7 @@ import {
   parseEmrBackup,
   prepareUnverifiedBackupRestore,
   removePatientEvent,
+  restoreEmrBackupState,
   saveEmrState,
   selectEncounter,
   selectFinalPatientEvents,
@@ -327,6 +330,72 @@ test("환자 등록부터 Encounter 서명까지 한 진료 흐름을 구조화 
   assert.ok(state.audit.slice(1).every(({ patientId, encounterId }) => patientId === PATIENT_ID && encounterId === ENCOUNTER_ID));
 });
 
+test("로컬 서명은 완료 뒤에도 필수 환자·Encounter·SOAP·진단 데이터를 다시 검증한다", () => {
+  let completed = createRegisteredState();
+  completed = checkInPatient(completed, PATIENT_ID, {
+    id: ENCOUNTER_ID,
+    date: VISIT_DATE,
+    department: "가정의학과",
+    clinician: "이선우",
+    room: "3진료실",
+    chiefComplaint: "혈압 추적",
+  }, TIMES.arrived);
+  completed = startEncounter(completed, PATIENT_ID, ENCOUNTER_ID, TIMES.started);
+  completed = saveEncounterDraft(completed, PATIENT_ID, ENCOUNTER_ID, { soap: SOAP }, TIMES.soapSaved);
+  completed = addEncounterDiagnosis(completed, PATIENT_ID, ENCOUNTER_ID, {
+    id: "diagnosis-i10",
+    system: KCD_SYSTEM,
+    code: "I10",
+    label: "본태성 고혈압",
+    diagnosisRole: "primary",
+    certainty: "confirmed",
+  }, TIMES.diagnosisAdded);
+  completed = completeEncounter(completed, PATIENT_ID, ENCOUNTER_ID, {}, TIMES.completed);
+
+  assert.deepEqual(validateEncounterForSigning(completed.patients[0], ENCOUNTER_ID), []);
+  const incompleteReview = structuredClone(completed);
+  const incompleteEncounter = getEncounter(incompleteReview.patients[0], ENCOUNTER_ID);
+  incompleteEncounter.clinician = "";
+  incompleteEncounter.chiefComplaint = "";
+  incompleteEncounter.soap.objective = "";
+  const incompleteDiagnosis = incompleteReview.patients[0].events.find(({ type }) => type === "condition");
+  incompleteDiagnosis.diagnosisRole = "secondary";
+  incompleteDiagnosis.code = "";
+  incompleteReview.patients[0].events.push({
+    id: "incomplete-prescription",
+    type: "medication",
+    encounterId: ENCOUNTER_ID,
+    recordStatus: "draft",
+    label: "용법 미완성 처방",
+    prescription: {},
+  });
+  assert.deepEqual(
+    encounterSigningOmissions(incompleteReview.patients[0], ENCOUNTER_ID).map(({ code }) => code),
+    [
+      "encounter-clinician",
+      "chief-complaint",
+      "soap-objective",
+      "primary-diagnosis-count",
+      "diagnosis-coding",
+      "prescription-dosing:incomplete-prescription",
+    ],
+  );
+  for (const mutate of [
+    (state) => { state.patients[0].name = ""; },
+    (state) => { state.patients[0].mrn = ""; },
+    (state) => { getEncounter(state.patients[0], ENCOUNTER_ID).date = ""; },
+    (state) => { getEncounter(state.patients[0], ENCOUNTER_ID).soap.objective = ""; },
+    (state) => { state.patients[0].events = state.patients[0].events.filter(({ type }) => type !== "condition"); },
+  ]) {
+    const incomplete = structuredClone(completed);
+    mutate(incomplete);
+    assert.throws(
+      () => signEncounter(incomplete, PATIENT_ID, ENCOUNTER_ID, "이선우", TIMES.signed),
+      /필수 진료기록이 완전하지 않아 서명할 수 없습니다|진료 회차를 찾을 수 없습니다/,
+    );
+  }
+});
+
 test("진료 측정은 지원 LOINC·고정 단위·임상 범위를 모델 경계에서 강제한다", () => {
   const state = checkInAndStart();
   assert.ok(ENCOUNTER_OBSERVATION_PRESETS.some(({ code, unit }) => code === "85354-9" && unit === "mmHg"));
@@ -444,7 +513,7 @@ test("서명된 Encounter와 그 진료 항목은 직접 수정·삭제·재개�
   assert.equal(getEncounter(signed.patients[0], ENCOUNTER_ID).soap.plan, SOAP.plan);
 });
 
-test("저장된 로컬 서명본은 같은 리비전과 감사 이력을 복제해도 직접 덮어쓸 수 없다", async () => {
+test("저장된 로컬 서명본은 리비전 생략이나 복원 옵션으로도 덮어쓸 수 없다", async () => {
   const signed = buildSignedEncounter();
   const memory = new Map();
   const storage = {
@@ -455,8 +524,37 @@ test("저장된 로컬 서명본은 같은 리비전과 감사 이력을 복제�
   const forged = structuredClone(signed);
   getEncounter(forged.patients[0], ENCOUNTER_ID).soap.plan = "감사 없는 변조 계획";
 
-  await assert.rejects(() => saveEmrState(forged, storage, signed.revision), /서명된 진료기록/);
+  await assert.rejects(() => saveEmrState(forged, storage), /서명된 진료기록/);
+  await assert.rejects(
+    () => saveEmrState(forged, storage, signed.revision, { allowSignedRecordReplacement: true }),
+    /서명된 진료기록/,
+  );
   assert.equal(getEncounter(loadEmrState(storage).patients[0], ENCOUNTER_ID).soap.plan, SOAP.plan);
+});
+
+test("전용 백업 복원은 기존 서명본을 신뢰 상태로 덮어쓰지 않고 외부·미검증 기록으로 교체한다", async () => {
+  const signed = buildSignedEncounter();
+  const memory = new Map();
+  const storage = {
+    getItem: (key) => memory.get(key) ?? null,
+    setItem: (key, value) => memory.set(key, value),
+  };
+  await saveEmrState(signed, storage);
+
+  const restored = await restoreEmrBackupState(
+    signed,
+    signed,
+    storage,
+    "2026-07-20T00:01:00.000Z",
+  );
+  const restoredEncounter = getEncounter(restored.patients[0], ENCOUNTER_ID);
+
+  assert.equal(restored.revision, signed.revision + 1);
+  assert.equal(restoredEncounter.signature.status, "external");
+  assert.equal(restoredEncounter.source.kind, "import");
+  assert.ok(restored.patients[0].events.every(({ source }) => source.kind === "import"));
+  assert.deepEqual(restored.audit.map(({ action }) => action), ["backup.restored"]);
+  assert.deepEqual(loadEmrState(storage), restored);
 });
 
 test("진료 항목 수정은 출처·소유권·lifecycle 보호 필드를 바꿀 수 없다", () => {

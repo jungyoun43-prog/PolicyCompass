@@ -21,7 +21,7 @@ test("배포 Worker가 로컬 EMR 화면과 모듈을 제공한다", async () =>
   }
 });
 
-test("EMR은 환자·차트·VitaGraph·코파일럿·급여 칸반·로컬 데이터 제어를 한 흐름에 둔다", async () => {
+test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 데이터 제어를 한 흐름에 둔다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const response = await worker.fetch(new Request("https://example.com/emr"));
   const html = await response.text();
@@ -35,7 +35,9 @@ test("EMR은 환자·차트·VitaGraph·코파일럿·급여 칸반·로컬 데�
   assert.match(html, /id="encounterClaimSummary"/);
   assert.match(html, /id="eventForm"/);
   assert.match(html, /id="eventSystem"/);
-  assert.match(html, /id="clinicalGraph"/);
+  assert.match(html, /id="clinicalBodyTitle"/);
+  assert.match(html, /id="bodyVisitList"/);
+  assert.match(html, /id="bodyMedicationList"/);
   assert.match(html, /id="copilotPanel"/);
   assert.match(html, /id="claimBoard"/);
   assert.match(html, /id="ruleServiceSystem"/);

@@ -80,7 +80,12 @@ function assert(value, message) {
 
 let client;
 const extraClients = [];
-let demoGraphNodes = 0;
+let demoBodyAreas = 0;
+let demoBodyCareAreas = 0;
+let demoBodyCandidateAreas = 0;
+let demoBodySignalAreas = 0;
+let demoBodyVisits = 0;
+let demoBodyMedications = 0;
 let demoClaimCards = 0;
 let aiMode = "rule-based";
 let aiRequestAbortedOnWipe = null;
@@ -207,89 +212,190 @@ try {
   ].join(";"));
   assert(await evaluate("document.querySelector('[data-tab=\"chart\"]').getAttribute('aria-selected') === 'true'"), "Arrow-key tab navigation failed.");
 
-  for (let index = 0; index < 17; index += 1) {
-    await evaluate(`(() => {
-      document.getElementById('eventType').value = 'condition';
-      document.getElementById('eventDate').value = '2026-07-19';
-      document.getElementById('eventSystem').value = 'urn:vitagraph:smoke:condition';
-      document.getElementById('eventCode').value = 'SMOKE-COND-${index}';
-      document.getElementById('eventLabel').value = '그래프 부하 진단 ${index}';
-      document.getElementById('eventForm').requestSubmit();
-    })()`);
-    await waitFor(
-      `document.getElementById('mainContent').inert === false && document.getElementById('eventTimeline').textContent.includes('그래프 부하 진단 ${index}')`,
-      `Graph-load event ${index} did not finish saving.`,
-    );
-  }
   await evaluate("document.querySelector('[data-tab=\"graph\"]').click()");
-  await waitFor("document.querySelectorAll('#clinicalGraph .clinical-node').length >= 20", "Large clinical graph did not render.");
-  demoGraphNodes = await evaluate("document.querySelectorAll('#clinicalGraph .clinical-node').length");
-  assert(demoGraphNodes === 24, "Clinical graph did not render its bounded 24-node capacity.");
-  const graphProjection = await evaluate(`(() => {
-    const notice = document.getElementById('graphProjectionNotice');
-    return {
-      total: Number(notice.dataset.totalRecords),
-      visible: Number(notice.dataset.visibleRecords),
-      omitted: Number(notice.dataset.omittedRecords),
-      totalConditions: Number(notice.dataset.totalConditions),
-      visibleConditions: Number(notice.dataset.visibleConditions),
-      notice: notice.textContent,
-      dateLabel: document.querySelector('.clinical-graph-overview__range span')?.textContent,
-      dateRange: document.getElementById('graphDateRange')?.textContent,
-    };
-  })()`);
-  assert(graphProjection.total > graphProjection.visible
-    && graphProjection.visible === 24
-    && graphProjection.omitted === graphProjection.total - graphProjection.visible,
-  `Clinical graph did not disclose its bounded projection: ${JSON.stringify(graphProjection)}`);
-  assert(graphProjection.visibleConditions === graphProjection.totalConditions,
-    `Clinical graph silently omitted condition nodes before non-condition records: ${JSON.stringify(graphProjection)}`);
-  assert(/전체 확정 기록 .* 표시하고 .* 생략/.test(graphProjection.notice)
-    && graphProjection.dateLabel === "전체 기록 범위"
-    && graphProjection.dateRange !== "기록 없음",
-  `Clinical graph omission or full-range disclosure is incomplete: ${JSON.stringify(graphProjection)}`);
-  assert(await evaluate(`(() => {
-    const svg = document.getElementById('clinicalGraph');
-    const bounds = svg.getBoundingClientRect();
-    return [...svg.querySelectorAll('.clinical-node')].every((node) => {
-      const box = node.getBoundingClientRect();
-      return box.left >= bounds.left - 1 && box.right <= bounds.right + 1
-        && box.top >= bounds.top - 1 && box.bottom <= bounds.bottom + 1;
-    });
-  })()`), "Large clinical graph clipped nodes outside the SVG viewport.");
-  const exactSource = await evaluate(`(() => {
-    const node = [...document.querySelectorAll('#clinicalGraph [data-graph-node]')].at(-1);
-    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    return {
-      id: node.dataset.graphNode,
-      type: node.dataset.type,
-      buttonId: document.getElementById('graphOpenChart').dataset.eventId,
-    };
-  })()`);
-  assert(exactSource.id === exactSource.buttonId, "Selected graph node did not bind its exact source event ID.");
-  await evaluate("document.getElementById('graphOpenChart').click()");
   await waitFor(
-    `document.activeElement === document.querySelector('[data-event-id=${JSON.stringify(exactSource.id)}]')`,
-    "Exact graph source record did not receive focus after navigation.",
+    "document.getElementById('panel-graph').hidden === false && document.querySelectorAll('.body-hotspot[data-body-area]').length === 12 && document.querySelectorAll('.body-caption[data-body-area]').length === 12",
+    "Clinical body map did not render its twelve departments.",
+  );
+  const bodyMap = await evaluate(`(() => {
+    const hotspots = [...document.querySelectorAll('.body-hotspot[data-body-area]')];
+    const captions = [...document.querySelectorAll('.body-caption[data-body-area]')];
+    const careAreaIds = [...new Set(
+      [...document.querySelectorAll('[data-body-area].is-care-record')].map(({ dataset }) => dataset.bodyArea),
+    )].sort();
+    const signalAreaIds = [...new Set(
+      [...document.querySelectorAll('[data-body-area].is-condition-signal')].map(({ dataset }) => dataset.bodyArea),
+    )].sort();
+    const candidateAreaIds = [...new Set(
+      [...document.querySelectorAll('[data-body-area].is-classification-candidate')].map(({ dataset }) => dataset.bodyArea),
+    )].sort();
+    const candidateOnlyAreaIds = [...new Set(
+      [...document.querySelectorAll('[data-body-area].is-candidate-only')].map(({ dataset }) => dataset.bodyArea),
+    )].sort();
+    const signalOnlyAreaIds = [...new Set(
+      [...document.querySelectorAll('[data-body-area].is-signal-only')].map(({ dataset }) => dataset.bodyArea),
+    )].sort();
+    return {
+      tabLabel: document.getElementById('tab-graph').textContent.trim(),
+      hotspots: hotspots.length,
+      captions: captions.length,
+      hotspotIds: hotspots.map(({ dataset }) => dataset.bodyArea),
+      captionIds: captions.map(({ dataset }) => dataset.bodyArea),
+      careAreaIds,
+      candidateAreaIds,
+      candidateOnlyAreaIds,
+      signalAreaIds,
+      signalOnlyAreaIds,
+      careCount: document.getElementById('bodyAreaCount').textContent.trim(),
+      signalCount: document.getElementById('bodySignalAreaCount').textContent.trim(),
+      visitCount: document.getElementById('bodyVisitCount').textContent.trim(),
+      medicationCount: document.getElementById('bodyMedicationCount').textContent.trim(),
+      legend: document.querySelector('.clinical-body-key').textContent.replace(/\\s+/g, ' ').trim(),
+    };
+  })()`);
+  demoBodyAreas = bodyMap.hotspots;
+  demoBodyCareAreas = bodyMap.careAreaIds.length;
+  demoBodyCandidateAreas = bodyMap.candidateAreaIds.length;
+  demoBodySignalAreas = bodyMap.signalAreaIds.length;
+  assert(bodyMap.tabLabel === "신체 지도", `Clinical body-map tab label drifted: ${JSON.stringify(bodyMap)}`);
+  assert(bodyMap.hotspots === 12 && bodyMap.captions === 12,
+    `Clinical body map did not render 12 hotspots and 12 captions: ${JSON.stringify(bodyMap)}`);
+  assert(new Set(bodyMap.hotspotIds).size === 12
+    && JSON.stringify(bodyMap.hotspotIds) === JSON.stringify(bodyMap.captionIds),
+  `Body hotspot and caption department identities diverged: ${JSON.stringify(bodyMap)}`);
+  assert(JSON.stringify(bodyMap.careAreaIds) === JSON.stringify(["endocrine"])
+    && bodyMap.careCount === "1개"
+    && bodyMap.visitCount === "2건"
+    && bodyMap.medicationCount === "1건",
+  `Demo care records were not limited to the explicitly declared department: ${JSON.stringify(bodyMap)}`);
+  assert(JSON.stringify(bodyMap.candidateAreaIds) === JSON.stringify(["endocrine"])
+    && bodyMap.candidateOnlyAreaIds.length === 0,
+  `Label-derived department candidates were not visually separated from confirmed care: ${JSON.stringify(bodyMap)}`);
+  assert(JSON.stringify(bodyMap.signalAreaIds) === JSON.stringify(["cardio", "endocrine", "renal", "sensory"])
+    && JSON.stringify(bodyMap.signalOnlyAreaIds) === JSON.stringify(["cardio", "renal", "sensory"])
+    && bodyMap.signalCount === "4개",
+  `Condition-derived navigation signals were not separated from care records: ${JSON.stringify(bodyMap)}`);
+  assert(/진료 기록 연결/.test(bodyMap.legend)
+    && /진료명 기반 분류 후보/.test(bodyMap.legend)
+    && /질환 기반 탐색 영역 · 진료 이력 아님/.test(bodyMap.legend),
+  `Body-map legend did not distinguish care, label candidates, and condition-derived signals: ${bodyMap.legend}`);
+
+  await evaluate("document.querySelector('.body-hotspot[data-body-area=\"endocrine\"]').click()");
+  await waitFor(
+    "document.querySelector('#bodyVisitList [data-body-source-event=\"kim-visit-today\"]') && document.querySelector('#bodyVisitList [data-body-source-event=\"kim-encounter\"]') && document.querySelector('#bodyMedicationList [data-body-source-event=\"kim-visit-med\"]')",
+    "Endocrine declared visit, label-derived candidate, and encounter-linked prescription did not render.",
+  );
+  const endocrineDetail = await evaluate(`(() => {
+    const visitSources = [...document.querySelectorAll('#bodyVisitList [data-body-source-event]')]
+      .map(({ dataset }) => dataset.bodySourceEvent);
+    const medicationSources = [...document.querySelectorAll('#bodyMedicationList [data-body-source-event]')]
+      .map(({ dataset }) => dataset.bodySourceEvent);
+    return {
+      title: document.getElementById('bodyDetailTitle').textContent.trim(),
+      department: document.getElementById('bodyDetailDepartment').textContent.trim(),
+      visitSources,
+      medicationSources,
+      visitText: document.getElementById('bodyVisitList').textContent.replace(/\\s+/g, ' ').trim(),
+      medicationText: document.getElementById('bodyMedicationList').textContent.replace(/\\s+/g, ' ').trim(),
+      visitGroupLabels: [...document.querySelectorAll('#bodyVisitList .clinical-body-list-group-label')]
+        .map((node) => node.textContent.replace(/\\s+/g, ' ').trim()),
+      boundary: document.getElementById('bodyDetailBoundary').textContent.replace(/\\s+/g, ' ').trim(),
+      projection: document.getElementById('bodyProjectionNotice').textContent.replace(/\\s+/g, ' ').trim(),
+      unassignedSummary: document.getElementById('bodyUnassignedMedicationCount').textContent.trim(),
+      unassignedRendered: Boolean(document.querySelector('[data-body-source-event="kim-med"]')),
+      selectedAreas: [...document.querySelectorAll('[data-body-area][aria-pressed="true"]')]
+        .map(({ dataset }) => dataset.bodyArea),
+    };
+  })()`);
+  demoBodyVisits = endocrineDetail.visitSources.length;
+  demoBodyMedications = endocrineDetail.medicationSources.length;
+  assert(endocrineDetail.title === "대사·호르몬" && endocrineDetail.department === "내분비내과",
+    `Endocrine selection did not update its detail heading: ${JSON.stringify(endocrineDetail)}`);
+  assert(JSON.stringify([...endocrineDetail.visitSources].sort()) === JSON.stringify(["kim-encounter", "kim-visit-today"]),
+    `Endocrine detail omitted or invented visits: ${JSON.stringify(endocrineDetail.visitSources)}`);
+  assert(/진료 중/.test(endocrineDetail.visitText)
+    && /진료 완료/.test(endocrineDetail.visitText)
+    && JSON.stringify(endocrineDetail.visitGroupLabels) === JSON.stringify([
+      "진료과 필드로 확인",
+      "진료명 기반 분류 후보 · 진료과 이력 확정 아님",
+    ]),
+  `Endocrine detail did not distinguish declared care from its label-derived candidate: ${JSON.stringify(endocrineDetail)}`);
+  assert(JSON.stringify(endocrineDetail.medicationSources) === JSON.stringify(["kim-visit-med"])
+    && /예시 혈압약/.test(endocrineDetail.medicationText)
+    && /처방 초안/.test(endocrineDetail.medicationText),
+  `Endocrine detail did not show only its encounter-linked prescription: ${JSON.stringify(endocrineDetail)}`);
+  assert(endocrineDetail.unassignedSummary === "1건"
+    && /진료과 연결 정보가 없는 약물 1건/.test(endocrineDetail.boundary)
+    && /임의로 배정하지 않아/.test(endocrineDetail.boundary)
+    && /진료과 필드로 확인된 진료 1건/.test(endocrineDetail.projection)
+    && /진료명 기반 분류 후보 1건과 연결 처방 0건/.test(endocrineDetail.projection)
+    && /확인된 진료과 이력에서 제외/.test(endocrineDetail.projection)
+    && /질환 기반 탐색 영역 4개는 진료 이력과 분리/.test(endocrineDetail.projection)
+    && !endocrineDetail.unassignedRendered,
+  `Care, candidate, signal, or unassigned-medication boundaries were not disclosed: ${JSON.stringify(endocrineDetail)}`);
+  assert(endocrineDetail.selectedAreas.length === 2
+    && endocrineDetail.selectedAreas.every((areaId) => areaId === "endocrine"),
+  `Hotspot and caption selection state diverged: ${JSON.stringify(endocrineDetail.selectedAreas)}`);
+
+  await client.call("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+  await evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  await evaluate("document.querySelector('.body-caption[data-body-area=\"renal\"]').click(); document.querySelector('.body-caption[data-body-area=\"endocrine\"]').click()");
+  const narrowBodyMap = await evaluate(`(() => {
+    const workspace = document.querySelector('.clinical-body-workspace').getBoundingClientRect();
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: innerWidth,
+      workspaceLeft: workspace.left,
+      workspaceRight: workspace.right,
+      selectedAreas: [...document.querySelectorAll('[data-body-area][aria-pressed="true"]')]
+        .map(({ dataset }) => dataset.bodyArea),
+      detailTitle: document.getElementById('bodyDetailTitle').textContent.trim(),
+    };
+  })()`);
+  assert(narrowBodyMap.documentWidth <= narrowBodyMap.viewportWidth
+    && narrowBodyMap.workspaceLeft >= -1
+    && narrowBodyMap.workspaceRight <= narrowBodyMap.viewportWidth + 1,
+  `Narrow clinical body map overflowed its viewport: ${JSON.stringify(narrowBodyMap)}`);
+  assert(narrowBodyMap.detailTitle === "대사·호르몬"
+    && narrowBodyMap.selectedAreas.length === 2
+    && narrowBodyMap.selectedAreas.every((areaId) => areaId === "endocrine"),
+  `Narrow clinical body-map selection did not remain synchronized: ${JSON.stringify(narrowBodyMap)}`);
+  await client.call("Emulation.setDeviceMetricsOverride", {
+    width: viewportWidth,
+    height: viewportHeight,
+    deviceScaleFactor: 1,
+    mobile: viewportWidth <= 620,
+  });
+
+  await evaluate("document.querySelector('#bodyVisitList [data-body-source-event=\"kim-visit-today\"]').click()");
+  await waitFor(
+    "document.activeElement === document.querySelector('[data-event-id=\"kim-visit-today\"]')",
+    "Exact body-map source record did not receive focus after navigation.",
   );
   const sourceNavigation = await evaluate(`(() => {
-    const row = document.querySelector('[data-event-id=${JSON.stringify(exactSource.id)}]');
+    const row = document.querySelector('[data-event-id="kim-visit-today"]');
     return {
       chartSelected: document.querySelector('[data-tab="chart"]').getAttribute('aria-selected'),
       current: row?.getAttribute('aria-current'),
       highlighted: row?.classList.contains('is-source-target'),
       marker: row?.querySelector('.event-source-target-label')?.textContent,
-      filterSelected: document.querySelector('[data-event-filter=${JSON.stringify(exactSource.type)}]')?.getAttribute('aria-pressed'),
+      filterSelected: document.querySelector('[data-event-filter="encounter"]')?.getAttribute('aria-pressed'),
       announcement: document.getElementById('workspaceStatus').textContent,
     };
   })()`);
   assert(sourceNavigation.chartSelected === "true"
     && sourceNavigation.current === "true"
     && sourceNavigation.highlighted
-    && sourceNavigation.marker === "관계 지도에서 선택한 원문"
+    && sourceNavigation.marker === "신체 지도에서 선택한 기록"
     && sourceNavigation.filterSelected === "true"
-    && /정확한 과거 기록으로 이동/.test(sourceNavigation.announcement),
-  `Exact graph source navigation lost identity, focus, highlight, filter, or announcement: ${JSON.stringify(sourceNavigation)}`);
+    && /차트 기록으로 이동/.test(sourceNavigation.announcement)
+    && /출처 식별자를 확인/.test(sourceNavigation.announcement),
+  `Exact body-map source navigation lost identity, focus, highlight, filter, or announcement: ${JSON.stringify(sourceNavigation)}`);
   await evaluate("document.querySelector('[data-tab=\"claims\"]').click()");
   assert(await evaluate("document.querySelectorAll('#claimBoard [data-claim-review-lane]').length === 4 && document.querySelectorAll('#claimResultSummary .claim-result-chip').length === 6"), "Claim review lanes or immutable calculated-result summary did not render.");
   demoClaimCards = await evaluate("document.querySelectorAll('#claimBoard .claim-card').length");
@@ -853,7 +959,8 @@ try {
   })()`, wipeClient), "Full wipe left patient, SOAP, diagnosis, prescription, or order PHI in the executing tab DOM.");
   assert(await evaluate(`(() => {
     const text = ['patientList', 'selectedPatientName', 'selectedPatientMeta', 'safetyAlerts', 'clinicalSummary', 'copilotContent',
-      'vitalList', 'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList', 'eventTimeline', 'graphEvidenceList',
+      'vitalList', 'diagnosisList', 'prescriptionList', 'orderList', 'recentEncounterList', 'eventTimeline',
+      'bodyVisitList', 'bodyMedicationList', 'bodyConditionList',
       'claimBoard', 'clinicalJourney', 'visitQuestions', 'auditList'].map((id) => document.getElementById(id).textContent).join(' ');
     return document.getElementById('soapSubjective').value === ''
       && document.getElementById('soapPlan').value === ''
@@ -921,7 +1028,13 @@ try {
 
   const result = {
     demoPatient: "김비타",
-    graphNodes: demoGraphNodes,
+    bodyAreas: demoBodyAreas,
+    bodyCareAreas: demoBodyCareAreas,
+    bodyCandidateAreas: demoBodyCandidateAreas,
+    bodySignalAreas: demoBodySignalAreas,
+    bodyVisits: demoBodyVisits,
+    bodyMedications: demoBodyMedications,
+    unassignedBodyMedications: 1,
     claimLanes: 4,
     claimCards: demoClaimCards,
     persistedPatient: "SMOKE-001",

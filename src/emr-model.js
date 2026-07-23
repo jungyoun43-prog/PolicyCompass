@@ -1,6 +1,7 @@
 import { DEFAULT_CLAIM_RULES, evaluateClaimRule, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
 import { createVisitBrief } from "./insight-model.js";
 import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
+import { CONDITIONS } from "./data.js";
 
 export const EMR_SCHEMA = "vitagraph-emr";
 export const EMR_BACKUP_SCHEMA = "vitagraph-emr-backup";
@@ -1164,58 +1165,363 @@ function conditionIdForEvent(event) {
   return "";
 }
 
-const CLINICAL_GRAPH_NODE_LIMIT = 24;
+export const CLINICAL_BODY_AREAS = Object.freeze([
+  Object.freeze({ id: "neuro", title: "뇌·신경", department: "신경과" }),
+  Object.freeze({ id: "mental", title: "마음·수면", department: "정신건강의학과" }),
+  Object.freeze({ id: "sensory", title: "눈·귀·코", department: "안과·이비인후과" }),
+  Object.freeze({ id: "cardio", title: "심장·혈관", department: "순환기내과" }),
+  Object.freeze({ id: "respiratory", title: "폐·호흡", department: "호흡기내과" }),
+  Object.freeze({ id: "digestive", title: "위·장·간", department: "소화기내과" }),
+  Object.freeze({ id: "endocrine", title: "대사·호르몬", department: "내분비내과" }),
+  Object.freeze({ id: "renal", title: "신장·수분", department: "신장내과" }),
+  Object.freeze({ id: "pelvic", title: "골반·비뇨", department: "산부인과·비뇨의학과" }),
+  Object.freeze({ id: "musculoskeletal", title: "뼈·관절", department: "정형외과·재활의학과" }),
+  Object.freeze({ id: "rheumatology", title: "면역·관절", department: "류마티스내과" }),
+  Object.freeze({ id: "dermatology", title: "피부·알레르기", department: "피부과·알레르기내과" }),
+]);
 
-function clinicalGraphDateRange(events) {
-  const dates = events.map(({ date }) => date).filter(Boolean).sort();
+const CLINICAL_BODY_AREA_IDS = new Set(CLINICAL_BODY_AREAS.map(({ id }) => id));
+const CLINICAL_DEPARTMENT_PATTERNS = {
+  neuro: [/신경과/],
+  mental: [/정신건강의학과/, /정신과/],
+  sensory: [/안과/, /이비인후과/],
+  cardio: [/순환기내과/, /심장내과/, /심혈관내과/, /심장혈관흉부외과/, /흉부외과/],
+  respiratory: [/호흡기내과/, /호흡기과/],
+  digestive: [/소화기내과/, /소화기과/, /간담췌외과/],
+  endocrine: [/내분비(?:대사)?내과/, /내분비과/],
+  renal: [/신장내과/, /신장병내과/, /신장과/],
+  pelvic: [/산부인과/, /비뇨의학과/, /비뇨기과/],
+  musculoskeletal: [/정형외과/, /재활의학과/],
+  rheumatology: [/류마티스내과/],
+  dermatology: [/피부과/, /알레르기내과/],
+};
+
+function bodyAreasForDepartmentText(value) {
+  if (!value) return [];
+  return CLINICAL_BODY_AREAS
+    .filter(({ id }) => CLINICAL_DEPARTMENT_PATTERNS[id].some((pattern) => pattern.test(value)))
+    .map(({ id }) => id);
+}
+
+function encounterBodyAssociation(encounter) {
+  const departmentAreaIds = bodyAreasForDepartmentText(encounter.department);
+  if (departmentAreaIds.length === 1) {
+    return {
+      areaId: departmentAreaIds[0],
+      kind: "declared",
+      sourceField: "department",
+      value: encounter.department,
+      basis: "Encounter 진료과 필드에 명시된 단일 진료과",
+    };
+  }
+  if (departmentAreaIds.length > 1) {
+    return {
+      areaId: "",
+      kind: "ambiguous",
+      sourceField: "department",
+      value: encounter.department,
+      basis: "Encounter 진료과 필드에 복수 진료과가 있어 자동 귀속하지 않음",
+      candidateAreaIds: departmentAreaIds,
+    };
+  }
+  const labelAreaIds = bodyAreasForDepartmentText(encounter.label);
+  if (labelAreaIds.length > 1) {
+    return {
+      areaId: "",
+      kind: "ambiguous",
+      sourceField: "label",
+      value: encounter.label,
+      basis: "Encounter 표시명에 복수 진료과가 있어 자동 귀속하지 않음",
+      candidateAreaIds: labelAreaIds,
+    };
+  }
+  return labelAreaIds.length === 1
+    ? {
+        areaId: labelAreaIds[0],
+        kind: "classified",
+        sourceField: "label",
+        value: encounter.label,
+        basis: "Encounter 표시명에 포함된 진료과 분류 후보 · 확인된 진료과로 집계하지 않음",
+        candidateAreaIds: labelAreaIds,
+      }
+    : null;
+}
+
+function encounterLifecycle(event) {
+  if (event.recordStatus === "draft" && ["arrived", "in-progress", "finished"].includes(event.status)) {
+    return {
+      lifecycle: "draft",
+      lifecycleLabel: event.status === "arrived"
+        ? "접수"
+        : event.status === "in-progress" ? "진료 중" : "서명 대기",
+    };
+  }
+  if (event.recordStatus === "final" && event.status === "finished") {
+    return { lifecycle: "final", lifecycleLabel: "진료 완료" };
+  }
+  return null;
+}
+
+function medicationLifecycle(event) {
+  if (event.recordStatus === "draft") return { lifecycle: "draft", lifecycleLabel: "처방 초안" };
+  if (event.recordStatus === "final") return { lifecycle: "final", lifecycleLabel: "확정 처방" };
+  return null;
+}
+
+function clinicalVisitProjection(event, association, lifecycle) {
   return {
-    from: dates[0] ?? "",
-    to: dates.at(-1) ?? "",
+    id: event.id,
+    label: event.label,
+    date: event.date,
+    department: event.department,
+    clinician: event.clinician,
+    room: event.room,
+    status: event.status,
+    recordStatus: event.recordStatus,
+    ...lifecycle,
+    association: {
+      kind: association.kind,
+      sourceField: association.sourceField,
+      value: association.value,
+      basis: association.basis,
+      ...(association.candidateAreaIds ? { candidateAreaIds: [...association.candidateAreaIds] } : {}),
+    },
+    source: event.source,
   };
 }
 
-export function createClinicalGraph(patientInput = {}) {
-  const patient = createFinalizedPatientView(patientInput);
-  const records = patient.events.filter((event) => ["condition", "observation", "medication", "allergy", "procedure", "symptom"].includes(event.type)
-    && hasCompatibleEventLifecycle(event));
-  const conditions = records.filter(({ type }) => type === "condition");
-  const otherRecords = records.filter(({ type }) => type !== "condition");
-  const selectedIds = new Set([...conditions, ...otherRecords]
-    .slice(0, CLINICAL_GRAPH_NODE_LIMIT)
-    .map(({ id }) => id));
-  const visibleRecords = records.filter(({ id }) => selectedIds.has(id));
-  const nodes = visibleRecords
-    .map((event) => ({ id: event.id, type: event.type, label: event.label, code: event.code, date: event.date, source: event.source }));
-  const conditionNodes = nodes.filter(({ type }) => type === "condition");
-  const edges = [];
-  for (const node of nodes) {
-    if (node.type === "condition") continue;
-    const nodeConditionId = conditionIdForEvent(node);
-    const target = nodeConditionId
-      ? conditionNodes.find((condition) => conditionIdForEvent(condition) === nodeConditionId)
-      : null;
-    if (target) edges.push({
-      id: `${target.id}:${node.id}`,
-      from: target.id,
-      to: node.id,
-      label: node.type === "medication" ? "치료" : node.type === "observation" ? "추적" : "기록",
-      kind: "inferred",
-      basis: `코드·표시명 키워드 기반 주제 분류(${nodeConditionId})`,
+function clinicalMedicationProjection(event, lifecycle, { association = null, unassignedReason = "" } = {}) {
+  return {
+    id: event.id,
+    label: event.label,
+    code: event.code,
+    date: event.date,
+    status: event.status,
+    recordStatus: event.recordStatus,
+    ...lifecycle,
+    encounterId: event.encounterId,
+    prescription: event.prescription,
+    source: event.source,
+    ...(association ? { association } : {}),
+    ...(unassignedReason ? { unassignedReason } : {}),
+  };
+}
+
+function isTrustedClinicalBodyEvent(event) {
+  return !["fhir", "import"].includes(event?.source?.kind);
+}
+
+export function createClinicalBodyAtlas(patientInput = {}) {
+  const patient = createPatient(patientInput);
+  const encounterById = new Map(
+    patient.events.filter(({ type }) => type === "encounter").map((event) => [event.id, event]),
+  );
+  const areas = CLINICAL_BODY_AREAS.map((area) => ({
+    ...area,
+    active: false,
+    careActive: false,
+    candidateActive: false,
+    signalActive: false,
+    candidateOnly: false,
+    signalOnly: false,
+    declaredVisitCount: 0,
+    classifiedVisitCount: 0,
+    declaredMedicationCount: 0,
+    classifiedMedicationCount: 0,
+    evidence: [],
+    conditions: [],
+    visits: [],
+    medications: [],
+  }));
+  const areaById = new Map(areas.map((area) => [area.id, area]));
+
+  const confirmedActiveConditions = patient.events.filter((event) => (
+    event.type === "condition"
+    && event.recordStatus === "final"
+    && event.status === "active"
+    && event.certainty === "confirmed"
+    && (!event.verificationStatus || event.verificationStatus === "confirmed")
+    && hasCompatibleEventLifecycle(event)
+    && isTrustedClinicalBodyEvent(event)
+  ));
+  for (const condition of confirmedActiveConditions) {
+    const conditionId = conditionIdForEvent(condition);
+    const areaIds = (CONDITIONS[conditionId]?.departments ?? []).filter((areaId) => CLINICAL_BODY_AREA_IDS.has(areaId));
+    for (const areaId of areaIds) {
+      const area = areaById.get(areaId);
+      const association = {
+        kind: "classified",
+        sourceField: "code-label",
+        value: [condition.code, condition.label].filter(Boolean).join(" · "),
+        basis: `확정 active 진단의 코드·표시명 기반 진료과 분류(${conditionId})`,
+      };
+      area.conditions.push({
+        id: condition.id,
+        label: condition.label,
+        code: condition.code,
+        date: condition.date,
+        status: condition.status,
+        recordStatus: condition.recordStatus,
+        certainty: condition.certainty,
+        conditionId,
+        association,
+        source: condition.source,
+      });
+      area.evidence.push({
+        eventId: condition.id,
+        eventType: "condition",
+        label: condition.label,
+        ...association,
+      });
+    }
+  }
+
+  const eligibleEncounterById = new Map();
+  const mappedEncounterById = new Map();
+  const unassignedEncounterById = new Map();
+  const unassignedVisits = [];
+  for (const encounter of patient.events.filter(({ type }) => type === "encounter")) {
+    const lifecycle = encounterLifecycle(encounter);
+    if (!lifecycle || !hasCompatibleEventLifecycle(encounter) || !isTrustedClinicalBodyEvent(encounter)) continue;
+    eligibleEncounterById.set(encounter.id, encounter);
+    const association = encounterBodyAssociation(encounter);
+    if (!association?.areaId) {
+      const unassignedReason = association?.kind === "ambiguous"
+        ? "department-ambiguous"
+        : association?.kind === "classified" ? "department-classified" : "department-unmapped";
+      unassignedVisits.push({
+        id: encounter.id,
+        label: encounter.label,
+        date: encounter.date,
+        department: encounter.department,
+        clinician: encounter.clinician,
+        room: encounter.room,
+        status: encounter.status,
+        recordStatus: encounter.recordStatus,
+        ...lifecycle,
+        source: encounter.source,
+        unassignedReason,
+        ...(association ? { association } : {}),
+      });
+      unassignedEncounterById.set(encounter.id, {
+        reason: unassignedReason,
+        association,
+      });
+      continue;
+    }
+    const visit = clinicalVisitProjection(encounter, association, lifecycle);
+    const area = areaById.get(association.areaId);
+    area.visits.push(visit);
+    area.evidence.push({
+      eventId: encounter.id,
+      eventType: "encounter",
+      label: encounter.label,
+      kind: association.kind,
+      sourceField: association.sourceField,
+      value: association.value,
+      basis: association.basis,
+      ...(association.candidateAreaIds ? { candidateAreaIds: [...association.candidateAreaIds] } : {}),
+    });
+    mappedEncounterById.set(encounter.id, {
+      areaId: association.areaId,
+      lifecycle: lifecycle.lifecycle,
+      associationKind: association.kind,
+      candidateAreaIds: association.candidateAreaIds ?? [],
     });
   }
+
+  const unassignedMedications = [];
+  for (const medication of patient.events.filter((event) => (
+    event.type === "medication"
+    && hasCompatibleEventLifecycle(event)
+    && isTrustedClinicalBodyEvent(event)
+  ))) {
+    const lifecycle = medicationLifecycle(medication);
+    if (!lifecycle) continue;
+    const mappedEncounter = mappedEncounterById.get(medication.encounterId);
+    const eligibleEncounter = eligibleEncounterById.get(medication.encounterId);
+    if (mappedEncounter && mappedEncounter.lifecycle === lifecycle.lifecycle) {
+      areaById.get(mappedEncounter.areaId).medications.push(clinicalMedicationProjection(medication, lifecycle, {
+        association: {
+          kind: "direct",
+          sourceField: "encounterId",
+          value: medication.encounterId,
+          basis: "Medication.encounterId로 Encounter에 직접 연결",
+          encounterAreaKind: mappedEncounter.associationKind,
+          ...(mappedEncounter.candidateAreaIds.length
+            ? { candidateAreaIds: [...mappedEncounter.candidateAreaIds] }
+            : {}),
+        },
+      }));
+      continue;
+    }
+    let unassignedReason = "lifecycle-mismatch";
+    if (!medication.encounterId) unassignedReason = "encounter-not-linked";
+    else if (!encounterById.has(medication.encounterId)) unassignedReason = "encounter-not-found";
+    else if (!eligibleEncounter) unassignedReason = "encounter-not-eligible";
+    else if (!mappedEncounter) {
+      unassignedReason = unassignedEncounterById.get(medication.encounterId)?.reason ?? "department-unmapped";
+    }
+    const encounterAssociation = unassignedEncounterById.get(medication.encounterId)?.association;
+    unassignedMedications.push(clinicalMedicationProjection(medication, lifecycle, {
+      unassignedReason,
+      ...(encounterAssociation ? {
+        association: {
+          kind: "direct",
+          sourceField: "encounterId",
+          value: medication.encounterId,
+          basis: "Medication.encounterId로 자동 귀속하지 않은 Encounter에 직접 연결",
+          encounterAreaKind: encounterAssociation.kind,
+          candidateAreaIds: encounterAssociation.candidateAreaIds ?? [],
+        },
+      } : {}),
+    }));
+  }
+
+  for (const area of areas) {
+    area.declaredVisitCount = area.visits.filter(({ association }) => association.kind === "declared").length;
+    area.classifiedVisitCount = area.visits.filter(({ association }) => association.kind === "classified").length;
+    area.declaredMedicationCount = area.medications
+      .filter(({ association }) => association.encounterAreaKind === "declared").length;
+    area.classifiedMedicationCount = area.medications
+      .filter(({ association }) => association.encounterAreaKind === "classified").length;
+    area.careActive = area.declaredVisitCount > 0;
+    area.candidateActive = area.classifiedVisitCount > 0;
+    area.signalActive = area.conditions.length > 0;
+    area.candidateOnly = area.candidateActive && !area.careActive && !area.signalActive;
+    area.signalOnly = area.signalActive && !area.careActive && !area.candidateActive;
+    area.active = area.careActive || area.candidateActive || area.signalActive;
+  }
+  const activeAreaIds = areas.filter(({ active }) => active).map(({ id }) => id);
+  const careAreaIds = areas.filter(({ careActive }) => careActive).map(({ id }) => id);
+  const candidateAreaIds = areas.filter(({ candidateActive }) => candidateActive).map(({ id }) => id);
+  const signalAreaIds = areas.filter(({ signalActive }) => signalActive).map(({ id }) => id);
   return {
-    nodes,
-    edges,
-    projection: {
-      limit: CLINICAL_GRAPH_NODE_LIMIT,
-      totalRecords: records.length,
-      visibleRecords: nodes.length,
-      omittedRecords: Math.max(0, records.length - nodes.length),
-      totalConditions: conditions.length,
-      visibleConditions: conditionNodes.length,
-      omittedConditions: Math.max(0, conditions.length - conditionNodes.length),
-      dateRange: clinicalGraphDateRange(records),
-      visibleDateRange: clinicalGraphDateRange(visibleRecords),
+    schema: "vitagraph-clinical-body-atlas",
+    areas,
+    activeAreaIds,
+    careAreaIds,
+    candidateAreaIds,
+    signalAreaIds,
+    unassigned: { visits: unassignedVisits, medications: unassignedMedications },
+    totals: {
+      areas: areas.length,
+      activeAreas: activeAreaIds.length,
+      careAreas: careAreaIds.length,
+      candidateAreas: candidateAreaIds.length,
+      candidateOnlyAreas: areas.filter(({ candidateOnly }) => candidateOnly).length,
+      signalAreas: signalAreaIds.length,
+      signalOnlyAreas: areas.filter(({ signalOnly }) => signalOnly).length,
+      conditions: confirmedActiveConditions.length,
+      conditionAssociations: areas.reduce((total, area) => total + area.conditions.length, 0),
+      visits: areas.reduce((total, area) => total + area.visits.length, 0),
+      declaredVisits: areas.reduce((total, area) => total + area.declaredVisitCount, 0),
+      classifiedVisits: areas.reduce((total, area) => total + area.classifiedVisitCount, 0),
+      medications: areas.reduce((total, area) => total + area.medications.length, 0),
+      declaredMedications: areas.reduce((total, area) => total + area.declaredMedicationCount, 0),
+      classifiedMedications: areas.reduce((total, area) => total + area.classifiedMedicationCount, 0),
+      unassignedVisits: unassignedVisits.length,
+      unassignedMedications: unassignedMedications.length,
     },
   };
 }

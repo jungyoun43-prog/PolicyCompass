@@ -1,4 +1,4 @@
-import { DEFAULT_CLAIM_RULES, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
+import { DEFAULT_CLAIM_RULES, evaluateClaimRule, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
 import { createVisitBrief } from "./insight-model.js";
 import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
 
@@ -37,6 +37,84 @@ const CANONICAL_EVENT_STATUSES = {
   note: new Set(["final"]),
 };
 const ORDER_INTENTS = new Set(["order", "original-order", "reflex-order", "filler-order", "instance-order"]);
+const CLAIM_REVIEW_STAGES = new Set(["new", "evidence", "reviewing", "reviewed"]);
+const CLAIM_REVIEW_STAGE_LABELS = {
+  new: "미분류",
+  evidence: "근거 대조",
+  reviewing: "검토 중",
+  reviewed: "확인 완료",
+};
+const CLAIM_REVIEW_ACTION_PREFIX = "claim-review.stage.";
+const SHA256_CONSTANTS = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+]);
+
+function rotateRight32(value, bits) {
+  return (value >>> bits) | (value << (32 - bits));
+}
+
+export function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  const paddedLength = Math.ceil((bytes.length + 9) / 64) * 64;
+  const data = new Uint8Array(paddedLength);
+  data.set(bytes);
+  data[bytes.length] = 0x80;
+  const bitLength = BigInt(bytes.length) * 8n;
+  for (let index = 0; index < 8; index += 1) {
+    data[paddedLength - 1 - index] = Number((bitLength >> BigInt(index * 8)) & 0xffn);
+  }
+  const hash = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
+  const words = new Uint32Array(64);
+  for (let offset = 0; offset < data.length; offset += 64) {
+    for (let index = 0; index < 16; index += 1) {
+      const cursor = offset + index * 4;
+      words[index] = ((data[cursor] << 24) | (data[cursor + 1] << 16) | (data[cursor + 2] << 8) | data[cursor + 3]) >>> 0;
+    }
+    for (let index = 16; index < 64; index += 1) {
+      const left = words[index - 15];
+      const right = words[index - 2];
+      const sigma0 = rotateRight32(left, 7) ^ rotateRight32(left, 18) ^ (left >>> 3);
+      const sigma1 = rotateRight32(right, 17) ^ rotateRight32(right, 19) ^ (right >>> 10);
+      words[index] = (words[index - 16] + sigma0 + words[index - 7] + sigma1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = hash;
+    for (let index = 0; index < 64; index += 1) {
+      const upperSigma1 = rotateRight32(e, 6) ^ rotateRight32(e, 11) ^ rotateRight32(e, 25);
+      const choice = (e & f) ^ (~e & g);
+      const first = (h + upperSigma1 + choice + SHA256_CONSTANTS[index] + words[index]) >>> 0;
+      const upperSigma0 = rotateRight32(a, 2) ^ rotateRight32(a, 13) ^ rotateRight32(a, 22);
+      const majority = (a & b) ^ (a & c) ^ (b & c);
+      const second = (upperSigma0 + majority) >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = (d + first) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (first + second) >>> 0;
+    }
+    hash[0] = (hash[0] + a) >>> 0;
+    hash[1] = (hash[1] + b) >>> 0;
+    hash[2] = (hash[2] + c) >>> 0;
+    hash[3] = (hash[3] + d) >>> 0;
+    hash[4] = (hash[4] + e) >>> 0;
+    hash[5] = (hash[5] + f) >>> 0;
+    hash[6] = (hash[6] + g) >>> 0;
+    hash[7] = (hash[7] + h) >>> 0;
+  }
+  return [...hash].map((word) => word.toString(16).padStart(8, "0")).join("");
+}
 
 function cleanText(value, fallback = "", maxLength = 2_000) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : fallback;
@@ -361,7 +439,7 @@ function normalizeAuditEvent(input = {}) {
     action,
     patientId: cleanText(input.patientId, "", 160),
     encounterId: cleanText(input.encounterId, "", 160),
-    entityId: cleanText(input.entityId, "", 160),
+    entityId: cleanText(input.entityId, "", 400),
     detail: cleanText(input.detail, "", 500),
   };
 }
@@ -379,6 +457,35 @@ function audit(action, now, { patientId = "", encounterId = "", entityId = "", d
   };
 }
 
+function normalizeClaimReview(input = {}, now = new Date().toISOString()) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const evaluationId = cleanText(input.evaluationId, "", 400);
+  const patientId = cleanText(input.patientId, "", 160);
+  const ruleId = cleanText(input.ruleId, "", 160);
+  const stage = CLAIM_REVIEW_STAGES.has(input.stage) ? input.stage : "";
+  const fingerprint = cleanText(input.fingerprint, "", 80);
+  const calculatedStatus = cleanText(input.calculatedStatus, "", 80);
+  const calculatedAsOf = validDate(input.calculatedAsOf);
+  if (!evaluationId || !patientId || !ruleId || !/^sha256:[0-9a-f]{64}$/.test(fingerprint) || !stage || !calculatedStatus || !calculatedAsOf) return null;
+  const requestedInvalidatedAt = optionalTimestamp(input.invalidatedAt);
+  const requestedInvalidatedFrom = CLAIM_REVIEW_STAGES.has(input.invalidatedFrom) && input.invalidatedFrom !== "new"
+    ? input.invalidatedFrom
+    : "";
+  const keepsInvalidation = stage === "new" && Boolean(requestedInvalidatedAt) && Boolean(requestedInvalidatedFrom);
+  return {
+    evaluationId,
+    patientId,
+    ruleId,
+    stage,
+    fingerprint,
+    calculatedStatus,
+    calculatedAsOf,
+    invalidatedAt: keepsInvalidation ? requestedInvalidatedAt : "",
+    invalidatedFrom: keepsInvalidation ? requestedInvalidatedFrom : "",
+    updatedAt: validTimestamp(input.updatedAt, validTimestamp(now)),
+  };
+}
+
 export function createEmptyEmrState(now = new Date().toISOString()) {
   const timestamp = validTimestamp(now);
   return {
@@ -390,6 +497,7 @@ export function createEmptyEmrState(now = new Date().toISOString()) {
     selectedEncounterId: "",
     patients: [],
     rules: DEFAULT_CLAIM_RULES.map((rule) => normalizeClaimRule(rule)),
+    claimReviews: [],
     audit: [],
     storageError: "",
     recoveryRaw: "",
@@ -425,6 +533,18 @@ export function normalizeEmrState(input = {}) {
     auditIds.add(event.id);
     auditEvents.push(event);
   }
+  const claimReviews = [];
+  const claimReviewIds = new Set();
+  for (const item of Array.isArray(input.claimReviews) ? input.claimReviews : []) {
+    const review = normalizeClaimReview(item, now);
+    if (!review
+      || claimReviewIds.has(review.evaluationId)
+      || !patientIds.has(review.patientId)
+      || !ruleIds.has(review.ruleId)
+      || review.evaluationId !== `${review.patientId}:${review.ruleId}`) continue;
+    claimReviewIds.add(review.evaluationId);
+    claimReviews.push(review);
+  }
   const selected = cleanText(input.selectedPatientId);
   const selectedPatientId = patientIds.has(selected) ? selected : patients[0]?.id ?? "";
   const selectedPatient = patients.find((patient) => patient.id === selectedPatientId);
@@ -441,6 +561,7 @@ export function normalizeEmrState(input = {}) {
     selectedEncounterId,
     patients,
     rules: rules.length ? rules : DEFAULT_CLAIM_RULES.map((rule) => normalizeClaimRule(rule)),
+    claimReviews: claimReviews.slice(0, 10_000),
     audit: auditEvents.slice(-1_000),
     storageError: cleanText(input.storageError, "", 500),
     recoveryRaw: typeof input.recoveryRaw === "string" ? input.recoveryRaw.slice(0, 5 * 1024 * 1024) : "",
@@ -685,6 +806,212 @@ export function appendStateAudit(stateInput, action, detail = "", now = new Date
   };
 }
 
+function claimReviewEvidenceSnapshot(event) {
+  if (!event) return null;
+  return {
+    id: event.id,
+    type: event.type,
+    recordStatus: event.recordStatus,
+    system: event.system,
+    code: event.code,
+    label: event.label,
+    date: event.date,
+    status: event.status,
+    value: event.value,
+    unit: event.unit,
+    observedAt: event.observedAt ?? "",
+    clinicalStatus: event.clinicalStatus ?? "",
+    verificationStatus: event.verificationStatus ?? "",
+    intent: event.intent ?? "",
+    source: event.source,
+  };
+}
+
+export function claimEvaluationFingerprint(evaluationInput = {}, patientInput = {}) {
+  const evaluation = evaluationInput && typeof evaluationInput === "object" ? evaluationInput : {};
+  const patient = createPatient(patientInput);
+  const evidenceIds = [...new Set((Array.isArray(evaluation.evidenceEventIds) ? evaluation.evidenceEventIds : [])
+    .map((id) => cleanText(id, "", 160))
+    .filter(Boolean))].sort();
+  const eventById = new Map(patient.events.map((event) => [event.id, event]));
+  const canonical = clinicalContextFingerprint({
+    evaluationId: cleanText(evaluation.id, "", 400),
+    patientId: cleanText(evaluation.patientId, "", 160),
+    ruleId: cleanText(evaluation.ruleId ?? evaluation.rule?.id, "", 160),
+    asOf: validDate(evaluation.asOf),
+    result: {
+      status: cleanText(evaluation.status, "", 80),
+      usedCount: boundedInteger(evaluation.usedCount),
+      remainingCount: boundedInteger(evaluation.remainingCount),
+      nextEligibleDate: validDate(evaluation.nextEligibleDate),
+      missingEvidence: [...new Set((Array.isArray(evaluation.missingEvidence) ? evaluation.missingEvidence : [])
+        .map((item) => cleanText(item, "", 500))
+        .filter(Boolean))].sort(),
+    },
+    rule: normalizeClaimRule(evaluation.rule),
+    evidence: evidenceIds.map((id) => claimReviewEvidenceSnapshot(eventById.get(id))).filter(Boolean),
+  });
+  return `sha256:${sha256Hex(canonical)}`;
+}
+
+function currentClaimEvaluation(state, evaluationInput) {
+  const patientId = cleanText(evaluationInput?.patientId, "", 160);
+  const ruleId = cleanText(evaluationInput?.ruleId ?? evaluationInput?.rule?.id, "", 160);
+  const asOf = validDate(evaluationInput?.asOf);
+  const patient = state.patients.find(({ id }) => id === patientId);
+  const rule = state.rules.find(({ id }) => id === ruleId);
+  if (!patient || !rule || !asOf) throw new TypeError("담당자 검토에 연결할 환자·규칙·판정일이 유효하지 않습니다.");
+  const evaluation = evaluateClaimRule(patient, rule, asOf);
+  if (evaluation.id !== cleanText(evaluationInput?.id, "", 400)) {
+    throw new TypeError("담당자 검토와 자동 규칙 판정의 식별자가 일치하지 않습니다.");
+  }
+  return { evaluation, patient, fingerprint: claimEvaluationFingerprint(evaluation, patient) };
+}
+
+function legacyClaimReviewStage(state, evaluationId) {
+  for (let index = state.audit.length - 1; index >= 0; index -= 1) {
+    const event = state.audit[index];
+    if (event.entityId !== evaluationId || !event.action.startsWith(CLAIM_REVIEW_ACTION_PREFIX)) continue;
+    const stage = event.action.slice(CLAIM_REVIEW_ACTION_PREFIX.length);
+    if (CLAIM_REVIEW_STAGES.has(stage)) return stage;
+  }
+  return "new";
+}
+
+function resolveClaimReviewFromState(state, evaluationInput) {
+  const context = currentClaimEvaluation(state, evaluationInput);
+  const stored = state.claimReviews.find(({ evaluationId }) => evaluationId === context.evaluation.id);
+  if (!stored) {
+    const legacyStage = legacyClaimReviewStage(state, context.evaluation.id);
+    return {
+      ...context,
+      stage: "new",
+      stale: legacyStage !== "new",
+      legacy: legacyStage !== "new",
+      invalidatedFrom: legacyStage !== "new" ? legacyStage : "",
+      invalidatedAt: "",
+      stored: null,
+    };
+  }
+  const fingerprintChanged = stored.fingerprint !== context.fingerprint;
+  const stale = Boolean(stored.invalidatedAt) || (fingerprintChanged && stored.stage !== "new");
+  return {
+    ...context,
+    stage: fingerprintChanged ? "new" : stored.stage,
+    stale,
+    legacy: false,
+    invalidatedFrom: fingerprintChanged && stored.stage !== "new" ? stored.stage : stored.invalidatedFrom,
+    invalidatedAt: stored.invalidatedAt,
+    stored,
+  };
+}
+
+export function resolveClaimReview(stateInput, evaluationInput) {
+  return resolveClaimReviewFromState(normalizeEmrState(stateInput), evaluationInput);
+}
+
+function claimReviewRecord(context, stage, now, { invalidatedAt = "", invalidatedFrom = "" } = {}) {
+  return normalizeClaimReview({
+    evaluationId: context.evaluation.id,
+    patientId: context.evaluation.patientId,
+    ruleId: context.evaluation.ruleId,
+    stage,
+    fingerprint: context.fingerprint,
+    calculatedStatus: context.evaluation.status,
+    calculatedAsOf: context.evaluation.asOf,
+    invalidatedAt,
+    invalidatedFrom,
+    updatedAt: now,
+  }, now);
+}
+
+function claimReviewInvalidationAudit(view, now) {
+  const from = view.invalidatedFrom || view.stored?.stage || "reviewed";
+  const previousStatus = view.stored?.calculatedStatus || "이전 판정";
+  const previousAsOf = view.stored?.calculatedAsOf || "이전 판정일";
+  return audit("claim-review.invalidated", now, {
+    patientId: view.evaluation.patientId,
+    entityId: view.evaluation.id,
+    detail: `${CLAIM_REVIEW_STAGE_LABELS[from]} → 미분류 · 자동 판정/근거/규칙/판정일 변경 · ${previousStatus}(${previousAsOf}) → ${view.evaluation.status}(${view.evaluation.asOf})`,
+  });
+}
+
+export function setClaimReviewStage(stateInput, evaluationInput, nextStage, detail = "", now = new Date().toISOString()) {
+  const state = normalizeEmrState(stateInput);
+  if (!CLAIM_REVIEW_STAGES.has(nextStage)) throw new TypeError("담당자 검토 단계가 유효하지 않습니다.");
+  const view = resolveClaimReviewFromState(state, evaluationInput);
+  if (view.stage === nextStage) return state;
+  const at = validTimestamp(now);
+  const next = claimReviewRecord(view, nextStage, at);
+  const claimReviews = state.claimReviews.filter(({ evaluationId }) => evaluationId !== next.evaluationId);
+  claimReviews.push(next);
+  const auditEvents = [];
+  if (view.stale && !view.invalidatedAt) auditEvents.push(claimReviewInvalidationAudit(view, at));
+  auditEvents.push(audit(`${CLAIM_REVIEW_ACTION_PREFIX}${nextStage}`, at, {
+    patientId: view.evaluation.patientId,
+    entityId: view.evaluation.id,
+    detail,
+  }));
+  return {
+    ...state,
+    revision: state.revision + 1,
+    claimReviews,
+    audit: [...state.audit, ...auditEvents].slice(-1_000),
+    updatedAt: at,
+  };
+}
+
+export function reconcileClaimReviews(stateInput, evaluationInputs = [], now = new Date().toISOString()) {
+  const state = normalizeEmrState(stateInput);
+  const inputs = new Map((Array.isArray(evaluationInputs) ? evaluationInputs : [])
+    .map((evaluation) => [cleanText(evaluation?.id, "", 400), evaluation])
+    .filter(([id]) => Boolean(id)));
+  const at = validTimestamp(now);
+  const reviews = [];
+  const invalidationAudits = [];
+  let changed = false;
+  const handled = new Set();
+  for (const stored of state.claimReviews) {
+    const input = inputs.get(stored.evaluationId);
+    if (!input) {
+      reviews.push(stored);
+      continue;
+    }
+    const view = resolveClaimReviewFromState(state, input);
+    handled.add(stored.evaluationId);
+    if (stored.fingerprint === view.fingerprint) {
+      reviews.push(stored);
+      continue;
+    }
+    changed = true;
+    if (stored.stage === "new") {
+      reviews.push(claimReviewRecord(view, "new", at, {
+        invalidatedAt: stored.invalidatedAt,
+        invalidatedFrom: stored.invalidatedFrom,
+      }));
+      continue;
+    }
+    reviews.push(claimReviewRecord(view, "new", at, { invalidatedAt: at, invalidatedFrom: stored.stage }));
+    invalidationAudits.push(claimReviewInvalidationAudit(view, at));
+  }
+  for (const [evaluationId, input] of inputs) {
+    if (handled.has(evaluationId) || state.claimReviews.some((review) => review.evaluationId === evaluationId)) continue;
+    const view = resolveClaimReviewFromState(state, input);
+    if (!view.legacy || !view.invalidatedFrom) continue;
+    changed = true;
+    reviews.push(claimReviewRecord(view, "new", at, { invalidatedAt: at, invalidatedFrom: view.invalidatedFrom }));
+    invalidationAudits.push(claimReviewInvalidationAudit(view, at));
+  }
+  if (!changed) return state;
+  return {
+    ...state,
+    revision: state.revision + 1,
+    claimReviews: reviews,
+    audit: [...state.audit, ...invalidationAudits].slice(-1_000),
+    updatedAt: at,
+  };
+}
+
 export function selectPatient(stateInput, patientId) {
   const state = normalizeEmrState(stateInput);
   return state.patients.some(({ id }) => id === patientId)
@@ -815,6 +1142,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     selectedEncounterId: "kim-visit-today",
     patients: [first, second],
     rules: DEFAULT_CLAIM_RULES.map((rule) => normalizeClaimRule(rule)),
+    claimReviews: [],
     audit: [audit("demo.loaded", timestamp, { detail: "2 patients" })],
     storageError: "",
     recoveryRaw: "",
@@ -836,12 +1164,27 @@ function conditionIdForEvent(event) {
   return "";
 }
 
+const CLINICAL_GRAPH_NODE_LIMIT = 24;
+
+function clinicalGraphDateRange(events) {
+  const dates = events.map(({ date }) => date).filter(Boolean).sort();
+  return {
+    from: dates[0] ?? "",
+    to: dates.at(-1) ?? "",
+  };
+}
+
 export function createClinicalGraph(patientInput = {}) {
   const patient = createFinalizedPatientView(patientInput);
-  const nodes = patient.events
-    .filter((event) => ["condition", "observation", "medication", "allergy", "procedure", "symptom"].includes(event.type)
-      && hasCompatibleEventLifecycle(event))
-    .slice(0, 24)
+  const records = patient.events.filter((event) => ["condition", "observation", "medication", "allergy", "procedure", "symptom"].includes(event.type)
+    && hasCompatibleEventLifecycle(event));
+  const conditions = records.filter(({ type }) => type === "condition");
+  const otherRecords = records.filter(({ type }) => type !== "condition");
+  const selectedIds = new Set([...conditions, ...otherRecords]
+    .slice(0, CLINICAL_GRAPH_NODE_LIMIT)
+    .map(({ id }) => id));
+  const visibleRecords = records.filter(({ id }) => selectedIds.has(id));
+  const nodes = visibleRecords
     .map((event) => ({ id: event.id, type: event.type, label: event.label, code: event.code, date: event.date, source: event.source }));
   const conditionNodes = nodes.filter(({ type }) => type === "condition");
   const edges = [];
@@ -860,7 +1203,21 @@ export function createClinicalGraph(patientInput = {}) {
       basis: `코드·표시명 키워드 기반 주제 분류(${nodeConditionId})`,
     });
   }
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+    projection: {
+      limit: CLINICAL_GRAPH_NODE_LIMIT,
+      totalRecords: records.length,
+      visibleRecords: nodes.length,
+      omittedRecords: Math.max(0, records.length - nodes.length),
+      totalConditions: conditions.length,
+      visibleConditions: conditionNodes.length,
+      omittedConditions: Math.max(0, conditions.length - conditionNodes.length),
+      dateRange: clinicalGraphDateRange(records),
+      visibleDateRange: clinicalGraphDateRange(visibleRecords),
+    },
+  };
 }
 
 function eventDisplay(event) {
@@ -1075,16 +1432,18 @@ export function migrateV1ToV2(input, migratedAt = new Date().toISOString()) {
 function validateCanonicalEmrState(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("EMR 데이터 형식이 유효하지 않습니다.");
   if (input.schema !== EMR_SCHEMA || input.version !== EMR_VERSION) throw new TypeError("EMR 내부 스키마가 유효하지 않습니다.");
-  if (!Array.isArray(input.patients) || !Array.isArray(input.rules) || !Array.isArray(input.audit)) {
+  const compatibleInput = Object.hasOwn(input, "claimReviews") ? input : { ...input, claimReviews: [] };
+  if (!Array.isArray(compatibleInput.patients) || !Array.isArray(compatibleInput.rules)
+    || !Array.isArray(compatibleInput.claimReviews) || !Array.isArray(compatibleInput.audit)) {
     throw new TypeError("EMR 내부 배열이 손상되었습니다.");
   }
-  const mrns = input.patients.map((patient) => cleanText(patient?.mrn)).filter(Boolean);
+  const mrns = compatibleInput.patients.map((patient) => cleanText(patient?.mrn)).filter(Boolean);
   if (new Set(mrns).size !== mrns.length) throw new TypeError("EMR 데이터에 중복 등록번호가 있습니다.");
-  const fhirIdentities = input.patients.map((patient) => cleanText(patient?.fhirIdentity, "", 2_000)).filter(Boolean);
+  const fhirIdentities = compatibleInput.patients.map((patient) => cleanText(patient?.fhirIdentity, "", 2_000)).filter(Boolean);
   if (new Set(fhirIdentities).size !== fhirIdentities.length) throw new TypeError("EMR 데이터에 중복 FHIR 환자 식별자가 있습니다.");
   const validationNow = new Date().toISOString();
-  for (const patient of input.patients) assertPatientDemographicsInput(patient, validationNow);
-  const normalized = normalizeEmrState(input);
+  for (const patient of compatibleInput.patients) assertPatientDemographicsInput(patient, validationNow);
+  const normalized = normalizeEmrState(compatibleInput);
   for (const patient of normalized.patients) {
     const encounterById = new Map(patient.events.filter((event) => event.type === "encounter").map((event) => [event.id, event]));
     const activeEncounters = [...encounterById.values()].filter((event) => event.recordStatus === "draft" && ["arrived", "in-progress"].includes(event.status));
@@ -1158,7 +1517,7 @@ function validateCanonicalEmrState(input) {
     assertOperationalClaimRule(rule);
   }
   assertNonOverlappingRuleVersions(normalized.rules);
-  if (JSON.stringify(stableJson(input)) !== JSON.stringify(stableJson(normalized))) {
+  if (JSON.stringify(stableJson(compatibleInput)) !== JSON.stringify(stableJson(normalized))) {
     throw new TypeError("EMR 데이터에 손상되거나 정규화 중 유실되는 필드가 있습니다.");
   }
   return normalized;
@@ -1199,6 +1558,7 @@ export function prepareUnverifiedBackupRestore(backupStateInput, trustedStateInp
     patients,
     selectedEncounterId: "",
     rules: trustedState.rules,
+    claimReviews: [],
     audit: [],
     demo: false,
     storageError: "",

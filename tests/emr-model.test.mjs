@@ -286,6 +286,57 @@ test("키워드로 만든 그래프 연결은 차트 사실이 아닌 추론과 
   assert.match(graph.edges[0].basis, /키워드 기반/);
 });
 
+test("24건을 넘는 임상 그래프는 중심 문제를 보존하고 전체·표시·생략 범위를 공개한다", () => {
+  const patient = createPatient({
+    id: "graph-limit",
+    name: "그래프 제한 환자",
+    events: [
+      ...Array.from({ length: 28 }, (_, index) => ({
+        id: `symptom-${index + 1}`,
+        type: "symptom",
+        code: `SYM-${index + 1}`,
+        label: `비연결 증상 ${index + 1}`,
+        date: `2026-07-${String(index + 1).padStart(2, "0")}`,
+      })),
+      { id: "old-condition", type: "condition", code: "Z99", label: "오래된 중심 문제", date: "2020-01-02" },
+    ],
+  });
+
+  assert.ok(patient.events.findIndex(({ id }) => id === "old-condition") >= 24);
+  const graph = createClinicalGraph(patient);
+
+  assert.equal(graph.nodes.length, 24);
+  assert.ok(graph.nodes.some(({ id }) => id === "old-condition"));
+  assert.equal(graph.edges.length, 0);
+  assert.deepEqual(graph.projection, {
+    limit: 24,
+    totalRecords: 29,
+    visibleRecords: 24,
+    omittedRecords: 5,
+    totalConditions: 1,
+    visibleConditions: 1,
+    omittedConditions: 0,
+    dateRange: { from: "2020-01-02", to: "2026-07-28" },
+    visibleDateRange: { from: "2020-01-02", to: "2026-07-28" },
+  });
+
+  const conditionOverflow = createClinicalGraph(createPatient({
+    id: "condition-overflow",
+    name: "중심 문제 제한 환자",
+    events: Array.from({ length: 26 }, (_, index) => ({
+      id: `condition-${index + 1}`,
+      type: "condition",
+      code: `Z${String(index + 1).padStart(2, "0")}`,
+      label: `중심 문제 ${index + 1}`,
+      date: `2025-01-${String(index + 1).padStart(2, "0")}`,
+    })),
+  }));
+  assert.equal(conditionOverflow.projection.totalConditions, 26);
+  assert.equal(conditionOverflow.projection.visibleConditions, 24);
+  assert.equal(conditionOverflow.projection.omittedConditions, 2);
+  assert.equal(conditionOverflow.projection.omittedRecords, 2);
+});
+
 test("저장소의 demo 플래그는 실제 로컬 기록을 비영속 데모로 바꾸지 않는다", async () => {
   const memory = new Map();
   const storage = {

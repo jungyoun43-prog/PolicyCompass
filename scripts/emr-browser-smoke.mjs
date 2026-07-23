@@ -225,6 +225,29 @@ try {
   await waitFor("document.querySelectorAll('#clinicalGraph .clinical-node').length >= 20", "Large clinical graph did not render.");
   demoGraphNodes = await evaluate("document.querySelectorAll('#clinicalGraph .clinical-node').length");
   assert(demoGraphNodes === 24, "Clinical graph did not render its bounded 24-node capacity.");
+  const graphProjection = await evaluate(`(() => {
+    const notice = document.getElementById('graphProjectionNotice');
+    return {
+      total: Number(notice.dataset.totalRecords),
+      visible: Number(notice.dataset.visibleRecords),
+      omitted: Number(notice.dataset.omittedRecords),
+      totalConditions: Number(notice.dataset.totalConditions),
+      visibleConditions: Number(notice.dataset.visibleConditions),
+      notice: notice.textContent,
+      dateLabel: document.querySelector('.clinical-graph-overview__range span')?.textContent,
+      dateRange: document.getElementById('graphDateRange')?.textContent,
+    };
+  })()`);
+  assert(graphProjection.total > graphProjection.visible
+    && graphProjection.visible === 24
+    && graphProjection.omitted === graphProjection.total - graphProjection.visible,
+  `Clinical graph did not disclose its bounded projection: ${JSON.stringify(graphProjection)}`);
+  assert(graphProjection.visibleConditions === graphProjection.totalConditions,
+    `Clinical graph silently omitted condition nodes before non-condition records: ${JSON.stringify(graphProjection)}`);
+  assert(/전체 확정 기록 .* 표시하고 .* 생략/.test(graphProjection.notice)
+    && graphProjection.dateLabel === "전체 기록 범위"
+    && graphProjection.dateRange !== "기록 없음",
+  `Clinical graph omission or full-range disclosure is incomplete: ${JSON.stringify(graphProjection)}`);
   assert(await evaluate(`(() => {
     const svg = document.getElementById('clinicalGraph');
     const bounds = svg.getBoundingClientRect();
@@ -234,13 +257,46 @@ try {
         && box.top >= bounds.top - 1 && box.bottom <= bounds.bottom + 1;
     });
   })()`), "Large clinical graph clipped nodes outside the SVG viewport.");
+  const exactSource = await evaluate(`(() => {
+    const node = [...document.querySelectorAll('#clinicalGraph [data-graph-node]')].at(-1);
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return {
+      id: node.dataset.graphNode,
+      type: node.dataset.type,
+      buttonId: document.getElementById('graphOpenChart').dataset.eventId,
+    };
+  })()`);
+  assert(exactSource.id === exactSource.buttonId, "Selected graph node did not bind its exact source event ID.");
+  await evaluate("document.getElementById('graphOpenChart').click()");
+  await waitFor(
+    `document.activeElement === document.querySelector('[data-event-id=${JSON.stringify(exactSource.id)}]')`,
+    "Exact graph source record did not receive focus after navigation.",
+  );
+  const sourceNavigation = await evaluate(`(() => {
+    const row = document.querySelector('[data-event-id=${JSON.stringify(exactSource.id)}]');
+    return {
+      chartSelected: document.querySelector('[data-tab="chart"]').getAttribute('aria-selected'),
+      current: row?.getAttribute('aria-current'),
+      highlighted: row?.classList.contains('is-source-target'),
+      marker: row?.querySelector('.event-source-target-label')?.textContent,
+      filterSelected: document.querySelector('[data-event-filter=${JSON.stringify(exactSource.type)}]')?.getAttribute('aria-pressed'),
+      announcement: document.getElementById('workspaceStatus').textContent,
+    };
+  })()`);
+  assert(sourceNavigation.chartSelected === "true"
+    && sourceNavigation.current === "true"
+    && sourceNavigation.highlighted
+    && sourceNavigation.marker === "관계 지도에서 선택한 원문"
+    && sourceNavigation.filterSelected === "true"
+    && /정확한 과거 기록으로 이동/.test(sourceNavigation.announcement),
+  `Exact graph source navigation lost identity, focus, highlight, filter, or announcement: ${JSON.stringify(sourceNavigation)}`);
   await evaluate("document.querySelector('[data-tab=\"claims\"]').click()");
-  assert(await evaluate("document.querySelectorAll('#claimBoard .claim-lane').length === 6"), "Claim board lanes did not render.");
+  assert(await evaluate("document.querySelectorAll('#claimBoard [data-claim-review-lane]').length === 4 && document.querySelectorAll('#claimResultSummary .claim-result-chip').length === 6"), "Claim review lanes or immutable calculated-result summary did not render.");
   demoClaimCards = await evaluate("document.querySelectorAll('#claimBoard .claim-card').length");
   assert(demoClaimCards >= 3, "Claim evaluations did not render.");
 
   await client.call("Page.navigate", { url: appUrl + "/emr" });
-  await waitFor("location.pathname === '/emr' && location.search === '' && document.readyState === 'complete' && Boolean(document.getElementById('fhirImport'))", "EMR did not become ready after navigation.");
+  await waitFor("location.pathname === '/emr' && location.search === '' && document.readyState === 'complete' && Boolean(document.getElementById('fhirImport')) && Boolean(document.getElementById('patientBirthDate')?.max)", "EMR did not become ready after navigation.");
   const fhirBundle = {
     resourceType: "Bundle",
     timestamp: "2026-07-19T09:00:00Z",
@@ -866,7 +922,7 @@ try {
   const result = {
     demoPatient: "김비타",
     graphNodes: demoGraphNodes,
-    claimLanes: 6,
+    claimLanes: 4,
     claimCards: demoClaimCards,
     persistedPatient: "SMOKE-001",
     persistedEvent: "SMOKE-BP",

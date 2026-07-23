@@ -21,12 +21,15 @@ import {
   KOREA_TIMEZONE_OFFSET_MINUTES,
   parseEmrBackup,
   prepareUnverifiedBackupRestore,
+  reconcileClaimReviews,
   recoverEmrState,
   removePatientEvent,
+  resolveClaimReview,
   retireClaimRule,
   saveEmrState,
   selectPatient,
   selectEncounter,
+  setClaimReviewStage,
   updatePatient,
 } from "./emr-model.js";
 import { parseEmrFhirBundle } from "./emr-fhir.js";
@@ -101,6 +104,11 @@ const AUDIT_LABELS = {
   "schema.migrated": "EMR 스키마 이관",
   "claim-rule.saved": "급여 규칙 저장",
   "claim-rule.retired": "급여 규칙 종료일 설정",
+  "claim-review.stage.new": "급여 담당자 검토 · 미분류",
+  "claim-review.stage.evidence": "급여 담당자 검토 · 근거 대조",
+  "claim-review.stage.reviewing": "급여 담당자 검토 · 검토 중",
+  "claim-review.stage.reviewed": "급여 담당자 검토 · 확인 완료",
+  "claim-review.invalidated": "급여 담당자 검토 · 재검토 필요",
   "fhir.imported": "FHIR 가져오기",
   "fhir.exported": "의료기관용 FHIR 내보내기",
   "patient.transfer.exported": "환자용 VitaGraph 전달",
@@ -128,6 +136,13 @@ const QUEUE_LABELS = {
   external: "외부 완료·미검증",
 };
 
+const CLAIM_REVIEW_STAGE_ORDER = ["new", "evidence", "reviewing", "reviewed"];
+const CLAIM_REVIEW_STAGE_LABELS = {
+  new: "미분류",
+  evidence: "근거 대조",
+  reviewing: "담당자 검토",
+  reviewed: "확인 완료",
+};
 const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
   none: ["visit-context"],
   waiting: ["visit-context"],
@@ -137,15 +152,6 @@ const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
   legacy: [],
   external: [],
 });
-
-const GRAPH_COLORS = {
-  condition: "var(--accent)",
-  observation: "var(--data-cyan)",
-  medication: "var(--data-violet)",
-  allergy: "var(--data-amber)",
-  procedure: "var(--data-lime)",
-  symptom: "var(--surface)",
-};
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const today = () => localCalendarDate(new Date(), KOREA_TIMEZONE_OFFSET_MINUTES);
@@ -274,9 +280,20 @@ const refs = {
   eventTimeline: byId("eventTimeline"),
   eventCount: byId("eventCount"),
   clinicalGraph: byId("clinicalGraph"),
+  graphProblemCount: byId("graphProblemCount"),
+  graphRecordCount: byId("graphRecordCount"),
+  graphRelationCount: byId("graphRelationCount"),
+  graphDateRange: byId("graphDateRange"),
+  graphProjectionNotice: byId("graphProjectionNotice"),
+  graphSelection: document.querySelector(".graph-selection"),
+  graphSelectionTitle: byId("graphSelectionTitle"),
+  graphSelectionDetail: byId("graphSelectionDetail"),
+  graphOpenChart: byId("graphOpenChart"),
   graphEvidenceList: byId("graphEvidenceList"),
   graphLegend: document.querySelector(".graph-legend"),
+  claimResultSummary: byId("claimResultSummary"),
   claimBoard: byId("claimBoard"),
+  claimBoardLive: byId("claimBoardLive"),
   ruleVersionList: byId("ruleVersionList"),
   ruleForm: byId("ruleForm"),
   ruleSetId: byId("ruleSetId"),
@@ -335,12 +352,15 @@ let boardScope = "patient";
 let queueFilter = "all";
 let viewedEncounterId = "";
 let clinicalComposerContextKey = "";
+let graphSelectionId = "";
 let stateTransitionBusy = false;
 let copilotBusy = false;
 let stateGeneration = 0;
 let copilotRequestController = null;
 let aiCapability = { checked: false, configured: false, model: "" };
 let lastFhirReport = null;
+let draggedClaimReviewId = "";
+let claimEvaluationById = new Map();
 const briefCache = new Map();
 const workflowDisclosureSessionState = new Map();
 const pendingWorkflowDisclosureSync = new WeakMap();
@@ -541,6 +561,11 @@ function claimEvaluations(patient, { includeCurrentDraft = false, encounterId = 
   }));
 }
 
+function claimEvaluationsForState(stateInput, asOf = today()) {
+  const board = buildClaimBoard(stateInput.patients, stateInput.rules, asOf);
+  return CLAIM_LANE_ORDER.flatMap((status) => board.lanes[status]);
+}
+
 function restoreCopilotEvidenceIds(brief, aliasToEventId) {
   const restore = (items) => (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
@@ -617,7 +642,12 @@ async function applyMutation(mutator, message, { preserveDraft = true, announce 
       throw new Error("손상된 로컬 저장을 먼저 원본으로 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.");
     }
     const base = preserveDraft ? preserveEncounterDraftIfChanged(state) : state;
-    const candidate = mutator(base);
+    const mutated = mutator(base);
+    const candidate = reconcileClaimReviews(
+      mutated,
+      claimEvaluationsForState(mutated),
+      new Date().toISOString(),
+    );
     if (wasDemo) {
       state = { ...candidate, demo: true };
     } else {
@@ -871,6 +901,8 @@ function renderTimeline(patient) {
   refs.eventCount.textContent = events.length + "건";
   for (const event of events) {
     const item = element("li", "event-row");
+    item.dataset.eventId = event.id;
+    item.tabIndex = -1;
     item.append(element("time", "", displayDate(event.date)));
     const body = element("div", "event-row__body");
     const header = element("header");
@@ -909,117 +941,450 @@ function renderTimeline(patient) {
   if (!events.length) refs.eventTimeline.append(createEmptyMessage("선택한 유형의 기록이 없습니다."));
 }
 
-function graphPositions(nodes) {
+function graphPositions(nodes, edges) {
   const positions = new Map();
-  if (!nodes.length) return positions;
-  const columns = Math.min(6, Math.max(1, Math.ceil(Math.sqrt(nodes.length * (900 / 520)))));
-  const rows = Math.ceil(nodes.length / columns);
-  const horizontalMargin = 70;
-  const verticalMargin = 60;
-  const horizontalStep = columns === 1 ? 0 : Math.min(190, (900 - horizontalMargin * 2) / (columns - 1));
-  const verticalStep = rows === 1 ? 0 : Math.min(140, (520 - verticalMargin * 2) / (rows - 1));
-  const firstRowY = 260 - ((rows - 1) * verticalStep) / 2;
-  nodes.forEach((node, index) => {
-    const row = Math.floor(index / columns);
-    const rowStart = row * columns;
-    const rowCount = Math.min(columns, nodes.length - rowStart);
-    const rowWidth = (rowCount - 1) * horizontalStep;
-    positions.set(node.id, {
-      x: 450 - rowWidth / 2 + (index - rowStart) * horizontalStep,
-      y: firstRowY + row * verticalStep,
+  const edgeCount = new Map(nodes.map(({ id }) => [id, 0]));
+  for (const edge of edges) {
+    edgeCount.set(edge.from, (edgeCount.get(edge.from) ?? 0) + 1);
+    edgeCount.set(edge.to, (edgeCount.get(edge.to) ?? 0) + 1);
+  }
+  const conditions = nodes
+    .filter(({ type }) => type === "condition")
+    .sort((left, right) => (edgeCount.get(right.id) ?? 0) - (edgeCount.get(left.id) ?? 0)
+      || String(right.date).localeCompare(String(left.date)));
+  const clusters = [];
+  const linkedNonConditions = new Set();
+  let cursorY = 28;
+  for (const condition of conditions) {
+    const relations = edges
+      .filter(({ from, to }) => from === condition.id || to === condition.id)
+      .map((edge) => ({
+        edge,
+        node: nodes.find(({ id }) => id === (edge.from === condition.id ? edge.to : edge.from)),
+      }))
+      .filter(({ node }) => Boolean(node))
+      .sort((left, right) => String(right.node.date).localeCompare(String(left.node.date)));
+    for (const { node } of relations) linkedNonConditions.add(node.id);
+    const relationRows = Math.max(1, Math.ceil(relations.length / 2));
+    const clusterHeight = Math.max(138, 54 + relationRows * 82);
+    const conditionY = cursorY + clusterHeight / 2 + 8;
+    positions.set(condition.id, { x: 450, y: conditionY, zone: "condition" });
+    relations.forEach(({ node }, index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      positions.set(node.id, {
+        x: column === 0 ? 148 : 752,
+        y: cursorY + 58 + row * 82,
+        zone: "linked-record",
+      });
     });
+    clusters.push({ condition, relations, y: cursorY, height: clusterHeight });
+    cursorY += clusterHeight + 18;
+  }
+
+  const unlinked = nodes
+    .filter(({ type, id }) => type !== "condition" && !linkedNonConditions.has(id))
+    .sort((left, right) => String(right.date).localeCompare(String(left.date)));
+  let unlinkedArea = null;
+  if (unlinked.length) {
+    const columns = 4;
+    const rows = Math.ceil(unlinked.length / columns);
+    const areaHeight = 58 + rows * 82 + 14;
+    unlinkedArea = { y: cursorY, height: areaHeight, hasConditions: conditions.length > 0 };
+    unlinked.forEach((node, index) => {
+      const row = Math.floor(index / columns);
+      const rowStart = row * columns;
+      const rowCount = Math.min(columns, unlinked.length - rowStart);
+      const horizontalStep = 202;
+      const rowWidth = (rowCount - 1) * horizontalStep;
+      positions.set(node.id, {
+        x: 450 - rowWidth / 2 + (index - rowStart) * horizontalStep,
+        y: cursorY + 62 + row * 82,
+        zone: "unlinked-record",
+      });
+    });
+    cursorY += areaHeight + 18;
+  }
+  return {
+    clusters,
+    height: Math.max(360, cursorY + 10),
+    positions,
+    unlinked,
+    unlinkedArea,
+  };
+}
+
+function graphLabel(value, maximum = 17) {
+  const normalized = String(value ?? "");
+  return normalized.length > maximum ? normalized.slice(0, maximum - 1) + "…" : normalized;
+}
+
+function appendGraphBackground(layout) {
+  const backgrounds = svgElement("g", { "aria-hidden": "true" });
+  for (const cluster of layout.clusters) {
+    backgrounds.append(svgElement("rect", {
+      class: "clinical-cluster-surface",
+      x: 14,
+      y: cluster.y,
+      width: 872,
+      height: cluster.height,
+      rx: 18,
+    }));
+    const label = svgElement("text", {
+      class: "clinical-cluster-label clinical-cluster-label--primary",
+      x: 34,
+      y: cluster.y + 25,
+    });
+    label.textContent = `중심 문제 · ${graphLabel(cluster.condition.label, 26)}`;
+    const count = svgElement("text", {
+      class: "clinical-cluster-label",
+      x: 866,
+      y: cluster.y + 25,
+      "text-anchor": "end",
+    });
+    count.textContent = `자동 분류 ${cluster.relations.length}개`;
+    backgrounds.append(label, count);
+  }
+  if (layout.unlinkedArea) {
+    backgrounds.append(svgElement("rect", {
+      class: "clinical-cluster-surface clinical-cluster-surface--unlinked",
+      x: 14,
+      y: layout.unlinkedArea.y,
+      width: 872,
+      height: layout.unlinkedArea.height,
+      rx: 18,
+    }));
+    const label = svgElement("text", {
+      class: "clinical-cluster-label",
+      x: 34,
+      y: layout.unlinkedArea.y + 25,
+    });
+    label.textContent = layout.unlinkedArea.hasConditions
+      ? "독립된 확정 기록 · 자동 연결 기준 없음"
+      : "확정 기록 · 중심 문제 기록 없음";
+    backgrounds.append(label);
+  }
+  refs.clinicalGraph.append(backgrounds);
+}
+
+function graphPath(from, to) {
+  const fromIsLeft = from.x < to.x;
+  const startX = from.x + (fromIsLeft ? 88 : -88);
+  const endX = to.x + (fromIsLeft ? -102 : 102);
+  const bend = Math.abs(endX - startX) * 0.46;
+  return `M ${startX} ${from.y} C ${startX + (fromIsLeft ? bend : -bend)} ${from.y}, ${endX + (fromIsLeft ? -bend : bend)} ${to.y}, ${endX} ${to.y}`;
+}
+
+function graphRelationLabel(edge, node) {
+  const type = node?.type;
+  if (type === "observation") return "측정 주제";
+  if (type === "medication") return "약물 주제";
+  if (type === "procedure") return "처치 주제";
+  if (type === "symptom") return "증상 주제";
+  return edge.label === "추적" ? "추적 주제" : "기록 주제";
+}
+
+function appendGraphEdges(graph, layout) {
+  const edgeGroup = svgElement("g", { "aria-label": "자동 분류된 추론 연결" });
+  for (const edge of graph.edges) {
+    const from = layout.positions.get(edge.from);
+    const to = layout.positions.get(edge.to);
+    if (!from || !to) continue;
+    const path = svgElement("path", {
+      class: `clinical-edge${edge.kind === "inferred" ? " clinical-edge--inferred" : ""}`,
+      d: graphPath(from, to),
+      "data-edge-from": edge.from,
+      "data-edge-to": edge.to,
+    });
+    const title = svgElement("title");
+    const fromNode = graph.nodes.find(({ id }) => id === edge.from);
+    const toNode = graph.nodes.find(({ id }) => id === edge.to);
+    const relatedNode = fromNode?.type === "condition" ? toNode : fromNode;
+    title.textContent = `${edge.kind === "inferred" ? "추론 연결" : "명시 관계"} · ${graphRelationLabel(edge, relatedNode)} · ${edge.basis || "관계 출처 없음"}${edge.kind === "inferred" ? " · 차트 사실 또는 의학적 인과 아님" : ""}`;
+    path.append(title);
+    edgeGroup.append(path);
+    const centerX = (from.x + to.x) / 2;
+    const centerY = (from.y + to.y) / 2 - 7;
+    const captionText = `추론 · ${graphRelationLabel(edge, relatedNode)}`;
+    const captionWidth = Math.max(68, captionText.length * 9 + 16);
+    const caption = svgElement("g", {
+      class: "clinical-edge-caption",
+      transform: `translate(${centerX} ${centerY})`,
+      "data-edge-from": edge.from,
+      "data-edge-to": edge.to,
+      "aria-hidden": "true",
+    });
+    const surface = svgElement("rect", {
+      x: captionWidth / -2,
+      y: -11,
+      width: captionWidth,
+      height: 22,
+      rx: 11,
+    });
+    const text = svgElement("text", { y: 4, "text-anchor": "middle" });
+    text.textContent = captionText;
+    caption.append(surface, text);
+    edgeGroup.append(caption);
+  }
+  refs.clinicalGraph.append(edgeGroup);
+}
+
+function appendGraphNode(node, position) {
+  const isCondition = node.type === "condition";
+  const width = isCondition ? 204 : 176;
+  const height = isCondition ? 80 : 68;
+  const group = svgElement("g", {
+    class: "clinical-node",
+    "data-graph-node": node.id,
+    "data-type": node.type,
+    transform: `translate(${position.x} ${position.y})`,
+    tabindex: "0",
+    role: "button",
+    "aria-pressed": "false",
+    "aria-label": `확정 ${(EVENT_LABELS[node.type] ?? node.type)} 기록, ${node.label}, ${displayDate(node.date)}. 상세 보기`,
   });
-  return positions;
+  const title = svgElement("title");
+  title.textContent = `${node.label} · ${node.code || "코드 없음"} · ${displayDate(node.date)} · 확정 차트 기록`;
+  group.append(
+    title,
+    svgElement("rect", {
+      class: "clinical-node__halo",
+      x: width / -2 - 5,
+      y: height / -2 - 5,
+      width: width + 10,
+      height: height + 10,
+      rx: isCondition ? 22 : 18,
+    }),
+    svgElement("rect", {
+      class: "clinical-node__surface",
+      x: width / -2,
+      y: height / -2,
+      width,
+      height,
+      rx: isCondition ? 18 : 14,
+    }),
+    svgElement("circle", {
+      class: "clinical-node__type-mark",
+      cx: width / -2 + 17,
+      cy: height / -2 + 16,
+      r: 4,
+    }),
+  );
+  const type = svgElement("text", {
+    class: "clinical-node__type",
+    x: width / -2 + 28,
+    y: height / -2 + 20,
+  });
+  type.textContent = isCondition ? "중심 문제" : (EVENT_LABELS[node.type] ?? node.type);
+  const label = svgElement("text", { class: "clinical-node__title", y: isCondition ? 8 : 7 });
+  label.textContent = graphLabel(node.label, isCondition ? 18 : 15);
+  const meta = svgElement("text", { class: "clinical-node__meta", y: isCondition ? 29 : 25 });
+  meta.textContent = displayDate(node.date);
+  const selectedMark = svgElement("circle", {
+    class: "clinical-node__selected-mark",
+    cx: width / 2 - 14,
+    cy: height / -2 + 14,
+    r: 9,
+  });
+  const selectedCheck = svgElement("path", {
+    class: "clinical-node__selected-check",
+    d: `M ${width / 2 - 18} ${height / -2 + 14} l 3 3 l 5 -6`,
+  });
+  group.append(type, label, meta, selectedMark, selectedCheck);
+  refs.clinicalGraph.append(group);
+}
+
+function graphDefinitionList(pairs) {
+  const list = element("dl");
+  for (const [term, description] of pairs) {
+    list.append(element("dt", "", term), element("dd", "", description || "확인되지 않음"));
+  }
+  return list;
+}
+
+function renderGraphSelection(graph, patient, nodeId) {
+  const node = graph.nodes.find(({ id }) => id === nodeId);
+  const event = patient.events.find(({ id }) => id === nodeId);
+  if (!node || !event) {
+    refs.graphSelection.dataset.selectionState = "empty";
+    refs.graphSelectionTitle.textContent = "기록을 선택하세요";
+    refs.graphSelectionDetail.replaceChildren(element("p", "", "지도에서 기록을 선택하면 유형, 날짜, 코드, 출처와 연결 해석을 확인할 수 있습니다."));
+    refs.graphOpenChart.disabled = true;
+    refs.graphOpenChart.removeAttribute("data-event-type");
+    refs.graphOpenChart.removeAttribute("data-event-id");
+    return;
+  }
+  const relations = graph.edges.filter(({ from, to }) => from === node.id || to === node.id);
+  const relatedNodes = relations
+    .map((edge) => graph.nodes.find(({ id }) => id === (edge.from === node.id ? edge.to : edge.from)))
+    .filter(Boolean);
+  refs.graphSelection.dataset.selectionState = "selected";
+  refs.graphSelectionTitle.textContent = node.label;
+  clear(refs.graphSelectionDetail);
+  const badges = element("div", "graph-record-badges");
+  badges.append(
+    element("span", "", "확정 차트 기록"),
+    element("span", "", EVENT_LABELS[node.type] ?? node.type),
+  );
+  refs.graphSelectionDetail.append(badges);
+  if (event.value !== "" && event.value !== undefined) {
+    refs.graphSelectionDetail.append(element("p", "graph-selection__value", `${event.value}${event.unit ? ` ${event.unit}` : ""}`));
+  }
+  refs.graphSelectionDetail.append(graphDefinitionList([
+    ["기록일", displayDate(node.date)],
+    ["코드", node.code ? [event.system, node.code].filter(Boolean).join(" · ") : "코드 없음"],
+    ["출처", [event.source?.label || node.source?.label || "출처 없음", event.source?.resourceId].filter(Boolean).join(" · ")],
+  ]));
+  const meaning = element("div", "graph-selection__meaning");
+  meaning.append(element("b", "", "관계 해석"));
+  if (relations.length) {
+    meaning.append(document.createTextNode(
+      node.type === "condition"
+        ? `${relatedNodes.map(({ label }) => label).join(", ")} ${relations.length}건이 코드·표시명 주제로 자동 분류되었습니다. 임상적 관련성은 원문과 진료 맥락으로 다시 확인해야 합니다.`
+        : `${relatedNodes.map(({ label }) => label).join(", ")}와 코드·표시명 주제가 겹쳐 자동 분류되었습니다. 차트가 관계나 인과를 명시한 것은 아닙니다.`,
+    ));
+  } else {
+    meaning.append(document.createTextNode("자동 연결 기준이 확인되지 않았습니다. 관계를 새로 지어내지 않고 독립된 차트 사실로 표시합니다."));
+  }
+  refs.graphSelectionDetail.append(meaning);
+  const next = element("p", "graph-selection__next");
+  next.append(element("b", "", "다음 확인 · "), document.createTextNode("날짜, 코드, 출처를 과거 기록 원문과 대조하세요."));
+  refs.graphSelectionDetail.append(next);
+  refs.graphOpenChart.disabled = false;
+  refs.graphOpenChart.dataset.eventType = node.type;
+  refs.graphOpenChart.dataset.eventId = node.id;
+}
+
+let renderedGraphContext = { graph: { nodes: [], edges: [] }, patient: null };
+
+function selectGraphNode(nodeId, focus = false) {
+  const { graph, patient } = renderedGraphContext;
+  if (!patient || !graph.nodes.some(({ id }) => id === nodeId)) return;
+  graphSelectionId = nodeId;
+  refs.clinicalGraph.dataset.selectionState = "selected";
+  for (const node of refs.clinicalGraph.querySelectorAll("[data-graph-node]")) {
+    const selected = node.dataset.graphNode === nodeId;
+    node.classList.toggle("is-selected", selected);
+    node.setAttribute("aria-pressed", String(selected));
+  }
+  for (const edge of refs.clinicalGraph.querySelectorAll("[data-edge-from][data-edge-to]")) {
+    const active = edge.dataset.edgeFrom === nodeId || edge.dataset.edgeTo === nodeId;
+    edge.classList.toggle("is-active", active);
+    edge.classList.toggle("is-muted", !active);
+  }
+  renderGraphSelection(graph, patient, nodeId);
+  if (focus) refs.clinicalGraph.querySelector(`[data-graph-node="${CSS.escape(nodeId)}"]`)?.focus();
+}
+
+function centerSelectedGraphNode() {
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+    const stage = refs.clinicalGraph.closest(".clinical-graph-stage");
+    const selected = refs.clinicalGraph.querySelector(".clinical-node.is-selected");
+    if (!stage || !selected || stage.scrollWidth <= stage.clientWidth) return;
+    const stageRect = stage.getBoundingClientRect();
+    const selectedRect = selected.getBoundingClientRect();
+    stage.scrollLeft += selectedRect.left + selectedRect.width / 2 - (stageRect.left + stage.clientWidth / 2);
+  }));
+}
+
+function renderGraphEvidence(graph) {
+  clear(refs.graphEvidenceList);
+  if (graph.edges.length) {
+    for (const edge of graph.edges) {
+      const from = graph.nodes.find(({ id }) => id === edge.from);
+      const to = graph.nodes.find(({ id }) => id === edge.to);
+      if (!from || !to) continue;
+      const item = element("li", "graph-relation-note");
+      const link = element("button", "graph-evidence-link");
+      link.type = "button";
+      link.dataset.selectGraphNode = to.id;
+      link.append(
+        element("b", "", `추론 · ${from.label} — ${to.label}`),
+        element("span", "", `${graphRelationLabel(edge, to)} · ${edge.basis || "관계 출처 없음"} · 차트 사실·의학적 인과 아님`),
+      );
+      item.append(link);
+      refs.graphEvidenceList.append(item);
+    }
+  } else {
+    const item = element("li", "graph-relation-note graph-relation-note--empty");
+    item.append(
+      element("b", "", "자동 분류된 연결 없음"),
+      element("span", "", "관계를 새로 만들지 않고 각 확정 기록을 독립적으로 표시합니다."),
+    );
+    refs.graphEvidenceList.append(item);
+  }
+  const boundary = element("li", "graph-evidence-boundary");
+  boundary.append(
+    element("b", "", `표시 노드 ${graph.projection.visibleRecords}건은 모두 확정 차트 기록`),
+    element("span", "", `${graph.projection.omittedRecords
+      ? `전체 ${graph.projection.totalRecords}건 중 ${graph.projection.omittedRecords}건은 지도에서 생략했습니다. `
+      : ""}각 노드를 선택하면 날짜·코드·원본 출처를 확인할 수 있습니다. 자동 분류 결과는 확정 기록에 추가되지 않습니다.`),
+  );
+  refs.graphEvidenceList.append(boundary);
 }
 
 function renderGraph(patient) {
   const graph = createClinicalGraph(patient);
-  const positions = graphPositions(graph.nodes);
+  const layout = graphPositions(graph.nodes, graph.edges);
+  renderedGraphContext = { graph, patient };
   clear(refs.clinicalGraph);
+  refs.clinicalGraph.setAttribute("viewBox", `0 0 900 ${layout.height}`);
+  refs.clinicalGraph.dataset.selectionState = graph.nodes.length ? "ready" : "empty";
+  refs.graphProblemCount.textContent = `${graph.projection.visibleConditions} / ${graph.projection.totalConditions}개`;
+  refs.graphRecordCount.textContent = `${graph.projection.visibleRecords} / ${graph.projection.totalRecords}건`;
+  refs.graphRelationCount.textContent = `${graph.edges.length}개`;
+  const { from, to } = graph.projection.dateRange;
+  refs.graphDateRange.textContent = from
+    ? from === to ? displayDate(from) : `${displayDate(from)} – ${displayDate(to)}`
+    : "기록 없음";
+  refs.graphProjectionNotice.dataset.totalRecords = String(graph.projection.totalRecords);
+  refs.graphProjectionNotice.dataset.visibleRecords = String(graph.projection.visibleRecords);
+  refs.graphProjectionNotice.dataset.omittedRecords = String(graph.projection.omittedRecords);
+  refs.graphProjectionNotice.dataset.totalConditions = String(graph.projection.totalConditions);
+  refs.graphProjectionNotice.dataset.visibleConditions = String(graph.projection.visibleConditions);
+  refs.graphProjectionNotice.textContent = graph.projection.omittedRecords
+    ? `전체 확정 기록 ${graph.projection.totalRecords}건 중 ${graph.projection.visibleRecords}건을 지도에 표시하고 ${graph.projection.omittedRecords}건은 가독성을 위해 생략했습니다.${graph.projection.omittedConditions ? ` 중심 문제 ${graph.projection.omittedConditions}개도 생략되어 과거 기록에서 확인해야 합니다.` : ""}`
+    : graph.projection.totalRecords
+      ? `전체 확정 기록 ${graph.projection.totalRecords}건을 지도에 모두 표시합니다.`
+      : "관계 지도에 표시할 확정 기록이 없습니다.";
+
   if (!graph.nodes.length) {
-    const text = svgElement("text", { x: 450, y: 260, "text-anchor": "middle", fill: "currentColor" });
-    text.textContent = "그래프로 표시할 구조화 임상기록이 없습니다.";
-    refs.clinicalGraph.append(text);
+    const empty = svgElement("g", { class: "clinical-graph-empty", "aria-hidden": "true" });
+    const title = svgElement("text", { class: "clinical-graph-empty__title", x: 450, y: 168, "text-anchor": "middle" });
+    title.textContent = "관계 지도로 표시할 확정 기록이 없습니다";
+    const body = svgElement("text", { x: 450, y: 200, "text-anchor": "middle" });
+    body.textContent = "과거 기록에서 구조화된 기록을 검토·확정하면 이곳에 나타납니다.";
+    empty.append(title, body);
+    refs.clinicalGraph.append(empty);
+    graphSelectionId = "";
+    renderGraphSelection(graph, patient, "");
   } else {
-    const edgeGroup = svgElement("g", { "aria-hidden": "true" });
+    appendGraphBackground(layout);
+    appendGraphEdges(graph, layout);
+    for (const node of graph.nodes) appendGraphNode(node, layout.positions.get(node.id));
+    const degree = new Map(graph.nodes.map(({ id }) => [id, 0]));
     for (const edge of graph.edges) {
-      const from = positions.get(edge.from);
-      const to = positions.get(edge.to);
-      if (!from || !to) continue;
-      const line = svgElement("line", {
-        class: `clinical-edge${edge.kind === "inferred" ? " clinical-edge--inferred" : ""}`,
-        x1: from.x,
-        y1: from.y,
-        x2: to.x,
-        y2: to.y,
-      });
-      const title = svgElement("title");
-      title.textContent = `${edge.kind === "inferred" ? "추론 관계" : "명시 관계"} · ${edge.label} · ${edge.basis || "관계 출처 없음"}`;
-      line.append(title);
-      edgeGroup.append(line);
-      if (edge.kind === "inferred") {
-        const label = svgElement("text", {
-          class: "clinical-edge-label",
-          x: (from.x + to.x) / 2,
-          y: (from.y + to.y) / 2 - 5,
-          "text-anchor": "middle",
-        });
-        label.textContent = "추론";
-        edgeGroup.append(label);
-      }
+      degree.set(edge.from, (degree.get(edge.from) ?? 0) + 1);
+      degree.set(edge.to, (degree.get(edge.to) ?? 0) + 1);
     }
-    refs.clinicalGraph.append(edgeGroup);
-    for (const node of graph.nodes) {
-      const position = positions.get(node.id);
-      const group = svgElement("g", {
-        class: "clinical-node",
-        "data-type": node.type,
-        transform: "translate(" + position.x + " " + position.y + ")",
-        tabindex: "0",
-        role: "group",
-        "aria-label": (EVENT_LABELS[node.type] ?? node.type) + " " + node.label + " " + displayDate(node.date),
-      });
-      const title = svgElement("title");
-      title.textContent = node.label + " · " + (node.code || "코드 없음") + " · " + displayDate(node.date);
-      const label = svgElement("text", { y: 4 });
-      label.textContent = node.label.length > 12 ? node.label.slice(0, 11) + "…" : node.label;
-      const meta = svgElement("text", { class: "node-meta", y: 21 });
-      meta.textContent = node.code || EVENT_LABELS[node.type] || node.type;
-      group.append(title, svgElement("circle", { r: node.type === "condition" ? 45 : 39 }), label, meta);
-      refs.clinicalGraph.append(group);
-    }
+    const initial = graph.nodes.find(({ id }) => id === graphSelectionId)
+      ?? [...graph.nodes].sort((left, right) => Number(right.type === "condition") - Number(left.type === "condition")
+        || (degree.get(right.id) ?? 0) - (degree.get(left.id) ?? 0)
+        || String(right.date).localeCompare(String(left.date)))[0];
+    selectGraphNode(initial.id);
   }
 
   clear(refs.graphLegend);
-  for (const type of ["condition", "observation", "medication", "allergy", "procedure", "symptom"]) {
-    const item = element("span");
-    const dot = element("i", "legend-dot");
-    dot.style.background = GRAPH_COLORS[type];
-    item.append(dot, document.createTextNode(EVENT_LABELS[type]));
-    refs.graphLegend.append(item);
+  for (const item of [
+    ["legend-dot legend-dot--condition", "중심 문제"],
+    ["legend-dot legend-dot--record", "확정 차트 기록"],
+    ["legend-line", "자동 분류 추론"],
+  ]) {
+    const legend = element("span");
+    legend.append(element("i", item[0]), document.createTextNode(item[1]));
+    refs.graphLegend.append(legend);
   }
-
-  clear(refs.graphEvidenceList);
-  for (const edge of graph.edges) {
-    const from = graph.nodes.find(({ id }) => id === edge.from);
-    const to = graph.nodes.find(({ id }) => id === edge.to);
-    if (!from || !to) continue;
-    const item = element("li", "graph-relation-note");
-    item.append(
-      element("b", "", `${edge.kind === "inferred" ? "추론 관계" : "명시 관계"} · ${from.label} → ${to.label}`),
-      element("span", "", `${edge.label} · ${edge.basis || "관계 출처 없음"}${edge.kind === "inferred" ? " · 차트 사실 아님" : ""}`),
-    );
-    refs.graphEvidenceList.append(item);
-  }
-  for (const node of graph.nodes) {
-    const item = element("li");
-    item.append(
-      element("b", "", node.label + (node.code ? " · " + node.code : "")),
-      element("span", "", displayDate(node.date) + " · " + (node.source?.label || "출처 없음")),
-    );
-    refs.graphEvidenceList.append(item);
-  }
-  if (!graph.nodes.length) refs.graphEvidenceList.append(createEmptyMessage("연결할 차트 근거가 없습니다."));
+  renderGraphEvidence(graph);
 }
 
 function safeExternalUrl(value) {
@@ -1060,25 +1425,119 @@ function renderRuleVersions() {
   if (!rules.length) refs.ruleVersionList.append(createEmptyMessage("저장된 급여 규칙이 없습니다."));
 }
 
+async function moveClaimReview(evaluation, nextStage, inputMethod) {
+  if (!evaluation || !CLAIM_REVIEW_STAGE_ORDER.includes(nextStage)) return false;
+  const review = resolveClaimReview(state, evaluation);
+  const currentStage = review.stage;
+  const nextLabel = CLAIM_REVIEW_STAGE_LABELS[nextStage];
+  if (currentStage === nextStage) {
+    refs.claimBoardLive.textContent = `${evaluation.title} 카드는 이미 ${nextLabel} 단계입니다.`;
+    return false;
+  }
+  const currentLabel = CLAIM_REVIEW_STAGE_LABELS[currentStage];
+  const computedLabel = CLAIM_LANE_LABELS[evaluation.status] ?? CLAIM_LANE_LABELS.unknown;
+  const detail = `${currentLabel} → ${nextLabel} · 규칙 판정 ${computedLabel} 유지 · ${inputMethod}`;
+  try {
+    await applyMutation(
+      (current) => setClaimReviewStage(
+        current,
+        evaluation,
+        nextStage,
+        detail,
+        new Date().toISOString(),
+      ),
+      `${evaluation.title}의 담당자 검토 단계를 '${nextLabel}' 단계로 옮겼습니다. 규칙 판정 '${computedLabel}'은 유지됩니다.`,
+      { preserveDraft: false },
+    );
+    refs.claimBoardLive.textContent = `${evaluation.title} 카드: '${currentLabel}'에서 '${nextLabel}' 단계로 이동했습니다.${review.stale ? " 이전 검토는 자동 판정·근거·규칙 또는 판정일 변경으로 무효화했습니다." : ""} 자동 규칙 판정 '${computedLabel}'은 변경되지 않았습니다.`;
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "담당자 검토 단계를 옮기지 못했습니다.";
+    refs.claimBoardLive.textContent = message;
+    setStatus(message, "error");
+    const patient = selectedPatient();
+    if (patient) renderClaimBoard(patient);
+    return false;
+  }
+}
+
 function renderClaimBoard(patient) {
   renderRuleVersions();
   const patients = boardScope === "all" ? state.patients : [patient];
   const board = buildClaimBoard(patients, state.rules, today());
-  clear(refs.claimBoard);
+  const evaluations = CLAIM_LANE_ORDER
+    .flatMap((status) => board.lanes[status])
+    .sort((left, right) => left.patientName.localeCompare(right.patientName, "ko") || left.title.localeCompare(right.title, "ko"));
+  claimEvaluationById = new Map(evaluations.map((evaluation) => [evaluation.id, evaluation]));
+
+  clear(refs.claimResultSummary);
+  refs.claimResultSummary.setAttribute("role", "list");
   for (const status of CLAIM_LANE_ORDER) {
+    const result = element("span", "claim-result-chip");
+    result.dataset.status = status;
+    result.setAttribute("role", "listitem");
+    result.append(
+      element("span", "", CLAIM_LANE_LABELS[status]),
+      element("b", "", board.lanes[status].length),
+    );
+    refs.claimResultSummary.append(result);
+  }
+
+  const reviewById = new Map(evaluations.map((evaluation) => [evaluation.id, resolveClaimReview(state, evaluation)]));
+  const reviewLanes = Object.fromEntries(CLAIM_REVIEW_STAGE_ORDER.map((stage) => [stage, []]));
+  for (const evaluation of evaluations) reviewLanes[reviewById.get(evaluation.id).stage].push(evaluation);
+  clear(refs.claimBoard);
+  for (const stage of CLAIM_REVIEW_STAGE_ORDER) {
     const lane = element("section", "claim-lane");
+    const laneTitleId = `claim-review-lane-${stage}`;
+    lane.dataset.claimReviewLane = stage;
+    lane.setAttribute("aria-labelledby", laneTitleId);
     const header = element("header");
-    header.append(element("h4", "", CLAIM_LANE_LABELS[status]), element("span", "", board.lanes[status].length));
+    const heading = element("div", "claim-lane__heading");
+    const title = element("h4", "", CLAIM_REVIEW_STAGE_LABELS[stage]);
+    title.id = laneTitleId;
+    heading.append(
+      title,
+      element("p", "", stage === "new"
+        ? "아직 담당 분류 없음"
+        : stage === "evidence"
+          ? "차트·청구 근거 수동 대조"
+          : stage === "reviewing"
+            ? "담당자가 현재 확인 중"
+            : "검토 완료 · 급여 확정 아님"),
+    );
+    header.append(heading, element("span", "", reviewLanes[stage].length));
     lane.append(header);
     const cards = element("div", "claim-lane__cards");
-    for (const evaluation of board.lanes[status]) {
+    cards.dataset.claimReviewDropzone = stage;
+    for (const [evaluationIndex, evaluation] of reviewLanes[stage].entries()) {
+      const review = reviewById.get(evaluation.id);
       const card = element("article", "claim-card");
-      card.dataset.status = status;
+      card.dataset.status = evaluation.status;
+      card.dataset.claimEvaluationId = evaluation.id;
+      card.dataset.claimReviewStale = String(review.stale);
+      card.draggable = true;
+      card.tabIndex = 0;
+      card.setAttribute("aria-label", `${evaluation.title} · 자동 규칙 판정 ${CLAIM_LANE_LABELS[evaluation.status]} · 담당자 검토 ${CLAIM_REVIEW_STAGE_LABELS[stage]}${review.stale ? " · 이전 검토 무효화, 재검토 필요" : ""}`);
+      card.setAttribute("aria-describedby", "claimBoardInstructions");
       const top = element("div", "claim-card__top");
       const serviceCode = element("code", "", evaluation.serviceCode);
       serviceCode.title = [evaluation.rule.serviceSystem, evaluation.serviceCode].filter(Boolean).join(" | ");
-      top.append(element("b", "", evaluation.title), serviceCode);
+      const dragHandle = element("span", "claim-drag-handle", "⠿");
+      dragHandle.setAttribute("aria-hidden", "true");
+      top.append(element("b", "", evaluation.title), serviceCode, dragHandle);
       card.append(top);
+      const computedStatus = element("span", "claim-computed-status", `자동 판정 · ${CLAIM_LANE_LABELS[evaluation.status]}`);
+      computedStatus.dataset.status = evaluation.status;
+      card.append(computedStatus);
+      if (review.stale) {
+        const stale = element("p", "claim-review-stale");
+        stale.append(
+          element("b", "", "재검토 필요 · "),
+          document.createTextNode(`자동 판정·근거·규칙 또는 판정일이 달라져 이전 '${CLAIM_REVIEW_STAGE_LABELS[review.invalidatedFrom] ?? "검토"}' 단계는 무효화되고 '미분류'로 돌아왔습니다.`),
+        );
+        card.append(stale);
+      }
       if (boardScope === "all") card.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
       card.append(element("p", "", evaluation.explanation));
       if (evaluation.missingEvidence.length) {
@@ -1117,13 +1576,31 @@ function renderClaimBoard(patient) {
         source.href = sourceUrl;
         source.target = "_blank";
         source.rel = "noreferrer";
+        source.draggable = false;
         card.append(source);
       } else {
         card.append(element("span", "claim-source", evaluation.rule.sourceLabel));
       }
+      const control = element("label", "claim-review-control");
+      const selectId = `claim-stage-${stage}-${evaluationIndex}`;
+      control.htmlFor = selectId;
+      control.append(element("span", "", "담당자 검토 단계"));
+      const select = document.createElement("select");
+      select.id = selectId;
+      select.dataset.claimReviewSelect = evaluation.id;
+      select.setAttribute("aria-label", `${evaluation.title} 담당자 검토 단계 이동`);
+      for (const optionStage of CLAIM_REVIEW_STAGE_ORDER) {
+        const option = document.createElement("option");
+        option.value = optionStage;
+        option.textContent = CLAIM_REVIEW_STAGE_LABELS[optionStage];
+        option.selected = optionStage === stage;
+        select.append(option);
+      }
+      control.append(select);
+      card.append(control);
       cards.append(card);
     }
-    if (!cards.childElementCount) cards.append(createEmptyMessage("해당 상태 없음", "claim-empty"));
+    if (!cards.childElementCount) cards.append(createEmptyMessage("카드를 여기에 놓을 수 있습니다.", "claim-empty"));
     lane.append(cards);
     refs.claimBoard.append(lane);
   }
@@ -1403,8 +1880,8 @@ function renderEncounterContext(patient, encounter, evaluations) {
   for (const node of graph.nodes) types.set(node.type, (types.get(node.type) ?? 0) + 1);
   const summary = element("div", "graph-mini-facts");
   summary.append(
-    element("strong", "", `${graph.nodes.length}개 임상 노드`),
-    element("span", "", `${graph.edges.length}개 추론 관계 · 차트 사실 아님`),
+    element("strong", "", `${graph.projection.visibleRecords}/${graph.projection.totalRecords}개 임상 노드 표시`),
+    element("span", "", `${graph.edges.length}개 추론 관계 · 차트 사실 아님${graph.projection.omittedRecords ? ` · 지도 생략 ${graph.projection.omittedRecords}건` : ""}`),
     element("small", "", [...types].map(([type, count]) => `${EVENT_LABELS[type] ?? type} ${count}`).join(" · ") || "확정 구조화 기록 없음"),
   );
   refs.encounterGraphSummary.append(summary);
@@ -1594,7 +2071,9 @@ function clearPatientWorkspaceUi() {
     refs.eventFilters,
     refs.eventTimeline,
     refs.clinicalGraph,
+    refs.graphProjectionNotice,
     refs.graphEvidenceList,
+    refs.claimResultSummary,
     refs.claimBoard,
     refs.ruleVersionList,
     refs.clinicalJourney,
@@ -1670,6 +2149,8 @@ function isClearedEmrState(candidate) {
     && candidate.patients.length === 0
     && Array.isArray(candidate.audit)
     && candidate.audit.length === 0
+    && Array.isArray(candidate.claimReviews)
+    && candidate.claimReviews.length === 0
     && Array.isArray(candidate.rules)
     && candidate.rules.every(({ sample }) => sample === true);
 }
@@ -1743,7 +2224,17 @@ function switchTab(tab, focus = false) {
   if (!document.querySelector("[data-panel='" + tab + "']")) return;
   activeTab = tab;
   renderTabs();
-  if (focus) byId("tab-" + tab)?.focus();
+  if (tab === "graph") centerSelectedGraphNode();
+  const activeTabButton = byId("tab-" + tab);
+  if (focus) activeTabButton?.focus();
+  const tabList = activeTabButton?.closest(".workspace-tabs");
+  if (!tabList || !activeTabButton || tabList.scrollWidth <= tabList.clientWidth) return;
+  const visibleStart = tabList.scrollLeft;
+  const visibleEnd = visibleStart + tabList.clientWidth;
+  const tabStart = activeTabButton.offsetLeft;
+  const tabEnd = tabStart + activeTabButton.offsetWidth;
+  if (tabStart < visibleStart) tabList.scrollLeft = Math.max(0, tabStart - 12);
+  else if (tabEnd > visibleEnd) tabList.scrollLeft = tabEnd - tabList.clientWidth + 12;
 }
 
 function downloadJson(value, filename) {
@@ -2254,6 +2745,66 @@ refs.eventFilters.addEventListener("click", (event) => {
   if (patient) renderTimeline(patient);
 });
 
+refs.clinicalGraph.addEventListener("click", (event) => {
+  const node = event.target.closest("[data-graph-node]");
+  if (node) selectGraphNode(node.dataset.graphNode);
+});
+
+refs.clinicalGraph.addEventListener("keydown", (event) => {
+  const node = event.target.closest("[data-graph-node]");
+  if (!node) return;
+  if (["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    selectGraphNode(node.dataset.graphNode);
+    return;
+  }
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  const nodes = [...refs.clinicalGraph.querySelectorAll("[data-graph-node]")];
+  const current = nodes.indexOf(node);
+  const previous = ["ArrowLeft", "ArrowUp"].includes(event.key);
+  const next = event.key === "Home"
+    ? nodes[0]
+    : event.key === "End"
+      ? nodes.at(-1)
+      : nodes[(current + (previous ? -1 : 1) + nodes.length) % nodes.length];
+  event.preventDefault();
+  selectGraphNode(next.dataset.graphNode, true);
+});
+
+refs.graphEvidenceList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-select-graph-node]");
+  if (!button) return;
+  selectGraphNode(button.dataset.selectGraphNode, true);
+  refs.clinicalGraph.closest(".clinical-graph-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+refs.graphOpenChart.addEventListener("click", () => {
+  const patient = selectedPatient();
+  const eventId = refs.graphOpenChart.dataset.eventId;
+  const record = patient?.events.find(({ id }) => id === eventId);
+  if (!patient || !record) {
+    setStatus("선택한 원문 기록을 찾을 수 없습니다. 관계 지도를 다시 열어 기록을 선택하세요.", "error");
+    return;
+  }
+  eventFilter = record.type;
+  renderTimeline(patient);
+  switchTab("chart");
+  const target = refs.eventTimeline.querySelector(`[data-event-id="${CSS.escape(record.id)}"]`);
+  if (!target) {
+    setStatus(`‘${record.label}’ 원문 기록을 현재 필터에서 찾을 수 없습니다.`, "error");
+    return;
+  }
+  target.classList.add("is-source-target");
+  target.setAttribute("aria-current", "true");
+  target.querySelector(".event-row__body header")?.prepend(element("span", "event-source-target-label", "관계 지도에서 선택한 원문"));
+  window.requestAnimationFrame(() => {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    target.scrollIntoView({ behavior, block: "center", inline: "nearest" });
+    target.focus({ preventScroll: true });
+  });
+  setStatus(`‘${record.label}’의 정확한 과거 기록으로 이동했습니다. 날짜·코드·출처를 원문과 대조하세요.`, "success");
+});
+
 refs.eventTimeline.addEventListener("click", async (event) => {
   const patient = selectedPatient();
   if (!patient) return;
@@ -2396,6 +2947,66 @@ for (const button of document.querySelectorAll("[data-board-scope]")) {
   });
 }
 
+function clearClaimDragState() {
+  draggedClaimReviewId = "";
+  refs.claimBoard.querySelectorAll(".is-dragging, .is-drop-target").forEach((node) => {
+    node.classList.remove("is-dragging", "is-drop-target");
+  });
+  delete refs.claimBoard.dataset.dragging;
+}
+
+refs.claimBoard.addEventListener("dragstart", (event) => {
+  const card = event.target.closest?.("[data-claim-evaluation-id]");
+  if (!card) return;
+  if (event.target.closest?.("a, select, option")) {
+    event.preventDefault();
+    return;
+  }
+  draggedClaimReviewId = card.dataset.claimEvaluationId;
+  refs.claimBoard.dataset.dragging = "true";
+  card.classList.add("is-dragging");
+  event.dataTransfer?.setData("text/plain", draggedClaimReviewId);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+});
+
+refs.claimBoard.addEventListener("dragover", (event) => {
+  const lane = event.target.closest?.("[data-claim-review-lane]");
+  if (!lane || !draggedClaimReviewId) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  refs.claimBoard.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+  lane.classList.add("is-drop-target");
+});
+
+refs.claimBoard.addEventListener("dragleave", (event) => {
+  const lane = event.target.closest?.("[data-claim-review-lane]");
+  if (!lane || lane.contains(event.relatedTarget)) return;
+  lane.classList.remove("is-drop-target");
+});
+
+refs.claimBoard.addEventListener("drop", async (event) => {
+  const lane = event.target.closest?.("[data-claim-review-lane]");
+  if (!lane) return;
+  event.preventDefault();
+  const evaluationId = event.dataTransfer?.getData("text/plain") || draggedClaimReviewId;
+  const evaluation = claimEvaluationById.get(evaluationId);
+  const nextStage = lane.dataset.claimReviewLane;
+  clearClaimDragState();
+  await moveClaimReview(evaluation, nextStage, "드래그 이동");
+  refs.claimBoard.querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"]`)?.focus();
+});
+
+refs.claimBoard.addEventListener("dragend", clearClaimDragState);
+
+refs.claimBoard.addEventListener("change", async (event) => {
+  const select = event.target.closest?.("[data-claim-review-select]");
+  if (!select) return;
+  const evaluationId = select.dataset.claimReviewSelect;
+  const evaluation = claimEvaluationById.get(evaluationId);
+  await moveClaimReview(evaluation, select.value, "단계 선택");
+  refs.claimBoard.querySelector(`[data-claim-review-select="${CSS.escape(evaluationId)}"]`)?.focus();
+});
+
 function loadDemo() {
   if (blockClinicalContextChange({ patientChanged: true })) return;
   state = createDemoEmrState();
@@ -2479,7 +3090,7 @@ refs.importEmr.addEventListener("change", async () => {
       const backup = await readJsonFile(file);
       assertCurrentStateGeneration(expectedGeneration);
       const parsed = parseEmrBackup(backup);
-      if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자 전달에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙과 감사 이력도 신뢰하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
+      if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자 전달에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙·감사 이력·담당자 검토 단계도 신뢰하지 않고 복원하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
         setStatus("백업 복원을 취소했습니다.");
         return;
       }

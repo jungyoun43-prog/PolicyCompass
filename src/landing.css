@@ -1,13 +1,13 @@
-.landing-shell {
-  padding-top: var(--space-8);
+.landing-page .landing-shell {
+  padding-top: var(--space-6);
 }
 
 .landing-hero {
   position: relative;
   display: grid;
-  min-height: 650px;
+  min-height: clamp(480px, 35vw, 520px);
   align-items: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
   overflow: hidden;
   border-bottom: 1px solid var(--line);
 }
@@ -15,8 +15,8 @@
 .landing-hero__copy {
   position: relative;
   z-index: 1;
-  width: min(100%, 600px);
-  padding: var(--space-12) 0;
+  width: min(100%, 680px);
+  padding: var(--space-8) 0;
 }
 
 .landing-hero__copy::before {
@@ -32,14 +32,19 @@
 }
 
 .landing-hero h1 {
-  max-width: 12ch;
-  margin: var(--space-3) 0 var(--space-5);
-  font-size: clamp(3.2rem, 6vw, 6rem);
+  max-width: none;
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: clamp(3.1rem, 4.6vw, 4.75rem);
   font-weight: 780;
   letter-spacing: -0.075em;
   line-height: 1.06;
-  text-wrap: balance;
   word-break: keep-all;
+}
+
+.landing-hero h1 > span {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .landing-hero h1 em {
@@ -52,7 +57,7 @@
   margin: 0;
   color: var(--muted);
   font-size: 1.0625rem;
-  line-height: 1.78;
+  line-height: 1.68;
   word-break: keep-all;
 }
 
@@ -84,7 +89,7 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
 }
 
 .landing-button {
@@ -114,35 +119,34 @@
 }
 
 .landing-hero__note {
-  margin: var(--space-4) 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--muted);
   font-size: 0.75rem;
 }
 
 .patient-start-path {
   display: grid;
-  grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(var(--space-6), 5vw, var(--space-12));
+  grid-template-columns: minmax(14rem, 0.68fr) minmax(0, 1.32fr);
+  gap: var(--space-6) clamp(var(--space-6), 4vw, var(--space-10));
   align-items: start;
-  margin: var(--space-6) 0 var(--space-10);
+  margin: var(--space-5) 0 var(--space-8);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background:
     radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 16rem),
     var(--surface-raised);
-  padding: clamp(var(--space-5), 4vw, var(--space-8));
+  padding: clamp(var(--space-5), 3vw, var(--space-8));
   box-shadow: var(--shadow-panel);
 }
 
 .patient-start-path header {
-  position: sticky;
-  top: calc(var(--header-height) + var(--space-4));
+  position: static;
 }
 
 .patient-start-path h2 {
-  max-width: 12ch;
+  max-width: 14em;
   margin: var(--space-2) 0 var(--space-3);
-  font-size: clamp(1.65rem, 3.3vw, 2.6rem);
+  font-size: clamp(1.6rem, 2.8vw, 2.35rem);
   letter-spacing: -0.05em;
   line-height: 1.16;
   word-break: keep-all;
@@ -159,6 +163,8 @@
 
 .patient-start-path ol {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-6);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -169,7 +175,7 @@
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: var(--space-4);
-  min-height: 86px;
+  min-height: 82px;
   align-items: start;
   padding: var(--space-3) 0 var(--space-4);
 }
@@ -182,6 +188,11 @@
   width: 2px;
   background: color-mix(in srgb, var(--accent) 32%, var(--line));
   content: "";
+  display: none;
+}
+
+.patient-start-path li:nth-child(-n + 2)::after {
+  display: block;
 }
 
 .patient-start-path__signal {
@@ -217,7 +228,7 @@
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-5);
   align-items: center;
-  margin-top: calc(var(--space-2) * -1);
+  margin-top: 0;
 }
 
 .patient-start-path__actions .text-action {
@@ -272,14 +283,14 @@
 .data-boundary,
 .beta,
 .closing {
-  padding: 112px 0;
+  padding: clamp(64px, 6vw, 88px) 0;
 }
 
 .outcome,
 .beta {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(var(--space-8), 8vw, 128px);
+  gap: clamp(var(--space-8), 7vw, 96px);
   align-items: center;
 }
 
@@ -287,9 +298,9 @@
 .data-boundary h2,
 .beta h2,
 .closing h2 {
-  max-width: 13ch;
-  margin: var(--space-3) 0 var(--space-5);
-  font-size: clamp(2.2rem, 4.4vw, 4rem);
+  max-width: 11em;
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
   letter-spacing: -0.06em;
   line-height: 1.1;
   text-wrap: balance;
@@ -427,13 +438,13 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-5);
-  margin: var(--space-10) 0 0;
+  margin: var(--space-8) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .workflow__steps li {
-  min-height: 170px;
+  min-height: 148px;
   border-top: 1px solid var(--line);
   padding-top: var(--space-5);
 }
@@ -467,7 +478,7 @@
 }
 
 .data-boundary h2 {
-  max-width: 12ch;
+  max-width: 10em;
 }
 
 .data-boundary header > p:not(.eyebrow),
@@ -579,7 +590,7 @@
 }
 
 .closing h2 {
-  max-width: 11ch;
+  max-width: 10em;
 }
 
 .closing .landing-actions {
@@ -625,7 +636,7 @@
 
   .landing-hero__copy {
     width: 100%;
-    padding: var(--space-6) 0 var(--space-8);
+    padding: var(--space-5) 0 var(--space-6);
   }
 
   .landing-hero__copy::before,
@@ -636,7 +647,7 @@
   .landing-hero__visual {
     position: relative;
     inset: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 10;
     order: 2;
   }
 
@@ -655,7 +666,7 @@
   .data-boundary,
   .beta,
   .closing {
-    padding: 80px 0;
+    padding: 64px 0;
   }
 
   .data-boundary {
@@ -676,18 +687,27 @@
 }
 
 @media (max-width: 620px) {
-  .landing-shell {
-    padding-top: var(--space-5);
+  .landing-page .landing-shell {
+    padding-top: var(--space-3);
   }
 
   .landing-hero h1 {
     max-width: none;
-    font-size: clamp(2.65rem, 12vw, 3.7rem);
-    letter-spacing: -0.06em;
+    font-size: clamp(2.4rem, 10.4vw, 2.9rem);
+    letter-spacing: -0.055em;
   }
 
   .landing-hero__lead {
     font-size: 1rem;
+    line-height: 1.62;
+  }
+
+  .patient-start-path ol {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-start-path li:not(:last-child)::after {
+    display: block;
   }
 
   .landing-actions,
@@ -727,7 +747,7 @@
   .workflow,
   .beta,
   .closing {
-    padding-block: 64px;
+    padding-block: var(--space-12);
   }
 
   .beta-plan__price {

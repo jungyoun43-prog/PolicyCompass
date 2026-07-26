@@ -84,7 +84,7 @@ async function readJson(request) {
 }
 
 function runtimeHeaders(pathname, headers) {
-  if (!["/insights", "/insights.html"].includes(pathname)) return headers;
+  if (!["/emr", "/emr.html", "/insights", "/insights.html"].includes(pathname)) return headers;
   const next = { ...headers };
   if (typeof next["content-security-policy"] === "string") {
     next["content-security-policy"] = next["content-security-policy"].replace("connect-src 'none'", "connect-src 'self'");

@@ -13,6 +13,7 @@ test("Journey 변화는 저장 데이터를 수정하지 않는 하나의 명시
   assert.match(html, /id="reviewJourneyChanges"[\s\S]*?aria-controls="journeyComparison"[\s\S]*?최근 변화 살펴보기/);
   assert.match(html, /id="comparisonTitle" tabindex="-1"/);
   assert.match(client, /elements\.reviewAction\.hidden = journey\.length < 2/);
+  assert.match(client, /value\.replaceAll\("-", "\\u2011"\)/);
   assert.match(
     client,
     /matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth"/,

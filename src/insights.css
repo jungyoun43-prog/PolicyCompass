@@ -167,6 +167,15 @@
   word-break: keep-all;
 }
 
+.question-examples {
+  max-width: 44rem;
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
 .print-date {
   margin: 0;
   color: var(--muted);

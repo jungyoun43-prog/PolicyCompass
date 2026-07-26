@@ -152,9 +152,16 @@ test("기준기간 내 횟수를 모두 사용하면 다음 인정 가능일을 
   }, "2026-07-19");
 
   assert.equal(result.status, "waiting");
+  assert.equal(result.calculationAvailable, true);
   assert.equal(result.usedCount, 1);
+  assert.equal(result.windowStart, "2026-04-21");
+  assert.equal(result.windowEnd, "2026-07-19");
+  assert.deepEqual(result.serviceEventIds, ["proc"]);
+  assert.equal(result.lastServiceDate, "2026-06-20");
+  assert.equal(result.daysSinceLastService, 29);
   assert.equal(result.nextEligibleDate, "2026-09-18");
   assert.deepEqual(result.missingEvidence, []);
+  assert.match(result.explanation, /EMR 확정 기록.*최근 90일.*1\/1회.*자동 집계/);
 });
 
 test("필수 근거가 없으면 횟수 상태보다 근거 부족을 우선한다", () => {
@@ -187,6 +194,34 @@ test("아직 시행되지 않았고 근거가 충족되면 준비 가능 상태�
   assert.equal(result.status, "ready");
   assert.equal(result.usedCount, 0);
   assert.equal(result.remainingCount, 1);
+  assert.deepEqual(result.serviceEventIds, []);
+  assert.equal(result.lastServiceDate, "");
+  assert.equal(result.daysSinceLastService, null);
+  assert.match(result.explanation, /EMR 확정 기록.*자동 집계.*남은 기준 횟수는 1회/);
+});
+
+test("집계 구간 밖의 최근 확정 시행은 횟수에서 제외하되 마지막 시행일로 구분한다", () => {
+  const result = evaluateClaimRule({
+    ...patient,
+    events: [
+      ...patient.events.filter(({ id }) => id !== "proc"),
+      { id: "old-proc", type: "procedure", code: "DEMO-PROC", label: "이전 추적검사", date: "2026-03-01", status: "completed" },
+    ],
+  }, {
+    id: "rule-outside-window",
+    title: "예시 추적검사",
+    serviceCode: "DEMO-PROC",
+    windowDays: 90,
+    maxCount: 1,
+    requiredEvidenceCodes: ["I10"],
+    effectiveFrom: "2026-01-01",
+  }, "2026-07-19");
+
+  assert.equal(result.usedCount, 0);
+  assert.deepEqual(result.serviceEventIds, []);
+  assert.equal(result.lastServiceDate, "2026-03-01");
+  assert.equal(result.daysSinceLastService, 140);
+  assert.ok(result.evidenceEventIds.includes("old-proc"));
 });
 
 test("시행 전후가 맞지 않는 규칙은 판정하지 않는다", () => {
@@ -200,6 +235,9 @@ test("시행 전후가 맞지 않는 규칙은 판정하지 않는다", () => {
   }, "2026-07-19");
 
   assert.equal(result.status, "not-applicable");
+  assert.equal(result.calculationAvailable, false);
+  assert.equal(result.usedCount, 0);
+  assert.equal(result.lastServiceDate, "");
 });
 
 test("전체 환자 급여 보드는 판정 상태별 칸과 환자 근거를 만든다", () => {

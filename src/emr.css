@@ -47,7 +47,8 @@ body.emr-page {
 }
 
 .clinical-header .app-header__inner {
-  grid-template-columns: minmax(0, 1fr) auto;
+  width: min(calc(100% - var(--space-8)), 1600px);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   min-height: var(--header-height);
   padding-block: 0;
@@ -66,11 +67,6 @@ body.emr-page {
   width: 18px;
   height: 18px;
   border-radius: 6px;
-}
-
-.clinical-header .app-header__action {
-  min-width: 44px;
-  min-height: 44px;
 }
 
 .emr-shell {
@@ -2857,16 +2853,11 @@ body.emr-page {
   font-size: 0.62rem;
 }
 
-.claim-card__explanation,
 .claim-missing {
   display: block;
   margin-top: var(--space-2);
   font-size: 0.65rem;
   line-height: 1.5;
-}
-
-.claim-card__explanation {
-  color: var(--muted);
 }
 
 .claim-card p {
@@ -2999,6 +2990,60 @@ body.emr-page {
   align-content: start;
 }
 
+.claim-auto-calculation {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--data-lime) 24%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--data-lime) 5%, var(--surface));
+  padding: var(--space-4);
+}
+
+.claim-auto-calculation > b {
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.claim-auto-calculation__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.claim-auto-calculation__metric {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: var(--space-3);
+}
+
+.claim-auto-calculation__metric small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.claim-auto-calculation__metric strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.claim-auto-calculation > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.claim-auto-calculation > .claim-auto-calculation__result {
+  color: var(--ink);
+}
+
 .claim-evidence {
   display: grid;
   gap: var(--space-2);
@@ -3047,8 +3092,9 @@ body.emr-page {
 
 .claim-facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 
 .claim-facts span {
@@ -3056,7 +3102,8 @@ body.emr-page {
   background: var(--surface-soft);
   padding: var(--space-1) var(--space-2);
   color: var(--muted);
-  font-size: 0.58rem;
+  font-size: 0.61rem;
+  line-height: 1.45;
 }
 
 .claim-source {
@@ -3448,8 +3495,7 @@ body.emr-page {
   .audit-list time,
   .audit-list span,
   .data-facts dt,
-  .data-facts dd,
-  .clinical-header .app-header__action
+  .data-facts dd
 ) {
   font-size: var(--font-size-caption);
 }
@@ -3507,10 +3553,6 @@ body.emr-page {
 }
 
 @media (max-width: 900px) {
-  .clinical-header .app-header__inner {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
   .clinical-layout {
     grid-template-columns: 1fr;
   }
@@ -3570,11 +3612,7 @@ body.emr-page {
   }
 
   .clinical-header .app-header__inner {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .clinical-header .app-header__action {
-    font-size: 0.68rem;
+    width: min(calc(100% - var(--space-4)), 1600px);
   }
 
   .clinical-command h1 {
@@ -3820,6 +3858,10 @@ body.emr-page {
 
   .claim-card__details-content {
     grid-template-columns: 1fr;
+  }
+
+  .claim-auto-calculation__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .audit-list li {

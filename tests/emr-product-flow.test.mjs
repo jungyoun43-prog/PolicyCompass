@@ -116,6 +116,10 @@ test("백업 복원은 전용 미검증 복원 경계로 저장하고 일반 sav
 
 test("공개 Worker는 EMR 데이터를 받지 않고 로컬 개발 서버만 코파일럿 프록시를 소유한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
+  const statusResponse = await worker.fetch(new Request("https://example.com/api/clinical-copilot/status"));
+  assert.equal(statusResponse.status, 200);
+  assert.deepEqual(await statusResponse.json(), { configured: false, mode: "rule-based", model: "" });
+
   const response = await worker.fetch(new Request("https://example.com/api/clinical-copilot", {
     method: "POST",
     body: "{}",
@@ -124,13 +128,16 @@ test("공개 Worker는 EMR 데이터를 받지 않고 로컬 개발 서버만 �
   assert.equal(response.status, 405);
 });
 
-test("공개 빌드는 네트워크 연결을 차단한다", async () => {
+test("공개 빌드는 AI 화면의 같은 출처 상태 확인만 허용하고 다른 화면의 연결은 차단한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
-  const response = await worker.fetch(new Request("https://example.com/emr"));
-  const policy = response.headers.get("content-security-policy") ?? "";
+  const emr = await worker.fetch(new Request("https://example.com/emr"));
+  const emrPolicy = emr.headers.get("content-security-policy") ?? "";
+  const map = await worker.fetch(new Request("https://example.com/map"));
+  const mapPolicy = map.headers.get("content-security-policy") ?? "";
 
-  assert.match(policy, /connect-src 'none'/);
-  assert.doesNotMatch(policy, /https?:\/\//);
+  assert.match(emrPolicy, /connect-src 'self'/);
+  assert.doesNotMatch(emrPolicy, /https?:\/\//);
+  assert.match(mapPolicy, /connect-src 'none'/);
 });
 
 test("개발 명령은 새 체크아웃에서도 빌드 산출물을 먼저 만든다", async () => {

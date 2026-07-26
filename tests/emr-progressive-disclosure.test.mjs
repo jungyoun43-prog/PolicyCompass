@@ -63,14 +63,26 @@ test("disclosure 기본값은 진료 단계에 맞고 사용자 선택은 메모
   assert.match(script, /renderWorkflowDisclosureSummaries\(encounter, status, records\)/);
 });
 
-test("EMR 헤더는 모든 뷰포트에서 60px 이하이고 환자 추가 목표는 44px 이상이다", async () => {
+test("EMR 헤더는 모든 뷰포트에서 60px 이하이다", async () => {
   const css = await readFile("src/emr.css", "utf8");
   const heights = [...css.matchAll(/--header-height:\s*(\d+)px/g)].map((match) => Number(match[1]));
 
   assert.ok(heights.length >= 1);
   assert.ok(heights.every((height) => height <= 60), heights);
   assert.match(css, /\.clinical-header\s*\{[^}]*height:\s*var\(--header-height\);[^}]*min-height:\s*var\(--header-height\);/s);
-  assert.match(css, /\.clinical-header \.app-header__action\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px;/s);
+});
+
+test("EMR 헤더는 워크스페이스 여백에 맞춰 단일 로고 열을 정렬한다", async () => {
+  const css = await readFile("src/emr.css", "utf8");
+
+  assert.match(
+    css,
+    /\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*min\(calc\(100% - var\(--space-8\)\), 1600px\);[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 620px\)\s*\{[\s\S]*?\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*min\(calc\(100% - var\(--space-4\)\), 1600px\);/s,
+  );
 });
 
 test("EMR 탭은 단일 키보드 모델만 사용한다", async () => {

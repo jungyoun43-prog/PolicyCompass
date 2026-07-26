@@ -38,10 +38,10 @@ const snapshot = {
 };
 
 const modelOutput = {
-  summary: "최근 처방 이후 야간 기침 시점을 확인할 준비가 필요합니다.",
+  summary: "약 먹는 시간과 밤 기침을 진료에서 물어볼 준비가 됐습니다.",
   questions: [{
-    question: "약 복용 시작과 기침 시작 시점을 함께 확인해도 될까요?",
-    reason: "처방과 자기보고의 시간 관계를 의료진에게 확인하기 위해서입니다.",
+    question: "이 약은 하루 중 언제 먹고, 기침이 계속되면 어떻게 문의하면 될까요?",
+    reason: "약 먹는 시간과 불편한 증상을 함께 물어보기 위해서입니다.",
     evidenceIds: ["medication:1", "self-report:1"],
   }],
   sharedSignals: [{
@@ -95,6 +95,12 @@ test("local provider uses loopback Ollama and rejects fabricated evidence", asyn
   assert.equal(requests[0].url, "http://127.0.0.1:11434/api/chat");
   assert.equal(result.provider, "local");
   assert.equal(result.questions.length, 1);
+  const prompt = JSON.parse(requests[0].options.body).messages[0].content;
+  assert.match(prompt, /진료실에서 그대로 읽을 수 있는 짧고 쉬운 존댓말/);
+  assert.match(prompt, /무엇을 먹어도 되는지/);
+  assert.match(prompt, /일주일에 몇 번·한 번에 몇 분/);
+  assert.match(prompt, /약은 언제 먹고 불편하면 어떻게 문의할지/);
+  assert.match(prompt, /검사 전 무엇을 준비할지/);
 
   await assert.rejects(
     () => runPatientQuestionAssistant({ ...payload, provider: "local" }, {
@@ -150,6 +156,7 @@ test("frontier provider requires per-run consent and uses Responses structured o
   assert.equal(captured.body.store, false);
   assert.equal(captured.body.text.format.type, "json_schema");
   assert.equal(captured.body.text.format.strict, true);
+  assert.match(captured.body.instructions, /전문 표현은 피하고 일상말로 풀어 씁니다/);
   assert.equal(result.provider, "frontier");
   assert.equal(result.questions[0].evidenceIds.length, 2);
 });

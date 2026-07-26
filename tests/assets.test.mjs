@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+test("Sites 배포용 Worker는 서버 AI 모듈을 dist 내부에서만 참조한다", async () => {
+  const [workerSource, assistantSource] = await Promise.all([
+    readFile("dist/server/index.js", "utf8"),
+    readFile("dist/server/patient-question-assistant.mjs", "utf8"),
+  ]);
+
+  assert.match(workerSource, /from "\.\/patient-question-assistant\.mjs"/);
+  assert.doesNotMatch(workerSource, /from "\.\.\/\.\.\/scripts\//);
+  assert.match(assistantSource, /export function patientQuestionAssistantStatus/);
+  assert.match(assistantSource, /export async function runPatientQuestionAssistant/);
+});
 
 test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
@@ -63,4 +76,17 @@ test("임상 워크스페이스 빈 상태 이미지를 투명 PNG 자산으로 
   assert.equal(response.headers.get("content-type"), "image/png");
   const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 8).toString("hex");
   assert.equal(signature, "89504e470d0a1a0a");
+});
+
+test("Journey의 양방향 진료 준비 일러스트를 WebP 자산으로 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+
+  const response = await worker.fetch(
+    new Request("https://example.com/assets/patient-journey-bridge.webp"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/webp");
+  const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 4).toString("ascii");
+  assert.equal(signature, "RIFF");
 });

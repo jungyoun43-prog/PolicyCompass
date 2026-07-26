@@ -267,7 +267,7 @@ try {
     document.getElementById("patientSelfReport").value = "지난 2주 동안 야간 기침이 심했습니다.";
     document.getElementById("patientSelfReport").dispatchEvent(new Event("input", { bubbles: true }));
   `);
-  await waitFor("document.getElementById('questions').textContent.includes('최근 변화가 언제 시작')", "Patient self-report did not create a grounded rule question.");
+  await waitFor("document.getElementById('questions').textContent.includes('이 불편함이 계속되거나 심해지면')", "Patient self-report did not create a grounded rule question.");
   await evaluate("document.querySelector('.question-select__input').click()");
   await waitFor("document.querySelector('.question-select__input').checked && !document.getElementById('sharePatientBrief').disabled", "Patient did not explicitly select a question for sharing.");
   await evaluate("document.getElementById('sharePatientBrief').click()");

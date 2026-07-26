@@ -1632,15 +1632,31 @@ function renderClaimBoard(patient) {
         summary.append(stale);
       }
       if (boardScope === "all") summary.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
-      summary.append(element("span", "claim-card__explanation", evaluation.explanation));
       if (evaluation.missingEvidence.length) {
         summary.append(element("span", "claim-missing", "보완 확인 · " + evaluation.missingEvidence.join(", ")));
       }
       const facts = element("span", "claim-facts");
-      facts.append(
-        element("span", "", "차트 시행 " + evaluation.usedCount + "/" + evaluation.rule.maxCount + "건"),
-        element("span", "", evaluation.nextEligibleDate ? "수동 대조 " + evaluation.nextEligibleDate : "기준일 수동 확인"),
-      );
+      if (!evaluation.calculationAvailable) {
+        facts.append(
+          element("span", "", "EMR 자동 집계 · 기간·횟수 미집계"),
+          element("span", "", `판정 제외 · ${evaluation.explanation}`),
+        );
+      } else {
+        facts.append(
+          element("span", "", `EMR 자동 집계 · 최근 ${evaluation.rule.windowDays}일 · 차트 시행 ${evaluation.usedCount}/${evaluation.rule.maxCount}회`),
+          element(
+            "span",
+            "",
+            evaluation.nextEligibleDate
+              ? `다음 기준일 ${evaluation.nextEligibleDate}`
+              : evaluation.usedCount > 0
+                ? `구간 내 마지막 시행 ${evaluation.lastServiceDate} · ${evaluation.daysSinceLastService}일 전`
+                : evaluation.lastServiceDate
+                  ? `구간 밖 마지막 시행 ${evaluation.lastServiceDate} · 현재 구간 0/${evaluation.rule.maxCount}회`
+                  : `차트 시행 기록 없음 · 남은 기준 ${evaluation.remainingCount}회`,
+          ),
+        );
+      }
       summary.append(facts);
       const disclosure = element("span", "claim-card__disclosure");
       disclosure.dataset.claimDetailLabel = "";
@@ -1675,6 +1691,41 @@ function renderClaimBoard(patient) {
       const evidenceEvents = evaluation.evidenceEventIds
         .map((id) => state.patients.find((item) => item.id === evaluation.patientId)?.events.find((event) => event.id === id))
         .filter(Boolean);
+      const autoCalculation = element("section", "claim-auto-calculation");
+      autoCalculation.append(element("b", "", "EMR 기간·횟수 자동 계산"));
+      const autoMetrics = element("div", "claim-auto-calculation__metrics");
+      const calculationFacts = evaluation.calculationAvailable
+        ? [
+            ["집계 구간", `${evaluation.windowStart} ~ ${evaluation.windowEnd}`],
+            ["시행 횟수", `${evaluation.usedCount}/${evaluation.rule.maxCount}회`],
+            [
+              "최근 차트 시행",
+              evaluation.lastServiceDate
+                ? `${evaluation.lastServiceDate} · ${evaluation.daysSinceLastService}일 전 · ${evaluation.usedCount > 0 ? "집계 구간 내" : "집계 구간 밖"}`
+                : "확정 기록 없음",
+            ],
+            ["다음 기준", evaluation.nextEligibleDate || `남은 기준 ${evaluation.remainingCount}회`],
+          ]
+        : [
+            ["자동 계산", "기간·횟수 미집계"],
+            ["제외 상태", CLAIM_LANE_LABELS[evaluation.status] ?? "판정 제외"],
+          ];
+      for (const [label, value] of calculationFacts) {
+        const metric = element("span", "claim-auto-calculation__metric");
+        metric.append(element("small", "", label), element("strong", "", value));
+        autoMetrics.append(metric);
+      }
+      autoCalculation.append(
+        autoMetrics,
+        element("p", "claim-auto-calculation__result", evaluation.explanation),
+        element(
+          "p",
+          "",
+          evaluation.calculationAvailable
+            ? `서명·확정된 EMR의 ${EVENT_LABELS[evaluation.rule.serviceEventType] ?? evaluation.rule.serviceEventType} 기록 중 코드·상태·집계일이 규칙과 일치하는 항목만 자동 계산했습니다.`
+            : "규칙 적용 조건이 충족된 경우에만 기간과 횟수를 계산합니다.",
+        ),
+      );
       const evidence = element("section", "claim-evidence");
       evidence.append(element("b", "", "연결 차트 근거"));
       if (evidenceEvents.length) {
@@ -1725,7 +1776,7 @@ function renderClaimBoard(patient) {
       detailAside.append(control);
       const detailBoundary = element("p", "claim-detail-boundary", "차트 근거와 규칙은 사전 점검 정보입니다. 의료적 필요를 제한하거나 급여를 확정하지 않으며 청구·심사 이력은 별도로 대조해야 합니다.");
       detailBoundary.id = detailBoundaryId;
-      detailContent.append(evidence, detailAside, detailBoundary);
+      detailContent.append(autoCalculation, evidence, detailAside, detailBoundary);
       details.append(detailHeader, detailContent);
       details.addEventListener("close", () => {
         summary.setAttribute("aria-expanded", "false");

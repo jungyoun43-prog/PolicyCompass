@@ -490,7 +490,10 @@
 }
 
 .beta {
-  align-items: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.72fr);
+  gap: clamp(var(--space-8), 7vw, 96px);
+  align-items: center;
   border-bottom: 1px solid var(--line);
 }
 
@@ -498,8 +501,18 @@
   max-width: 42rem;
 }
 
-.beta__copy > .beta__boundary {
-  margin-top: var(--space-5);
+.beta__aside {
+  display: grid;
+  width: 100%;
+  max-width: 32rem;
+  gap: var(--space-4);
+  justify-items: end;
+  justify-self: end;
+}
+
+.beta__aside > .beta__boundary {
+  width: 100%;
+  margin: 0;
   border: 1px solid color-mix(in srgb, var(--data-cyan) 24%, var(--line));
   border-radius: var(--radius-control);
   background:
@@ -516,11 +529,14 @@
 }
 
 .beta__boundary strong {
+  display: block;
+  margin-bottom: var(--space-1);
   color: var(--ink);
 }
 
-.beta__copy .landing-button {
-  margin-top: var(--space-6);
+.beta__aside .landing-button {
+  min-width: min(100%, 15rem);
+  margin: 0;
 }
 
 .closing {
@@ -647,6 +663,16 @@
     grid-template-columns: 1fr;
   }
 
+  .beta {
+    grid-template-columns: 1fr;
+  }
+
+  .beta__aside {
+    max-width: none;
+    justify-items: start;
+    justify-self: stretch;
+  }
+
   .outcome,
   .workflow,
   .beta,
@@ -670,6 +696,14 @@
   .landing-hero__lead {
     font-size: 1rem;
     line-height: 1.62;
+  }
+
+  .beta__aside {
+    justify-items: stretch;
+  }
+
+  .beta__aside .landing-button {
+    width: 100%;
   }
 
   .patient-start-path ol {

@@ -159,7 +159,10 @@
 
 .body-stage {
   position: relative;
-  min-height: 540px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   isolation: isolate;
   border-radius: calc(var(--radius-panel) - var(--space-2));
@@ -196,11 +199,32 @@
 }
 
 .human-figure {
-  position: absolute;
+  position: relative;
   z-index: 1;
-  inset: var(--space-3) 18% var(--space-4);
+  width: 64%;
+  height: 532px;
+  margin: var(--space-3) auto var(--space-4);
   min-width: 0;
   min-height: 0;
+}
+
+.body-stage > .detail-panel {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.body-stage > .detail-panel :where(h2, h3, p, li) {
+  overflow-wrap: anywhere;
 }
 
 .human-figure__image {
@@ -390,7 +414,8 @@
   }
 
   .human-figure {
-    inset-inline: 16%;
+    width: 68%;
+    height: 472px;
   }
 }
 
@@ -410,12 +435,14 @@
     font-size: 0.6875rem;
   }
 
-  .body-stage {
-    min-height: 500px;
+  .human-figure {
+    width: 74%;
+    height: 468px;
+    margin-block: var(--space-4);
   }
 
-  .human-figure {
-    inset: var(--space-4) 13% var(--space-4);
+  .body-stage > .detail-panel {
+    padding: var(--space-5);
   }
 
   .human-figure__image {

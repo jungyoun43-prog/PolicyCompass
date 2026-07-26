@@ -1138,6 +1138,121 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("park-bmd", "procedure", "DEMO-BMD", "골밀도검사", dateBefore(asOf, 350), { system: "urn:vitagraph:demo:service", status: "completed" }),
     ],
   }, timestamp);
+  const third = createPatient({
+    id: "demo-patient-lee",
+    mrn: "VG-1003",
+    name: "이준호",
+    birthDate: "1967-02-18",
+    sex: "male",
+    bloodType: "B+",
+    insuranceType: "national-health",
+    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    events: [
+      demoEvent("lee-visit-today", "encounter", "AMB", "순환기내과 외래", asOf, {
+        recordStatus: "draft",
+        status: "arrived",
+        arrivedAt: new Date(new Date(timestamp).valueOf() - 25 * 60_000).toISOString(),
+        department: "순환기내과",
+        clinician: "이선우",
+        room: "2진료실",
+        chiefComplaint: "혈압약 복용 후 시작된 야간 기침 상담",
+        signature: { status: "unsigned", signer: "", signedAt: "" },
+      }),
+      demoEvent("lee-cough", "symptom", "SYM-COUGH", "지난 2주 동안 심해진 야간 기침", dateBefore(asOf, 1), {
+        note: "밤에 누우면 마른기침이 잦아짐",
+      }),
+      demoEvent("lee-ace", "medication", "C09AA03", "리시노프릴 예시 처방", dateBefore(asOf, 18), {
+        system: "http://www.whocc.no/atc",
+        status: "active",
+        note: "1일 1회 아침 복용",
+      }),
+      demoEvent("lee-bp", "observation", "85354-9", "혈압", dateBefore(asOf, 3), {
+        system: "http://loinc.org",
+        value: "142/88",
+        unit: "mmHg",
+      }),
+      demoEvent("lee-hypertension", "condition", "I10", "고혈압", dateBefore(asOf, 1_825), {
+        system: KCD_SYSTEM,
+        status: "active",
+      }),
+    ],
+  }, timestamp);
+  const fourth = createPatient({
+    id: "demo-patient-choi",
+    mrn: "VG-1004",
+    name: "최민아",
+    birthDate: "1985-09-27",
+    sex: "female",
+    bloodType: "O+",
+    insuranceType: "national-health",
+    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    events: [
+      demoEvent("choi-visit-today", "encounter", "AMB", "소화기내과 외래", asOf, {
+        recordStatus: "draft",
+        status: "arrived",
+        arrivedAt: new Date(new Date(timestamp).valueOf() - 18 * 60_000).toISOString(),
+        department: "소화기내과",
+        clinician: "정다온",
+        room: "6진료실",
+        chiefComplaint: "야식 뒤 속쓰림과 식사 조절 상담",
+        signature: { status: "unsigned", signer: "", signedAt: "" },
+      }),
+      demoEvent("choi-reflux-symptom", "symptom", "SYM-HEARTBURN", "늦은 식사 뒤 반복되는 속쓰림", dateBefore(asOf, 2), {
+        note: "주 3회 정도, 취침 전 악화",
+      }),
+      demoEvent("choi-reflux", "condition", "K21", "위식도역류", dateBefore(asOf, 210), {
+        system: KCD_SYSTEM,
+        status: "active",
+      }),
+      demoEvent("choi-med", "medication", "MED-PPI", "예시 위산 억제제", dateBefore(asOf, 30), {
+        status: "active",
+        note: "아침 식전 복용",
+      }),
+      demoEvent("choi-weight", "observation", "29463-7", "체중", dateBefore(asOf, 7), {
+        system: "http://loinc.org",
+        value: 62.4,
+        unit: "kg",
+      }),
+    ],
+  }, timestamp);
+  const fifth = createPatient({
+    id: "demo-patient-jung",
+    mrn: "VG-1005",
+    name: "정수진",
+    birthDate: "1959-06-08",
+    sex: "female",
+    bloodType: "AB+",
+    insuranceType: "national-health",
+    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    events: [
+      demoEvent("jung-visit-today", "encounter", "AMB", "재활의학과 외래", asOf, {
+        recordStatus: "draft",
+        status: "arrived",
+        arrivedAt: new Date(new Date(timestamp).valueOf() - 4 * 60_000).toISOString(),
+        department: "재활의학과",
+        clinician: "한가람",
+        room: "4진료실",
+        chiefComplaint: "무릎 통증에 맞는 운동 종류와 강도 상담",
+        signature: { status: "unsigned", signer: "", signedAt: "" },
+      }),
+      demoEvent("jung-knee-pain", "symptom", "SYM-KNEE-PAIN", "계단에서 심해지는 오른쪽 무릎 통증", dateBefore(asOf, 3), {
+        note: "걷기는 가능하나 오래 걸으면 통증 증가",
+      }),
+      demoEvent("jung-arthritis", "condition", "M17", "무릎 골관절염", dateBefore(asOf, 680), {
+        system: KCD_SYSTEM,
+        status: "active",
+      }),
+      demoEvent("jung-therapy", "procedure", "DEMO-PT", "무릎 재활운동 교육", dateBefore(asOf, 45), {
+        system: "urn:vitagraph:demo:service",
+        status: "completed",
+      }),
+      demoEvent("jung-bmi", "observation", "39156-5", "체질량지수", dateBefore(asOf, 12), {
+        system: "http://loinc.org",
+        value: 26.1,
+        unit: "kg/m2",
+      }),
+    ],
+  }, timestamp);
   return {
     schema: EMR_SCHEMA,
     version: EMR_VERSION,
@@ -1145,10 +1260,10 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     demo: true,
     selectedPatientId: first.id,
     selectedEncounterId: "kim-visit-today",
-    patients: [first, second],
+    patients: [first, second, third, fourth, fifth],
     rules: DEFAULT_CLAIM_RULES.map((rule) => normalizeClaimRule(rule)),
     claimReviews: [],
-    audit: [audit("demo.loaded", timestamp, { detail: "2 patients" })],
+    audit: [audit("demo.loaded", timestamp, { detail: "5 patients" })],
     storageError: "",
     recoveryRaw: "",
     createdAt: timestamp,

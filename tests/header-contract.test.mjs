@@ -53,16 +53,16 @@ test("게이트웨이는 의료진 EMR과 개인 VitaGraph 진입점을 분리�
   assert.doesNotMatch(html, /두 앱은 환자용 파일로만 연결|확인 코드/);
 });
 
-test("EMR 헤더는 환자 화면 탭을 중복하지 않고 전역 작업만 제공한다", async () => {
+test("EMR 헤더는 환자 화면 탭과 환자 추가 전역 작업을 중복하지 않는다", async () => {
   const html = await readFile("src/emr.html", "utf8");
   const header = html.match(/<header class="app-header clinical-header">([\s\S]*?)<\/header>/)?.[0] ?? "";
   const hrefs = [...header.matchAll(/\bhref="([^"]+)"/g)].map(([, href]) => href);
 
   assert.match(header, /class="app-brand" href="\/emr"/);
-  assert.match(header, /class="app-header__action" href="#patientComposer">환자 추가<\/a>/);
+  assert.doesNotMatch(header, /class="app-header__action"|href="#patientComposer"|>환자 추가<\/a>/);
   assert.doesNotMatch(header, /class="app-nav clinical-nav"/);
   assert.doesNotMatch(header, /data-tab-target/);
-  assert.deepEqual(hrefs, ["/emr", "#patientComposer"]);
+  assert.deepEqual(hrefs, ["/emr"]);
   for (const route of ["/patient", "/map", "/connections", "/insights", "/journey"]) {
     assert.equal(hrefs.includes(route), false, route);
   }

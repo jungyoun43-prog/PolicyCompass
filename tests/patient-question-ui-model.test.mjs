@@ -122,6 +122,7 @@ test("API 요청은 서버 계약에 맞춘 정제 스냅샷만 보내고 외부
 
 test("결정론적 폴백은 자기보고·측정·서명 처방·질환 질문을 근거와 함께 제한한다", () => {
   const brief = createPatientFallbackBrief(scene, "2주 전부터 밤에 기침이 잦음");
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
 
   assert.equal(brief.kind, "rule-based");
   assert.ok(brief.questions.length > 0 && brief.questions.length <= 5);
@@ -129,7 +130,63 @@ test("결정론적 폴백은 자기보고·측정·서명 처방·질환 질문�
   assert.ok(brief.questions.some(({ evidenceIds }) => evidenceIds.includes("measurement:blood-pressure")));
   assert.ok(brief.questions.some(({ evidenceIds }) => evidenceIds.includes("medication:1")));
   assert.ok(brief.questions.every(({ origin, question }) => origin === "rule" && question.endsWith("?")));
+  assert.match(questionText, /측정이나 검사 전에는 무엇을 준비해야 할까요/);
+  assert.match(questionText, /하루 중 언제 먹고, 불편한 증상이 생기면/);
+  assert.doesNotMatch(questionText, /추세|전해질|심혈관 위험|촉발 요인|추적 시점|인과관계/);
   assert.match(brief.disclaimer, /진단·처방·응급 판단을 제공하지 않습니다/);
+});
+
+test("환자용 질환 질문은 식사와 횟수·시간이 있는 운동을 쉬운 말로 묻는다", () => {
+  const brief = createPatientFallbackBrief({
+    visibleIds: ["diabetes", "arthritis"],
+  });
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
+
+  assert.match(questionText, /무엇을 먹어도 되고/);
+  assert.match(questionText, /일주일에 몇 번·(?:한 번에 )?몇 분/);
+  assert.doesNotMatch(questionText, /추세|전해질|심혈관 위험|촉발 요인|추적 시점|인과관계/);
+  assert.ok(brief.questions.every(({ question }) => question.endsWith("?")));
+});
+
+test("정제 기록이 많아도 식사·운동 생활 질문을 최소 두 자리 우선 보장한다", () => {
+  const richSnapshot = structuredClone(signedSnapshot);
+  richSnapshot.healthMap.measurements.push({
+    key: "hba1c",
+    code: "4548-4",
+    label: "당화혈색소",
+    value: 6.8,
+    unit: "%",
+    observedOn: "2026-07-18",
+    basis: "final-observation",
+  });
+  richSnapshot.medications.push({
+    system: "urn:kr:local-medication",
+    code: "STATIN-001",
+    label: "예시 지질약",
+    prescribedOn: "2026-07-12",
+    dose: 1,
+    doseUnit: "정",
+    route: "경구",
+    frequency: "1일 1회",
+    durationDays: 30,
+    quantity: 30,
+    basis: "signed-prescription",
+  });
+  const brief = createPatientFallbackBrief({
+    ...scene,
+    visibleIds: ["hypertension"],
+    clinicalSnapshot: richSnapshot,
+  }, "최근 어지러움이 있었습니다.");
+  const conditionQuestions = brief.questions.filter(({ evidenceIds }) => evidenceIds.includes("condition:hypertension"));
+  const questionText = conditionQuestions.map(({ question }) => question).join(" ");
+
+  assert.equal(brief.questions.length, 5);
+  assert.equal(brief.questions[0].evidenceIds[0], "self-report:1");
+  assert.equal(conditionQuestions.length, 2);
+  assert.match(questionText, /어떤 음식을 덜 먹고/);
+  assert.match(questionText, /일주일에 몇 번·몇 분/);
+  assert.ok(brief.questions.some(({ evidenceIds }) => evidenceIds.some((id) => id.startsWith("measurement:"))));
+  assert.ok(brief.questions.some(({ evidenceIds }) => evidenceIds.some((id) => id.startsWith("medication:"))));
 });
 
 test("모델 질문과 AI 공유 요약은 정제 근거만 허용하고 진단·처방 문장을 거부한다", () => {
@@ -137,10 +194,10 @@ test("모델 질문과 AI 공유 요약은 정제 근거만 허용하고 진단�
     provider: "local",
     model: "local-test",
     generatedAt: "2026-07-26T10:00:00Z",
-    summary: "최근 처방과 야간 기침의 시작 시점을 함께 확인할 준비가 필요합니다.",
+    summary: "약 먹는 시간과 밤 기침을 진료에서 물어볼 준비가 됐습니다.",
     questions: [{
-      question: "약 복용 시작과 밤 기침 시작 시점을 함께 확인해도 될까요?",
-      reason: "처방과 자기보고의 시간 관계를 의료진에게 확인하기 위해서입니다.",
+      question: "이 약은 하루 중 언제 먹고, 기침이 계속되면 어떻게 문의하면 될까요?",
+      reason: "약 먹는 시간과 불편한 증상을 함께 물어보기 위해서입니다.",
       evidenceIds: ["medication:1", "self-report:1"],
     }],
     sharedSignals: [{
@@ -175,10 +232,10 @@ test("명시 공유 payload는 우선 질문을 앞에 두고 모델·환자 요
     provider: "frontier",
     model: "frontier-test",
     generatedAt: "2026-07-26T10:00:00Z",
-    summary: "야간 기침 기간과 처방 시점을 함께 확인할 준비가 필요합니다.",
+    summary: "밤 기침과 약 먹는 시간을 진료에서 물어볼 준비가 됐습니다.",
     questions: [{
-      question: "최근 밤 기침의 기간과 약 복용 시작 시점을 함께 확인할까요?",
-      reason: "최근 변화와 서명 처방의 시점을 대조하기 위해서입니다.",
+      question: "이 약은 언제 먹고, 밤 기침이 계속되면 어떻게 문의하면 될까요?",
+      reason: "약 먹는 시간과 불편한 증상을 함께 물어보기 위해서입니다.",
       evidenceIds: ["self-report:1", "medication:1"],
     }],
     sharedSignals: [{
@@ -226,6 +283,9 @@ test("진료 준비 화면은 자동 연결·provider 동의·명시 공유·선
 
   assert.match(html, /EMR에서 서명하거나 의료진이 확인·확정한 기록 중 식별정보를 제외/);
   assert.match(html, /id="patientSelfReport"[^>]*maxlength="1000"/);
+  assert.match(html, /무엇을 먹어도 될까요/);
+  assert.match(html, /운동은 일주일에 몇 번·몇 분 하면 좋을까요/);
+  assert.match(html, /약은 언제 먹고, 검사 전에는 무엇을 준비할까요/);
   assert.match(html, /name="question-provider" value="local" checked/);
   assert.match(html, /name="question-provider" value="frontier"/);
   assert.match(html, /id="frontierConsent"/);

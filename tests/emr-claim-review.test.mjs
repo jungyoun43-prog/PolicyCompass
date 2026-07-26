@@ -66,11 +66,23 @@ test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 
   assert.match(renderClaimBoardSource, /summary\.append\(stale\)/);
   assert.match(renderClaimBoardSource, /summary\.append\(element\("span", "claim-missing"/);
   assert.match(renderClaimBoardSource, /summary\.append\(facts\)/);
-  assert.match(renderClaimBoardSource, /detailContent\.append\(evidence, detailAside, detailBoundary\)/);
+  assert.match(renderClaimBoardSource, /if \(!evaluation\.calculationAvailable\)/);
+  assert.match(renderClaimBoardSource, /기간·횟수 미집계/);
+  assert.match(renderClaimBoardSource, /판정 제외 · \$\{evaluation\.explanation\}/);
+  assert.match(renderClaimBoardSource, /EMR 자동 집계 · 최근 \$\{evaluation\.rule\.windowDays\}일 · 차트 시행/);
+  assert.match(renderClaimBoardSource, /구간 밖 마지막 시행/);
+  assert.match(renderClaimBoardSource, /현재 구간 0\/\$\{evaluation\.rule\.maxCount\}회/);
+  assert.match(renderClaimBoardSource, /EMR 기간·횟수 자동 계산/);
+  assert.match(renderClaimBoardSource, /evaluation\.windowStart.*evaluation\.windowEnd/s);
+  assert.doesNotMatch(renderClaimBoardSource, /claim-card__explanation/);
+  assert.match(renderClaimBoardSource, /claim-auto-calculation__result", evaluation\.explanation/);
+  assert.match(renderClaimBoardSource, /detailContent\.append\(autoCalculation, evidence, detailAside, detailBoundary\)/);
   assert.match(renderClaimBoardSource, /직접 연결된 확정 차트 근거가 없습니다/);
   assert.match(js, /addEventListener\("click", \(event\) => \{[\s\S]*?data-claim-detail-toggle[\s\S]*?details\.showModal\(\)/);
   assert.match(css, /\.claim-card__details::backdrop\s*\{/);
   assert.match(css, /\.claim-card__details-content\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(css, /\.claim-auto-calculation__metrics\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.claim-facts\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(css, /\.claim-card__summary:focus-visible\s*\{/);
 });
 

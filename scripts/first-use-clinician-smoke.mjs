@@ -30,17 +30,20 @@ await runBrowserSmoke({
     await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", `${viewport.width}x${viewport.height}: sample workspace did not open`);
     const geometry = await evaluate(`(() => {
       const header = document.querySelector('.clinical-header');
-      const action = document.querySelector('.clinical-header .app-header__action');
+      const brand = document.querySelector('.clinical-header .app-brand');
+      const shell = document.querySelector('.emr-shell');
       const tablists = [...document.querySelectorAll('.workspace-tabs[role="tablist"]')];
       const tabs = tablists[0] ? [...tablists[0].querySelectorAll('[role="tab"]')] : [];
       const headerRect = header?.getBoundingClientRect();
-      const actionRect = action?.getBoundingClientRect();
+      const brandRect = brand?.getBoundingClientRect();
+      const shellRect = shell?.getBoundingClientRect();
       const persistent = document.querySelector('[data-safety-persistent], .patient-workspace-navigation');
       const persistentRect = persistent?.getBoundingClientRect();
       return {
         headerHeight: headerRect?.height ?? 0,
-        actionWidth: actionRect?.width ?? 0,
-        actionHeight: actionRect?.height ?? 0,
+        brandLeft: brandRect?.left ?? -1,
+        shellLeft: shellRect?.left ?? -1,
+        globalActionCount: document.querySelectorAll('.clinical-header .app-header__action').length,
         tablistCount: tablists.length,
         tabLabels: tabs.map((tab) => tab.textContent.replace(/\\s+/g, ' ').trim()),
         duplicateNavCount: document.querySelectorAll('nav.clinical-nav, [data-tab-target]').length,
@@ -51,7 +54,8 @@ await runBrowserSmoke({
       };
     })()`);
     assert(geometry.headerHeight <= 60, `${viewport.width}x${viewport.height}: clinical header is ${geometry.headerHeight}px`);
-    assert(geometry.actionWidth >= 44 && geometry.actionHeight >= 44, `${viewport.width}x${viewport.height}: patient-add target is ${geometry.actionWidth}x${geometry.actionHeight}`);
+    assert(geometry.globalActionCount === 0, `${viewport.width}x${viewport.height}: removed patient-add header action remains`);
+    assert(Math.abs(geometry.brandLeft - geometry.shellLeft) <= 1, `${viewport.width}x${viewport.height}: brand/shell alignment drifted ${geometry.brandLeft}/${geometry.shellLeft}`);
     assert(geometry.tablistCount === 1, `${viewport.width}x${viewport.height}: expected one patient tablist`);
     assert(JSON.stringify(geometry.tabLabels) === JSON.stringify(expectedLabels), `${viewport.width}x${viewport.height}: patient tab labels drifted`);
     assert(geometry.duplicateNavCount === 0, `${viewport.width}x${viewport.height}: duplicate clinical navigation remains`);

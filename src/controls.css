@@ -501,9 +501,8 @@ textarea:focus {
 }
 
 .map-page .body-panel { display: flex; flex-direction: column; }
-.map-page .body-stage { flex: 1; min-height: 560px; }
-.map-page .connection-portal,
-.map-page .detail-panel { grid-column: 1 / -1; }
+.map-page .body-stage { flex: 0 0 auto; min-height: 0; }
+.map-page .connection-portal { grid-column: 1 / -1; }
 
 @media (max-width: 980px) {
   .map-page .dashboard { grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr); }
@@ -513,7 +512,7 @@ textarea:focus {
   .map-page .map-shell { width: min(100% - var(--page-gutter), var(--page-width)); }
   .map-page .map-hero,
   .map-page .dashboard { grid-template-columns: 1fr; }
-  .map-page .body-stage { min-height: 500px; }
+  .map-page .body-stage { min-height: 0; }
   .form-actions { grid-template-columns: 1fr; }
   .form-actions .primary-button,
   .form-actions .secondary-button { width: 100%; min-height: 48px; }

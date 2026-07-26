@@ -170,7 +170,8 @@ function renderComparison() {
     renderMeasurementChanges([]); return;
   }
   const changes = compareSnapshots(before, after);
-  elements.title.textContent = `${before.date} → ${after.date}`;
+  const displayDate = (value) => value.replaceAll("-", "\u2011");
+  elements.title.textContent = `${displayDate(before.date)} → ${displayDate(after.date)}`;
   elements.copy.textContent = "최근 두 기록에 포함된 신호의 차이입니다. 임상적 변화로 해석하지 않습니다.";
   conditionPills(elements.added, changes.added, "새 신호 없음"); conditionPills(elements.steady, changes.unchanged, "유지 신호 없음"); conditionPills(elements.removed, changes.removed, "빠진 신호 없음");
   renderMeasurementChanges(changes.measurementChanges);

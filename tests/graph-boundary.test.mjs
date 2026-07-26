@@ -2,6 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
+function findElementEnd(source, start, tagName) {
+  const tags = new RegExp(`<\\/?${tagName}\\b[^>]*>`, "g");
+  tags.lastIndex = start;
+  let depth = 0;
+  let match;
+
+  while ((match = tags.exec(source))) {
+    depth += match[0].startsWith("</") ? -1 : 1;
+    if (depth === 0) return tags.lastIndex;
+  }
+
+  return -1;
+}
+
 test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", async () => {
   const html = await readFile("src/landing.html", "utf8");
   const preview = html.match(/<article class="brief-preview"[\s\S]*?<\/article>/)?.[0] ?? "";
@@ -46,4 +60,38 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
   assert.match(html, /류마티스내과/);
   assert.match(html, /기록과 연결됨/);
   assert.match(html, /현재 기록에 없음/);
+});
+
+test("Health Map 상세는 신체 지도 안에서 인체 이미지 바로 뒤에 이어지고 반응형 폭을 넘지 않는다", async () => {
+  const [html, bodyMapCss, controlsCss, responsiveCss] = await Promise.all([
+    readFile("src/index.html", "utf8"),
+    readFile("src/body-map.css", "utf8"),
+    readFile("src/controls.css", "utf8"),
+    readFile("src/responsive.css", "utf8"),
+  ]);
+  const stageStart = html.indexOf('<div class="body-stage"');
+  const stageEnd = findElementEnd(html, stageStart, "div");
+  const figureStart = html.indexOf('<div class="human-figure"', stageStart);
+  const figureEnd = findElementEnd(html, figureStart, "div");
+  const detailStart = html.indexOf('<section class="panel detail-panel"', stageStart);
+
+  assert.ok(stageStart >= 0 && stageEnd > stageStart, "body-stage 경계를 찾을 수 있어야 한다.");
+  assert.ok(figureStart > stageStart && figureEnd > figureStart, "human-figure가 body-stage 안에 있어야 한다.");
+  assert.ok(detailStart > figureEnd, "상세는 human-figure 뒤에 있어야 한다.");
+  assert.equal(html.slice(figureEnd, detailStart).trim(), "", "상세는 human-figure의 바로 다음 형제여야 한다.");
+  assert.ok(detailStart < stageEnd, "상세는 body-stage 바깥으로 떨어지면 안 된다.");
+  assert.equal((html.slice(stageStart, stageEnd).match(/class="panel detail-panel"/g) ?? []).length, 1);
+  assert.match(html.slice(detailStart, stageEnd), /aria-labelledby="detailTitle"/);
+  for (const id of ["detailTone", "detailSystem", "detailTitle", "detailSummary", "detailRelation", "detailChecks", "detailCare"]) {
+    assert.equal((html.match(new RegExp(`id="${id}"`, "g")) ?? []).length, 1, `${id}는 한 번만 유지되어야 한다.`);
+  }
+
+  assert.match(bodyMapCss, /\.body-stage\s*\{[^}]*display:\s*grid[^}]*min-width:\s*0[^}]*overflow:\s*hidden/s);
+  assert.match(bodyMapCss, /\.human-figure\s*\{[^}]*position:\s*relative[^}]*width:\s*64%[^}]*height:\s*532px/s);
+  assert.match(bodyMapCss, /\.body-stage > \.detail-panel\s*\{[^}]*max-width:\s*100%[^}]*min-width:\s*0[^}]*border-top:[^}]*box-shadow:\s*none[^}]*overflow:\s*hidden/s);
+  assert.match(bodyMapCss, /\.body-stage > \.detail-panel :where\(h2, h3, p, li\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+  assert.match(bodyMapCss, /@media \(max-width: 780px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*68%[^}]*height:\s*472px/s);
+  assert.match(bodyMapCss, /@media \(max-width: 520px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*74%[^}]*height:\s*468px/s);
+  assert.match(controlsCss, /\.map-page \.body-stage\s*\{\s*flex:\s*0 0 auto;\s*min-height:\s*0;\s*\}/);
+  assert.match(responsiveCss, /@media \(max-width: 780px\)[\s\S]*?\.detail-panel\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });

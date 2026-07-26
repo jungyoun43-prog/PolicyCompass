@@ -203,10 +203,26 @@ test("샘플 EMR은 임상기록·신체 지도·급여 보드를 확인할 충�
   const demo = createDemoEmrState("2026-07-19T10:00:00.000Z");
 
   assert.equal(demo.demo, true);
-  assert.ok(demo.patients.length >= 2);
+  assert.equal(demo.patients.length, 5);
+  assert.deepEqual(
+    demo.patients.map(({ name }) => name),
+    ["김비타", "박여정", "이준호", "최민아", "정수진"],
+  );
   assert.ok(demo.patients[0].events.some(({ type }) => type === "condition"));
   assert.ok(demo.patients[0].events.some(({ type }) => type === "medication"));
   assert.ok(demo.patients[0].events.some(({ type }) => type === "procedure"));
+  assert.match(
+    demo.patients.find(({ id }) => id === "demo-patient-lee").events.map(({ label }) => label).join(" "),
+    /야간 기침.*리시노프릴/,
+  );
+  assert.match(
+    demo.patients.find(({ id }) => id === "demo-patient-choi").events.map(({ label }) => label).join(" "),
+    /속쓰림.*위식도역류/,
+  );
+  assert.match(
+    demo.patients.find(({ id }) => id === "demo-patient-jung").events.map(({ label }) => label).join(" "),
+    /무릎 통증.*골관절염/,
+  );
   assert.ok(demo.rules.length >= 2);
 });
 

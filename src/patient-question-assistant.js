@@ -3,7 +3,6 @@ import {
   normalizeClinicalObservationValue,
 } from "./clinical-observations.js";
 import { CONDITIONS } from "./data.js";
-import { createVisitBrief } from "./insight-model.js";
 
 export const PATIENT_QUESTION_REQUEST_SCHEMA = "vitagraph-patient-question-request";
 export const PATIENT_QUESTION_REQUEST_VERSION = 1;
@@ -18,6 +17,88 @@ const MAX_MEDICATIONS = 40;
 const providerNames = new Set(["local", "frontier"]);
 const measurementByKey = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.key, spec]));
 const measurementByCode = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.code, spec]));
+const PATIENT_CONDITION_QUESTION_RULES = {
+  diabetes: [
+    {
+      question: "혈당 관리를 위해 평소에 무엇을 먹어도 되고, 무엇을 줄이면 좋을까요?",
+      reason: "집에서 실천할 식사 방법을 구체적으로 물어보기 위해서입니다.",
+    },
+    {
+      question: "저에게 맞는 운동은 무엇이고, 일주일에 몇 번·한 번에 몇 분 하면 좋을까요?",
+      reason: "무리하지 않고 꾸준히 할 수 있는 운동량을 물어보기 위해서입니다.",
+    },
+  ],
+  hypertension: [
+    {
+      question: "혈압 관리를 위해 어떤 음식을 덜 먹고, 대신 무엇을 먹으면 좋을까요?",
+      reason: "장보기와 식사 때 바로 적용할 방법을 물어보기 위해서입니다.",
+    },
+    {
+      question: "혈압에 무리가 가지 않는 운동은 무엇이고, 일주일에 몇 번·몇 분 하면 좋을까요?",
+      reason: "내 상태에 맞는 운동 종류와 시간을 물어보기 위해서입니다.",
+    },
+  ],
+  dyslipidemia: [
+    {
+      question: "콜레스테롤 관리를 위해 자주 먹어도 되는 음식과 줄일 음식은 무엇인가요?",
+      reason: "매일 먹는 음식을 고를 때 쓸 수 있는 기준을 물어보기 위해서입니다.",
+    },
+    {
+      question: "콜레스테롤 관리에 도움이 되는 운동은 일주일에 몇 번·몇 분 하면 좋을까요?",
+      reason: "일상에서 이어 갈 수 있는 운동 계획을 물어보기 위해서입니다.",
+    },
+  ],
+  asthma: [
+    {
+      question: "흡입기는 하루 중 언제, 어떤 순서로 쓰면 되는지 다시 보여 주실 수 있나요?",
+      reason: "집에서 약을 올바르게 사용하는 방법을 확인하기 위해서입니다.",
+    },
+    {
+      question: "운동할 때 숨이 차면 언제 쉬고, 어떤 경우에 병원에 연락해야 할까요?",
+      reason: "활동 중 불편한 증상이 생겼을 때 어떻게 물어볼지 준비하기 위해서입니다.",
+    },
+  ],
+  migraine: [
+    {
+      question: "두통이 있을 때 집에서 해도 되는 일과 피하면 좋은 일은 무엇인가요?",
+      reason: "두통이 있는 날의 생활 방법을 물어보기 위해서입니다.",
+    },
+    {
+      question: "두통약은 언제 먹고, 너무 자주 먹는 기준은 무엇인가요?",
+      reason: "약 먹는 시간과 사용 횟수를 의료진에게 확인하기 위해서입니다.",
+    },
+  ],
+  reflux: [
+    {
+      question: "속이 쓰릴 때 무엇을 먹어도 되고, 어떤 음식은 줄이면 좋을까요?",
+      reason: "증상이 있을 때 식사를 고르는 방법을 물어보기 위해서입니다.",
+    },
+    {
+      question: "저녁 식사와 잠자는 시간은 얼마나 띄우면 좋을까요?",
+      reason: "집에서 바꿔 볼 수 있는 식사와 수면 습관을 물어보기 위해서입니다.",
+    },
+  ],
+  mood: [
+    {
+      question: "잠을 잘 자려면 집에서 바꿔 볼 수 있는 생활 습관은 무엇인가요?",
+      reason: "매일 해 볼 수 있는 작은 변화를 물어보기 위해서입니다.",
+    },
+    {
+      question: "마음이 많이 힘들 때 누구에게, 어떤 방법으로 도움을 요청하면 좋을까요?",
+      reason: "혼자 견디기 어려울 때 도움받는 방법을 미리 알아두기 위해서입니다.",
+    },
+  ],
+  arthritis: [
+    {
+      question: "관절에 무리가 덜 가는 운동은 무엇이고, 일주일에 몇 번·몇 분 하면 좋을까요?",
+      reason: "통증을 살피며 이어 갈 수 있는 운동량을 물어보기 위해서입니다.",
+    },
+    {
+      question: "통증이 있을 때 해도 되는 활동과 쉬어야 하는 때를 알려 주실 수 있나요?",
+      reason: "일상생활에서 움직임과 휴식을 나누는 기준을 물어보기 위해서입니다.",
+    },
+  ],
+};
 
 const directIdentifierPatterns = [
   /\b\d{6}\s*[- ]?\s*[1-8]\d{6}\b/g,
@@ -278,12 +359,40 @@ function contextSignals(context) {
   }));
 }
 
+function patientConditionQuestions(conditionIds) {
+  const questions = [];
+  const seen = new Set();
+  const rounds = Math.max(
+    0,
+    ...conditionIds.map((id) => PATIENT_CONDITION_QUESTION_RULES[id]?.length ?? 0),
+  );
+  for (let index = 0; index < rounds && questions.length < MAX_QUESTIONS; index += 1) {
+    for (const id of conditionIds) {
+      const rule = PATIENT_CONDITION_QUESTION_RULES[id]?.[index];
+      if (!rule || seen.has(rule.question)) continue;
+      seen.add(rule.question);
+      questions.push({
+        id: `${id}-${index + 1}`,
+        question: rule.question,
+        reason: rule.reason,
+        basis: `건강 지도에서 ‘${CONDITIONS[id].label}’ 관련 입력 신호가 표시됨`,
+        sourceId: id,
+        sourceLabel: CONDITIONS[id].label,
+        origin: "rule",
+        evidenceIds: [id],
+      });
+      if (questions.length === MAX_QUESTIONS) break;
+    }
+  }
+  return questions;
+}
+
 function supplementalRuleQuestions(context) {
   return [
     ...(context.selfReportSummary ? [{
       id: "self-report-1",
-      question: "최근 변화가 언제 시작됐고, 진료에서 어떤 점을 먼저 확인하면 좋을까요?",
-      reason: "환자가 느낀 변화의 기간과 양상을 의료진에게 빠뜨리지 않고 전달하기 위해서입니다.",
+      question: "이 불편함이 계속되거나 심해지면 언제 병원에 연락해야 할까요?",
+      reason: "집에서 지켜볼 때와 다시 진료받을 때를 물어보기 위해서입니다.",
       basis: "환자가 진료 준비 화면에서 정리한 최근 변화",
       sourceId: "self-report",
       sourceLabel: "최근 변화",
@@ -292,8 +401,8 @@ function supplementalRuleQuestions(context) {
     }] : []),
     ...context.measurements.map((measurement) => ({
       id: `measurement-${measurement.key}-1`,
-      question: `최근 ${measurement.label} 측정값은 어떻게 이해하고 언제 다시 확인하면 좋을까요?`,
-      reason: "한 번의 측정만으로 결론 내리지 않고 측정 조건과 추적 시점을 의료진에게 확인하기 위해서입니다.",
+      question: `다음 ${measurement.label} 측정이나 검사 전에는 무엇을 준비해야 할까요?`,
+      reason: "금식 여부, 약 먹는 시간, 방문 시간처럼 미리 알아둘 일을 물어보기 위해서입니다.",
       basis: `${measurement.label} ${String(measurement.value)} ${measurement.unit}${measurement.observedOn ? ` · ${measurement.observedOn}` : ""}`,
       sourceId: measurement.id,
       sourceLabel: measurement.label,
@@ -302,8 +411,8 @@ function supplementalRuleQuestions(context) {
     })),
     ...context.medications.map((medication) => ({
       id: `${medication.id.replace(":", "-")}-1`,
-      question: `${medication.label}의 복용 방법과 기간, 주의할 점을 어떻게 확인하면 좋을까요?`,
-      reason: "서명된 처방의 용법을 환자가 이해한 내용과 대조하고 궁금한 점을 의료진에게 확인하기 위해서입니다.",
+      question: `${medication.label}은 하루 중 언제 먹고, 불편한 증상이 생기면 어떻게 문의하면 될까요?`,
+      reason: "약 먹는 시간과 불편할 때 연락하는 방법을 물어보기 위해서입니다.",
       basis: `${medication.label} · ${String(medication.dose)} ${medication.doseUnit} · ${medication.frequency}`,
       sourceId: medication.id,
       sourceLabel: medication.label,
@@ -313,17 +422,32 @@ function supplementalRuleQuestions(context) {
   ];
 }
 
+function prioritizedFallbackQuestions(context, conditionQuestions) {
+  const supplemental = supplementalRuleQuestions(context);
+  const selfReportQuestions = supplemental.filter(({ id }) => id.startsWith("self-report-"));
+  const measurementQuestions = supplemental.filter(({ id }) => id.startsWith("measurement-"));
+  const medicationQuestions = supplemental.filter(({ id }) => id.startsWith("medication-"));
+  return [
+    ...selfReportQuestions,
+    ...conditionQuestions.slice(0, 2),
+    ...measurementQuestions.slice(0, 1),
+    ...medicationQuestions.slice(0, 1),
+    ...conditionQuestions.slice(2),
+    ...measurementQuestions.slice(1),
+    ...medicationQuestions.slice(1),
+  ];
+}
+
 export function createPatientFallbackBrief(session = {}, selfReportInput = "") {
   const context = createPatientQuestionContext(session, selfReportInput);
-  const conditionBrief = createVisitBrief(context.conditionIds);
   const questions = [];
   const seen = new Set();
-  const conditionQuestions = conditionBrief.questions.map((item) => ({
+  const conditionQuestions = patientConditionQuestions(context.conditionIds).map((item) => ({
     ...item,
     sourceId: `condition:${item.sourceId}`,
     evidenceIds: item.evidenceIds.map((id) => `condition:${id}`),
   }));
-  for (const item of [...supplementalRuleQuestions(context), ...conditionQuestions]) {
+  for (const item of prioritizedFallbackQuestions(context, conditionQuestions)) {
     if (questions.length >= MAX_QUESTIONS || seen.has(item.question)) continue;
     seen.add(item.question);
     questions.push(item);
@@ -333,7 +457,7 @@ export function createPatientFallbackBrief(session = {}, selfReportInput = "") {
     + context.medications.length
     + (context.selfReportSummary ? 1 : 0);
   return {
-    ...conditionBrief,
+    ids: context.conditionIds,
     kind: "rule-based",
     provider: "rule",
     label: "규칙 기반 질문",

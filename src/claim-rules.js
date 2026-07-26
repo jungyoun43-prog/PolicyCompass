@@ -281,8 +281,14 @@ function inactiveResult(patient, rule, status, asOf, explanation) {
     serviceCode: rule.serviceCode,
     status,
     asOf,
+    calculationAvailable: false,
+    windowStart: asOf && rule.windowDays ? addDays(asOf, -(rule.windowDays - 1)) : "",
+    windowEnd: asOf,
     usedCount: 0,
     remainingCount: rule.maxCount,
+    serviceEventIds: [],
+    lastServiceDate: "",
+    daysSinceLastService: null,
     nextEligibleDate: "",
     missingEvidence: [],
     evidenceEventIds: [],
@@ -328,7 +334,7 @@ export function evaluateClaimRule(patientInput, ruleInput, asOfInput = new Date(
 
   const cutoff = addDays(asOf, -(rule.windowDays - 1));
   const acceptedServiceStatuses = SERVICE_STATUS_BY_TYPE[rule.serviceEventType];
-  const serviceEvents = patient.events
+  const allServiceEvents = patient.events
     .filter((event) => (!event?.recordStatus || cleanText(event.recordStatus) === "final")
       && !["fhir", "import"].includes(event.source?.kind)
       && cleanText(event?.code) === rule.serviceCode
@@ -337,25 +343,34 @@ export function evaluateClaimRule(patientInput, ruleInput, asOfInput = new Date(
       && acceptedServiceStatuses.has(cleanText(event?.status))
       && hasRecordedObservationValue(event)
       && eventDate(event)
-      && eventDate(event) >= cutoff
       && eventDate(event) <= asOf)
     .sort((a, b) => eventDate(a).localeCompare(eventDate(b)));
+  const serviceEvents = allServiceEvents.filter((event) => eventDate(event) >= cutoff);
   const usedCount = serviceEvents.length;
   const remainingCount = Math.max(0, rule.maxCount - usedCount);
-  const evidenceEventIds = [...new Set([...applicabilityEvents, ...evidenceEvents, ...serviceEvents].map(({ id }) => cleanText(id)).filter(Boolean))];
+  const serviceEventIds = serviceEvents.map(({ id }) => cleanText(id)).filter(Boolean);
+  const lastServiceEvent = allServiceEvents.at(-1);
+  const lastServiceDate = eventDate(lastServiceEvent);
+  const daysSinceLastService = lastServiceDate ? differenceInDays(asOf, lastServiceDate) : null;
+  const evidenceEventIds = [...new Set([
+    ...applicabilityEvents,
+    ...evidenceEvents,
+    ...serviceEvents,
+    ...(lastServiceEvent ? [lastServiceEvent] : []),
+  ].map(({ id }) => cleanText(id)).filter(Boolean))];
   const blockingIndex = Math.max(0, usedCount - rule.maxCount);
   const blockingServiceDate = eventDate(serviceEvents[blockingIndex]);
   const nextEligibleDate = usedCount >= rule.maxCount && blockingServiceDate ? addDays(blockingServiceDate, rule.windowDays) : "";
 
   let status = "ready";
-  let explanation = rule.windowDays + "일 기준기간에 차트 시행 기록 " + usedCount + "/" + rule.maxCount + "건이 확인됐습니다. 청구·심사 이력 대조가 필요합니다.";
+  let explanation = `EMR 확정 기록에서 최근 ${rule.windowDays}일 시행 ${usedCount}/${rule.maxCount}회를 자동 집계했습니다. 남은 기준 횟수는 ${remainingCount}회이며, 실제 청구·심사 이력은 별도 대조가 필요합니다.`;
   if (missingEvidence.length > 0) {
     status = "missing-evidence";
-    explanation = "필수 근거 " + missingEvidence.length + "개를 확인해야 합니다.";
+    explanation = `EMR의 기간·횟수는 자동 집계했지만 필수 근거 ${missingEvidence.length}개를 더 확인해야 합니다.`;
   } else if (usedCount >= rule.maxCount) {
     const daysUntilEligible = differenceInDays(nextEligibleDate, asOf) ?? rule.windowDays;
     status = daysUntilEligible <= rule.dueSoonDays ? "due-soon" : "waiting";
-    explanation = rule.windowDays + "일 안에 차트 시행 기록이 기준 건수에 도달했습니다. " + nextEligibleDate + " 전후를 청구·심사 이력과 수동 대조하세요.";
+    explanation = `EMR 확정 기록에서 최근 ${rule.windowDays}일 시행 ${usedCount}/${rule.maxCount}회를 자동 집계해 기준 횟수에 도달했습니다. 다음 기준일은 ${nextEligibleDate}이며 실제 청구·심사 이력은 별도 대조하세요.`;
   }
 
   return {
@@ -368,8 +383,14 @@ export function evaluateClaimRule(patientInput, ruleInput, asOfInput = new Date(
     serviceCode: rule.serviceCode,
     status,
     asOf,
+    calculationAvailable: true,
+    windowStart: cutoff,
+    windowEnd: asOf,
     usedCount,
     remainingCount,
+    serviceEventIds,
+    lastServiceDate,
+    daysSinceLastService,
     nextEligibleDate,
     missingEvidence,
     evidenceEventIds,

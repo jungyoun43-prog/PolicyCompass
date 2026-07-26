@@ -26,28 +26,21 @@ test("첫 사용 안내는 데스크톱에서 압축된 두 열, 모바일에서
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.patient-start-path ol\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
 });
 
-test("개인 홈은 데이터 경계를 독립 섹션 대신 개인 보관 안내에 압축한다", async () => {
+test("개인 홈은 중복 개인 보관 안내 없이 진료 준비 CTA로 바로 이어진다", async () => {
   const [html, css] = await Promise.all([
     readFile("src/landing.html", "utf8"),
     readFile("src/landing.css", "utf8"),
   ]);
 
-  const personalCopy = html.match(/<section class="beta"[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.doesNotMatch(html, /<section class="beta"/);
+  assert.doesNotMatch(html, /class="beta__(?:copy|aside|boundary)"/);
+  assert.doesNotMatch(html, /id="data-boundary"/);
+  assert.doesNotMatch(html, /href="#data-boundary"/);
+  assert.doesNotMatch(html, /MY HEALTH COPY/);
+  assert.doesNotMatch(html, /정제 JSON은 환자가 직접 선택해 보관하는 사본입니다/);
   assert.doesNotMatch(html, /<section class="data-boundary"/);
-  assert.match(personalCopy, /class="beta__copy"[\s\S]*?<\/div>\s*<div class="beta__aside">/);
-  assert.match(personalCopy, /class="beta__boundary" id="data-boundary"/);
-  assert.match(personalCopy, /class="beta__aside"[\s\S]*?class="beta__boundary"[\s\S]*?내 연결 기록 확인/);
-  assert.match(personalCopy, /정제 JSON은 환자가 직접 선택해 보관하는 사본입니다/);
-  assert.match(personalCopy, /병원 연결을 위한 업로드 파일이 아니며/);
-  assert.match(personalCopy, /프론티어 AI 전송은 별도 동의 없이는 실행되지 않습니다/);
-  assert.match(css, /\.beta\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.9fr\) minmax\(0, 1\.1fr\)/);
-  assert.match(css, /\.beta\s*\{[\s\S]*?border:\s*1px solid var\(--line\)/);
-  assert.match(css, /\.beta\s*\{[\s\S]*?box-shadow:\s*var\(--shadow-panel\)/);
-  assert.match(css, /\.beta__copy\s*\{[\s\S]*?min-height:\s*380px[\s\S]*?padding:/);
-  assert.match(css, /\.beta__aside\s*\{[\s\S]*?max-width:\s*none[\s\S]*?justify-self:\s*stretch/);
-  assert.match(css, /\.beta__aside \.landing-button\s*\{[\s\S]*?width:\s*100%/);
-  assert.match(css, /@media \(max-width: 800px\)[\s\S]*?\.beta\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
-  assert.doesNotMatch(css, /\.data-boundary\s*\{/);
+  assert.match(html, /<\/ol>\s*<\/section>\s*<section class="closing"/);
+  assert.doesNotMatch(css, /\.beta(?:\s|__)/);
 });
 
 test("다음 진료 CTA는 제목과 분리된 균형 잡힌 열에서 반응형으로 흐른다", async () => {
@@ -69,7 +62,7 @@ test("개인 홈의 아래 섹션은 동작 줄이기를 존중하는 스크롤 
     readFile("scripts/build.mjs", "utf8"),
   ]);
 
-  assert.equal((html.match(/\sdata-reveal(?:\s|>)/g) ?? []).length, 6);
+  assert.equal((html.match(/\sdata-reveal(?:\s|>)/g) ?? []).length, 5);
   assert.match(html, /<script type="module" src="\/landing\.js"><\/script>/);
   assert.match(css, /\.reveal-ready \[data-reveal\]/);
   assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*?\[data-reveal\]/);

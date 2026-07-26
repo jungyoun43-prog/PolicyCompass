@@ -37,8 +37,7 @@ test("Health Map은 서명 EMR 정제 기록을 자동 연결하고 JSON은 환�
   assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="connected-record"'));
   assert.match(html, /id="saveJourney"/);
   assert.match(landing, /의료진이 서명한 기록은 환자에게 필요한 항목만 정제되어 자동으로 이어집니다/);
-  assert.match(landing, /정제 JSON은 환자가 직접 선택해 보관하는 사본/);
-  assert.match(landing, /병원 연결을 위한 업로드 파일이 아니며/);
+  assert.doesNotMatch(landing, /MY HEALTH COPY|정제 JSON은 환자가 직접 선택해 보관하는 사본/);
   assert.doesNotMatch(html, /id="(?:fhirFile|transferCode|selectRecordFile|importRecordButton)"/);
   assert.doesNotMatch(landing, /href="\/map#import-record"|VitaGraph 환자 전달 v1/);
 });

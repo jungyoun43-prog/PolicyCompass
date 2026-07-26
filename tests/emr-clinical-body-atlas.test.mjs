@@ -64,6 +64,8 @@ test("신체 지도는 진료 연결·진료명 후보·질환 탐색 신호를 
 
 test("신체 지도는 선택 상태·키보드 초점·좁은 화면 재배치를 제공한다", () => {
   assert.match(css, /\.clinical-body-layout\s*\{[^}]*grid-template-columns:/s);
+  assert.match(css, /\.clinical-body-stage \.human-figure\s*\{[^}]*inset:\s*auto[^}]*margin-inline:\s*auto/s);
+  assert.doesNotMatch(css, /\.clinical-body-stage \.human-figure\s*\{[^}]*inset-inline:\s*(?:10|14)%/s);
   assert.match(css, /\.clinical-department-index \.body-caption:focus-visible\s*\{[^}]*outline:/s);
   assert.match(css, /\.clinical-body-stage \.body-hotspot:not\(\.is-care-record\):not\(\.is-condition-signal\):focus-visible/s);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.clinical-body-layout\s*\{\s*grid-template-columns:\s*1fr/s);

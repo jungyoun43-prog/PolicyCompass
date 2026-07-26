@@ -2100,7 +2100,8 @@ body.emr-page {
 }
 
 .clinical-body-stage .human-figure {
-  inset-inline: 14%;
+  inset: auto;
+  margin-inline: auto;
 }
 
 .clinical-body-stage .body-hotspot {
@@ -2530,10 +2531,6 @@ body.emr-page {
 @media (max-width: 520px) {
   .clinical-body-stage {
     min-height: 500px;
-  }
-
-  .clinical-body-stage .human-figure {
-    inset-inline: 10%;
   }
 
   .clinical-body-overview > div,

@@ -308,7 +308,6 @@
 
 .outcome,
 .workflow,
-.beta,
 .closing {
   padding: clamp(52px, 5vw, 72px) 0;
 }
@@ -490,53 +489,119 @@
 }
 
 .beta {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.72fr);
-  gap: clamp(var(--space-8), 7vw, 96px);
-  align-items: center;
-  border-bottom: 1px solid var(--line);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 0;
+  align-items: stretch;
+  margin: var(--space-6) 0 var(--space-8);
+  overflow: hidden;
+  contain: paint;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background:
+    radial-gradient(
+      circle at 4% 8%,
+      color-mix(in srgb, var(--data-cyan) 11%, transparent),
+      transparent 23rem
+    ),
+    var(--surface-raised);
+  box-shadow: var(--shadow-panel);
 }
 
 .beta__copy {
-  max-width: 42rem;
+  display: grid;
+  min-height: 380px;
+  max-width: none;
+  align-content: center;
+  padding: clamp(var(--space-8), 5vw, 64px);
+}
+
+.beta__copy h2 {
+  max-width: 10em;
+}
+
+.beta__copy > p:not(.eyebrow) {
+  max-width: 36rem;
+  font-size: 0.9375rem;
 }
 
 .beta__aside {
+  position: relative;
   display: grid;
   width: 100%;
-  max-width: 32rem;
-  gap: var(--space-4);
-  justify-items: end;
-  justify-self: end;
+  max-width: none;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-content: stretch;
+  justify-items: stretch;
+  justify-self: stretch;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--data-cyan) 13%, var(--surface)) 0%,
+      color-mix(in srgb, var(--data-cyan) 4%, var(--surface)) 58%,
+      var(--surface) 100%
+    );
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+}
+
+.beta__aside::before {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-6);
+  color: color-mix(in srgb, var(--data-cyan) 12%, transparent);
+  content: "PERSONAL COPY";
+  font: 800 clamp(2.4rem, 4.3vw, 4.25rem) / 1 var(--font-mono);
+  letter-spacing: -0.08em;
+  pointer-events: none;
+  width: max-content;
 }
 
 .beta__aside > .beta__boundary {
+  position: relative;
+  z-index: 1;
+  display: grid;
   width: 100%;
+  min-height: 220px;
   margin: 0;
   border: 1px solid color-mix(in srgb, var(--data-cyan) 24%, var(--line));
-  border-radius: var(--radius-control);
+  border-radius: calc(var(--radius-control) + var(--space-1));
   background:
     linear-gradient(
       112deg,
-      color-mix(in srgb, var(--data-cyan) 8%, var(--surface)) 0%,
-      color-mix(in srgb, var(--data-cyan) 2%, var(--surface)) 62%,
-      var(--surface) 100%
+      color-mix(in srgb, var(--surface) 88%, transparent) 0%,
+      color-mix(in srgb, var(--surface) 72%, transparent) 100%
     );
-  padding: var(--space-3) var(--space-4);
+  align-content: end;
+  padding: clamp(var(--space-6), 3.5vw, var(--space-8));
   color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.65;
+  font-size: 0.875rem;
+  line-height: 1.75;
+  word-break: keep-all;
 }
 
 .beta__boundary strong {
   display: block;
-  margin-bottom: var(--space-1);
+  max-width: 24rem;
+  margin-bottom: var(--space-3);
   color: var(--ink);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  letter-spacing: -0.035em;
+  line-height: 1.4;
 }
 
 .beta__aside .landing-button {
-  min-width: min(100%, 15rem);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
   margin: 0;
+  font-size: 0.875rem;
 }
 
 .closing {
@@ -665,17 +730,23 @@
 
   .beta {
     grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .beta__aside {
+    border-top: 1px solid var(--line);
+    border-left: 0;
     max-width: none;
-    justify-items: start;
     justify-self: stretch;
+  }
+
+  .beta__copy {
+    min-height: 0;
+    padding: var(--space-8);
   }
 
   .outcome,
   .workflow,
-  .beta,
   .closing {
     padding: 64px 0;
   }
@@ -700,6 +771,12 @@
 
   .beta__aside {
     justify-items: stretch;
+    padding: var(--space-5);
+  }
+
+  .beta__aside > .beta__boundary {
+    min-height: 190px;
+    padding: var(--space-6);
   }
 
   .beta__aside .landing-button {
@@ -755,7 +832,6 @@
 
   .outcome,
   .workflow,
-  .beta,
   .closing {
     padding-block: 48px;
   }

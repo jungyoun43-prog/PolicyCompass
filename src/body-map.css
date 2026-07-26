@@ -208,22 +208,20 @@
   min-height: 0;
 }
 
-.body-stage > .detail-panel {
+.body-panel > .detail-panel {
   position: relative;
-  z-index: 2;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin: 0;
-  border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
-  border-radius: 0;
+  margin: var(--space-4) 0 0;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--surface) 94%, var(--surface-soft));
   box-shadow: none;
   overflow: hidden;
 }
 
-.body-stage > .detail-panel :where(h2, h3, p, li) {
+.body-panel > .detail-panel :where(h2, h3, p, li) {
   overflow-wrap: anywhere;
 }
 
@@ -441,16 +439,17 @@
     margin-block: var(--space-4);
   }
 
-  .body-stage > .detail-panel {
+  .body-panel > .detail-panel {
     padding: var(--space-5);
   }
 
   .human-figure__image {
     filter:
-      contrast(1.16)
-      saturate(1.1)
-      drop-shadow(0 18px 24px color-mix(in srgb, var(--data-violet) 14%, transparent))
-      drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 12%, transparent));
+      brightness(0.84)
+      contrast(1.08)
+      saturate(1.16)
+      drop-shadow(0 12px 20px color-mix(in srgb, var(--data-violet) 15%, transparent))
+      drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 13%, transparent));
   }
 
   .body-hotspot__core {

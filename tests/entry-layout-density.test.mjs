@@ -40,8 +40,12 @@ test("개인 홈은 데이터 경계를 독립 섹션 대신 개인 보관 안�
   assert.match(personalCopy, /정제 JSON은 환자가 직접 선택해 보관하는 사본입니다/);
   assert.match(personalCopy, /병원 연결을 위한 업로드 파일이 아니며/);
   assert.match(personalCopy, /프론티어 AI 전송은 별도 동의 없이는 실행되지 않습니다/);
-  assert.match(css, /\.beta\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) minmax\(20rem, 0\.72fr\)/);
-  assert.match(css, /\.beta__aside\s*\{[\s\S]*?justify-self:\s*end/);
+  assert.match(css, /\.beta\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.9fr\) minmax\(0, 1\.1fr\)/);
+  assert.match(css, /\.beta\s*\{[\s\S]*?border:\s*1px solid var\(--line\)/);
+  assert.match(css, /\.beta\s*\{[\s\S]*?box-shadow:\s*var\(--shadow-panel\)/);
+  assert.match(css, /\.beta__copy\s*\{[\s\S]*?min-height:\s*380px[\s\S]*?padding:/);
+  assert.match(css, /\.beta__aside\s*\{[\s\S]*?max-width:\s*none[\s\S]*?justify-self:\s*stretch/);
+  assert.match(css, /\.beta__aside \.landing-button\s*\{[\s\S]*?width:\s*100%/);
   assert.match(css, /@media \(max-width: 800px\)[\s\S]*?\.beta\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
   assert.doesNotMatch(css, /\.data-boundary\s*\{/);
 });

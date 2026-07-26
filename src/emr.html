@@ -378,6 +378,16 @@
                     <p class="sign-review__acknowledgement-status" id="encounterSignReviewAcknowledgementStatus" role="status" aria-live="polite"></p>
                   </section>
 
+                  <section class="clinical-card encounter-mobile-claim" aria-labelledby="encounterMobileClaimTitle">
+                    <div class="card-heading">
+                      <div><p class="rail-eyebrow">CLAIM READINESS</p><h3 id="encounterMobileClaimTitle">서명 전 급여 점검</h3></div>
+                      <span class="source-badge">예비 점검</span>
+                    </div>
+                    <p class="context-guidance">현재 진료 초안을 가상 반영해 기간·횟수·근거 누락을 먼저 확인합니다.</p>
+                    <div class="context-summary" id="encounterMobileClaimSummary" aria-live="polite"></div>
+                    <button class="clinical-button context-open-button" type="button" data-open-tab="claims">전체 급여 보드 열기</button>
+                  </section>
+
                   <section class="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
                     <h3 class="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
                     <div class="encounter-save-context">
@@ -385,11 +395,11 @@
                       <p class="form-message" id="encounterFormMessage" role="status" aria-live="polite"></p>
                     </div>
                     <div class="encounter-save-actions">
-                      <button class="clinical-button" id="cancelEncounter" type="button" hidden>진료 취소</button>
+                      <button class="clinical-button clinical-button--danger" id="cancelEncounter" type="button" hidden>진료 취소</button>
                       <button class="clinical-button" id="reopenEncounter" type="button" hidden>서명 전 재개</button>
                       <button class="clinical-button" id="saveEncounterDraft" type="submit" form="encounterForm">임시 저장</button>
-                      <button class="clinical-button" id="completeEncounter" type="button">진료 완료</button>
-                      <button class="clinical-button clinical-button--primary" id="signEncounter" type="button">검토 후 서명</button>
+                      <button class="clinical-button clinical-button--primary" id="completeEncounter" type="button">진료 완료</button>
+                      <button class="clinical-button clinical-button--primary clinical-button--confirm" id="signEncounter" type="button">검토 후 서명</button>
                     </div>
                   </section>
                 </div>

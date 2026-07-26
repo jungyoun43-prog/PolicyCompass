@@ -49,7 +49,11 @@ try {
           .filter((link) => new URL(link.href).pathname === '/emr').length,
         journeyBefore: localStorage.getItem('vitagraph-journey')
       })`);
-      assert(/이 기기|브라우저/.test(boundary.local) && /서버 전송 없음/.test(boundary.local), "Patient local-storage boundary is unclear.");
+      assert(
+        /이 기기|브라우저/.test(boundary.local)
+          && /동의한 경우에만|서버 자동 전송 없음/.test(boundary.local),
+        "Patient local-storage boundary is unclear.",
+      );
       assert(boundary.clinicianLinks === 0, "Patient flow crossed into clinician navigation.");
     });
 

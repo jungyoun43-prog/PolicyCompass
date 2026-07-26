@@ -104,7 +104,7 @@ test("Journey 변화 비교는 제목을 전체 너비 상단에 두고 세부 �
     readFile("src/journey.css", "utf8"),
   ]);
 
-  assert.match(html, /<section class="journey-comparison"[\s\S]*?<div class="journey-comparison__header">[\s\S]*?<div class="comparison-detail">/);
+  assert.match(html, /<section class="journey-comparison"[\s\S]*?<div class="journey-comparison__header">[\s\S]*?<div class="comparison-detail"[^>]*>/);
   assert.match(css, /\.journey-comparison\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(css, /\.journey-comparison__header\s*\{[\s\S]*?width:\s*100%/);
   assert.match(css, /\.comparison-detail\s*\{[\s\S]*?display:\s*grid/);

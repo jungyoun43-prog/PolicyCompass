@@ -86,6 +86,16 @@
   word-break: keep-all;
 }
 .comparison-detail { display: grid; min-width: 0; gap: var(--space-6); }
+.comparison-detail[hidden] { display: none; }
+.journey-comparison[data-state="waiting"] {
+  gap: var(--space-3);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--data-cyan) 5%, var(--surface)),
+      var(--surface) 62%
+    );
+}
 .change-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
 .change-columns article { border-radius: 18px; background: var(--surface-soft); padding: var(--space-4); }
 .change-columns h3 { margin: var(--space-2) 0 var(--space-3); font-size: .875rem; }
@@ -324,7 +334,26 @@
 }
 
 @media (max-width: 800px) { .journey-shell { width: min(100% - var(--space-8), 1320px); } .journey-intro, .journey-comparison { grid-template-columns: 1fr; gap: var(--space-6); } .journey-intro h1 { font-size: clamp(3rem, 15vw, 5rem); } .journey-heading { flex-direction: column; } .journey-data-actions { width: 100%; justify-content: flex-start; } .change-columns { grid-template-columns: 1fr; } .privacy-state { display: none; } }
-@media (max-width: 520px) { .journey-workspace, .journey-comparison { padding: var(--space-5); } .journey-heading { flex-direction: column; } .journey-data-actions { display: grid; width: 100%; grid-template-columns: 1fr 1fr; } .journey-data-actions .journey-clear { grid-column: 1 / -1; } .measurement-comparison > div:first-child { display: block; } .page-nav { gap: 0; } .page-nav a { padding-inline: var(--space-2); } }
+@media (max-width: 520px) {
+  .journey-workspace,
+  .journey-comparison { padding: var(--space-5); }
+  .journey-heading { flex-direction: column; }
+  .journey-data-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .journey-data-actions .secondary-button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: var(--space-2);
+    font-size: 0.6875rem;
+  }
+  .journey-data-actions .journey-clear { grid-column: 1 / -1; }
+  .measurement-comparison > div:first-child { display: block; }
+  .page-nav { gap: 0; }
+  .page-nav a { padding-inline: var(--space-2); }
+}
 
 
 /* Shared VitaGraph rhythm for Journey */

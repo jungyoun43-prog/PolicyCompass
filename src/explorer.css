@@ -116,7 +116,7 @@
 
 .explorer-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: var(--space-5);
   min-height: 0;
@@ -350,6 +350,7 @@
   font-weight: 560;
   line-height: 1.6;
   text-align: center;
+  word-break: keep-all;
 }
 
 .scene-edge {
@@ -551,10 +552,19 @@
 }
 
 .explorer-detail {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.1fr) minmax(0, 1.08fr);
   gap: var(--space-4);
   padding: var(--space-6);
+}
+
+.explorer-detail__identity,
+.explorer-detail__guidance,
+.explorer-detail__evidence {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  align-content: start;
 }
 
 .explorer-detail .detail-system {
@@ -607,30 +617,30 @@
   background: var(--surface);
 }
 
-.explorer-detail > section {
+.explorer-detail section {
   border-top: 1px solid var(--line);
   padding-top: var(--space-4);
 }
 
-.explorer-detail > section h3 {
+.explorer-detail section h3 {
   margin: 0 0 var(--space-2);
   color: var(--ink);
   font-size: 0.875rem;
   letter-spacing: -0.01em;
 }
 
-.explorer-detail > section p,
-.explorer-detail > section li {
+.explorer-detail section p,
+.explorer-detail section li {
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.65;
 }
 
-.explorer-detail > section p {
+.explorer-detail section p {
   margin: 0;
 }
 
-.explorer-detail > section ul {
+.explorer-detail section ul {
   display: grid;
   gap: var(--space-2);
   margin: 0;
@@ -665,6 +675,9 @@
 }
 
 .evidence-card a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   color: color-mix(in srgb, var(--data-cyan) 72%, var(--ink));
   font-size: 0.75rem;
   font-weight: 760;
@@ -722,15 +735,10 @@
   }
 
   .explorer-detail {
-    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .explorer-detail > :is(.detail-system, .explorer-detail-title, .explorer-detail-summary) {
-    grid-column: 1 / -1;
-  }
-
-  .explorer-detail > :is(.evidence-kind, .explorer-next-step) {
+  .explorer-detail__identity {
     grid-column: 1 / -1;
   }
 }
@@ -748,6 +756,14 @@
   .explorer-first-use {
     grid-template-columns: 1fr;
     gap: var(--space-4);
+  }
+
+  .explorer-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .explorer-detail__identity {
+    grid-column: auto;
   }
 }
 
@@ -767,7 +783,12 @@
   }
 
   .explorer-intro .page-hero__lead {
-    display: none;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 
   .explorer-workspace {
@@ -847,7 +868,6 @@
   }
 
   .explorer-detail {
-    display: flex;
     padding: var(--space-5);
   }
 
@@ -862,7 +882,7 @@
   }
 
   .explorer-first-use ol {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: var(--space-2);
   }
 
@@ -871,9 +891,11 @@
   }
 
   .explorer-first-use li {
-    display: flex;
-    gap: var(--space-1);
-    font-size: 0;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: var(--space-2);
+    font-size: 0.6875rem;
+    line-height: 1.45;
   }
 
   .explorer-first-use li b {
@@ -887,6 +909,11 @@
     margin: 0;
     font-size: 0.6875rem;
     line-height: 1.35;
+  }
+
+  .explorer-first-use li span {
+    display: grid;
+    gap: 2px;
   }
 
   .explorer-next-step .primary-button {

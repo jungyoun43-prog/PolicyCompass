@@ -119,7 +119,7 @@ test("Health Map은 실데이터와 예시 데이터를 명확히 분리한다",
   assert.ok(textarea, "health note textarea should exist");
   assert.equal(textarea[1].trim(), "", "the map must not preload a sample as user data");
   assert.match(html, /id="loadDemo"/);
-  assert.match(html, /예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음/);
+  assert.match(html, /예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey 미저장/);
   assert.match(html, /확인 필요 신호 · 진단 아님/);
   assert.match(app, /sessionStorage\.setItem\(sessionKey, JSON\.stringify\(\{[\s\S]*?isDemo: state\.isDemo/);
   assert.match(app, /elements\.resetButton\.addEventListener\("click",[\s\S]*?state\.visibleIds = \[\.\.\.state\.clinicalConditionIds\]/);

@@ -118,8 +118,11 @@
   min-height: calc(var(--space-10) + var(--space-1));
   display: inline-flex;
   align-items: center;
-  border: 0;
-  background: transparent;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  padding-inline: var(--space-4);
   color: var(--ink);
   font-family: inherit;
   font-size: 0.8125rem;
@@ -452,8 +455,9 @@
 
 .frontier-consent label {
   display: flex;
+  min-height: 44px;
   gap: var(--space-3);
-  align-items: start;
+  align-items: center;
   margin-top: var(--space-3);
   color: var(--ink);
   font-size: 0.75rem;
@@ -811,6 +815,33 @@
 }
 
 @media (max-width: 620px) {
+  .insights-page .page-hero__lead {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .insights-page .page-hero__actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .insights-page .page-hero__actions .brief-action {
+    width: 100%;
+    min-width: 0;
+    padding-inline: var(--space-3);
+    text-align: center;
+  }
+
+  .insights-page .page-hero__actions .brief-action--primary {
+    grid-column: 1 / -1;
+  }
+
   .question-panel,
   .snapshot-card,
   .signal-card,
@@ -825,6 +856,10 @@
   .insight-status {
     grid-template-columns: 1fr;
     gap: var(--space-2);
+  }
+
+  .status-refresh {
+    width: 100%;
   }
 
   .insight-status p {

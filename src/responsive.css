@@ -32,11 +32,11 @@
   }
 
   .detail-panel {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .detail-identity {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 }
 
@@ -84,10 +84,7 @@
   }
 
   .detail-column {
-    border-top: 1px solid var(--line);
-    border-left: 0;
-    padding-top: var(--space-5);
-    padding-left: 0;
+    padding: var(--space-4);
   }
 
   .safety-banner {

@@ -68,7 +68,7 @@
       </section>
 
       <p class="demo-mode" id="personalDemoMode" role="status" hidden>
-        예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
+        예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey 미저장
       </p>
 
       <section class="explorer-first-use" aria-labelledby="explorerGuideTitle" data-graph-instructions>
@@ -122,40 +122,48 @@
         </div>
 
         <aside class="explorer-detail" aria-live="polite" aria-labelledby="explorerDetailTitle">
-          <p class="detail-system" id="explorerDetailSystem">연결 지도</p>
-          <div class="explorer-detail-title">
-            <span class="detail-tone" id="explorerDetailTone"></span>
-            <h2 id="explorerDetailTitle">질환 노드를 선택하세요</h2>
+          <div class="explorer-detail__identity">
+            <p class="detail-system" id="explorerDetailSystem">연결 지도</p>
+            <div class="explorer-detail-title">
+              <span class="detail-tone" id="explorerDetailTone"></span>
+              <h2 id="explorerDetailTitle">질환 노드를 선택하세요</h2>
+            </div>
+            <p class="evidence-kind" id="explorerEvidenceKind">선택한 노드의 기록 근거 유형이 여기에 표시됩니다.</p>
+            <p class="explorer-detail-summary" id="explorerDetailSummary">
+              선택한 질환의 검사·식사·관리 메모를 이 패널에서 확인할 수 있습니다.
+            </p>
           </div>
-          <p class="evidence-kind" id="explorerEvidenceKind">선택한 노드의 기록 근거 유형이 여기에 표시됩니다.</p>
-          <p class="explorer-detail-summary" id="explorerDetailSummary">
-            선택한 질환의 검사·식사·관리 메모를 이 패널에서 확인할 수 있습니다.
-          </p>
-          <section>
-            <h3>왜 연결되나요</h3>
-            <p id="explorerDetailRelation">선을 따라가며 가까운 질환을 선택해 보세요.</p>
-          </section>
-          <section>
-            <h3>다음에 확인할 것</h3>
-            <ul id="explorerDetailChecks"></ul>
-          </section>
-          <section>
-            <h3>식사·영양 대화</h3>
-            <ul id="explorerDetailNutrition"></ul>
-          </section>
-          <section>
-            <h3>관리 대화</h3>
-            <ul id="explorerDetailCare"></ul>
-          </section>
-          <section>
-            <h3>관련 관계의 문헌 근거</h3>
-            <div class="evidence-list" id="explorerEvidenceList"></div>
-          </section>
-          <div class="explorer-next-step">
-            <p class="panel-index">NEXT · VISIT PREP</p>
-            <h3>선택한 내용을 진료 질문으로 이어 보세요.</h3>
-            <p>현재 지도와 확인 항목을 로컬 AI 또는 동의한 프론티어 AI로 질문 초안에 정리한 뒤, 공유할 내용을 직접 선택합니다.</p>
-            <a class="primary-button" href="/insights" data-next-action>다음: 진료 준비 질문 만들기</a>
+
+          <div class="explorer-detail__guidance">
+            <section>
+              <h3>왜 연결되나요</h3>
+              <p id="explorerDetailRelation">선을 따라가며 가까운 질환을 선택해 보세요.</p>
+            </section>
+            <section>
+              <h3>다음에 확인할 것</h3>
+              <ul id="explorerDetailChecks"></ul>
+            </section>
+            <section>
+              <h3>식사·영양 대화</h3>
+              <ul id="explorerDetailNutrition"></ul>
+            </section>
+            <section>
+              <h3>관리 대화</h3>
+              <ul id="explorerDetailCare"></ul>
+            </section>
+          </div>
+
+          <div class="explorer-detail__evidence">
+            <section>
+              <h3>관련 관계의 문헌 근거</h3>
+              <div class="evidence-list" id="explorerEvidenceList"></div>
+            </section>
+            <div class="explorer-next-step">
+              <p class="panel-index">NEXT · VISIT PREP</p>
+              <h3>선택한 내용을 진료 질문으로 이어 보세요.</h3>
+              <p>현재 지도와 확인 항목을 로컬 AI 또는 동의한 프론티어 AI로 질문 초안에 정리한 뒤, 공유할 내용을 직접 선택합니다.</p>
+              <a class="primary-button" href="/insights" data-next-action>다음: 진료 준비 질문 만들기</a>
+            </div>
           </div>
         </aside>
       </section>

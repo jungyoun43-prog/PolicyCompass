@@ -103,7 +103,7 @@ await runBrowserSmoke({
     ["/map", "[data-graph-discovery=\"map\"]", "map"],
     ["/connections", "[data-graph-discovery=\"connections\"]", "connections"],
     ["/insights", "#questionCount", "insights"],
-    ["/journey", "[data-story-section=\"changed\"]", "journey"],
+    ["/journey", "#journeyComparison", "journey"],
   ];
   for (const [route, readySelector, name] of routeExpectations) {
     await navigate(route, `Boolean(document.querySelector(${JSON.stringify(readySelector)}))`);
@@ -128,6 +128,8 @@ await runBrowserSmoke({
         changed: visible('[data-story-section="changed"]'),
         context: visible('[data-story-section="context"]'),
         next: visible('[data-story-section="next"]'),
+        comparison: visible('#journeyComparison'),
+        comparisonDetailHidden: document.getElementById('journeyComparisonDetail')?.hidden === true,
         questions: visible('#questions'),
         signals: visible('#signals'),
         visitStoryPresent: Boolean(document.querySelector('.visit-story')),
@@ -142,7 +144,15 @@ await runBrowserSmoke({
     } else if (name === "insights") {
       assert(result.questions && result.signals && !result.visitStoryPresent, `${route}: focused question brief is incomplete`);
     } else {
-      assert(result.changed && result.context && result.next, `${route}: change story is incomplete`);
+      assert(
+        result.comparison
+          && result.firstUse
+          && result.comparisonDetailHidden
+          && !result.changed
+          && !result.context
+          && !result.next,
+        `${route}: compact waiting state is incomplete`,
+      );
     }
     routeResults.push({ route, ...result });
   }
@@ -164,7 +174,7 @@ await runBrowserSmoke({
   journeyDataPersistenceVerified = true;
 
   const localStorageExplanationVerified = viewportResults.every(({ localText }) => (
-    /이 기기|브라우저/.test(localText) && /서버 전송 없음/.test(localText)
+    /이 기기|브라우저/.test(localText) && /동의한 경우에만|서버 자동 전송 없음/.test(localText)
   ));
   const patientClinicianBoundaryVerified = [...viewportResults, ...routeResults]
     .every(({ emrLinks }) => emrLinks === 0);

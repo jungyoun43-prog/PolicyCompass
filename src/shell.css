@@ -40,8 +40,7 @@ body.insights-page {
     line-height: 1.08;
   }
 
-  .map-page .page-hero__lead,
-  .insights-page .page-hero__lead { display: none; }
+  .map-page .page-hero__lead { display: none; }
   .map-page .input-panel { padding: var(--space-3); }
   .map-page .panel-heading {
     flex-direction: row;
@@ -137,6 +136,9 @@ body.insights-page {
   top: var(--space-2);
   left: var(--space-2);
   z-index: 100;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   border-radius: var(--radius-pill);
   background: var(--ink);
   padding: var(--space-2) var(--space-3);
@@ -169,8 +171,11 @@ body.insights-page {
 
 .app-brand {
   display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
   gap: var(--space-2);
   align-items: center;
+  justify-self: start;
   color: var(--ink);
   font-size: 1rem;
   font-weight: 760;
@@ -225,6 +230,7 @@ body.insights-page {
 
 .app-nav a {
   display: inline-flex;
+  min-width: 44px;
   min-height: 44px;
   align-items: center;
   justify-content: center;

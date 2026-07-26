@@ -14,6 +14,7 @@ const elements = {
   added: document.querySelector("#addedSignals"), steady: document.querySelector("#steadySignals"), removed: document.querySelector("#removedSignals"),
   measurementChanges: document.querySelector("#measurementChanges"),
   comparison: document.querySelector("#journeyComparison"),
+  comparisonDetail: document.querySelector("#journeyComparisonDetail"),
   storyChanges: document.querySelector("#journeyChanges"), contexts: document.querySelector("#journeyContexts"),
   nextReviews: document.querySelector("#journeyNextReviews"), priorComparison: document.querySelector("#journeyPriorComparison"),
   clear: document.querySelector("#clearJourney"), export: document.querySelector("#exportJourney"),
@@ -161,6 +162,8 @@ function renderMeasurementChanges(changes) {
 function renderComparison() {
   const after = journey.at(-1) ?? null;
   const before = journey.length > 1 ? journey.at(-2) : null;
+  elements.comparison.dataset.state = journey.length > 1 ? "ready" : "waiting";
+  elements.comparisonDetail.hidden = journey.length < 2;
   renderNarrative(before, after);
 
   if (journey.length < 2) {

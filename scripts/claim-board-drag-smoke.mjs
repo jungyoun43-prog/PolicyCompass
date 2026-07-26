@@ -84,7 +84,7 @@ await runBrowserSmoke({
   assert(disclosure.before.expanded === "false"
     && disclosure.before.open === false
     && /자동 판정/.test(disclosure.before.summaryStatus ?? "")
-    && /차트 시행/.test(disclosure.before.summaryFacts ?? ""),
+    && /차트 시행|기간·횟수 미집계[\s\S]*판정 제외|판정 제외[\s\S]*기간·횟수 미집계/.test(disclosure.before.summaryFacts ?? ""),
   `Collapsed claim card did not retain its decision-critical summary: ${JSON.stringify(disclosure)}`);
   assert(disclosure.after.expanded === "true"
     && disclosure.after.open === true

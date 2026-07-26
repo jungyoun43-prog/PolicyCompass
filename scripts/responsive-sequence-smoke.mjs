@@ -30,12 +30,12 @@ export const CANONICAL_STEPS = Object.freeze([
   Object.freeze({
     id: "patient-home",
     route: "/patient",
-    selectors: [".landing-hero", ".fact-strip", ".outcome", ".workflow", ".beta", ".closing"],
+    selectors: [".landing-hero", ".fact-strip", ".outcome", ".workflow", ".closing"],
   }),
   Object.freeze({
     id: "patient-map",
     route: "/map",
-    selectors: [".map-hero", ".input-panel", ".body-panel", ".connection-portal", ".detail-panel", ".safety-banner"],
+    selectors: [".map-hero", ".input-panel", ".body-panel", ".detail-panel", ".connection-portal", ".safety-banner"],
   }),
   Object.freeze({
     id: "patient-connections",
@@ -188,7 +188,7 @@ export async function observeResponsiveRoute(api, {
       product['primary-role-choice-reachable'] = visible(clinicalAction) && visible(patientAction);
     } else if (route === '/patient') {
       product['local-storage-understood'] = /이 기기|브라우저/.test(routeText)
-        && /서버 전송 없음/.test(routeText);
+        && /동의한 경우에만|서버 자동 전송 없음/.test(routeText);
       product['journey-data-preserved'] = marker === ${JSON.stringify(profileId)}
         && Boolean(document.querySelector('a[href="/journey"]'));
     } else if (route === '/map') {

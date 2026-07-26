@@ -60,12 +60,15 @@ body.emr-page {
 }
 
 .clinical-header .app-brand {
+  width: max-content;
+  min-height: 44px;
+  justify-self: start;
   font-size: 0.9rem;
 }
 
 .clinical-header .app-brand__mark {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
 }
 
@@ -226,11 +229,18 @@ body.emr-page {
 
 .clinical-button--danger {
   border-color: color-mix(in srgb, var(--urgent) 36%, var(--line));
+  background: color-mix(in srgb, var(--urgent) 5%, var(--surface));
   color: var(--urgent);
 }
 
+.clinical-button--confirm {
+  border-color: color-mix(in srgb, var(--data-lime) 64%, var(--ink));
+  background: color-mix(in srgb, var(--data-lime) 64%, var(--ink));
+  color: var(--surface);
+}
+
 .text-action {
-  min-height: 36px;
+  min-height: 44px;
   border-color: transparent;
   background: var(--surface-soft);
   padding: var(--space-2) var(--space-3);
@@ -859,6 +869,8 @@ body.emr-page {
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface-soft) 60%, var(--surface));
   padding: 0 var(--space-5);
+  scroll-padding-inline: var(--space-5);
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
 
@@ -877,6 +889,7 @@ body.emr-page {
   cursor: pointer;
   font-size: 0.74rem;
   font-weight: 720;
+  scroll-snap-align: start;
 }
 
 .workspace-tabs button[aria-selected="true"] {
@@ -1177,6 +1190,12 @@ body.emr-page {
   padding: var(--space-3);
   box-shadow: 0 14px 40px color-mix(in srgb, var(--ink) 13%, transparent);
   backdrop-filter: blur(14px);
+}
+
+.encounter-mobile-claim {
+  display: none;
+  border-color: color-mix(in srgb, var(--data-amber) 32%, var(--line));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--data-amber) 8%, var(--surface)), var(--surface) 62%);
 }
 
 .encounter-save-bar .form-message {
@@ -3536,6 +3555,14 @@ body.emr-page {
     align-items: stretch;
   }
 
+  .encounter-mobile-claim {
+    display: block;
+  }
+
+  .encounter-context-rail .context-card--claim {
+    display: none;
+  }
+
   .context-card {
     height: 100%;
   }
@@ -3572,10 +3599,19 @@ body.emr-page {
     max-height: none;
     overflow-x: auto;
     overflow-y: hidden;
+    padding-right: var(--space-4);
+    scroll-padding-inline: var(--space-1);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
   }
 
   .patient-list li {
     min-width: 210px;
+    scroll-snap-align: start;
+  }
+
+  .patient-list::-webkit-scrollbar {
+    display: none;
   }
 
   .metric-grid {
@@ -3699,25 +3735,30 @@ body.emr-page {
   }
 
   .workspace-tabs {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      #000 var(--space-4),
-      #000 calc(100% - var(--space-4)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      #000 var(--space-4),
-      #000 calc(100% - var(--space-4)),
-      transparent
-    );
+    scroll-padding-inline: var(--space-4);
   }
 
   .body-caption__status {
     overflow-wrap: normal;
     word-break: keep-all;
+  }
+
+  .workspace-tabs[data-scroll-position="start"],
+  .patient-list[data-scroll-position="start"] {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--space-6)), transparent 100%);
+  }
+
+  .workspace-tabs[data-scroll-position="middle"],
+  .patient-list[data-scroll-position="middle"] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent 100%);
+  }
+
+  .workspace-tabs[data-scroll-position="end"],
+  .patient-list[data-scroll-position="end"] {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-6), #000 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--space-6), #000 100%);
   }
 
   .metric-grid,

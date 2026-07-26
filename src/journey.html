@@ -95,7 +95,7 @@
               src="/assets/patient-journey-bridge.webp"
               width="1536"
               height="1024"
-              loading="lazy"
+              loading="eager"
               decoding="async"
               alt="집에서 정제된 건강 기록을 확인하고 의료진과 생활 질문을 주고받는 흐름"
             />
@@ -124,7 +124,7 @@
           <h2 id="comparisonTitle" tabindex="-1">최근 두 시점 비교</h2>
           <p id="comparisonCopy">기록이 두 개 이상이면 최근 변화가 자동으로 표시됩니다.</p>
         </div>
-        <div class="comparison-detail">
+        <div class="comparison-detail" id="journeyComparisonDetail" hidden>
           <div class="journey-story-grid" aria-label="최근 기록 변화 이야기">
             <article class="journey-story-card journey-story-card--changed" data-story-section="changed">
               <span class="journey-story-card__step" aria-hidden="true">01</span>

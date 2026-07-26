@@ -283,6 +283,7 @@ const refs = {
   orderInstructions: byId("orderInstructions"),
   orderList: byId("orderList"),
   encounterClaimSummary: byId("encounterClaimSummary"),
+  encounterMobileClaimSummary: byId("encounterMobileClaimSummary"),
   encounterSignoffSummary: byId("encounterSignoffSummary"),
   recentEncounterList: byId("recentEncounterList"),
   encounterBodySummary: byId("encounterBodySummary"),
@@ -811,6 +812,31 @@ function createEmptyMessage(text, className = "summary-empty") {
   return element("p", className, text);
 }
 
+function updateHorizontalScrollPosition(container) {
+  if (!container) return;
+  const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+  const position = maxScroll <= 1
+    ? "none"
+    : container.scrollLeft <= 1
+      ? "start"
+      : container.scrollLeft >= maxScroll - 1
+        ? "end"
+        : "middle";
+  container.dataset.scrollPosition = position;
+}
+
+function centerSelectedPatientCard(patientId, behavior = "smooth") {
+  const button = refs.patientList.querySelector(`[data-patient-id="${CSS.escape(patientId)}"]`);
+  const item = button?.closest("li");
+  const maxScroll = Math.max(0, refs.patientList.scrollWidth - refs.patientList.clientWidth);
+  if (!item || maxScroll <= 1) return;
+  const centered = item.offsetLeft - ((refs.patientList.clientWidth - item.offsetWidth) / 2);
+  refs.patientList.scrollTo({
+    left: Math.max(0, Math.min(maxScroll, centered)),
+    behavior,
+  });
+}
+
 function renderPatients() {
   const query = refs.patientSearch.value.trim().toLocaleLowerCase("ko");
   const patients = state.patients.filter((patient) => {
@@ -851,6 +877,7 @@ function renderPatients() {
   for (const button of refs.queueFilters.querySelectorAll("[data-queue-filter]")) {
     button.setAttribute("aria-pressed", String(button.dataset.queueFilter === queueFilter));
   }
+  requestAnimationFrame(() => updateHorizontalScrollPosition(refs.patientList));
 }
 
 function renderSafety(patient) {
@@ -2012,10 +2039,9 @@ function appendEncounterEntry(list, { title, meta, detail = "", badge = "", enti
   list.append(item);
 }
 
-function renderEncounterClaims(patient, evaluations) {
-  clear(refs.encounterClaimSummary);
-  refs.encounterClaimSummary.append(element("p", "claim-preflight-note", "예비판정 · 서명 전 초안을 확정 사실과 분리해 가상 반영"));
-  const attentionStatuses = new Set(["missing-evidence", "due-soon", "unknown"]);
+function renderEncounterClaimSummary(target, evaluations, attention) {
+  clear(target);
+  target.append(element("p", "claim-preflight-note", "예비판정 · 서명 전 초안을 확정 사실과 분리해 가상 반영"));
   const counts = Object.fromEntries(CLAIM_LANE_ORDER.map((status) => [status, evaluations.filter((item) => item.status === status).length]));
   const countRow = element("div", "claim-mini-counts");
   for (const status of ["missing-evidence", "due-soon", "ready", "waiting", "unknown"]) {
@@ -2023,12 +2049,7 @@ function renderEncounterClaims(patient, evaluations) {
     chip.append(element("b", "", counts[status]), document.createTextNode(CLAIM_LANE_LABELS[status]));
     countRow.append(chip);
   }
-  refs.encounterClaimSummary.append(countRow);
-  const attention = evaluations.filter((item) => attentionStatuses.has(item.status)).slice(0, 3);
-  refs.encounterSignoffSummary.textContent = attention.length
-    ? `서명 전 확인 ${attention.length}건 · 오른쪽 청구 조정 위험에서 근거를 검토하세요.`
-    : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요.";
-  refs.encounterSignoffSummary.dataset.tone = attention.length ? "attention" : "ready";
+  target.append(countRow);
   for (const evaluation of attention) {
     const card = element("article", "claim-mini-risk");
     card.append(
@@ -2036,9 +2057,20 @@ function renderEncounterClaims(patient, evaluations) {
       element("span", "", CLAIM_LANE_LABELS[evaluation.status] ?? "확인"),
       element("p", "", evaluation.explanation),
     );
-    refs.encounterClaimSummary.append(card);
+    target.append(card);
   }
-  if (!attention.length) refs.encounterClaimSummary.append(element("p", "context-ok", "현재 규칙에서 즉시 보완할 항목 없음 · 실제 청구 전 담당자 재확인"));
+  if (!attention.length) target.append(element("p", "context-ok", "현재 규칙에서 즉시 보완할 항목 없음 · 실제 청구 전 담당자 재확인"));
+}
+
+function renderEncounterClaims(patient, evaluations) {
+  const attentionStatuses = new Set(["missing-evidence", "due-soon", "unknown"]);
+  const attention = evaluations.filter((item) => attentionStatuses.has(item.status)).slice(0, 3);
+  refs.encounterSignoffSummary.textContent = attention.length
+    ? `서명 전 확인 ${attention.length}건 · 급여 점검에서 기간·횟수·근거를 검토하세요.`
+    : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요.";
+  refs.encounterSignoffSummary.dataset.tone = attention.length ? "attention" : "ready";
+  renderEncounterClaimSummary(refs.encounterClaimSummary, evaluations, attention);
+  renderEncounterClaimSummary(refs.encounterMobileClaimSummary, evaluations, attention);
 }
 
 function renderEncounterContext(patient, encounter, evaluations) {
@@ -2384,6 +2416,7 @@ function clearPatientWorkspaceUi() {
     refs.prescriptionList,
     refs.orderList,
     refs.encounterClaimSummary,
+    refs.encounterMobileClaimSummary,
     refs.recentEncounterList,
     refs.encounterBodySummary,
     refs.eventFilters,
@@ -2449,6 +2482,7 @@ function render() {
   renderDataFacts();
   renderFhirReport();
   syncSelectedClinicalSnapshot();
+  requestAnimationFrame(() => updateHorizontalScrollPosition(document.querySelector(".workspace-tabs")));
 }
 
 function resetPatientForm() {
@@ -2563,6 +2597,7 @@ function switchTab(tab, focus = false) {
     tabList.scrollWidth - tabList.clientWidth,
     centered,
   ));
+  updateHorizontalScrollPosition(tabList);
 }
 
 function downloadJson(value, filename) {
@@ -2811,6 +2846,7 @@ refs.patientList.addEventListener("click", async (event) => {
       eventFilter = "all";
       activeTab = "encounter";
       render();
+      centerSelectedPatientCard(button.dataset.patientId);
     });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "환자 선택을 저장하지 못했습니다.", "error");
@@ -3393,7 +3429,9 @@ for (const disclosure of document.querySelectorAll("details[data-workflow-disclo
   });
 }
 
-document.querySelector(".workspace-tabs").addEventListener("keydown", (event) => {
+const workspaceTabList = document.querySelector(".workspace-tabs");
+
+workspaceTabList.addEventListener("keydown", (event) => {
   if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
   const tabs = [...document.querySelectorAll(".workspace-tabs [role='tab']")];
   const focusedTab = event.target.closest("[data-tab]");
@@ -3407,6 +3445,13 @@ document.querySelector(".workspace-tabs").addEventListener("keydown", (event) =>
   event.preventDefault();
   switchTab(next.dataset.tab, true);
 });
+
+workspaceTabList.addEventListener("scroll", () => updateHorizontalScrollPosition(workspaceTabList), { passive: true });
+refs.patientList.addEventListener("scroll", () => updateHorizontalScrollPosition(refs.patientList), { passive: true });
+window.addEventListener("resize", () => {
+  updateHorizontalScrollPosition(workspaceTabList);
+  updateHorizontalScrollPosition(refs.patientList);
+}, { passive: true });
 
 for (const button of document.querySelectorAll("[data-board-scope]")) {
   button.addEventListener("click", () => {

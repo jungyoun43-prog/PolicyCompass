@@ -130,6 +130,7 @@
 
 .landing-hero__boundary p {
   margin: 0;
+  word-break: keep-all;
 }
 
 .landing-hero__boundary p + p {
@@ -336,6 +337,7 @@
   margin: 0;
   color: var(--muted);
   line-height: 1.75;
+  word-break: keep-all;
 }
 
 .text-action {
@@ -438,6 +440,7 @@
   display: block;
   font-size: 0.875rem;
   line-height: 1.5;
+  word-break: keep-all;
 }
 
 .brief-preview__questions p {
@@ -445,6 +448,7 @@
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.55;
+  word-break: keep-all;
 }
 
 .brief-preview > footer {

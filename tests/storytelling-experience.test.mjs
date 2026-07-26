@@ -64,9 +64,13 @@ test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리
   assert.doesNotMatch(insights, /visit-story|data-story-section/);
   assert.match(insights, /class="question-panel"/);
   assert.match(insights, /data-first-use/);
-  assert.match(insights, /href="\/map#import-record"/);
+  assert.match(insights, /id="refreshClinicalSnapshotEmpty"/);
+  assert.match(insights, /서명·확정된 최신 정제 기록 확인/);
   assert.match(insights, /href="\/map\?sample=1"/);
   assert.match(insights, /Journey 저장 안 됨/);
+  assert.match(insights, /JSON은 병원과 연결하기 위한 업로드 파일이 아니라 환자가 직접 보관·활용하는 사본/);
+  assert.match(insights, /id="sharePatientBrief"/);
+  assert.doesNotMatch(insights, /href="\/map#import-record"|id="fhirFile"/);
 
   assert.match(journey, /data-story-section="changed"/);
   assert.match(journey, /data-story-section="context"/);

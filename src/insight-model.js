@@ -97,6 +97,8 @@ function buildQuestion(rule, sourceId, index) {
     basis: `건강 지도에서 ‘${source.label}’ 관련 입력 신호가 표시됨`,
     sourceId,
     sourceLabel: source.label,
+    origin: "rule",
+    evidenceIds: [sourceId],
   };
 }
 

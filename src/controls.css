@@ -165,6 +165,13 @@
   color: color-mix(in srgb, var(--data-lime) 65%, var(--ink));
 }
 
+.input-panel__heading-actions {
+  display: grid;
+  flex: none;
+  gap: var(--space-2);
+  justify-items: end;
+}
+
 .field-label,
 .signal-fieldset legend {
   display: block;
@@ -172,15 +179,6 @@
   font-size: 0.8125rem;
   font-weight: 700;
 }
-
-.field-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.field-heading .field-label { margin-bottom: 0; }
 
 .demo-trigger {
   min-height: 44px;
@@ -220,6 +218,101 @@
 .import-file-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
 .import-file-actions .import-button,
 .import-file-actions .primary-button { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+.care-link-indicator {
+  width: .75rem;
+  height: .75rem;
+  flex: none;
+  border: 3px solid color-mix(in srgb, var(--data-cyan) 24%, var(--surface));
+  border-radius: 50%;
+  background: var(--data-cyan);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--data-cyan) 46%, var(--line));
+}
+.care-link-status {
+  min-height: 2.7em;
+  color: var(--ink) !important;
+  font-weight: 680;
+  line-height: 1.45;
+}
+.care-link-status[data-state="connected"] {
+  color: color-mix(in srgb, var(--data-cyan) 70%, var(--ink)) !important;
+}
+.care-link-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.care-link-summary[hidden] { display: none; }
+.care-link-summary span {
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 22%, var(--line));
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  padding: var(--space-1) var(--space-2);
+  color: var(--ink);
+  font-size: .6875rem;
+  font-weight: 700;
+}
+.care-link-details {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.care-link-details[hidden] { display: none; }
+.care-link-group {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, .38fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  border-top: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  padding-top: var(--space-2);
+}
+.care-link-details h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: .6875rem;
+  font-weight: 760;
+  line-height: 1.45;
+}
+.care-link-details ul {
+  display: grid;
+  gap: var(--space-1);
+  max-height: 10rem;
+  margin: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-1) 0 0;
+  list-style: none;
+}
+.care-link-details li {
+  display: grid;
+  gap: 2px;
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding: var(--space-2);
+  line-height: 1.4;
+}
+.care-link-details li strong {
+  color: var(--ink);
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+.care-link-details li span,
+.care-link-details li.is-empty {
+  color: var(--muted);
+  font-size: .65rem;
+}
+.care-link-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.care-link-actions > button {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+}
 .record-file-status { min-height: 1.4em; font-weight: 650; line-height: 1.45; }
 .import-warning {
   border: 1px solid color-mix(in srgb, var(--data-amber) 28%, var(--line));
@@ -302,6 +395,14 @@ textarea:focus {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--surface);
+}
+
+.signal-chip.is-clinical::after {
+  content: "EMR";
+  margin-left: var(--space-1);
+  font: 700 .55rem var(--font-mono);
+  letter-spacing: .04em;
+  opacity: .72;
 }
 
 .form-error {
@@ -413,8 +514,6 @@ textarea:focus {
   .map-page .map-hero,
   .map-page .dashboard { grid-template-columns: 1fr; }
   .map-page .body-stage { min-height: 500px; }
-  .field-heading { align-items: stretch; flex-direction: column; }
-  .demo-trigger { width: 100%; }
   .form-actions { grid-template-columns: 1fr; }
   .form-actions .primary-button,
   .form-actions .secondary-button { width: 100%; min-height: 48px; }
@@ -423,5 +522,6 @@ textarea:focus {
 
 @media (max-width: 620px) {
   .map-page .import-box > .record-file-status { display: block; }
-  .import-file-actions { grid-template-columns: 1fr; }
+  .import-file-actions,
+  .care-link-actions { grid-template-columns: 1fr; }
 }

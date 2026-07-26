@@ -767,16 +767,12 @@ body.emr-page {
 }
 
 .workspace-empty__mark {
-  width: 58px;
-  height: 58px;
+  display: block;
+  width: clamp(140px, 13vw, 176px);
+  height: auto;
   margin-bottom: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 50% 50%, var(--accent) 0 6px, transparent 7px),
-    linear-gradient(30deg, transparent 46%, color-mix(in srgb, var(--data-cyan) 60%, transparent) 47% 52%, transparent 53%),
-    linear-gradient(-30deg, transparent 46%, color-mix(in srgb, var(--data-violet) 60%, transparent) 47% 52%, transparent 53%),
-    var(--surface-soft);
+  object-fit: contain;
+  filter: drop-shadow(0 18px 28px color-mix(in srgb, var(--ink) 12%, transparent));
 }
 
 .workspace-empty h2 {
@@ -1678,6 +1674,30 @@ body.emr-page {
   margin-bottom: var(--space-4);
 }
 
+.copilot-bridge-status {
+  display: grid;
+  gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 30%, var(--line));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--data-cyan) 7%, var(--surface));
+  padding: var(--space-3);
+}
+
+.copilot-bridge-status[data-stale="true"] {
+  border-color: color-mix(in srgb, var(--data-amber) 42%, var(--line));
+  background: color-mix(in srgb, var(--data-amber) 8%, var(--surface));
+}
+
+.copilot-bridge-status b {
+  font-size: 0.72rem;
+}
+
+.copilot-bridge-status span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
 .copilot-section li {
   position: relative;
   border: 1px solid color-mix(in srgb, var(--data-violet) 14%, var(--line));
@@ -1690,6 +1710,71 @@ body.emr-page {
   line-height: 1.55;
 }
 
+.copilot-question-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.copilot-question-column {
+  border: 1px solid color-mix(in srgb, var(--data-violet) 18%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--data-violet) 3%, var(--surface));
+  padding: var(--space-3);
+}
+
+.copilot-question-column--patient {
+  border-color: color-mix(in srgb, var(--data-cyan) 22%, var(--line));
+  background: color-mix(in srgb, var(--data-cyan) 4%, var(--surface));
+}
+
+.copilot-question-kicker {
+  display: block;
+  margin-bottom: 2px;
+  color: color-mix(in srgb, var(--data-violet) 72%, var(--ink));
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+}
+
+.copilot-question-column--patient .copilot-question-kicker {
+  color: color-mix(in srgb, var(--data-cyan) 74%, var(--ink));
+}
+
+.copilot-question-column h5 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.76rem;
+}
+
+.copilot-section li.copilot-question {
+  padding: var(--space-3);
+}
+
+.copilot-question b {
+  display: block;
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.copilot-question p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+.copilot-section li.copilot-question--empty {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.copilot-question-boundary {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.61rem;
+  line-height: 1.5;
+}
+
 .copilot-citations,
 .question-citations {
   display: block;
@@ -1698,11 +1783,16 @@ body.emr-page {
   font-family: var(--font-mono);
   font-size: 0.58rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .copilot-citations small {
   display: block;
   font: inherit;
+}
+
+.copilot-citations small[data-provenance-kind="patient"] {
+  color: color-mix(in srgb, var(--data-cyan) 72%, var(--ink));
 }
 
 .copilot-provenance {
@@ -1717,6 +1807,11 @@ body.emr-page {
   padding: var(--space-1) var(--space-2);
   color: var(--muted);
   font-size: 0.61rem;
+}
+
+.copilot-provenance .copilot-provenance__patient {
+  background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface));
+  color: color-mix(in srgb, var(--data-cyan) 74%, var(--ink));
 }
 
 .next-work-card {
@@ -2631,18 +2726,18 @@ body.emr-page {
 .claim-card {
   --claim-status-tone: var(--muted);
   min-width: 0;
+  overflow: clip;
   border: 1px solid color-mix(in srgb, var(--claim-status-tone) 24%, var(--line));
   border-radius: 11px;
   background:
     radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--claim-status-tone) 8%, transparent), transparent 48%),
     var(--surface);
-  padding: var(--space-3);
-  cursor: grab;
   transition: border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, transform 150ms ease;
 }
 
-.claim-card:active {
-  cursor: grabbing;
+.claim-card[data-claim-detail-open="true"] {
+  border-color: color-mix(in srgb, var(--claim-status-tone) 44%, var(--line));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--claim-status-tone) 10%, transparent);
 }
 
 .claim-card.is-dragging {
@@ -2650,9 +2745,28 @@ body.emr-page {
   transform: scale(0.985);
 }
 
-.claim-card:focus-visible {
+.claim-card__summary {
+  display: block;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: transparent;
+  padding: var(--space-3);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.claim-card__summary:hover {
+  background: color-mix(in srgb, var(--claim-status-tone) 5%, transparent);
+}
+
+.claim-card__summary:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--data-cyan) 55%, var(--ink));
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 .claim-card[data-status="missing-evidence"] { --claim-status-tone: var(--data-amber); }
@@ -2686,6 +2800,7 @@ body.emr-page {
   grid-column: 2;
   grid-row: 1;
   color: var(--muted);
+  cursor: grab;
   font-size: 1rem;
   line-height: 1;
   text-align: right;
@@ -2737,9 +2852,21 @@ body.emr-page {
 
 .claim-patient {
   display: block;
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
   color: var(--muted);
   font-size: 0.62rem;
+}
+
+.claim-card__explanation,
+.claim-missing {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.claim-card__explanation {
+  color: var(--muted);
 }
 
 .claim-card p {
@@ -2750,30 +2877,166 @@ body.emr-page {
 }
 
 .claim-missing {
-  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink)) !important;
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
   font-weight: 700;
 }
 
 .claim-review-stale {
+  display: block;
+  margin-top: var(--space-2);
   border: 1px solid color-mix(in srgb, var(--data-amber) 42%, var(--line));
   border-radius: 9px;
   background: color-mix(in srgb, var(--data-amber) 10%, var(--surface-soft));
   padding: var(--space-2);
-  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink)) !important;
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
+  font-size: 0.62rem;
+  line-height: 1.5;
 }
 
 .claim-review-stale b {
   color: inherit;
 }
 
-.claim-evidence,
-.claim-rule-version,
-.claim-manual-note {
+.claim-card__disclosure {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-2);
+  color: color-mix(in srgb, var(--data-cyan) 72%, var(--ink));
+  font-size: 0.61rem;
+  font-weight: 760;
+}
+
+.claim-card__disclosure::after {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  content: "";
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 140ms ease-out;
+}
+
+.claim-card__summary[aria-expanded="true"] .claim-card__disclosure::after {
+  transform: rotate(225deg);
+}
+
+.claim-card__details {
+  position: fixed;
+  inset: 0;
+  width: min(calc(100% - var(--space-8)), 680px);
+  max-width: none;
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+  margin: auto;
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 30%, var(--line));
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 28px 90px color-mix(in srgb, var(--ink) 28%, transparent);
+  padding: 0;
+  color: var(--ink);
+}
+
+.claim-card__details[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.claim-card__details::backdrop {
+  background: color-mix(in srgb, var(--ink) 34%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.claim-card__details-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 92% 0, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 15rem),
+    var(--surface);
+  padding: var(--space-5);
+}
+
+.claim-card__details-eyebrow {
   display: block;
-  margin-top: var(--space-2);
+  margin-bottom: var(--space-1);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  font-weight: 760;
+  letter-spacing: 0.08em;
+}
+
+.claim-card__details-header h5 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.35rem;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  word-break: keep-all;
+}
+
+.claim-card__details-close {
+  min-width: 68px;
+}
+
+.claim-card__details-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
+  gap: var(--space-4);
+  overflow: auto;
+  padding: var(--space-5);
+}
+
+.claim-card__details-aside {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.claim-evidence {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--data-cyan) 5%, var(--surface));
+  padding: var(--space-4);
   color: var(--muted);
-  font-size: 0.58rem;
-  line-height: 1.45;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.claim-rule-version,
+.claim-manual-note,
+.claim-detail-boundary {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.claim-evidence b {
+  color: var(--ink);
+}
+
+.claim-evidence span {
+  display: block;
+  border-left: 2px solid color-mix(in srgb, var(--data-cyan) 42%, var(--line));
+  padding-left: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.claim-evidence .claim-evidence__empty {
+  border-left-color: var(--line-strong);
+  color: var(--muted);
 }
 
 .claim-manual-note {
@@ -2798,7 +3061,7 @@ body.emr-page {
 
 .claim-source {
   display: block;
-  margin-top: var(--space-2);
+  margin: 0;
   color: color-mix(in srgb, var(--data-cyan) 72%, var(--ink));
   font-size: 0.57rem;
   font-weight: 700;
@@ -2808,10 +3071,17 @@ body.emr-page {
 .claim-review-control {
   display: grid;
   gap: 4px;
-  margin-top: var(--space-3);
+  margin-top: var(--space-1);
   border-top: 1px solid var(--line);
   padding-top: var(--space-3);
   cursor: default;
+}
+
+.claim-detail-boundary {
+  grid-column: 1 / -1;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--data-cyan) 5%, var(--surface));
+  padding: var(--space-2);
 }
 
 .claim-review-control > span {
@@ -3535,6 +3805,21 @@ body.emr-page {
 
   .claim-card__top {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .claim-card__details {
+    width: calc(100% - var(--space-4));
+    max-height: calc(100dvh - var(--space-4));
+    border-radius: 16px;
+  }
+
+  .claim-card__details-header,
+  .claim-card__details-content {
+    padding: var(--space-4);
+  }
+
+  .claim-card__details-content {
+    grid-template-columns: 1fr;
   }
 
   .audit-list li {

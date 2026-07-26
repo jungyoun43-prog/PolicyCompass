@@ -2,6 +2,10 @@ import http from "node:http";
 
 import worker from "../dist/server/index.js";
 import { runClinicalCopilot } from "./clinical-copilot.mjs";
+import {
+  patientQuestionAssistantStatus,
+  runPatientQuestionAssistant,
+} from "./patient-question-assistant.mjs";
 
 const port = Number.parseInt(process.env.PORT ?? "4173", 10);
 const localBaseUrl = `http://127.0.0.1:${port}`;
@@ -69,7 +73,7 @@ async function readJson(request) {
 }
 
 function localHeadersFor(pathname, headers) {
-  if (!["/emr", "/emr.html"].includes(pathname)) return headers;
+  if (!["/emr", "/emr.html", "/insights", "/insights.html"].includes(pathname)) return headers;
   const next = { ...headers };
   const csp = next["content-security-policy"];
   if (typeof csp === "string") next["content-security-policy"] = csp.replace("connect-src 'none'", "connect-src 'self'");
@@ -81,7 +85,8 @@ const server = http.createServer((request, response) => {
     const requestTarget = request.url ?? "/";
     if (!requestTarget.startsWith("/")) throw new ApiError(400, "INVALID_TARGET", "요청 경로가 올바르지 않습니다.");
     const url = new URL(requestTarget, localBaseUrl);
-    const isApi = url.pathname.startsWith("/api/clinical-copilot");
+    const isApi = url.pathname.startsWith("/api/clinical-copilot")
+      || url.pathname.startsWith("/api/patient-question-assistant");
     if (isApi) assertLocalApiRequest(request);
 
     if (url.pathname === "/api/clinical-copilot/status" && request.method === "GET") {
@@ -106,6 +111,37 @@ const server = http.createServer((request, response) => {
         sendJson(response, 200, result);
       } catch {
         throw new ApiError(502, "LOCAL_MODEL_FAILED", "로컬 AI가 유효한 근거 초안을 반환하지 못했습니다.");
+      }
+      return;
+    }
+    if (url.pathname === "/api/patient-question-assistant/status" && request.method === "GET") {
+      sendJson(response, 200, patientQuestionAssistantStatus());
+      return;
+    }
+    if (url.pathname === "/api/patient-question-assistant" && request.method === "POST") {
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "정제 질문 준비 데이터가 필요합니다.");
+      }
+      const provider = payload.provider === "frontier" ? "frontier" : "local";
+      if (provider === "frontier" && payload.consent !== true) {
+        throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
+      }
+      const status = patientQuestionAssistantStatus();
+      if (!status[provider].configured) {
+        sendJson(response, 503, {
+          code: provider === "frontier" ? "FRONTIER_NOT_CONFIGURED" : "LOCAL_AI_NOT_CONFIGURED",
+          message: "규칙 기반 질문을 사용합니다.",
+        });
+        return;
+      }
+      try {
+        sendJson(response, 200, await runPatientQuestionAssistant(payload));
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new ApiError(400, "INVALID_PATIENT_CONTEXT", error.message);
+        }
+        throw new ApiError(502, "PATIENT_MODEL_FAILED", "선택한 AI가 유효한 근거 질문을 반환하지 못했습니다.");
       }
       return;
     }

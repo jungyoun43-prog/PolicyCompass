@@ -49,9 +49,21 @@ test("Insights 질문은 하나의 명시적 선택 동작과 복원 가능한 �
 });
 
 test("건강 지도 입력은 선택 가능한 질환 뒤에 제출 동작을 제공한다", async () => {
-  const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
+  const [html, css] = await Promise.all([
+    readFile(new URL("../src/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../src/controls.css", import.meta.url), "utf8"),
+  ]);
+  assert.ok(
+    html.indexOf('id="loadDemo"') < html.indexOf('id="healthForm"'),
+    "예시 기록 버튼은 입력 폼보다 위의 패널 헤더에 있어야 한다",
+  );
+  assert.match(html, /class="input-panel__heading-actions"[\s\S]*?id="loadDemo"[\s\S]*?class="session-badge"/);
+  assert.match(css, /\.input-panel__heading-actions\s*\{[\s\S]*?justify-items:\s*end/);
   assert.ok(html.indexOf('class="signal-fieldset"') < html.indexOf('id="analyzeButton"'));
-  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="import-record"'));
+  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="connected-record"'));
+  assert.match(html, /id="refreshCareLink"/);
+  assert.match(html, /id="downloadClinicalJson"[^>]*disabled/);
+  assert.doesNotMatch(html, /id="(?:transferCode|fhirFile|importRecordButton)"/);
 });
 
 test("빈 EMR은 하나의 명시적 샘플 워크스페이스 동작만 제공한다", async () => {

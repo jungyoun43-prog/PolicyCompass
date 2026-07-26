@@ -4,7 +4,7 @@ import test from "node:test";
 
 const routes = new Map([
   ["/", ["gateway.html", /데이터 입력 없음/]],
-  ["/patient", ["landing.html", /이 기기에서 처리.+진단·처방 아님/]],
+  ["/patient", ["landing.html", /개인용 앱 · EMR 업무 공간과 분리 · 식별정보·원문 메모 제외.+진단·처방 아님/]],
   ["/map", ["index.html", /진단 결과가 아닌 대화 준비용 지도/]],
   ["/connections", ["connections.html", /0개 질환/]],
   ["/insights", ["insights.html", /현재 브리프/]],

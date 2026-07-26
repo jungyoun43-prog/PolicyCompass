@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="건강 지도에 남긴 신호를 진료실에서 바로 확인할 질문 브리프로 정리합니다." />
+    <meta name="description" content="EMR에서 서명·확정된 정제 기록과 내가 남긴 변화를 로컬 AI 또는 동의한 프론티어 AI로 진료 질문 브리프로 정리합니다." />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>진료 준비 브리프 | VitaGraph Personal</title>
@@ -31,7 +31,7 @@
           <a href="/insights" aria-current="page">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
+        <a class="app-header__action" href="/map#connected-record">연결 기록 확인</a>
       </div>
     </header>
 
@@ -48,17 +48,20 @@
                 <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
               </svg>
             </span>
-            <span class="page-hero__eyebrow signal-kicker__label">VISIT PREP · LOCAL RULES</span>
+            <span class="page-hero__eyebrow signal-kicker__label">VISIT PREP · REFINED RECORD</span>
           </div>
           <h1 id="insightTitle">진료실에서 바로 꺼내 보는 질문 브리프</h1>
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            건강 지도에 남긴 입력 신호를 최대 다섯 개의 질문으로 정리합니다. 모든 처리는 이 브라우저 안에서 이뤄지며 의료 판단을 대신하지 않습니다.
+            EMR에서 서명하거나 의료진이 확인·확정한 기록 중 식별정보를 제외한 환자용 항목과 내가 적은 최근 변화만 읽어, 의료진에게 확인할 질문을 최대 다섯 개로 정리합니다.
           </p>
           <div class="page-hero__actions">
             <button class="brief-action brief-action--primary" id="printBrief" type="button" disabled>
               브리프 인쇄
+            </button>
+            <button class="brief-action brief-action--secondary" id="exportClinicalSnapshot" type="button" disabled>
+              정제 기록 JSON 내보내기
             </button>
             <a class="brief-action brief-action--secondary" href="/map">건강 지도 편집</a>
           </div>
@@ -73,9 +76,10 @@
         <div>
           <b>현재 브리프</b>
           <span id="questionCount">0개 질문</span>
+          <span class="connection-badge" id="clinicalConnectionBadge">연결 확인 중</span>
         </div>
         <p id="coverage" role="status" aria-live="polite"></p>
-        <a href="/map">입력 신호 수정</a>
+        <button class="status-refresh" id="refreshClinicalSnapshot" type="button">연결 기록 다시 확인</button>
       </section>
 
       <div class="brief-layout clinician-hierarchy__groups">
@@ -92,26 +96,92 @@
             진료에서 먼저 확인할 질문을 하나 선택하세요.
           </p>
 
+          <section class="question-assistant" id="questionAssistant" aria-labelledby="assistantTitle">
+            <header class="question-assistant__heading">
+              <div>
+                <p class="eyebrow">QUESTION ASSISTANT</p>
+                <h3 id="assistantTitle">최근 변화를 더하고 질문을 다듬어 보세요.</h3>
+              </div>
+              <span class="assistant-mode" id="questionProviderMode">규칙 기반 안전망</span>
+            </header>
+
+            <label class="assistant-report" for="patientSelfReport">
+              <span>이번 진료에서 전할 최근 변화 <small>선택 · 1,000자 이내</small></span>
+              <textarea
+                id="patientSelfReport"
+                maxlength="1000"
+                rows="3"
+                placeholder="예: 2주 전부터 밤에 기침이 잦아졌어요."
+                aria-describedby="selfReportPrivacy"
+              ></textarea>
+            </label>
+            <p class="assistant-privacy" id="selfReportPrivacy">
+              이름·연락처·주소는 적지 마세요. 흔한 연락처·이메일·등록번호 형식은 제거하며, EMR 원문은 모델에 보내지 않습니다.
+            </p>
+
+            <fieldset class="assistant-provider">
+              <legend>질문 생성 방식</legend>
+              <label>
+                <input type="radio" name="question-provider" value="local" checked />
+                <span><b>로컬 AI</b><small>이 기기의 Ollama · 실패하면 규칙 기반 유지</small></span>
+              </label>
+              <label>
+                <input type="radio" name="question-provider" value="frontier" />
+                <span><b>프론티어 AI</b><small>외부 모델 · 아래 전송 동의 필요</small></span>
+              </label>
+            </fieldset>
+
+            <div class="frontier-consent" id="frontierConsentPanel" hidden>
+              <p>
+                프론티어 AI를 사용하면 질환 항목, 최종 측정값, 서명 처방, 위에 적은 최근 변화가 외부 모델 서비스로 전송됩니다.
+                EMR의 이름·등록번호·원문은 제외하지만, 최근 변화에 직접 적은 이름·주소는 자동 탐지가 완전하지 않으므로 전송 전에 삭제하세요.
+              </p>
+              <label>
+                <input id="frontierConsent" type="checkbox" />
+                <span>위 전송 범위를 확인했고 이번 질문 생성에 동의합니다.</span>
+              </label>
+            </div>
+
+            <div class="question-assistant__actions">
+              <button class="brief-action brief-action--primary" id="runPatientAssistant" type="button">
+                로컬 AI로 질문 제안
+              </button>
+              <button class="brief-action brief-action--secondary" id="useRuleQuestions" type="button">
+                규칙 기반으로 되돌리기
+              </button>
+              <button class="brief-action brief-action--secondary" id="sharePatientBrief" type="button" disabled>
+                선택 질문을 의료진에게 공유
+              </button>
+            </div>
+            <p class="assistant-status" id="patientAssistantStatus" role="status" aria-live="polite">
+              정제된 연결 기록만 사용합니다. AI 질문은 공유 전 직접 선택하고 확인하세요.
+            </p>
+          </section>
+
           <div class="brief-empty" id="briefEmpty" data-first-use hidden>
             <span class="brief-empty__index" aria-hidden="true">00</span>
             <div>
-              <p class="eyebrow">FIRST BRIEF</p>
-              <h3>기록 하나로 첫 질문 브리프를 만들어 보세요.</h3>
-              <p>직접 입력하거나 지원되는 환자 전달 JSON을 가져오면, 기록에 있는 신호만 질문과 근거로 정리합니다.</p>
+              <p class="eyebrow">WAITING FOR SIGNED RECORD</p>
+              <h3>서명·확정된 진료 기록이 연결되면 질문 브리프가 시작됩니다.</h3>
+              <p>의료진이 EMR에서 진료를 서명하거나 과거 기록을 확인·확정하면, 이름·등록번호와 원문 메모를 제외한 환자용 항목만 이 브라우저에 자동 연결됩니다.</p>
               <div class="first-use-actions">
-                <a class="first-use-action first-use-action--primary brief-action brief-action--primary" href="/map#import-record">
-                  <span>건강 지도 시작</span><small>내 기록 가져오기 · 브라우저 안에서 처리</small>
-                </a>
+                <button class="first-use-action first-use-action--primary brief-action brief-action--primary" id="refreshClinicalSnapshotEmpty" type="button">
+                  <span>연결 기록 다시 확인</span><small>서명·확정된 최신 정제 기록 확인</small>
+                </button>
                 <a class="first-use-action" href="/map?sample=1">
                   <span>예시로 먼저 보기</span><small>현재 탭에서만 유지 · Journey 저장 안 됨</small>
                 </a>
               </div>
               <ol class="first-use-steps" aria-label="첫 질문 브리프 만들기">
-                <li><span>1</span><div><b>기록 연결</b><small>증상·수치·알고 있는 질환을 현재 지도에 표시</small></div></li>
-                <li><span>2</span><div><b>질문 확인</b><small>왜 확인하는지와 어떤 입력에서 나온 질문인지 대조</small></div></li>
-                <li><span>3</span><div><b>필요한 것만 준비</b><small>진료실에서 보여 줄 질문을 인쇄하거나 화면으로 확인</small></div></li>
+                <li><span>1</span><div><b>EMR 서명 완료</b><small>의료진이 이번 진료 기록과 처방을 확정</small></div></li>
+                <li><span>2</span><div><b>환자용으로 정제</b><small>식별정보·원문 메모를 빼고 필요한 항목만 자동 연결</small></div></li>
+                <li><span>3</span><div><b>질문 확인·공유</b><small>근거를 대조하고 선택한 질문만 의료진에게 전달</small></div></li>
               </ol>
-              <p class="first-use-safety">가져오기 전 대상자와 파일 출처를 직접 확인하세요. 예시는 실제 건강 기록으로 저장되지 않습니다.</p>
+              <details class="legacy-record-path">
+                <summary>내 정제 기록을 보관하려면</summary>
+                <p>위 “정제 기록 JSON 내보내기”를 선택하세요. JSON은 병원과 연결하기 위한 업로드 파일이 아니라 환자가 직접 보관·활용하는 사본입니다.</p>
+              </details>
+              <p class="first-use-safety">연결 기록은 환자용 정제 사본입니다. 예시는 실제 건강 기록이나 의료진 브리프로 공유되지 않습니다.</p>
             </div>
           </div>
 
@@ -125,6 +195,14 @@
         </section>
 
         <aside class="brief-rail" aria-label="브리프 보조 정보">
+          <section class="snapshot-card" aria-labelledby="snapshotTitle">
+            <p class="eyebrow">SIGNED SNAPSHOT</p>
+            <h2 id="snapshotTitle">EMR 정제 기록 연결</h2>
+            <p class="snapshot-card__status" id="clinicalSnapshotStatus">연결된 서명·확정 기록을 확인하는 중입니다.</p>
+            <dl class="snapshot-counts" id="clinicalSnapshotCounts"></dl>
+            <p class="snapshot-card__note">이름·등록번호·연락처·EMR 원문은 이 화면의 모델 입력과 JSON 내보내기에 포함하지 않습니다.</p>
+          </section>
+
           <section class="signal-card" aria-labelledby="signalTitle">
             <p class="eyebrow">INPUT BASIS</p>
             <h2 id="signalTitle">브리프가 참고한 신호</h2>
@@ -135,9 +213,9 @@
             <p class="eyebrow">HOW IT WORKS</p>
             <h2 id="methodTitle">기록을 질문으로만 바꿉니다.</h2>
             <ol aria-label="브리프 정리 과정">
-              <li><span>1</span>입력 신호 확인</li>
-              <li><span>2</span>정해진 질문 규칙 매칭</li>
-              <li><span>3</span>최대 다섯 개로 정리</li>
+              <li><span>1</span>정제 기록·최근 변화 확인</li>
+              <li><span>2</span>규칙 또는 선택한 AI로 질문 제안</li>
+              <li><span>3</span>근거 대조 후 최대 다섯 개 공유</li>
             </ol>
             <p id="disclaimer"></p>
           </section>

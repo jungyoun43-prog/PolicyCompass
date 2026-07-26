@@ -76,7 +76,7 @@ function canonicalInstant(value, label = "내보내기 시각") {
   return parsed.toISOString();
 }
 
-function koreanCalendarDate(instant) {
+export function koreanCalendarDate(instant) {
   return new Date(new Date(instant).valueOf() + KOREA_TIMEZONE_OFFSET_MILLISECONDS).toISOString().slice(0, 10);
 }
 
@@ -273,9 +273,14 @@ function selectedHealthMap(patient, exportedAt) {
   };
 }
 
+export function createPatientHealthMap(patient, exportedAt) {
+  const instant = canonicalInstant(exportedAt);
+  return selectedHealthMap(patient, instant);
+}
+
 export function createPatientTransferPackage(patient, exportedAt, transferCode = randomTransferCode()) {
   const instant = canonicalInstant(exportedAt);
-  const { conditions, measurements } = selectedHealthMap(patient, instant);
+  const { conditions, measurements } = createPatientHealthMap(patient, instant);
   if (conditions.length + measurements.length === 0) {
     throw new TypeError("환자용 VitaGraph에 내보낼 최종·확정 지원 기록이 없습니다.");
   }

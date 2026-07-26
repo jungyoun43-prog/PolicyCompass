@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="몸의 신호, 질환의 연결, 확인할 관리 항목을 한 화면에서 탐색하는 개인 건강 관계 지도"
+      content="EMR에서 자동 연결된 정제 기록과 직접 남긴 신호를 몸·질환·관리 항목으로 탐색하는 개인 건강 관계 지도"
     />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
@@ -39,7 +39,7 @@
           <a href="/insights">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map#import-record">기록 가져오기</a>
+        <a class="app-header__action" href="/map#connected-record">연결 기록 확인</a>
       </div>
     </header>
 
@@ -62,8 +62,8 @@
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            기록한 증상과 검사 수치를 신체 부위, 관련 질환, 확인할 관리 항목으로
-            이어 봅니다.
+            EMR에서 연결된 정제 기록과 내가 적은 증상·검사 수치를 신체 부위,
+            관련 질환, 확인할 관리 항목으로 이어 봅니다.
           </p>
           <p class="page-hero__note" data-route-context>
             진단 결과가 아닌 대화 준비용 지도입니다. 최종 판단은 의료진과 함께하세요.
@@ -79,18 +79,18 @@
           <div class="panel-heading">
             <div>
               <p class="panel-index">MY SIGNALS</p>
-              <h2 id="inputTitle">내 데이터 넣기</h2>
+              <h2 id="inputTitle">내 기록 확인·추가</h2>
             </div>
-            <span class="session-badge">SESSION ONLY</span>
-          </div>
-
-          <form id="healthForm" novalidate>
-            <div class="field-heading">
-              <label class="field-label" for="healthNote">증상과 검사 수치</label>
+            <div class="input-panel__heading-actions">
               <button class="demo-trigger" id="loadDemo" type="button">
                 예시 기록 불러오기
               </button>
+              <span class="session-badge">SESSION ONLY</span>
             </div>
+          </div>
+
+          <form id="healthForm" novalidate>
+            <label class="field-label" for="healthNote">증상과 검사 수치</label>
             <p class="demo-mode" id="demoMode" role="status" hidden>
               예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey에는 저장되지 않음
             </p>
@@ -129,53 +129,48 @@
                 건강 지도 업데이트
               </button>
               <button class="secondary-button" id="resetButton" type="button">
-                비우기
+                내 입력 비우기
               </button>
             </div>
           </form>
 
-          <section class="import-box" id="import-record" aria-labelledby="fhirImportTitle">
-              <div class="import-heading">
-                <div><span class="import-tag">VITAGRAPH JSON</span><h3 id="fhirImportTitle">내 건강 기록 가져오기</h3></div>
+          <section class="import-box care-link-box" id="connected-record" aria-labelledby="careLinkTitle">
+            <div class="import-heading">
+              <div>
+                <span class="import-tag">SIGNED · VERIFIED EMR RECORD</span>
+                <h3 id="careLinkTitle">EMR 정제 기록</h3>
               </div>
-              <label class="transfer-code-field" for="transferCode">
-                <span>1. 별도로 전달받은 확인 코드</span>
-                <input
-                  id="transferCode"
-                  name="transferCode"
-                  type="text"
-                  inputmode="text"
-                  autocomplete="one-time-code"
-                  autocapitalize="characters"
-                  spellcheck="false"
-                  maxlength="33"
-                  pattern="VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}"
-                  placeholder="VG-…"
-                  aria-invalid="false"
-                  aria-errormessage="fhirResult"
-                  aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
-                />
-              </label>
-              <p id="recordImportHelp">코드를 먼저 입력하고 파일을 고른 뒤, 마지막 확인 버튼을 눌러야 지도가 바뀝니다. 의료기관 EMR에서 받은 <code>vitagraph-patient-transfer</code> v1 JSON만 읽습니다.</p>
-              <input
-                id="fhirFile"
-                type="file"
-                accept=".json,application/json"
-                tabindex="-1"
-                aria-label="VitaGraph 환자 전달 JSON 파일"
-                aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
-              />
-              <div class="import-file-actions">
-                <button class="import-button" id="selectRecordFile" type="button" aria-controls="fhirFile">
-                  2. 기록 파일 선택
-                </button>
-                <button class="primary-button" id="importRecordButton" type="button" disabled>
-                  3. 확인하고 가져오기
-                </button>
+              <span class="care-link-indicator" aria-hidden="true"></span>
+            </div>
+            <p>
+              의료진이 진료를 서명하면 최종·확정 사실과 처방이 식별정보 없이
+              이 브라우저에 자동 연결됩니다. 파일과 확인 코드는 필요하지 않습니다.
+            </p>
+            <p class="care-link-status" id="careLinkStatus" role="status" aria-live="polite">
+              연결된 서명·확정 기록을 확인하는 중입니다.
+            </p>
+            <div class="care-link-summary" id="careLinkSummary" hidden></div>
+            <div class="care-link-details" id="careLinkDetails" aria-label="연결된 EMR 정제 항목" hidden>
+              <div class="care-link-group" role="group" aria-labelledby="careConditionsTitle">
+                <h4 id="careConditionsTitle">확정 건강 항목</h4>
+                <ul id="careConditionList"></ul>
               </div>
-              <p class="record-file-status" id="recordFileStatus" role="status" aria-live="polite">확인 코드를 먼저 입력한 뒤 기록 파일을 선택하세요.</p>
-              <p class="import-warning" id="recordImportWarning"><strong>민감한 건강정보:</strong> 본인 기기에서만 열어 주세요. 파일 원문은 서버 전송 없음.</p>
-              <div class="import-result" id="fhirResult" role="status" aria-live="polite" hidden></div>
+              <div class="care-link-group" role="group" aria-labelledby="careMeasurementsTitle">
+                <h4 id="careMeasurementsTitle">최종 측정값</h4>
+                <ul id="careMeasurementList"></ul>
+              </div>
+              <div class="care-link-group" role="group" aria-labelledby="careMedicationsTitle">
+                <h4 id="careMedicationsTitle">서명 처방</h4>
+                <ul id="careMedicationList"></ul>
+              </div>
+            </div>
+            <div class="care-link-actions">
+              <button class="import-button" id="refreshCareLink" type="button">연결 기록 다시 확인</button>
+              <button class="secondary-button" id="downloadClinicalJson" type="button" disabled>내 정제 JSON 내보내기</button>
+            </div>
+            <p class="import-warning">
+              원본 EMR·이름·등록번호·연락처·원문 메모는 연결하거나 내보내지 않습니다.
+            </p>
           </section>
 
           <div class="detected-summary" aria-live="polite">
@@ -203,7 +198,7 @@
               <h3 id="mapInstructionsTitle">처음이라면 이렇게 보세요</h3>
             </div>
             <ol id="mapInstructions">
-              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 기록을 가져옵니다.</span></li>
+              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 연결된 정제 기록을 확인합니다.</span></li>
               <li><b>2</b><span>색 있는 신체 표식을 선택해 관련 신호를 확인합니다.</span></li>
               <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
             </ol>
@@ -217,7 +212,7 @@
             <ul class="map-legend__items">
               <li>
                 <i class="map-legend__symbol map-legend__symbol--recorded" aria-hidden="true"></i>
-                <span><strong>기록 신호</strong><small>직접 입력하거나 가져온 건강 항목</small></span>
+                <span><strong>기록 신호</strong><small>직접 입력하거나 EMR에서 연결된 정제 건강 항목</small></span>
               </li>
               <li id="mapRelationshipMeaning" data-relationship-meaning>
                 <i class="map-legend__symbol map-legend__symbol--inferred" aria-hidden="true"></i>
@@ -322,14 +317,22 @@
         <section class="panel connection-portal" aria-labelledby="graphTitle">
           <div class="connection-copy">
             <p class="panel-index">NEXT · CONNECTION EXPLORER</p>
-            <h2 id="graphTitle">다음은 관계와 근거를 확인할 차례입니다.</h2>
-            <p>
-              기록에서 찾은 건강 항목과 문헌을 바탕으로 제안한 관계를 구분해 보여 줍니다.
-              노드를 선택하고, 왜 연결됐는지 출처와 함께 확인해 보세요.
-            </p>
-            <div class="connection-actions">
-              <a class="primary-button" href="/connections" data-connections-link data-next-action>다음: 관계와 근거 확인하기</a>
-              <span><strong id="graphPreviewCount">0개</strong> 질환을 연결할 준비가 됐어요</span>
+            <h2 id="graphTitle">
+              <span>다음은 관계와 근거를</span>
+              <span>확인할 차례입니다.</span>
+            </h2>
+            <div class="connection-support">
+              <p class="connection-description">
+                <span>기록에서 찾은 건강 항목과 문헌을 바탕으로 제안한 관계를 구분해 보여 줍니다.</span>
+                <span>노드를 선택하고, 왜 연결됐는지 출처와 함께 확인해 보세요.</span>
+              </p>
+              <div class="connection-actions">
+                <a class="primary-button" href="/connections" data-connections-link data-next-action>다음: 관계와 근거 확인하기</a>
+                <span class="connection-actions__status" role="status" aria-live="polite">
+                  <strong id="graphPreviewCount">0개</strong>
+                  <span>질환을 연결할 준비가 됐어요</span>
+                </span>
+              </div>
             </div>
           </div>
 

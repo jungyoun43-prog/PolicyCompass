@@ -8,10 +8,10 @@ const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9228", 10);
 const routes = [
   { route: "/", selector: ".role-card--clinical .role-action", text: "의료진 EMR 열기" },
-  { route: "/patient", selector: ".landing-actions .landing-button--primary", text: "내 기록으로 시작" },
+  { route: "/patient", selector: ".landing-actions .landing-button--primary", text: "연결 기록으로 시작" },
   { route: "/map", selector: "#analyzeButton", text: "건강 지도 업데이트" },
-  { route: "/connections", selector: "#sceneEmpty .primary-button", text: "건강 지도에서 시작" },
-  { route: "/insights", selector: "#briefEmpty .brief-action--primary", text: "건강 지도 시작" },
+  { route: "/connections", selector: "#sceneEmpty .primary-button", text: "건강 지도에서 연결 확인" },
+  { route: "/insights", selector: "#refreshClinicalSnapshot", text: "연결 기록 다시 확인" },
   { route: "/journey", selector: "#journeyEmpty .primary-button", text: "첫 지도 만들기" },
   { route: "/emr", selector: "#loadDemo", text: "샘플 워크스페이스 열기" },
 ];

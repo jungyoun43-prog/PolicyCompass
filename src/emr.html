@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="신체·진료과 기록 지도와 급여 적합성 칸반을 결합한 로컬 임상 EMR 워크스페이스" />
+    <meta name="description" content="서명된 환자용 정제 연결과 양방향 로컬 AI 질문 준비, 신체 기록 지도와 급여 보드를 결합한 임상 EMR 워크스페이스" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
     <title>VitaGraph Clinical | 로컬 AI 보조 EMR</title>
@@ -53,11 +53,12 @@
           <details class="emr-utilities" id="emrUtilities">
             <summary class="clinical-button">데이터 작업</summary>
             <div class="emr-utility-panel">
-              <p class="emr-utility-heading"><b>가져오기·전달·백업</b><span>진료 화면과 분리된 로컬 데이터 작업입니다.</span></p>
+              <p class="emr-utility-heading"><b>가져오기·백업</b><span>진료 화면과 분리된 로컬 데이터 작업입니다.</span></p>
               <div class="emr-utility-actions">
                 <input class="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" />
                 <label class="clinical-button" for="fhirImport">FHIR 가져오기</label>
-                <button class="clinical-button clinical-button--patient-transfer" id="exportPatientTransfer" type="button" aria-describedby="patientTransferGuidance">환자용 VitaGraph JSON</button>
+                <button class="clinical-button clinical-button--patient-transfer" id="syncPersonalRecord" type="button" aria-describedby="patientTransferGuidance">Personal 최신화</button>
+                <button class="clinical-button" id="disconnectPersonalRecord" type="button" aria-describedby="patientTransferGuidance">Personal 연결 해제</button>
                 <button class="clinical-button" id="exportFhir" type="button">의료기관용 FHIR</button>
                 <button class="clinical-button" id="exportEmr" type="button">백업 내보내기</button>
                 <input class="visually-hidden" id="importEmr" type="file" accept=".json,application/json" />
@@ -65,10 +66,10 @@
               </div>
               <div class="patient-transfer-guidance" id="patientTransferGuidance">
                 <div>
-                  <b>환자 앱 전달용</b>
-                  <span>선택 환자의 지원되는 최종·확정 사실만 JSON에 포함합니다. 다운로드 전에 환자명과 일회성 전달 확인 코드를 대조하고, 코드는 파일과 다른 경로로 환자에게 안내하세요.</span>
+                  <b>Personal 자동 연결</b>
+                  <span>진료를 서명하거나 과거 기록을 확인·확정하면 필요한 사실과 서명 처방만 식별정보·원문 메모 없이 자동 연결됩니다. 환자는 Personal에서 자신의 정제 사본을 JSON으로 내보낼 수 있습니다. 공유 기기에서는 작업 후 연결을 해제하세요.</span>
                 </div>
-                <p id="patientTransferStatus" role="status" aria-live="polite"></p>
+                <p id="personalSyncStatus" role="status" aria-live="polite"></p>
               </div>
             </div>
           </details>
@@ -178,7 +179,14 @@
 
         <section class="patient-workspace" aria-label="선택 환자 차트">
           <div class="workspace-empty" id="workspaceEmpty">
-            <span class="workspace-empty__mark" aria-hidden="true"></span>
+            <img
+              class="workspace-empty__mark"
+              src="/assets/clinical-workspace-empty.png"
+              width="176"
+              height="176"
+              alt=""
+              aria-hidden="true"
+            />
             <p class="rail-eyebrow">NO PATIENT SELECTED</p>
             <h2>환자 한 명을 선택하면 임상 흐름이 열립니다.</h2>
             <p>차트, 신체·진료과 지도, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
@@ -434,7 +442,7 @@
                     <div><p class="rail-eyebrow">CLINICAL COPILOT</p><h3 id="copilotTitle">진료 준비 초안</h3></div>
                     <span class="source-badge source-badge--draft" id="copilotMode">규칙 기반</span>
                   </div>
-                  <p class="draft-warning">의료진 검토 전 확정 기록 아님 · 인용 ID와 문장 의미를 원 차트에서 직접 대조</p>
+                  <p class="draft-warning">의료진 검토 전 확정 기록 아님 · 선택 환자의 확정 차트 + 환자가 명시적으로 공유한 질문 브리프만 사용 · 의료진 AI는 로컬 실행 · 진단·처방·인과 판단 아님</p>
                   <div id="copilotContent"></div>
                   <button class="clinical-button clinical-button--primary" id="runCopilot" type="button">근거로 초안 다시 만들기</button>
                 </section>
@@ -472,7 +480,7 @@
                         <label>단위<input id="eventUnit" maxlength="40" placeholder="예: mmHg" /></label>
                       </div>
                       <label>기록 메모<textarea id="eventNote" rows="4" maxlength="2000" placeholder="의료진이 확인한 맥락과 근거"></textarea></label>
-                      <p class="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자 전달 후보가 됩니다.</p>
+                      <p class="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자용 정제 기록에 반영됩니다.</p>
                       <p class="form-message" id="eventFormMessage" role="alert"></p>
                       <button class="clinical-button clinical-button--primary" type="submit">검토 대기 기록 추가</button>
                     </form>
@@ -607,7 +615,7 @@
                   <span class="claim-review-guide__mark" aria-hidden="true">↔</span>
                   <div>
                     <b>규칙 판정과 담당자 검토 단계를 분리합니다.</b>
-                    <p>아래 자동 판정은 차트와 규칙으로 다시 계산되며 바뀌지 않습니다. 카드를 끌어 놓거나 단계 선택을 사용하면 담당자의 수동 검토 단계만 이동합니다.</p>
+                    <p>카드에는 자동 판정·보완 항목·기준 사용량만 먼저 표시합니다. 카드를 선택하면 연결 차트 근거·규칙 버전·출처·검토 단계가 펼쳐집니다. 카드를 끌어 놓거나 단계 선택을 사용하면 담당자의 수동 검토 단계만 이동합니다.</p>
                   </div>
                 </div>
                 <div class="claim-result-summary" id="claimResultSummary" aria-label="변경되지 않는 자동 규칙 판정 요약"></div>

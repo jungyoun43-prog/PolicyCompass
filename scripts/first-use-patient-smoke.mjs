@@ -32,7 +32,7 @@ await runBrowserSmoke({
       const firstUse = document.querySelector('[data-first-use="patient"]');
       const localContext = document.querySelector('[data-route-context]');
       const sample = firstUse?.querySelector('a[href="/map?sample=1"]');
-      const imported = firstUse?.querySelector('a[href="/map#import-record"]');
+      const connected = firstUse?.querySelector('a[href="/map#connected-record"]');
       const heroPrimary = document.querySelector('[data-primary-action]');
       const heroSample = document.querySelector('.landing-actions a[href="/map?sample=1"]');
       const rect = firstUse?.getBoundingClientRect();
@@ -52,7 +52,7 @@ await runBrowserSmoke({
         steps: firstUse?.querySelectorAll('[data-first-use-step]').length ?? 0,
         localText: localContext?.textContent.replace(/\\s+/g, ' ').trim() ?? '',
         sampleVisible: Boolean(sampleRect && sampleRect.width > 0 && sampleRect.height > 0),
-        importPresent: Boolean(imported),
+        connectedPresent: Boolean(connected),
         firstUseWidth: rect?.width ?? 0,
         actionBounds,
         viewportHeight: innerHeight,
@@ -62,8 +62,8 @@ await runBrowserSmoke({
       };
     })()`);
     assert(result.steps === 4, `${viewport.width}x${viewport.height}: first-use path does not have four steps`);
-    assert(/이 기기|브라우저/.test(result.localText) && /서버 전송 없음/.test(result.localText), `${viewport.width}x${viewport.height}: local-only context is unclear`);
-    assert(result.sampleVisible && result.importPresent, `${viewport.width}x${viewport.height}: safe sample/import entry is missing`);
+    assert(/개인용 앱/.test(result.localText) && /식별정보·원문 메모 제외/.test(result.localText) && /진단·처방 아님/.test(result.localText), `${viewport.width}x${viewport.height}: patient data boundary is unclear`);
+    assert(result.sampleVisible && result.connectedPresent, `${viewport.width}x${viewport.height}: safe sample/connected-record entry is missing`);
     assert(result.firstUseWidth > 0 && result.documentWidth <= result.viewportWidth, `${viewport.width}x${viewport.height}: first-use layout overflows`);
     assert(
       result.actionBounds.every((action) => action
@@ -73,8 +73,8 @@ await runBrowserSmoke({
         && action.bottom <= result.viewportHeight),
       `${viewport.width}x${viewport.height}: hero start actions are not both reachable in the first viewport (${JSON.stringify(result.actionBounds)})`,
     );
-    assert(result.actionBounds[0].text === "내 기록으로 시작" && result.actionBounds[0].path === "/map#import-record",
-      `${viewport.width}x${viewport.height}: private-start action is incorrect`);
+    assert(result.actionBounds[0].text === "연결 기록으로 시작" && result.actionBounds[0].path === "/map#connected-record",
+      `${viewport.width}x${viewport.height}: connected-record action is incorrect`);
     assert(result.actionBounds[1].text === "예시로 보기" && result.actionBounds[1].path === "/map?sample=1",
       `${viewport.width}x${viewport.height}: sample action is incorrect`);
     assert(result.emrLinks === 0, `${viewport.width}x${viewport.height}: patient start exposes /emr`);

@@ -62,6 +62,15 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
   try {
     const emr = await fetch(`${baseUrl}/emr`);
     assert.match(emr.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
+    const insights = await fetch(`${baseUrl}/insights`);
+    assert.match(insights.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
+
+    const patientStatus = await fetch(`${baseUrl}/api/patient-question-assistant/status`);
+    assert.equal(patientStatus.status, 200);
+    assert.deepEqual(await patientStatus.json(), {
+      local: { configured: false, model: "" },
+      frontier: { configured: false, model: "gpt-5.6-sol" },
+    });
 
     const forbidden = await post(baseUrl, "{}", { "content-type": "application/json", origin: "https://evil.example" });
     assert.equal(forbidden.status, 403);
@@ -79,6 +88,22 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
     const unconfigured = await post(baseUrl, JSON.stringify({ patient: { events: [] } }), { "content-type": "application/json", origin: baseUrl });
     assert.equal(unconfigured.status, 503);
     assert.equal((await unconfigured.json()).code, "AI_NOT_CONFIGURED");
+
+    const frontierWithoutConsent = await fetch(`${baseUrl}/api/patient-question-assistant`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: baseUrl },
+      body: JSON.stringify({ provider: "frontier", consent: false }),
+    });
+    assert.equal(frontierWithoutConsent.status, 400);
+    assert.equal((await frontierWithoutConsent.json()).code, "FRONTIER_CONSENT_REQUIRED");
+
+    const frontierUnconfigured = await fetch(`${baseUrl}/api/patient-question-assistant`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: baseUrl },
+      body: JSON.stringify({ provider: "frontier", consent: true }),
+    });
+    assert.equal(frontierUnconfigured.status, 503);
+    assert.equal((await frontierUnconfigured.json()).code, "FRONTIER_NOT_CONFIGURED");
   } finally {
     await stopChild(child);
   }

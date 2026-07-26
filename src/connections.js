@@ -1,4 +1,5 @@
 import { CONDITIONS, relationsFor } from "/data.js";
+import { readCareBridge, subscribeCareBridge } from "/care-bridge.js";
 import { createExplorerScene, selectExplorerNode, settleExplorerScene } from "/explorer-model.js";
 import { createDetailModel } from "/view-model.js";
 
@@ -33,28 +34,52 @@ const elements = {
   demoMode: document.querySelector("#personalDemoMode"),
 };
 
-function readSession() {
+function conditionIds(value) {
+  return Array.isArray(value)
+    ? [...new Set(value)].filter((id) => CONDITIONS[id])
+    : [];
+}
+
+function clinicalIdsFromBridge(bridge) {
+  return conditionIds(bridge?.clinical?.snapshot?.healthMap?.conditions?.map(({ id }) => id));
+}
+
+function readSession(bridge = readCareBridge()) {
   try {
     const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "null");
-    const visibleIds = Array.isArray(stored?.visibleIds)
-      ? stored.visibleIds.filter((id) => CONDITIONS[id])
-      : [];
-    const declaredIds = Array.isArray(stored?.declaredIds)
-      ? stored.declaredIds.filter((id) => CONDITIONS[id] && visibleIds.includes(id))
-      : visibleIds;
+    const storedVisibleIds = conditionIds(stored?.visibleIds);
+    const storedClinicalIds = conditionIds(stored?.clinicalConditionIds);
+    const declaredIds = conditionIds(stored?.declaredIds);
+    const isDemo = stored?.isDemo === true;
+    const patientVisibleIds = Array.isArray(stored?.patientVisibleIds)
+      ? conditionIds(stored.patientVisibleIds)
+      : storedVisibleIds.filter((id) => !storedClinicalIds.includes(id) || declaredIds.includes(id));
+    const clinicalConditionIds = isDemo ? [] : clinicalIdsFromBridge(bridge);
+    const visibleIds = isDemo
+      ? storedVisibleIds
+      : [...new Set([...patientVisibleIds, ...clinicalConditionIds])];
     return {
       visibleIds,
-      declaredIds,
+      patientVisibleIds,
+      clinicalConditionIds,
+      declaredIds: declaredIds.filter((id) => visibleIds.includes(id)),
       activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? ""),
-      isDemo: stored?.isDemo === true,
+      isDemo,
     };
   } catch {
-    return { visibleIds: [], declaredIds: [], activeId: "", isDemo: false };
+    return {
+      visibleIds: [],
+      patientVisibleIds: [],
+      clinicalConditionIds: [],
+      declaredIds: [],
+      activeId: "",
+      isDemo: false,
+    };
   }
 }
 
 const state = {
-  ...readSession(),
+  ...readSession(readCareBridge()),
   selectedNodeId: "",
   scene: null,
   zoom: 1,
@@ -81,17 +106,41 @@ function renderList(target, items) {
   );
 }
 
+function conditionProvenance(id) {
+  if (state.clinicalConditionIds.includes(id)) {
+    return {
+      kind: "recorded",
+      source: "clinical",
+      label: "EMR 확정 기록 · 의료진이 서명·확정한 뒤 환자용으로 정제된 질환 항목",
+      aria: "EMR에서 서명·확정 후 정제되어 연결된 질환 기록",
+    };
+  }
+  if (state.declaredIds.includes(id)) {
+    return {
+      kind: "recorded",
+      source: "patient",
+      label: "환자 직접 확인 · 건강 지도에서 직접 선택한 항목 · 의료진 확정 진단 아님",
+      aria: "건강 지도에서 직접 선택한 환자 확인 항목, 의료진 확정 진단 아님",
+    };
+  }
+  return {
+    kind: "inferred",
+    source: "inferred",
+    label: "입력 신호에서 찾은 확인 후보 · 진단으로 기록된 사실이 아님",
+    aria: "입력 신호에서 찾은 확인 후보, 진단 사실 아님",
+  };
+}
+
 function renderConditionDetail(id) {
   if (!id || !CONDITIONS[id]) return;
   const detail = createDetailModel(id);
   elements.detailTone.className = `detail-tone tone-${detail.tone}`;
   elements.detailSystem.textContent = detail.system;
   elements.detailTitle.textContent = detail.title;
-  const isRecorded = state.declaredIds.includes(id);
-  elements.evidenceKind.className = `evidence-kind evidence-kind--${isRecorded ? "recorded" : "inferred"}`;
-  elements.evidenceKind.textContent = isRecorded
-    ? "개인 기록 근거 · 직접 선택하거나 가져온 질환 항목"
-    : "입력 신호에서 찾은 확인 후보 · 진단으로 기록된 사실이 아님";
+  const provenance = conditionProvenance(id);
+  elements.evidenceKind.className = `evidence-kind evidence-kind--${provenance.kind}`;
+  elements.evidenceKind.dataset.provenance = provenance.source;
+  elements.evidenceKind.textContent = provenance.label;
   elements.detailSummary.textContent = detail.summary;
   elements.detailRelation.textContent = detail.relation;
   renderList(elements.detailChecks, detail.checks);
@@ -131,6 +180,7 @@ function renderEmptyDetail() {
   elements.detailSystem.textContent = "연결 지도";
   elements.detailTitle.textContent = "질환 노드를 선택하세요";
   elements.evidenceKind.className = "evidence-kind";
+  delete elements.evidenceKind.dataset.provenance;
   elements.evidenceKind.textContent = "개인 기록 근거와 문헌 기반 추론 관계를 구분해 표시합니다.";
   elements.detailSummary.textContent = "질환 관계는 그래프에서, 검사·식사·관리 메모는 이 패널에서 분리해 읽습니다.";
   elements.detailRelation.textContent = "Health Map에서 연결한 질환이 이 장면에 표시됩니다.";
@@ -149,6 +199,8 @@ function saveSession() {
     const preserved = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
     sessionStorage.setItem(sessionKey, JSON.stringify({
       ...preserved,
+      patientVisibleIds: state.patientVisibleIds,
+      clinicalConditionIds: state.clinicalConditionIds,
       visibleIds: state.visibleIds,
       activeId: state.activeId,
     }));
@@ -237,7 +289,8 @@ function moveNode(nodeId, point) {
 
 function nodeGroup(node) {
   const isSelected = node.id === state.activeId || node.id === state.selectedNodeId;
-  const isRecorded = state.declaredIds.includes(node.id);
+  const provenance = conditionProvenance(node.id);
+  const isRecorded = provenance.kind === "recorded";
   const isRelated = state.scene.edges.some((edge) => (
     (edge.source === state.activeId && edge.target === node.id)
     || (edge.target === state.activeId && edge.source === node.id)
@@ -258,8 +311,9 @@ function nodeGroup(node) {
     "data-tone": node.tone,
     "data-node-id": node.id,
     "data-relation-count": node.relationCount,
-    "data-evidence-kind": isRecorded ? "recorded" : "inferred",
-    "aria-label": `${node.label}, ${node.subtitle}. ${isRecorded ? "직접 선택하거나 가져온 질환 항목" : "입력 신호에서 찾은 확인 후보, 진단 사실 아님"}. ${selectionDescription}.`,
+    "data-evidence-kind": provenance.kind,
+    "data-evidence-source": provenance.source,
+    "aria-label": `${node.label}, ${node.subtitle}. ${provenance.aria}. ${selectionDescription}.`,
     "aria-pressed": String(isSelected),
   });
   if (isSelected) group.classList.add("is-selected");
@@ -375,6 +429,15 @@ function renderGraph() {
   renderConditionDetail(state.activeId);
 }
 
+function refreshFromBridge(bridge = readCareBridge()) {
+  const next = readSession(bridge);
+  Object.assign(state, next);
+  state.selectedNodeId = state.activeId;
+  if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
+  saveSession();
+  renderGraph();
+}
+
 function applyViewportTransform() {
   const offsetX = sceneSize.width * (1 - state.zoom) / 2;
   const offsetY = sceneSize.height * (1 - state.zoom) / 2;
@@ -479,3 +542,5 @@ updateSceneFraming();
 applyViewportTransform();
 if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
 renderGraph();
+const unsubscribeBridge = subscribeCareBridge((bridge) => refreshFromBridge(bridge));
+window.addEventListener("pagehide", unsubscribeBridge, { once: true });

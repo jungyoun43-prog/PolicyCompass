@@ -163,40 +163,46 @@ try {
     document.getElementById("diagnosisForm").requestSubmit();
   `);
   await waitFor("document.getElementById('diagnosisList').textContent.includes('본태성 고혈압')", "Encounter diagnosis did not render.");
+  await evaluate(`
+    document.getElementById("medicationCode").value = "C09AA02";
+    document.getElementById("medicationSystem").value = "http://www.whocc.no/atc";
+    document.getElementById("medicationName").value = "에날라프릴";
+    document.getElementById("medicationDose").value = "5";
+    document.getElementById("medicationDoseUnit").value = "mg";
+    document.getElementById("medicationRoute").value = "경구";
+    document.getElementById("medicationFrequency").value = "1일 1회";
+    document.getElementById("medicationDurationDays").value = "30";
+    document.getElementById("medicationQuantity").value = "30";
+    document.getElementById("prescriptionForm").requestSubmit();
+  `);
+  await waitFor("document.getElementById('prescriptionList').textContent.includes('에날라프릴')", "Encounter prescription did not render.");
   await evaluate("document.getElementById('completeEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Encounter did not complete.");
+  await waitFor("document.getElementById('encounterSignReviewAcknowledged').disabled === false", "Pre-sign review did not become available.");
+  await evaluate(`
+    document.getElementById("encounterSignReviewAcknowledged").checked = true;
+    document.getElementById("encounterSignReviewAcknowledged").dispatchEvent(new Event("change", { bubbles: true }));
+  `);
+  await waitFor("document.getElementById('signEncounter').disabled === false", "Explicit pre-sign acknowledgement did not enable signing.");
   await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
 
-  await evaluate("document.querySelector('#emrUtilities > summary').click()");
-  await waitFor("document.getElementById('emrUtilities').open && document.getElementById('exportPatientTransfer').getClientRects().length === 1", "Data utility disclosure did not expose patient transfer through its summary control.");
-  await evaluate(`
-    window.__transferDownloadText = "";
-    window.__nativeCreateObjectURL = URL.createObjectURL.bind(URL);
-    URL.createObjectURL = (blob) => {
-      blob.text().then((text) => { window.__transferDownloadText = text; });
-      return window.__nativeCreateObjectURL(blob);
-    };
-    document.getElementById("exportPatientTransfer").click();
-  `);
-  await waitFor("window.__transferDownloadText.length > 0", "Patient transfer download was not produced.");
-  const transferText = await evaluate("window.__transferDownloadText");
-  const transfer = JSON.parse(transferText);
-  assert(transfer.schema === "vitagraph-patient-transfer" && transfer.version === 1, "Transfer schema/version mismatch.");
-  assert(/^VG-/.test(transfer.transferCode), "Transfer confirmation code is missing.");
-  assert(transfer.healthMap.conditions.some(({ id }) => id === "hypertension"), "Confirmed condition was not exported.");
-  assert(transfer.healthMap.measurements.some(({ key, value }) => key === "hba1c" && value === 7.1), "Confirmed observation was not exported.");
-  assert(!/전달검증환자|HANDOFF-001|1980-02-03/.test(transferText), "Transfer exposed direct patient identifiers.");
-  assert(await evaluate("document.getElementById('patientTransferStatus').textContent.includes('내보냈습니다')"), "Export status did not confirm completion.");
+  await waitFor("Boolean(JSON.parse(localStorage.getItem('vitagraph-care-bridge-v1') || 'null')?.clinical?.snapshot)", "Signed encounter did not publish an automatic Personal snapshot.");
+  const bridgeText = await evaluate("localStorage.getItem('vitagraph-care-bridge-v1')");
+  const bridge = JSON.parse(bridgeText);
+  const clinical = bridge.clinical.snapshot;
+  assert(bridge.schema === "vitagraph-care-bridge" && bridge.version === 1, "Care bridge schema/version mismatch.");
+  assert(clinical.schema === "vitagraph-clinical-snapshot", "Clinical snapshot schema mismatch.");
+  assert(clinical.healthMap.conditions.some(({ id }) => id === "hypertension"), "Confirmed condition was not refined into the bridge.");
+  assert(clinical.healthMap.measurements.some(({ key, value }) => key === "hba1c" && value === 7.1), "Final observation was not refined into the bridge.");
+  assert(clinical.medications.some(({ code, label }) => code === "C09AA02" && label === "에날라프릴"), "Signed prescription was not refined into the bridge.");
+  assert(!/전달검증환자|HANDOFF-001|1980-02-03|특이 증상 없음|복약 유지/.test(bridgeText), "Care bridge exposed an identifier or raw clinical note.");
+  assert(await evaluate("document.getElementById('personalSyncStatus').textContent.includes('Personal 자동 연결')"), "EMR did not announce the automatic Personal connection.");
 
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
-  await evaluate(`
-    window.__demoDownload = "";
-    URL.createObjectURL = (blob) => { blob.text().then((text) => { window.__demoDownload = text; }); return window.__nativeCreateObjectURL(blob); };
-    document.getElementById("exportPatientTransfer").click();
-  `);
-  await waitFor("document.getElementById('patientTransferStatus').textContent.includes('샘플 환자')", "Demo export was not rejected.");
-  assert(await evaluate("window.__demoDownload === ''"), "Demo patient produced a transfer download.");
+  await evaluate("document.getElementById('syncPersonalRecord').click()");
+  await waitFor("document.getElementById('personalSyncStatus').textContent.includes('샘플 환자')", "Demo Personal sync was not rejected.");
+  assert(await evaluate(`localStorage.getItem('vitagraph-care-bridge-v1') === ${JSON.stringify(bridgeText)}`), "Demo workspace replaced the real patient's connected snapshot.");
 
   await navigate("/map", "Boolean(document.getElementById('healthForm'))");
   await evaluate(`
@@ -206,41 +212,135 @@ try {
     }));
     location.reload();
   `);
-  await waitFor("document.getElementById('conditionCount')?.textContent === '1개'", "Map did not hydrate the existing scene.");
-  const beforeCancelledImport = await evaluate("sessionStorage.getItem('vitagraph-scene')");
-  await evaluate(`
-    (() => {
-      window.confirm = () => false;
-      const file = new File([${JSON.stringify(transferText)}], "transfer.json", { type: "application/json" });
-      const files = new DataTransfer();
-      files.items.add(file);
-      document.getElementById("fhirFile").files = files.files;
-      document.getElementById("fhirFile").dispatchEvent(new Event("change", { bubbles: true }));
-    })();
-  `);
-  await waitFor("document.getElementById('fhirResult').textContent.includes('취소')", "Cancelled code check did not settle.");
-  assert(await evaluate("sessionStorage.getItem('vitagraph-scene')") === beforeCancelledImport, "Cancelled import mutated patient session state.");
+  await waitFor("document.getElementById('conditionCount')?.textContent === '2개'", "Map did not merge the existing scene with the connected clinical record.");
+  assert(await evaluate(`(() => {
+    const scene = JSON.parse(sessionStorage.getItem("vitagraph-scene"));
+    return scene.patientVisibleIds.includes("migraine")
+      && scene.clinicalConditionIds.includes("hypertension")
+      && scene.visibleIds.includes("migraine")
+      && scene.visibleIds.includes("hypertension");
+  })()`), "Map did not persist patient and clinical condition provenance separately.");
+  assert(await evaluate("document.getElementById('careLinkStatus').dataset.state === 'connected'"), "Map did not expose the connected signed-record state.");
+  assert(await evaluate("document.getElementById('careLinkSummary').textContent.includes('확정 질환 1개') && document.getElementById('careLinkSummary').textContent.includes('최종 측정 1개') && document.getElementById('careLinkSummary').textContent.includes('서명 처방 1개')"), "Map did not summarize the refined clinical scope.");
+  assert(await evaluate("document.getElementById('careConditionList').textContent.includes('고혈압') && document.getElementById('careConditionList').textContent.includes('의료진 확정')"), "Map did not show the refined condition details.");
+  assert(await evaluate("document.getElementById('careMeasurementList').textContent.includes('당화혈색소 7.1 %') && document.getElementById('careMeasurementList').textContent.includes('최종 측정')"), "Map did not show the refined measurement details.");
+  assert(await evaluate("document.getElementById('careMedicationList').textContent.includes('에날라프릴') && document.getElementById('careMedicationList').textContent.includes('5mg') && document.getElementById('careMedicationList').textContent.includes('1일 1회')"), "Map did not show the signed prescription details.");
+  assert(await evaluate("!document.getElementById('transferCode') && !document.getElementById('fhirFile') && !document.getElementById('importRecordButton')"), "Map still exposes the retired patient JSON upload flow.");
 
   await evaluate(`
-    (() => {
-      window.confirm = () => true;
-      const file = new File([${JSON.stringify(transferText)}], "transfer.json", { type: "application/json" });
-      const files = new DataTransfer();
-      files.items.add(file);
-      document.getElementById("fhirFile").files = files.files;
-      document.getElementById("fhirFile").dispatchEvent(new Event("change", { bubbles: true }));
-    })();
+    window.__ownedJsonText = "";
+    window.__nativeCreateObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      blob.text().then((text) => { window.__ownedJsonText = text; });
+      return window.__nativeCreateObjectURL(blob);
+    };
+    document.getElementById("downloadClinicalJson").click();
   `);
-  await waitFor("document.getElementById('fhirResult').classList.contains('is-success')", "Confirmed patient import did not finish.");
-  const patientScene = JSON.parse(await evaluate("sessionStorage.getItem('vitagraph-scene')"));
-  assert(patientScene.visibleIds.includes("hypertension"), "Imported map omitted the condition.");
-  assert(patientScene.measurements.some(({ key }) => key === "hba1c"), "Imported map omitted the measurement.");
-  assert(patientScene.source.includes("서명되지 않은 사본"), "Unsigned trust label was not preserved in patient state.");
+  await waitFor("window.__ownedJsonText.length > 0", "Patient-owned refined JSON download was not produced.");
+  const ownedJsonText = await evaluate("window.__ownedJsonText");
+  const owned = JSON.parse(ownedJsonText);
+  assert(owned.schema === "vitagraph-patient-owned-record" && owned.scope === "patient-controlled-copy", "Patient-owned JSON scope/schema mismatch.");
+  assert(owned.clinical.healthMap.conditions.some(({ id }) => id === "hypertension"), "Patient-owned JSON omitted the refined condition.");
+  assert(owned.clinical.medications.some(({ label }) => label === "에날라프릴"), "Patient-owned JSON omitted the signed prescription.");
+  assert(!/전달검증환자|HANDOFF-001|1980-02-03|특이 증상 없음|복약 유지/.test(ownedJsonText), "Patient-owned JSON exposed an identifier or raw clinical note.");
+  await evaluate("document.getElementById('resetButton').click()");
+  await waitFor("document.getElementById('conditionCount')?.textContent === '1개'", "Clearing patient input also removed the connected clinical condition.");
+  assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('고혈압') && !document.getElementById('miniConditionList').textContent.includes('편두통')"), "Map did not preserve only the connected record after clearing patient input.");
 
   await navigate("/connections", "Boolean(document.getElementById('networkScene'))");
-  await waitFor("document.getElementById('sceneNodeCount')?.textContent.includes('1개')", "Connections did not receive imported patient state.");
+  await waitFor("document.getElementById('sceneNodeCount')?.textContent.includes('1개')", "Connections did not receive the connected patient state.");
+  assert(await evaluate(`(() => {
+    const node = document.querySelector('[data-node-id="hypertension"]');
+    const detail = document.getElementById("explorerEvidenceKind");
+    return node?.dataset.evidenceKind === "recorded"
+      && node?.dataset.evidenceSource === "clinical"
+      && /서명·확정/.test(node.getAttribute("aria-label") || "")
+      && !/진단 사실 아님/.test(node.getAttribute("aria-label") || "")
+      && detail?.dataset.provenance === "clinical"
+      && /EMR 확정 기록/.test(detail.textContent)
+      && !/진단(?:으로 기록된 사실이| 사실) 아님/.test(detail.textContent);
+  })()`), "Connections mislabeled the EMR-confirmed condition as inferred or unverified.");
   await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
-  await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Visit brief did not receive imported patient state.");
+  await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Visit brief did not receive the connected patient state.");
+  assert(await evaluate("document.getElementById('clinicalSnapshotStatus').textContent.includes('자동 연결')"), "Visit brief did not identify the signed snapshot.");
+  await evaluate(`
+    document.getElementById("patientSelfReport").value = "지난 2주 동안 야간 기침이 심했습니다.";
+    document.getElementById("patientSelfReport").dispatchEvent(new Event("input", { bubbles: true }));
+  `);
+  await waitFor("document.getElementById('questions').textContent.includes('최근 변화가 언제 시작')", "Patient self-report did not create a grounded rule question.");
+  await evaluate("document.querySelector('.question-select__input').click()");
+  await waitFor("document.querySelector('.question-select__input').checked && !document.getElementById('sharePatientBrief').disabled", "Patient did not explicitly select a question for sharing.");
+  await evaluate("document.getElementById('sharePatientBrief').click()");
+  await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('의료진 EMR에 공유')", "Patient brief share did not finish.");
+  const sharedBridgeText = await evaluate("localStorage.getItem('vitagraph-care-bridge-v1')");
+  const sharedBridge = JSON.parse(sharedBridgeText);
+  assert(sharedBridge.patient?.brief?.summary.includes("지난 2주 동안 야간 기침이 심했습니다"), "Shared brief omitted the patient-authored nocturnal cough summary.");
+  assert(sharedBridge.patient.brief.questions.length > 0, "Shared brief omitted the explicitly selected question.");
+
+  await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '전달검증환자'");
+  await waitFor("Boolean(document.querySelector('.copilot-bridge-status'))", "EMR did not receive the explicitly shared patient brief.");
+  assert(await evaluate("document.querySelector('.copilot-bridge-status').textContent.includes('환자가 공유한 내용') && document.querySelector('.copilot-bridge-status').textContent.includes('미검증')"), "EMR did not label the patient brief as shared and unverified.");
+  assert(await evaluate("document.getElementById('copilotContent').textContent.includes('기침이 시작된 시점') && document.getElementById('copilotContent').textContent.includes('에날라프릴') && document.getElementById('copilotContent').textContent.includes('원인이라고 단정하지 않습니다')"), "Clinician assistant did not turn the cough/ACE timing signal into a non-causal confirmation question.");
+
+  await navigate("/map", "Boolean(document.getElementById('healthForm'))");
+  await evaluate(`
+    document.getElementById("healthNote").value = "속쓰림";
+    document.getElementById("healthNote").dispatchEvent(new Event("input", { bubbles: true }));
+    document.querySelector('[data-condition="migraine"]').click();
+    document.getElementById("healthForm").requestSubmit();
+  `);
+  await waitFor("document.getElementById('conditionCount')?.textContent === '3개'", "Map did not combine clinical, patient-declared, and input-inferred conditions before disconnect.");
+  const staleClinicalScene = await evaluate("sessionStorage.getItem('vitagraph-scene')");
+  const staleClinicalSceneValue = JSON.parse(staleClinicalScene);
+  assert(staleClinicalSceneValue.clinicalConditionIds.includes("hypertension"), "Clinical condition provenance was not persisted before disconnect.");
+  assert(staleClinicalSceneValue.patientVisibleIds.includes("migraine") && staleClinicalSceneValue.patientVisibleIds.includes("reflux"), "Patient-declared or input-inferred conditions were not preserved separately before disconnect.");
+  await evaluate("localStorage.removeItem('vitagraph-care-bridge-v1')");
+
+  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(staleClinicalScene)})`);
+  await navigate("/connections", "Boolean(document.getElementById('networkScene'))");
+  await waitFor("document.getElementById('sceneNodeCount')?.textContent.includes('2개')", "Connections retained a stale clinical-only condition after disconnect.");
+  assert(await evaluate(`(() => {
+    const ids = [...document.querySelectorAll("[data-node-id]")].map(({ dataset }) => dataset.nodeId);
+    const migraine = document.querySelector('[data-node-id="migraine"]');
+    const reflux = document.querySelector('[data-node-id="reflux"]');
+    return !ids.includes("hypertension")
+      && ids.includes("migraine")
+      && ids.includes("reflux")
+      && migraine?.dataset.evidenceSource === "patient"
+      && migraine?.dataset.evidenceKind === "recorded"
+      && reflux?.dataset.evidenceSource === "inferred"
+      && reflux?.dataset.evidenceKind === "inferred";
+  })()`), "Connections did not preserve patient provenance while removing the disconnected clinical condition.");
+
+  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(staleClinicalScene)})`);
+  await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
+  await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Insights did not preserve patient questions after clinical disconnect.");
+  assert(await evaluate(`(() => {
+    const signals = document.getElementById("signals").textContent;
+    return signals.includes("편두통")
+      && signals.includes("위식도역류")
+      && !signals.includes("고혈압")
+      && document.getElementById("clinicalSnapshotStatus").textContent.includes("연결되지 않았")
+      && document.getElementById("exportClinicalSnapshot").disabled
+      && document.getElementById("sharePatientBrief").disabled;
+  })()`), "Insights retained stale clinical evidence or discarded patient-declared/inferred evidence after disconnect.");
+
+  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(staleClinicalScene)})`);
+  await navigate("/map", "Boolean(document.getElementById('healthForm'))");
+  await waitFor("document.getElementById('conditionCount')?.textContent === '2개'", "Map retained a stale clinical-only condition after disconnect.");
+  assert(await evaluate(`(() => {
+    const labels = document.getElementById("miniConditionList").textContent;
+    const scene = JSON.parse(sessionStorage.getItem("vitagraph-scene"));
+    return labels.includes("편두통")
+      && labels.includes("위식도역류")
+      && !labels.includes("고혈압")
+      && scene.clinicalConditionIds.length === 0
+      && scene.patientVisibleIds.includes("migraine")
+      && scene.patientVisibleIds.includes("reflux")
+      && !scene.visibleIds.includes("hypertension")
+      && document.getElementById("careLinkStatus").dataset.state === "empty"
+      && document.getElementById("careLinkDetails").hidden;
+  })()`), "Map did not clear stale clinical details while preserving patient-declared and inferred conditions.");
 
   await client.call("Emulation.setDeviceMetricsOverride", {
     width: 390,
@@ -268,15 +368,21 @@ try {
   assert(gatewayLayout.cautions.length === 2 && gatewayLayout.cautions.every(({ top, bottom, display }) => top >= 0 && bottom <= 844 && display !== "none"), `Both safety cautions were not visible within 390×844: ${JSON.stringify(gatewayLayout)}`);
 
   const result = {
-    transferCode: transfer.transferCode,
-    conditions: transfer.healthMap.conditions.length,
-    measurements: transfer.healthMap.measurements.length,
-    signedEncounterTransfer: true,
-    demoExportBlocked: true,
-    cancelledImportAtomic: true,
+    channelId: sharedBridge.channelId,
+    conditions: clinical.healthMap.conditions.length,
+    measurements: clinical.healthMap.measurements.length,
+    medications: clinical.medications.length,
+    signedEncounterAutoConnected: true,
+    demoSyncBlocked: true,
+    patientOwnedJsonExported: true,
     mapHydrated: true,
     connectionsLinked: true,
+    clinicalProvenanceVisible: true,
     visitBriefLinked: true,
+    patientBriefExplicitlyShared: true,
+    clinicianCoughAceQuestionGrounded: true,
+    staleClinicalClearedEverywhere: true,
+    patientSignalsPreservedAfterDisconnect: true,
     gatewayMobileReady: true,
   };
   const temporaryReportPath = `${reportPath}.${process.pid}.tmp`;

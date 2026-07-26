@@ -35,15 +35,21 @@ test("개인 홈은 데이터 경계를 독립 섹션 대신 개인 보관 안�
   const personalCopy = html.match(/<section class="beta"[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.doesNotMatch(html, /<section class="data-boundary"/);
   assert.match(personalCopy, /class="beta__boundary" id="data-boundary"/);
-  assert.match(personalCopy, /원문은 서버로 보내지 않습니다/);
-  assert.match(personalCopy, /공용 기기에서는 저장을 권하지 않습니다/);
+  assert.match(personalCopy, /정제 JSON은 환자가 직접 선택해 보관하는 사본입니다/);
+  assert.match(personalCopy, /병원 연결을 위한 업로드 파일이 아니며/);
+  assert.match(personalCopy, /프론티어 AI 전송은 별도 동의 없이는 실행되지 않습니다/);
   assert.doesNotMatch(css, /\.data-boundary\s*\{/);
 });
 
-test("다음 진료 제목은 데스크톱에서 한 줄을 유지한다", async () => {
+test("다음 진료 CTA는 제목과 분리된 균형 잡힌 열에서 반응형으로 흐른다", async () => {
   const css = await readFile("src/landing.css", "utf8");
 
-  assert.match(css, /@media \(min-width: 801px\)[\s\S]*?\.closing h2\s*\{[\s\S]*?white-space:\s*nowrap/);
+  assert.match(css, /\.closing\s*\{[\s\S]*?grid-template-columns:\s*1fr[\s\S]*?justify-items:\s*center/);
+  assert.match(css, /\.closing\s*\{[\s\S]*?border:\s*1px solid var\(--line\)/);
+  assert.match(css, /\.closing \.landing-actions\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.closing \.landing-actions\s*\{[\s\S]*?justify-self:\s*center/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.closing \.landing-actions\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
+  assert.doesNotMatch(css, /\.closing h2\s*\{[\s\S]*?white-space:\s*nowrap/);
 });
 
 test("개인 홈의 아래 섹션은 동작 줄이기를 존중하는 스크롤 리빌을 사용한다", async () => {

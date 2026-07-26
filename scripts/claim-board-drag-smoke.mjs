@@ -58,6 +58,42 @@ await runBrowserSmoke({
   assert(initial.laneCounts[0] === 3 && initial.laneCounts.slice(1).every((count) => count === 0), "Fresh cards are not in the manual unclassified lane.");
   assert(Math.max(...initial.laneWidths) - Math.min(...initial.laneWidths) <= 2, `Desktop review lanes are not equal width: ${initial.laneWidths.join(', ')}`);
   assert(initial.documentWidth <= initial.viewportWidth, `Desktop claim board overflows the viewport: ${initial.documentWidth}/${initial.viewportWidth}`);
+  const disclosure = await evaluate(`(() => {
+    const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+    const toggle = card.querySelector('[data-claim-detail-toggle]');
+    const details = card.querySelector('.claim-card__details');
+    const before = {
+      expanded: toggle.getAttribute('aria-expanded'),
+      open: details.open,
+      summaryStatus: card.querySelector('.claim-computed-status')?.textContent,
+      summaryFacts: card.querySelector('.claim-facts')?.textContent,
+    };
+    toggle.click();
+    const after = {
+      expanded: toggle.getAttribute('aria-expanded'),
+      open: details.open,
+      regionRole: details.getAttribute('role'),
+      ariaModal: details.getAttribute('aria-modal'),
+      labelledBy: details.getAttribute('aria-labelledby'),
+      evidence: details.querySelector('.claim-evidence')?.textContent,
+      live: document.getElementById('claimBoardLive')?.textContent,
+    };
+    toggle.click();
+    return { before, after };
+  })()`);
+  assert(disclosure.before.expanded === "false"
+    && disclosure.before.open === false
+    && /자동 판정/.test(disclosure.before.summaryStatus ?? "")
+    && /차트 시행/.test(disclosure.before.summaryFacts ?? ""),
+  `Collapsed claim card did not retain its decision-critical summary: ${JSON.stringify(disclosure)}`);
+  assert(disclosure.after.expanded === "true"
+    && disclosure.after.open === true
+    && disclosure.after.regionRole === "dialog"
+    && disclosure.after.ariaModal === "true"
+    && Boolean(disclosure.after.labelledBy)
+    && /연결 차트 근거/.test(disclosure.after.evidence ?? "")
+    && /세부정보를 열었습니다/.test(disclosure.after.live ?? ""),
+  `Claim evidence disclosure was not accessible or complete: ${JSON.stringify(disclosure)}`);
   await evaluate("document.getElementById('claimBoardTitle').scrollIntoView({ block: 'start' })");
   const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
   await mkdir(dirname(screenshotPath), { recursive: true });
@@ -137,6 +173,7 @@ await runBrowserSmoke({
   );
 
   const selectSelector = `[data-claim-review-select="${initial.cardId}"]`;
+  await evaluate(`document.querySelector('[data-claim-detail-toggle="${initial.cardId}"]').click()`);
   assert(await tabTo(selectSelector), "Keyboard focus could not reach the claim review stage control.");
   await evaluate(`(() => {
     const select = document.querySelector(${JSON.stringify(selectSelector)});
@@ -274,7 +311,10 @@ await runBrowserSmoke({
   await setViewport({ width: 390, height: 844, mobile: true });
   const mobile = await evaluate(`(() => {
     const lanes = [...document.querySelectorAll('[data-claim-review-lane]')];
-    const select = document.querySelector('[data-claim-review-select]');
+    const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+    const toggle = card.querySelector('[data-claim-detail-toggle]');
+    if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+    const select = card.querySelector('[data-claim-review-select]');
     const handle = document.querySelector('.claim-drag-handle');
     return {
       laneCount: lanes.length,
@@ -302,6 +342,7 @@ await runBrowserSmoke({
     screenshot: screenshotPath,
     desktop: initial,
     afterDrag,
+    disclosure,
     responsive,
     mobile,
   });

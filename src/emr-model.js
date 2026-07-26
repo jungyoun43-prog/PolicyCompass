@@ -1,6 +1,10 @@
 import { DEFAULT_CLAIM_RULES, evaluateClaimRule, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
 import { createVisitBrief } from "./insight-model.js";
 import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
+import {
+  createClinicalQuestionSuggestions,
+  normalizeClinicalPatientBrief,
+} from "./clinical-question-assistant.js";
 import { CONDITIONS } from "./data.js";
 
 export const EMR_SCHEMA = "vitagraph-emr";
@@ -1531,7 +1535,12 @@ function eventDisplay(event) {
   return `${event.label}${value}`;
 }
 
-export function createLocalCopilotBrief(patientInput, claimEvaluations = [], asOf = new Date().toISOString().slice(0, 10)) {
+export function createLocalCopilotBrief(
+  patientInput,
+  claimEvaluations = [],
+  asOf = new Date().toISOString().slice(0, 10),
+  patientBriefInput = {},
+) {
   const patient = createFinalizedPatientView(patientInput);
   const conditions = patient.events.filter((event) => event.type === "condition" && hasCompatibleEventLifecycle(event));
   const medications = patient.events.filter((event) => event.type === "medication" && hasCompatibleEventLifecycle(event));
@@ -1562,11 +1571,27 @@ export function createLocalCopilotBrief(patientInput, claimEvaluations = [], asO
     ...sourceEvents.map(({ id }) => id),
     ...tasks.flatMap(({ evidenceEventIds }) => evidenceEventIds),
   ]);
-  const questions = visitBrief.questions.map((question) => ({
+  const conditionQuestions = visitBrief.questions.map((question) => ({
     ...question,
     evidenceEventIds: conditions.filter((event) => conditionIdForEvent(event) === question.sourceId).map(({ id }) => id),
+    patientBriefIds: [],
   })).filter(({ evidenceEventIds }) => evidenceEventIds.length > 0);
-  for (const eventId of questions.flatMap(({ evidenceEventIds }) => evidenceEventIds)) provenanceIds.add(eventId);
+  const questionDraft = createClinicalQuestionSuggestions(patient, patientBriefInput);
+  const questionKeys = new Set();
+  const patientQuestions = [
+    ...questionDraft.patientQuestions.filter(({ patientBriefIds }) => patientBriefIds.length > 0),
+    ...conditionQuestions,
+    ...questionDraft.patientQuestions.filter(({ patientBriefIds }) => patientBriefIds.length === 0),
+  ].filter((item) => {
+    const key = cleanText(item?.question, "", 500).toLocaleLowerCase("ko");
+    if (!key || questionKeys.has(key)) return false;
+    questionKeys.add(key);
+    return true;
+  }).slice(0, 5);
+  const clinicianQuestions = questionDraft.clinicianQuestions.slice(0, 5);
+  for (const eventId of [...clinicianQuestions, ...patientQuestions].flatMap(({ evidenceEventIds }) => evidenceEventIds)) {
+    provenanceIds.add(eventId);
+  }
   const eventById = new Map(patient.events.map((event) => [event.id, event]));
   return {
     id: uniqueId("brief"),
@@ -1576,9 +1601,12 @@ export function createLocalCopilotBrief(patientInput, claimEvaluations = [], asO
     generatedAt: `${asOf}T00:00:00.000Z`,
     summary,
     tasks,
-    questions,
+    clinicianQuestions,
+    patientQuestions,
+    questions: patientQuestions,
+    patientBriefProvenance: questionDraft.patientBriefProvenance,
     provenance: [...provenanceIds].map((eventId) => eventById.get(eventId)).filter(Boolean).map((event) => ({ eventId: event.id, label: event.label, date: event.date, sourceLabel: event.source.label })),
-    disclaimer: "의료진 검토 전 확정 기록이 아닙니다. 진단·처방·급여 결정을 자동 수행하지 않습니다.",
+    disclaimer: "의료진 검토 전 확정 기록이 아닙니다. 질문 준비용 초안이며 진단·처방·인과관계·급여 결정을 자동 수행하지 않습니다.",
   };
 }
 
@@ -1612,7 +1640,12 @@ function redactPatientText(value, patient) {
   return redacted;
 }
 
-export function createCopilotRequest(patientInput = {}, evaluations = [], asOf = localCalendarDate()) {
+export function createCopilotRequest(
+  patientInput = {},
+  evaluations = [],
+  asOf = localCalendarDate(),
+  patientBriefInput = {},
+) {
   const patient = createFinalizedPatientView(patientInput);
   const aliasToEventId = new Map();
   const eventIdToAlias = new Map();
@@ -1644,9 +1677,33 @@ export function createCopilotRequest(patientInput = {}, evaluations = [], asOf =
       .map((id) => eventIdToAlias.get(id))
       .filter(Boolean),
   }));
+  const patientBrief = normalizeClinicalPatientBrief(patientBriefInput, patient);
+  const aliasToPatientBriefId = new Map();
+  const patientBriefItems = patientBrief.items.map((item, index) => {
+    const alias = `patient-${index + 1}`;
+    aliasToPatientBriefId.set(alias, item.id);
+    return {
+      id: alias,
+      kind: item.kind,
+      text: item.text,
+      observedOn: item.observedOn,
+    };
+  });
   return {
-    payload: { patient: { events }, claimEvaluations, asOf: validDate(asOf) },
+    payload: {
+      patient: { events },
+      patientBrief: {
+        items: patientBriefItems,
+        safety: {
+          patientReported: true,
+          verifiedClinicalFact: false,
+        },
+      },
+      claimEvaluations,
+      asOf: validDate(asOf),
+    },
     aliasToEventId,
+    aliasToPatientBriefId,
   };
 }
 

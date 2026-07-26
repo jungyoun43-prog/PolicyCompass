@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,32 +8,38 @@ const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9229", 10);
 const links = [
   { from: "/", selector: ".role-card--clinical .role-action", path: "/emr", hash: "" },
-  { from: "/patient", selector: ".landing-actions .landing-button--primary", path: "/map", hash: "#import-record" },
-  { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#import-record" },
-  { from: "/insights", selector: "#briefEmpty .brief-action--primary", path: "/map", hash: "#import-record" },
-  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#import-record" },
+  { from: "/patient", selector: ".landing-actions .landing-button--primary", path: "/map", hash: "#connected-record" },
+  { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#connected-record" },
+  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#connected-record" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-primary-actions-"));
-const transferCode = "VG-01234-56789-ABCDE-FGHJK-MNPQRS";
-const transferFixture = join(profile, "patient-transfer.json");
-await writeFile(transferFixture, JSON.stringify({
-  schema: "vitagraph-patient-transfer",
+const careBridgeFixture = {
+  schema: "vitagraph-care-bridge",
   version: 1,
-  exportedAt: "2026-07-20T12:34:56.000Z",
-  transferCode,
-  scope: "patient-vita-graph",
-  trust: "unsigned-local-export",
-  healthMap: {
-    conditions: [{
-      id: "hypertension",
-      label: "고혈압",
-      recordedOn: "2026-07-20",
-      basis: "confirmed-condition",
-    }],
-    measurements: [],
+  channelId: "primary-action-smoke-channel",
+  updatedAt: "2026-07-20T12:34:56.000Z",
+  clinical: {
+    publishedAt: "2026-07-20T12:34:56.000Z",
+    snapshot: {
+      schema: "vitagraph-clinical-snapshot",
+      version: 1,
+      preparedAt: "2026-07-20T12:34:56.000Z",
+      source: "finalized-clinical-record",
+      healthMap: {
+        conditions: [{
+          id: "hypertension",
+          label: "고혈압",
+          recordedOn: "2026-07-20",
+          basis: "confirmed-condition",
+        }],
+        measurements: [],
+      },
+      medications: [],
+      summary: { includedConditions: 1, includedMeasurements: 0, includedMedications: 0 },
+    },
   },
-  summary: { includedConditions: 1, includedMeasurements: 0 },
-}));
+  patient: null,
+};
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const browser = spawn(chrome, [
   "--headless", "--no-sandbox", "--disable-gpu", "--disable-background-networking",
@@ -109,24 +115,13 @@ try {
   await evaluate(`document.getElementById('healthNote').value='혈압 148/94';document.getElementById('healthNote').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('analyzeButton').click()`);
   await waitFor("document.getElementById('miniConditionList').children.length > 0", "/map valid primary action did not update state");
 
-  await evaluate("document.getElementById('transferCode').value='';document.getElementById('selectRecordFile').click()");
-  await waitFor("document.activeElement === document.getElementById('transferCode') && document.getElementById('transferCode').getAttribute('aria-invalid') === 'true'", "/map missing transfer code did not focus and identify its field");
-  await evaluate(`document.getElementById('transferCode').value='VG-01234-56789-ABCDE-FGHJK-MNPQRT';document.getElementById('transferCode').dispatchEvent(new Event('input',{bubbles:true}))`);
-  const documentNode = await client.call("DOM.getDocument");
-  const fileInput = await client.call("DOM.querySelector", {
-    nodeId: documentNode.root.nodeId,
-    selector: "#fhirFile",
-  });
-  assert(fileInput.nodeId, "/map patient transfer file input was not available");
-  await client.call("DOM.setFileInputFiles", { nodeId: fileInput.nodeId, files: [transferFixture] });
-  await waitFor("!document.getElementById('importRecordButton').disabled && document.getElementById('recordFileStatus').textContent.includes('patient-transfer.json')", "/map selected transfer file did not reach the explicit import step");
-  await evaluate("window.confirm=()=>true;document.getElementById('importRecordButton').click()");
-  await waitFor("document.activeElement === document.getElementById('transferCode') && document.getElementById('transferCode').getAttribute('aria-invalid') === 'true'", "/map mismatched transfer code did not focus and identify its field");
-  assert(await evaluate("!document.getElementById('importRecordButton').disabled && document.getElementById('recordFileStatus').textContent.includes('patient-transfer.json')"), "/map mismatched transfer code discarded the selected file");
-  await evaluate(`document.getElementById('transferCode').value=${JSON.stringify(transferCode.toLowerCase())};document.getElementById('transferCode').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('importRecordButton').click()`);
-  await waitFor("document.getElementById('fhirResult').classList.contains('is-success') && document.getElementById('miniConditionList').textContent.includes('고혈압')", "/map corrected transfer code did not import the retained file");
+  await evaluate(`localStorage.setItem('vitagraph-care-bridge-v1', ${JSON.stringify(JSON.stringify(careBridgeFixture))});location.reload()`);
+  await waitFor("document.getElementById('careLinkStatus').dataset.state === 'connected'", "/map did not expose the automatic signed-record connection");
+  assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('고혈압')"), "/map automatic connection omitted the signed condition");
+  assert(await evaluate("!document.getElementById('downloadClinicalJson').disabled"), "/map patient-owned JSON export did not become available");
 
   await navigate("/insights");
+  await waitFor("document.getElementById('clinicalSnapshotStatus').textContent.includes('자동 연결')", "/insights did not expose the signed clinical snapshot");
   await waitFor("!document.getElementById('printBrief').disabled", "/insights populated primary action was not enabled");
   await waitFor("Boolean(document.querySelector('.question-select__input'))", "/insights visit question selection was unavailable");
   const selectedQuestionId = await evaluate("document.querySelector('[data-question-id]').dataset.questionId");
@@ -136,6 +131,9 @@ try {
   await waitFor(`document.querySelector('[data-question-id="${selectedQuestionId}"] .question-select__input').checked`, "/insights visit question selection was not preserved");
   await evaluate("window.__printInvoked=false;window.print=()=>{window.__printInvoked=true};document.getElementById('printBrief').click()");
   await waitFor("window.__printInvoked === true", "/insights populated primary action did not invoke printing");
+  await evaluate("document.getElementById('sharePatientBrief').click()");
+  await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('의료진 EMR에 공유')", "/insights explicit patient-brief share did not finish");
+  assert(await evaluate("Boolean(JSON.parse(localStorage.getItem('vitagraph-care-bridge-v1')).patient?.brief?.questions?.length)"), "/insights did not persist the explicitly shared patient brief");
 
   await evaluate(`localStorage.setItem('vitagraph-journey', JSON.stringify([
     {id:'journey-a',date:'2026-06-01',conditionIds:['hypertension'],measurements:[],source:'직접 입력',createdAt:'2026-06-01T00:00:00.000Z'},
@@ -176,7 +174,7 @@ try {
   } else {
     await waitFor(`document.getElementById('encounterStatus').dataset.status === ${JSON.stringify(expectedStatus)}`, `/emr ${activatedEmrAction} did not produce ${expectedStatus}`);
   }
-  console.log(`primary-action behavioral contracts passed: ${links.length + 4} route states; EMR activated ${activatedEmrAction}`);
+  console.log(`primary-action behavioral contracts passed: ${links.length + 5} route states; EMR activated ${activatedEmrAction}`);
 } finally {
   client?.close(); browser.kill("SIGTERM");
   await Promise.race([new Promise((resolve) => browser.once("exit", resolve)), delay(2_000)]);

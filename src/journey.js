@@ -229,7 +229,7 @@ elements.export.addEventListener("click", () => {
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  setTransferStatus(`Journey 기록 ${journey.length}개를 JSON 파일로 내보냈습니다.`, "success");
+  setTransferStatus(`Journey 기록 ${journey.length}개를 개인 백업 JSON으로 내보냈습니다. EMR 연결 기록에는 영향을 주지 않습니다.`, "success");
 });
 
 elements.importTrigger.addEventListener("click", () => elements.importInput.click());
@@ -241,18 +241,18 @@ elements.importInput.addEventListener("change", async () => {
   try {
     if (file.size > 5 * 1024 * 1024) throw new TypeError("5MB 이하의 Journey 백업 파일을 선택하세요.");
     const imported = parseJourneyBackup(JSON.parse(await file.text()));
-    if (journey.length > 0 && !window.confirm(`현재 기록 ${journey.length}개를 가져온 기록 ${imported.length}개로 교체할까요?`)) {
-      setTransferStatus("가져오기를 취소했습니다.");
+    if (journey.length > 0 && !window.confirm(`현재 Journey ${journey.length}개를 백업의 Journey ${imported.length}개로 교체할까요?`)) {
+      setTransferStatus("Journey 백업 복원을 취소했습니다.");
       return;
     }
     journey = imported;
     persistJourney();
     render();
-    setTransferStatus(`Journey 기록 ${journey.length}개를 가져와 현재 기록을 교체했습니다.`, "success");
+    setTransferStatus(`Journey 백업에서 기록 ${journey.length}개를 복원해 현재 Journey를 교체했습니다.`, "success");
   } catch (error) {
     const message = error instanceof SyntaxError
-      ? "JSON 파일을 읽을 수 없습니다."
-      : error instanceof Error ? error.message : "Journey 백업 파일을 가져오지 못했습니다.";
+      ? "Journey 백업 JSON을 읽을 수 없습니다."
+      : error instanceof Error ? error.message : "Journey 백업을 복원하지 못했습니다.";
     setTransferStatus(message, "error");
   } finally {
     elements.importInput.value = "";

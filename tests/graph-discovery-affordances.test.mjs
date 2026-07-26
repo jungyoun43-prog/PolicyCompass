@@ -51,6 +51,17 @@ test("Health Map 관계 미리보기는 기록 사실과 추론 Connection을 �
   assert.match(portalCss, /\.preview-connection--inferred[\s\S]*?stroke-dasharray/);
 });
 
+test("Health Map 관계 안내는 제목 아래 설명을 들여 쓰고 한국어 어절을 보존한다", async () => {
+  const portalCss = await readFile("src/portal.css", "utf8");
+
+  assert.match(mapHtml, /class="connection-support"/);
+  assert.match(mapHtml, /class="connection-description"[\s\S]*?<span>기록에서 찾은/);
+  assert.match(mapHtml, /class="connection-actions__status" role="status" aria-live="polite"/);
+  assert.match(portalCss, /\.connection-support\s*\{[\s\S]*?margin-left:\s*clamp/);
+  assert.match(portalCss, /\.connection-description\s*\{[\s\S]*?word-break:\s*keep-all/);
+  assert.match(portalCss, /@media \(max-width: 620px\)[\s\S]*?\.connection-support\s*\{[\s\S]*?margin-left:\s*0/);
+});
+
 test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내를 제공한다", () => {
   assertDiscoveryContract(connectionsHtml, "connections");
   assert.match(connectionsHtml, /노드 클릭·Enter: 선택/);
@@ -67,12 +78,26 @@ test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내
 });
 
 test("Connections는 개인 기록 근거와 문헌 기반 추론 관계를 시각·텍스트로 구분한다", () => {
-  assert.match(connectionsHtml, /직접 선택·가져온 질환/);
+  assert.match(connectionsHtml, /EMR 서명·확정 기록 · 환자 직접 선택 항목/);
   assert.match(connectionsHtml, /입력 신호에서 찾은 후보/);
   assert.match(connectionsHtml, /문헌 기반 추론 관계 · 환자 기록 사실 아님/);
+  assert.match(connectionsJs, /function conditionProvenance\(id\)/);
+  assert.match(connectionsJs, /state\.clinicalConditionIds\.includes\(id\)/);
+  assert.match(connectionsJs, /source: "clinical"/);
+  assert.match(connectionsJs, /EMR 확정 기록 · 의료진이 서명·확정한 뒤 환자용으로 정제된 질환 항목/);
+  assert.match(connectionsJs, /source: "patient"/);
+  assert.match(connectionsJs, /환자 직접 확인 · 건강 지도에서 직접 선택한 항목 · 의료진 확정 진단 아님/);
+  assert.match(connectionsJs, /source: "inferred"/);
   assert.match(connectionsJs, /data-evidence-kind/);
-  assert.match(connectionsJs, /isRecorded \? "recorded" : "inferred"/);
+  assert.match(connectionsJs, /"data-evidence-kind": provenance\.kind/);
+  assert.match(connectionsJs, /"data-evidence-source": provenance\.source/);
+  assert.match(connectionsJs, /elements\.evidenceKind\.dataset\.provenance = provenance\.source/);
   assert.match(connectionsJs, /진단으로 기록된 사실이 아님/);
+  const clinicalProvenance = connectionsJs.match(
+    /if \(state\.clinicalConditionIds\.includes\(id\)\) \{[\s\S]*?\n  \}/,
+  )?.[0] ?? "";
+  assert.match(clinicalProvenance, /EMR 확정 기록/);
+  assert.doesNotMatch(clinicalProvenance, /진단(?:으로 기록된 사실이| 사실) 아님|확정 진단 아님/);
   assert.match(connectionsJs, /node-selection-ring/);
   assert.match(connectionsJs, /✓ 선택됨/);
   assert.match(explorerCss, /\.scene-edge\.is-inferred[\s\S]*?stroke-dasharray/);
@@ -98,5 +123,5 @@ test("연결된 생명 신호 모티프는 두 그래프 화면이 공유하는 
   ]) {
     assert.ok(brandCss.includes(selector), selector);
   }
-  assert.doesNotMatch(`${mapHtml}\n${connectionsHtml}`, /\b(?:DNA|ECG|AI)\b|스파클|반짝이/i);
+  assert.doesNotMatch(`${mapHtml}\n${connectionsHtml}`, /\b(?:DNA|ECG)\b|스파클|반짝이/i);
 });

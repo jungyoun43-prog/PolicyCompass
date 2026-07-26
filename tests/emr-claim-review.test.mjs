@@ -48,6 +48,32 @@ test("급여 칸반은 드래그·키보드 대체·라이브 안내·감사 이
   assert.match(js, /자동 규칙 판정 .*변경되지 않았습니다/);
 });
 
+test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 규칙 세부정보를 접근 가능하게 펼친다", () => {
+  const renderClaimBoardSource = js.slice(
+    js.indexOf("function renderClaimBoard(patient)"),
+    js.indexOf("function renderJourney(patient, brief)"),
+  );
+  assert.match(html, /카드에는 자동 판정·보완 항목·기준 사용량만 먼저 표시합니다/);
+  assert.match(renderClaimBoardSource, /summary\.dataset\.claimDetailToggle = evaluation\.id/);
+  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-expanded", "false"\)/);
+  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-controls", detailsId\)/);
+  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-haspopup", "dialog"\)/);
+  assert.match(renderClaimBoardSource, /document\.createElement\("dialog"\)/);
+  assert.match(renderClaimBoardSource, /details\.setAttribute\("role", "dialog"\)/);
+  assert.match(renderClaimBoardSource, /details\.setAttribute\("aria-modal", "true"\)/);
+  assert.match(renderClaimBoardSource, /details\.setAttribute\("aria-labelledby", detailTitleId\)/);
+  assert.match(renderClaimBoardSource, /summary\.append\(computedStatus\)/);
+  assert.match(renderClaimBoardSource, /summary\.append\(stale\)/);
+  assert.match(renderClaimBoardSource, /summary\.append\(element\("span", "claim-missing"/);
+  assert.match(renderClaimBoardSource, /summary\.append\(facts\)/);
+  assert.match(renderClaimBoardSource, /detailContent\.append\(evidence, detailAside, detailBoundary\)/);
+  assert.match(renderClaimBoardSource, /직접 연결된 확정 차트 근거가 없습니다/);
+  assert.match(js, /addEventListener\("click", \(event\) => \{[\s\S]*?data-claim-detail-toggle[\s\S]*?details\.showModal\(\)/);
+  assert.match(css, /\.claim-card__details::backdrop\s*\{/);
+  assert.match(css, /\.claim-card__details-content\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(css, /\.claim-card__summary:focus-visible\s*\{/);
+});
+
 test("재계산으로 오래된 담당자 검토가 되면 미분류로 안전하게 보이고 재검토를 안내한다", () => {
   assert.match(js, /resolveClaimReview\(state, evaluation\)/);
   assert.match(js, /data\.claimReviewStale|dataset\.claimReviewStale/);

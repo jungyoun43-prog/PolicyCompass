@@ -36,10 +36,6 @@ import {
 import { parseEmrFhirBundle } from "./emr-fhir.js";
 import { exportPatientFhirBundle } from "./emr-fhir-export.js";
 import {
-  createPatientTransferPackage,
-  patientTransferFilename,
-} from "./patient-transfer.js";
-import {
   addEncounterDiagnosis,
   addEncounterObservation,
   addEncounterOrder,
@@ -69,6 +65,17 @@ import {
   CLAIM_LANE_LABELS,
   CLAIM_LANE_ORDER,
 } from "./claim-rules.js";
+import {
+  CLINICAL_PATIENT_BRIEF_EVENT,
+  normalizeClinicalPatientBrief,
+} from "./clinical-question-assistant.js";
+import {
+  clinicalSnapshotFingerprint as careBridgeClinicalFingerprint,
+  createClinicalSnapshot,
+  publishClinicalSnapshot,
+  readCareBridge,
+  subscribeCareBridge,
+} from "./care-bridge.js";
 
 const EVENT_LABELS = {
   encounter: "내원",
@@ -344,8 +351,9 @@ const refs = {
   importEmr: byId("importEmr"),
   exportEmr: byId("exportEmr"),
   exportFhir: byId("exportFhir"),
-  exportPatientTransfer: byId("exportPatientTransfer"),
-  patientTransferStatus: byId("patientTransferStatus"),
+  syncPersonalRecord: byId("syncPersonalRecord"),
+  disconnectPersonalRecord: byId("disconnectPersonalRecord"),
+  personalSyncStatus: byId("personalSyncStatus"),
   exportEmrSecondary: byId("exportEmrSecondary"),
   wipeEmr: byId("wipeEmr"),
   exportRecoveryRaw: byId("exportRecoveryRaw"),
@@ -379,7 +387,18 @@ let aiCapability = { checked: false, configured: false, model: "" };
 let lastFhirReport = null;
 let draggedClaimReviewId = "";
 let claimEvaluationById = new Map();
+let lastPublishedPatientId = "";
+let lastPublishedSnapshotFingerprint = "";
+const PERSONAL_SYNC_SUSPENDED_KEY = "vitagraph-personal-sync-suspended-v1";
+let personalConnectionSuspended = (() => {
+  try {
+    return localStorage.getItem(PERSONAL_SYNC_SUSPENDED_KEY) === "1";
+  } catch {
+    return false;
+  }
+})();
 const briefCache = new Map();
+const patientBriefCache = new Map();
 const workflowDisclosureSessionState = new Map();
 const pendingWorkflowDisclosureSync = new WeakMap();
 
@@ -560,6 +579,108 @@ function finalizedPatient(patient) {
   return patient ? createFinalizedPatientView(patient) : null;
 }
 
+function connectedPatientBrief(patient) {
+  return patient ? patientBriefCache.get(patient.id) ?? null : null;
+}
+
+function comparableClinicalSnapshot(snapshot) {
+  return {
+    healthMap: snapshot?.healthMap ?? null,
+    medications: Array.isArray(snapshot?.medications) ? snapshot.medications : [],
+  };
+}
+
+function patientSnapshotMatchesBridge(patient, bridge) {
+  if (!patient || !bridge?.clinical?.snapshot) return false;
+  const bridgeSnapshot = bridge.clinical.snapshot;
+  const bridgeFactCount = (bridgeSnapshot.healthMap?.conditions?.length ?? 0)
+    + (bridgeSnapshot.healthMap?.measurements?.length ?? 0)
+    + (bridgeSnapshot.medications?.length ?? 0);
+  // The bridge intentionally carries no identity. An empty snapshot could match
+  // more than one patient, so fail closed instead of attaching an ambiguous brief.
+  if (bridgeFactCount === 0) return false;
+  try {
+    const currentSnapshot = createClinicalSnapshot(patient, bridgeSnapshot.preparedAt);
+    return clinicalContextFingerprint(comparableClinicalSnapshot(currentSnapshot))
+      === clinicalContextFingerprint(comparableClinicalSnapshot(bridgeSnapshot));
+  } catch {
+    return false;
+  }
+}
+
+function bridgeMatchesPatient(patient, bridge) {
+  if (!patient || state.demo) return false;
+  const matchingPatientIds = state.patients
+    .filter((candidate) => patientSnapshotMatchesBridge(candidate, bridge))
+    .map(({ id }) => id);
+  return matchingPatientIds.length === 1 && matchingPatientIds[0] === patient.id;
+}
+
+function storePatientBrief(patient, briefInput, {
+  receivedAt = new Date().toISOString(),
+  stale = false,
+  channelId = "direct-local-hook",
+} = {}) {
+  if (!patient) return false;
+  const brief = normalizeClinicalPatientBrief(briefInput, patient);
+  const previous = connectedPatientBrief(patient);
+  if (!brief.items.length) {
+    if (!previous) return false;
+    patientBriefCache.delete(patient.id);
+    briefCache.delete(patient.id);
+    return true;
+  }
+  const next = {
+    brief,
+    receivedAt: typeof receivedAt === "string" ? receivedAt : new Date().toISOString(),
+    stale: stale === true,
+    channelId,
+  };
+  if (previous && clinicalContextFingerprint(previous) === clinicalContextFingerprint(next)) return false;
+  patientBriefCache.set(patient.id, next);
+  briefCache.delete(patient.id);
+  return true;
+}
+
+function syncPatientBriefFromCareBridge(bridge = readCareBridge(), patient = selectedPatient()) {
+  const current = connectedPatientBrief(patient);
+  if (!bridgeMatchesPatient(patient, bridge)) {
+    if (!current || current.channelId === "direct-local-hook") return false;
+    if (bridge?.channelId === current.channelId) {
+      if (current.stale) return false;
+      patientBriefCache.set(patient.id, { ...current, stale: true });
+      briefCache.delete(patient.id);
+      return true;
+    }
+    patientBriefCache.delete(patient.id);
+    briefCache.delete(patient.id);
+    return true;
+  }
+  const shared = bridge?.patient;
+  if (!shared?.brief) {
+    if (!connectedPatientBrief(patient)) return false;
+    patientBriefCache.delete(patient.id);
+    briefCache.delete(patient.id);
+    return true;
+  }
+  const patientUpdatedAt = shared.updatedAt ?? shared.brief.preparedAt ?? bridge.updatedAt;
+  const currentClinicalFingerprint = careBridgeClinicalFingerprint(bridge.clinical?.snapshot);
+  return storePatientBrief(patient, shared.brief, {
+    receivedAt: patientUpdatedAt,
+    stale: !shared.basedOnClinicalFingerprint
+      || shared.basedOnClinicalFingerprint !== currentClinicalFingerprint,
+    channelId: bridge.channelId,
+  });
+}
+
+function renderPatientBriefUpdate() {
+  const patient = selectedPatient();
+  if (!patient) return;
+  const evaluations = claimEvaluations(patient);
+  renderCopilot(patient, evaluations);
+  renderJourney(patient, briefCache.get(patient.id));
+}
+
 function claimEvaluations(patient, { includeCurrentDraft = false, encounterId = "", asOf = today() } = {}) {
   if (!patient) return [];
   const activeEncounter = getEncounter(patient, encounterId) ?? unresolvedEncounterForPatient(patient);
@@ -578,23 +699,34 @@ function claimEvaluationsForState(stateInput, asOf = today()) {
   return CLAIM_LANE_ORDER.flatMap((status) => board.lanes[status]);
 }
 
-function restoreCopilotEvidenceIds(brief, aliasToEventId) {
+function restoreCopilotEvidenceIds(brief, aliasToEventId, aliasToPatientBriefId = new Map()) {
   const restore = (items) => (Array.isArray(items) ? items : []).map((item) => ({
     ...item,
     evidenceEventIds: (Array.isArray(item.evidenceEventIds) ? item.evidenceEventIds : [])
       .map((id) => aliasToEventId.get(id))
+      .filter(Boolean),
+    patientBriefIds: (Array.isArray(item.patientBriefIds) ? item.patientBriefIds : [])
+      .map((id) => aliasToPatientBriefId.get(id))
       .filter(Boolean),
   }));
   return {
     ...brief,
     summary: restore(brief.summary),
     priorities: restore(brief.priorities),
-    questions: restore(brief.questions),
+    clinicianQuestions: restore(brief.clinicianQuestions),
+    patientQuestions: restore(brief.patientQuestions),
+    questions: restore(brief.patientQuestions ?? brief.questions),
     warnings: restore(brief.warnings),
     provenance: (Array.isArray(brief.provenance) ? brief.provenance : []).map((item) => ({
       ...item,
       eventId: aliasToEventId.get(item.eventId) ?? "",
     })).filter(({ eventId }) => eventId),
+    patientBriefProvenance: (Array.isArray(brief.patientBriefProvenance) ? brief.patientBriefProvenance : [])
+      .map((item) => ({
+        ...item,
+        id: aliasToPatientBriefId.get(item.id) ?? "",
+      }))
+      .filter(({ id }) => id),
   };
 }
 
@@ -602,6 +734,7 @@ function copilotRequestFingerprint(request) {
   return clinicalContextFingerprint({
     payload: request.payload,
     eventIdentities: [...request.aliasToEventId.entries()],
+    patientBriefIdentities: [...(request.aliasToPatientBriefId ?? new Map()).entries()],
   });
 }
 
@@ -788,38 +921,113 @@ function renderSummary(patient) {
 }
 
 function normalizedQuestion(item) {
-  if (typeof item === "string") return { question: item, reason: "로컬 모델이 만든 의료진 검토용 질문입니다." };
+  if (typeof item === "string") {
+    return {
+      question: item,
+      reason: "로컬 모델이 만든 의료진 검토용 질문입니다.",
+      evidenceEventIds: [],
+      patientBriefIds: [],
+    };
+  }
   return {
     question: item?.question || item?.title || "확인 질문",
     reason: item?.reason || item?.basis || "",
     evidenceEventIds: Array.isArray(item?.evidenceEventIds) ? item.evidenceEventIds : [],
+    patientBriefIds: Array.isArray(item?.patientBriefIds) ? item.patientBriefIds : [],
   };
 }
 
-function appendGroundedItem(list, text, evidenceEventIds, patient) {
+function groundedSources(evidenceEventIds, patientBriefIds, patient, patientBriefProvenance) {
   const eventById = new Map(patient.events.map((event) => [event.id, event]));
-  const citations = [...new Set(evidenceEventIds ?? [])].map((id) => eventById.get(id)).filter(Boolean);
-  if (!citations.length) return false;
-  const item = element("li");
-  item.append(document.createTextNode(text));
+  const patientBriefById = new Map((Array.isArray(patientBriefProvenance) ? patientBriefProvenance : [])
+    .map((item) => [item.id, item]));
+  return {
+    chart: [...new Set(evidenceEventIds ?? [])].map((id) => eventById.get(id)).filter(Boolean),
+    patient: [...new Set(patientBriefIds ?? [])].map((id) => patientBriefById.get(id)).filter(Boolean),
+  };
+}
+
+function appendCitationRow(item, sources) {
   const citationRow = element("span", "copilot-citations");
-  for (const event of citations.slice(0, 4)) {
-    citationRow.append(element(
+  for (const event of sources.chart.slice(0, 4)) {
+    const source = element(
       "small",
       "",
-      [event.label, displayDate(event.date), event.source?.label, event.source?.resourceId].filter(Boolean).join(" · "),
-    ));
+      "확정 차트 · " + [event.label, displayDate(event.date), event.source?.label, event.source?.resourceId].filter(Boolean).join(" · "),
+    );
+    source.dataset.provenanceKind = "chart";
+    citationRow.append(source);
+  }
+  for (const patientSource of sources.patient.slice(0, 3)) {
+    const source = element(
+      "small",
+      "",
+      [patientSource.label, patientSource.observedOn ? displayDate(patientSource.observedOn) : "", "환자보고 · 미검증"].filter(Boolean).join(" · "),
+    );
+    source.dataset.provenanceKind = "patient";
+    citationRow.append(source);
   }
   item.append(citationRow);
+}
+
+function appendGroundedItem(
+  list,
+  text,
+  evidenceEventIds,
+  patient,
+  patientBriefIds = [],
+  patientBriefProvenance = [],
+) {
+  const sources = groundedSources(evidenceEventIds, patientBriefIds, patient, patientBriefProvenance);
+  if (!sources.chart.length && !sources.patient.length) return false;
+  const item = element("li");
+  item.append(document.createTextNode(text));
+  appendCitationRow(item, sources);
+  list.append(item);
+  return true;
+}
+
+function appendQuestionItem(list, value, patient, patientBriefProvenance) {
+  const question = normalizedQuestion(value);
+  const sources = groundedSources(
+    question.evidenceEventIds,
+    question.patientBriefIds,
+    patient,
+    patientBriefProvenance,
+  );
+  if (!sources.chart.length && !sources.patient.length) return false;
+  const item = element("li", "copilot-question");
+  item.append(
+    element("b", "", question.question),
+    element("p", "", question.reason),
+  );
+  appendCitationRow(item, sources);
   list.append(item);
   return true;
 }
 
 function renderCopilot(patient, evaluations) {
-  const brief = briefCache.get(patient.id) ?? createLocalCopilotBrief(patient, evaluations, today());
+  const connectedBrief = connectedPatientBrief(patient);
+  const brief = briefCache.get(patient.id)
+    ?? createLocalCopilotBrief(patient, evaluations, today(), connectedBrief?.brief);
   if (!briefCache.has(patient.id)) briefCache.set(patient.id, brief);
   clear(refs.copilotContent);
   refs.copilotMode.textContent = brief.kind === "model" ? "로컬 AI" : "규칙 기반";
+  const patientBriefProvenance = Array.isArray(brief.patientBriefProvenance) ? brief.patientBriefProvenance : [];
+
+  if (connectedBrief?.brief?.items?.length) {
+    const bridgeStatus = element("section", "copilot-bridge-status");
+    bridgeStatus.dataset.stale = String(connectedBrief.stale === true);
+    bridgeStatus.append(
+      element("b", "", connectedBrief.stale ? "환자가 공유한 내용 · 다시 확인 필요" : "환자가 공유한 내용 · 로컬 연결"),
+      element(
+        "span",
+        "",
+        `${connectedBrief.brief.items.length}개 항목 · 수신 ${displayTimestamp(connectedBrief.receivedAt)} · 환자보고/미검증 · EMR 사실로 저장하지 않음`,
+      ),
+    );
+    refs.copilotContent.append(bridgeStatus);
+  }
 
   const summary = element("section", "copilot-section");
   summary.append(element("h4", "", "기록 요약"));
@@ -848,6 +1056,43 @@ function renderCopilot(patient, evaluations) {
   prioritySection.append(priorityList);
   refs.copilotContent.append(prioritySection);
 
+  const questionSection = element("section", "copilot-section copilot-question-section");
+  questionSection.append(element("h4", "", "진료 대화 질문 초안"));
+  const questionGrid = element("div", "copilot-question-grid");
+  const clinicianColumn = element("section", "copilot-question-column copilot-question-column--clinician");
+  clinicianColumn.append(
+    element("span", "copilot-question-kicker", "ASK THE PATIENT"),
+    element("h5", "", "의사가 먼저 물어볼 질문"),
+  );
+  const clinicianList = element("ol");
+  for (const item of brief.clinicianQuestions ?? []) {
+    appendQuestionItem(clinicianList, item, patient, patientBriefProvenance);
+  }
+  if (!clinicianList.childElementCount) {
+    clinicianList.append(element("li", "copilot-question copilot-question--empty", "질문을 만들 확정 차트 또는 공유 브리프 근거가 없습니다."));
+  }
+  clinicianColumn.append(clinicianList);
+
+  const patientColumn = element("section", "copilot-question-column copilot-question-column--patient");
+  patientColumn.append(
+    element("span", "copilot-question-kicker", "ANTICIPATE"),
+    element("h5", "", "환자가 물을 수 있는 질문"),
+  );
+  const patientList = element("ol");
+  for (const item of brief.patientQuestions ?? brief.questions ?? []) {
+    appendQuestionItem(patientList, item, patient, patientBriefProvenance);
+  }
+  if (!patientList.childElementCount) {
+    patientList.append(element("li", "copilot-question copilot-question--empty", "예상 질문을 만들 확정 차트 또는 공유 브리프 근거가 없습니다."));
+  }
+  patientColumn.append(patientList);
+  questionGrid.append(clinicianColumn, patientColumn);
+  questionSection.append(
+    questionGrid,
+    element("p", "copilot-question-boundary", "질문 준비용 초안입니다. 증상과 약물의 시간 관계는 확인 질문으로만 제시하며 진단·처방·인과관계를 뜻하지 않습니다."),
+  );
+  refs.copilotContent.append(questionSection);
+
   if (Array.isArray(brief.warnings) && brief.warnings.length) {
     const warningSection = element("section", "copilot-section");
     warningSection.append(element("h4", "", "확인 필요"));
@@ -869,6 +1114,14 @@ function renderCopilot(patient, evaluations) {
     ? explicitSources
     : patient.events.filter((event) => referencedIds.has(event.id)).map((event) => ({ label: event.label, date: event.date }));
   for (const source of sources.slice(0, 8)) chips.append(element("span", "", source.label + " · " + displayDate(source.date)));
+  if (patientBriefProvenance.length) {
+    const labels = [...new Set(patientBriefProvenance.map(({ sourceLabel }) => sourceLabel).filter(Boolean))];
+    chips.append(element(
+      "span",
+      "copilot-provenance__patient",
+      `${labels.join(" · ") || "환자 공유 브리프"} ${patientBriefProvenance.length}개 · 미검증`,
+    ));
+  }
   if (!chips.childElementCount) chips.append(element("span", "", "직접 연결된 이벤트 근거 없음"));
   provenance.append(chips);
   refs.copilotContent.append(provenance);
@@ -1338,48 +1591,93 @@ function renderClaimBoard(patient) {
     for (const [evaluationIndex, evaluation] of reviewLanes[stage].entries()) {
       const review = reviewById.get(evaluation.id);
       const card = element("article", "claim-card");
+      const titleId = `claim-card-title-${stage}-${evaluationIndex}`;
+      const detailsId = `claim-card-details-${stage}-${evaluationIndex}`;
+      const detailTitleId = `claim-card-detail-title-${stage}-${evaluationIndex}`;
+      const detailBoundaryId = `claim-card-detail-boundary-${stage}-${evaluationIndex}`;
       card.dataset.status = evaluation.status;
       card.dataset.claimEvaluationId = evaluation.id;
       card.dataset.claimReviewStale = String(review.stale);
+      card.dataset.claimDetailOpen = "false";
       card.draggable = true;
-      card.tabIndex = 0;
-      card.setAttribute("aria-label", `${evaluation.title} · 자동 규칙 판정 ${CLAIM_LANE_LABELS[evaluation.status]} · 담당자 검토 ${CLAIM_REVIEW_STAGE_LABELS[stage]}${review.stale ? " · 이전 검토 무효화, 재검토 필요" : ""}`);
-      card.setAttribute("aria-describedby", "claimBoardInstructions");
-      const top = element("div", "claim-card__top");
+
+      const summary = element("button", "claim-card__summary");
+      summary.type = "button";
+      summary.dataset.claimDetailToggle = evaluation.id;
+      summary.setAttribute("aria-expanded", "false");
+      summary.setAttribute("aria-controls", detailsId);
+      summary.setAttribute("aria-haspopup", "dialog");
+      summary.setAttribute("aria-describedby", "claimBoardInstructions");
+      summary.dataset.claimDetailSummary = `${evaluation.title} · 자동 규칙 판정 ${CLAIM_LANE_LABELS[evaluation.status]} · 담당자 검토 ${CLAIM_REVIEW_STAGE_LABELS[stage]}${review.stale ? " · 이전 검토 무효화, 재검토 필요" : ""}`;
+      summary.setAttribute("aria-label", `${summary.dataset.claimDetailSummary} · 근거·세부정보 보기`);
+
+      const top = element("span", "claim-card__top");
+      const title = element("b", "", evaluation.title);
+      title.id = titleId;
       const serviceCode = element("code", "", evaluation.serviceCode);
       serviceCode.title = [evaluation.rule.serviceSystem, evaluation.serviceCode].filter(Boolean).join(" | ");
       const dragHandle = element("span", "claim-drag-handle", "⠿");
       dragHandle.setAttribute("aria-hidden", "true");
-      top.append(element("b", "", evaluation.title), serviceCode, dragHandle);
-      card.append(top);
+      top.append(title, serviceCode, dragHandle);
+      summary.append(top);
       const computedStatus = element("span", "claim-computed-status", `자동 판정 · ${CLAIM_LANE_LABELS[evaluation.status]}`);
       computedStatus.dataset.status = evaluation.status;
-      card.append(computedStatus);
+      summary.append(computedStatus);
       if (review.stale) {
-        const stale = element("p", "claim-review-stale");
+        const stale = element("span", "claim-review-stale");
         stale.append(
           element("b", "", "재검토 필요 · "),
           document.createTextNode(`자동 판정·근거·규칙 또는 판정일이 달라져 이전 '${CLAIM_REVIEW_STAGE_LABELS[review.invalidatedFrom] ?? "검토"}' 단계는 무효화되고 '미분류'로 돌아왔습니다.`),
         );
-        card.append(stale);
+        summary.append(stale);
       }
-      if (boardScope === "all") card.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
-      card.append(element("p", "", evaluation.explanation));
+      if (boardScope === "all") summary.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
+      summary.append(element("span", "claim-card__explanation", evaluation.explanation));
       if (evaluation.missingEvidence.length) {
-        card.append(element("p", "claim-missing", "보완 확인 · " + evaluation.missingEvidence.join(", ")));
+        summary.append(element("span", "claim-missing", "보완 확인 · " + evaluation.missingEvidence.join(", ")));
       }
-      const facts = element("div", "claim-facts");
+      const facts = element("span", "claim-facts");
       facts.append(
         element("span", "", "차트 시행 " + evaluation.usedCount + "/" + evaluation.rule.maxCount + "건"),
         element("span", "", evaluation.nextEligibleDate ? "수동 대조 " + evaluation.nextEligibleDate : "기준일 수동 확인"),
       );
-      card.append(facts);
+      summary.append(facts);
+      const disclosure = element("span", "claim-card__disclosure");
+      disclosure.dataset.claimDetailLabel = "";
+      disclosure.textContent = "근거·세부정보 보기";
+      summary.append(disclosure);
+      card.append(summary);
+
+      const details = document.createElement("dialog");
+      details.className = "claim-card__details";
+      details.id = detailsId;
+      details.setAttribute("role", "dialog");
+      details.setAttribute("aria-modal", "true");
+      details.setAttribute("aria-labelledby", detailTitleId);
+      details.setAttribute("aria-describedby", detailBoundaryId);
+      const detailHeader = element("header", "claim-card__details-header");
+      const detailHeading = element("div");
+      detailHeading.append(
+        element("span", "claim-card__details-eyebrow", "CLAIM EVIDENCE"),
+      );
+      const detailTitle = element("h5", "", evaluation.title);
+      detailTitle.id = detailTitleId;
+      const detailStatus = element("span", "claim-computed-status", `자동 판정 · ${CLAIM_LANE_LABELS[evaluation.status]}`);
+      detailStatus.dataset.status = evaluation.status;
+      detailHeading.append(detailTitle, detailStatus);
+      const closeDetails = element("button", "clinical-button claim-card__details-close", "닫기");
+      closeDetails.type = "button";
+      closeDetails.dataset.claimDetailClose = evaluation.id;
+      closeDetails.setAttribute("aria-label", `${evaluation.title} 근거·세부정보 닫기`);
+      detailHeader.append(detailHeading, closeDetails);
+
+      const detailContent = element("div", "claim-card__details-content");
       const evidenceEvents = evaluation.evidenceEventIds
         .map((id) => state.patients.find((item) => item.id === evaluation.patientId)?.events.find((event) => event.id === id))
         .filter(Boolean);
+      const evidence = element("section", "claim-evidence");
+      evidence.append(element("b", "", "연결 차트 근거"));
       if (evidenceEvents.length) {
-        const evidence = element("div", "claim-evidence");
-        evidence.append(element("b", "", "연결 차트 근거"));
         for (const event of evidenceEvents.slice(0, 5)) {
           evidence.append(element(
             "span",
@@ -1387,14 +1685,16 @@ function renderClaimBoard(patient) {
             [event.label, event.date, [event.system, event.code].filter(Boolean).join(" | "), event.source?.label, event.source?.resourceId].filter(Boolean).join(" · "),
           ));
         }
-        card.append(evidence);
+      } else {
+        evidence.append(element("span", "claim-evidence__empty", "직접 연결된 확정 차트 근거가 없습니다."));
       }
-      card.append(element(
+      const detailAside = element("div", "claim-card__details-aside");
+      detailAside.append(element(
         "span",
         "claim-rule-version",
         "규칙 " + evaluation.rule.ruleSetId + " · v" + evaluation.rule.version + " · " + evaluation.rule.effectiveFrom + " ~ " + (evaluation.rule.effectiveTo || "현재"),
       ));
-      card.append(element("span", "claim-manual-note", "Claim/ClaimResponse 미연결 · 청구·심사 이력 수동 대조"));
+      detailAside.append(element("span", "claim-manual-note", "Claim/ClaimResponse 미연결 · 청구·심사 이력 수동 대조"));
       const sourceUrl = safeExternalUrl(evaluation.rule.sourceUrl);
       if (sourceUrl) {
         const source = element("a", "claim-source", evaluation.rule.sourceLabel + " ↗");
@@ -1402,9 +1702,9 @@ function renderClaimBoard(patient) {
         source.target = "_blank";
         source.rel = "noreferrer";
         source.draggable = false;
-        card.append(source);
+        detailAside.append(source);
       } else {
-        card.append(element("span", "claim-source", evaluation.rule.sourceLabel));
+        detailAside.append(element("span", "claim-source", evaluation.rule.sourceLabel));
       }
       const control = element("label", "claim-review-control");
       const selectId = `claim-stage-${stage}-${evaluationIndex}`;
@@ -1422,7 +1722,20 @@ function renderClaimBoard(patient) {
         select.append(option);
       }
       control.append(select);
-      card.append(control);
+      detailAside.append(control);
+      const detailBoundary = element("p", "claim-detail-boundary", "차트 근거와 규칙은 사전 점검 정보입니다. 의료적 필요를 제한하거나 급여를 확정하지 않으며 청구·심사 이력은 별도로 대조해야 합니다.");
+      detailBoundary.id = detailBoundaryId;
+      detailContent.append(evidence, detailAside, detailBoundary);
+      details.append(detailHeader, detailContent);
+      details.addEventListener("close", () => {
+        summary.setAttribute("aria-expanded", "false");
+        summary.setAttribute("aria-label", `${summary.dataset.claimDetailSummary} · 근거·세부정보 보기`);
+        disclosure.textContent = "근거·세부정보 보기";
+        card.dataset.claimDetailOpen = "false";
+        refs.claimBoardLive.textContent = `${evaluation.title}의 연결 차트 근거와 규칙 세부정보를 닫았습니다.`;
+        summary.focus({ preventScroll: true });
+      });
+      card.append(details);
       cards.append(card);
     }
     if (!cards.childElementCount) cards.append(createEmptyMessage("카드를 여기에 놓을 수 있습니다.", "claim-empty"));
@@ -2044,6 +2357,7 @@ function renderWorkspace() {
     clearPatientWorkspaceUi();
     return;
   }
+  syncPatientBriefFromCareBridge(readCareBridge(), patient);
   const evaluations = claimEvaluations(patient);
   const encounter = currentEncounter(patient);
   const preflightEvaluations = claimEvaluations(patient, {
@@ -2083,6 +2397,7 @@ function render() {
   renderAudit();
   renderDataFacts();
   renderFhirReport();
+  syncSelectedClinicalSnapshot();
 }
 
 function resetPatientForm() {
@@ -2115,6 +2430,8 @@ function adoptClearedEmrState(cleared) {
   state = cleared;
   savedState = cleared;
   briefCache.clear();
+  patientBriefCache.clear();
+  clearPersonalClinicalSnapshot();
   lastFhirReport = null;
   render();
 }
@@ -2201,10 +2518,95 @@ function downloadJson(value, filename) {
   downloadText(JSON.stringify(value, null, 2), filename, "application/json;charset=utf-8");
 }
 
-function setPatientTransferStatus(message, tone = "") {
-  refs.patientTransferStatus.textContent = message;
-  if (tone) refs.patientTransferStatus.dataset.tone = tone;
-  else delete refs.patientTransferStatus.dataset.tone;
+function setPersonalSyncStatus(message, tone = "") {
+  refs.personalSyncStatus.textContent = message;
+  if (tone) refs.personalSyncStatus.dataset.tone = tone;
+  else delete refs.personalSyncStatus.dataset.tone;
+}
+
+function clinicalSnapshotFingerprint(snapshot) {
+  return clinicalContextFingerprint(comparableClinicalSnapshot(snapshot));
+}
+
+function syncSelectedClinicalSnapshot({ announce = false, force = false } = {}) {
+  if (personalConnectionSuspended && !force) {
+    setPersonalSyncStatus("Personal 연결 해제됨 · “Personal 최신화”를 눌러 다시 연결할 수 있습니다.");
+    return null;
+  }
+  const patient = selectedPatient();
+  if (!patient || state.demo || state.storageError) {
+    if (announce) {
+      setPersonalSyncStatus(
+        state.demo
+          ? "샘플 환자는 Personal에 연결하지 않습니다."
+          : "자동 연결할 로컬 환자를 먼저 선택하세요.",
+        state.demo ? "" : "error",
+      );
+    }
+    return null;
+  }
+  try {
+    const snapshot = createClinicalSnapshot(patient, new Date());
+    const fingerprint = clinicalSnapshotFingerprint(snapshot);
+    const currentBridge = readCareBridge();
+    const currentFingerprint = currentBridge?.clinical?.snapshot
+      ? clinicalSnapshotFingerprint(currentBridge.clinical.snapshot)
+      : "";
+    const patientChanged = Boolean(lastPublishedPatientId && lastPublishedPatientId !== patient.id);
+    const shouldPublish = force
+      || patientChanged
+      || lastPublishedPatientId !== patient.id
+      || lastPublishedSnapshotFingerprint !== fingerprint
+      || currentFingerprint !== fingerprint;
+    const bridge = shouldPublish
+      ? publishClinicalSnapshot(snapshot, {
+        rotateChannel: patientChanged || currentFingerprint !== fingerprint,
+      })
+      : currentBridge;
+    lastPublishedPatientId = patient.id;
+    lastPublishedSnapshotFingerprint = fingerprint;
+    syncPatientBriefFromCareBridge(bridge, patient);
+    const count = snapshot.summary;
+    const includedTotal = count.includedConditions
+      + count.includedMeasurements
+      + count.includedMedications;
+    if (includedTotal > 0) {
+      setPersonalSyncStatus(
+        `Personal 자동 연결 · 확정 질환 ${count.includedConditions}개 · 최종 측정 ${count.includedMeasurements}개 · 서명 처방 ${count.includedMedications}개 · ${displayTimestamp(snapshot.preparedAt)}`,
+        "success",
+      );
+    } else {
+      setPersonalSyncStatus("Personal 연결 대기 · 아직 서명·확정된 환자용 항목이 없습니다.");
+    }
+    if (announce) {
+      setStatus(
+        includedTotal > 0
+          ? "서명된 최종 기록과 처방을 환자용으로 정제해 Personal에 연결했습니다."
+          : "연결할 서명·확정 항목이 없어 Personal의 이전 정제 기록을 비웠습니다.",
+        "success",
+      );
+    }
+    return bridge;
+  } catch (error) {
+    setPersonalSyncStatus(
+      error instanceof Error ? error.message : "Personal 정제 기록 연결에 실패했습니다.",
+      "error",
+    );
+    return null;
+  }
+}
+
+function clearPersonalClinicalSnapshot() {
+  try {
+    const snapshot = createClinicalSnapshot({ events: [] }, new Date());
+    publishClinicalSnapshot(snapshot, { rotateChannel: true });
+    lastPublishedPatientId = "";
+    lastPublishedSnapshotFingerprint = clinicalSnapshotFingerprint(snapshot);
+    return true;
+  } catch {
+    // EMR deletion still completes if local bridge storage is unavailable.
+    return false;
+  }
 }
 
 function currentExportBlocker(exportState = state) {
@@ -2252,7 +2654,7 @@ async function checkAiStatus() {
     if (aiCapability.configured) {
       refs.aiStatusDot.classList.add("is-ready");
       refs.aiStatusLabel.textContent = "로컬 AI 연결";
-      refs.aiStatusDetail.textContent = aiCapability.model + " · 브리프만 생성";
+      refs.aiStatusDetail.textContent = aiCapability.model + " · 질문 초안만 생성 · 외부 전송 없음";
     } else {
       refs.aiStatusLabel.textContent = "규칙 기반 모드";
       refs.aiStatusDetail.textContent = "Ollama 모델 미설정 · 기능 정상";
@@ -2268,7 +2670,8 @@ async function runCopilot() {
   const patient = selectedPatient();
   if (!patient || copilotBusy) return;
   const evaluations = claimEvaluations(patient);
-  briefCache.set(patient.id, createLocalCopilotBrief(patient, evaluations, today()));
+  const patientBrief = connectedPatientBrief(patient)?.brief ?? {};
+  briefCache.set(patient.id, createLocalCopilotBrief(patient, evaluations, today(), patientBrief));
   renderCopilot(patient, evaluations);
   if (!aiCapability.configured) {
     setStatus("규칙 기반 초안을 만들었습니다. 로컬 AI가 설정되지 않아 환자 데이터를 전송하지 않았습니다.", "success");
@@ -2279,9 +2682,9 @@ async function runCopilot() {
   const controller = new AbortController();
   copilotRequestController = controller;
   renderCopilot(patient, evaluations);
-  setStatus("규칙 기반 초안을 먼저 만들었습니다. 이름·등록번호·전화·자유메모를 제외한 구조화 차트를 로컬 AI에 보냅니다.");
+  setStatus("규칙 기반 초안을 먼저 만들었습니다. 직접식별자·자유메모를 제외한 확정 차트와 환자가 공유한 브리프만 로컬 AI에 전달합니다. 외부로 전송하지 않습니다.");
   try {
-    const request = createCopilotRequest(patient, evaluations, today());
+    const request = createCopilotRequest(patient, evaluations, today(), patientBrief);
     const requestFingerprint = copilotRequestFingerprint(request);
     const response = await fetch("/api/clinical-copilot", {
       method: "POST",
@@ -2294,14 +2697,22 @@ async function runCopilot() {
     if (result.kind !== "model") throw new Error("로컬 모델 초안 형식이 올바르지 않습니다.");
     const currentPatient = state.patients.find(({ id }) => id === patient.id);
     const currentRequest = currentPatient
-      ? createCopilotRequest(currentPatient, claimEvaluations(currentPatient), today())
+      ? createCopilotRequest(
+        currentPatient,
+        claimEvaluations(currentPatient),
+        today(),
+        connectedPatientBrief(currentPatient)?.brief ?? {},
+      )
       : null;
     if (selectedPatient()?.id !== patient.id
       || !currentRequest
       || copilotRequestFingerprint(currentRequest) !== requestFingerprint) {
       throw new Error("차트 또는 급여 기준이 변경되어 오래된 로컬 AI 초안을 폐기했습니다.");
     }
-    briefCache.set(patient.id, restoreCopilotEvidenceIds(result, request.aliasToEventId));
+    briefCache.set(
+      patient.id,
+      restoreCopilotEvidenceIds(result, request.aliasToEventId, request.aliasToPatientBriefId),
+    );
     setStatus("로컬 AI 초안을 만들었습니다. 의료진 검토 전 확정 기록이 아닙니다.", "success");
   } catch (error) {
     if (!controller.signal.aborted) {
@@ -2955,6 +3366,32 @@ for (const button of document.querySelectorAll("[data-board-scope]")) {
   });
 }
 
+refs.claimBoard.addEventListener("click", (event) => {
+  const close = event.target.closest?.("[data-claim-detail-close]");
+  if (close) {
+    close.closest("dialog")?.close();
+    return;
+  }
+  const toggle = event.target.closest?.("[data-claim-detail-toggle]");
+  if (!toggle) return;
+  const evaluationId = toggle.dataset.claimDetailToggle;
+  const details = document.getElementById(toggle.getAttribute("aria-controls"));
+  const card = toggle.closest("[data-claim-evaluation-id]");
+  if (!evaluationId || !details || !card) return;
+  if (details.open) {
+    details.close();
+    return;
+  }
+  details.showModal();
+  toggle.setAttribute("aria-expanded", "true");
+  toggle.setAttribute("aria-label", `${toggle.dataset.claimDetailSummary} · 근거·세부정보 열림`);
+  card.dataset.claimDetailOpen = "true";
+  toggle.querySelector("[data-claim-detail-label]").textContent = "근거·세부정보 열림";
+  details.querySelector("[data-claim-detail-close]")?.focus();
+  const evaluation = claimEvaluationById.get(evaluationId);
+  refs.claimBoardLive.textContent = `${evaluation?.title ?? "급여 항목"}의 연결 차트 근거와 규칙 세부정보를 열었습니다.`;
+});
+
 function clearClaimDragState() {
   draggedClaimReviewId = "";
   refs.claimBoard.querySelectorAll(".is-dragging, .is-drop-target").forEach((node) => {
@@ -3001,7 +3438,9 @@ refs.claimBoard.addEventListener("drop", async (event) => {
   const nextStage = lane.dataset.claimReviewLane;
   clearClaimDragState();
   await moveClaimReview(evaluation, nextStage, "드래그 이동");
-  refs.claimBoard.querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"]`)?.focus();
+  refs.claimBoard
+    .querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"] [data-claim-detail-toggle]`)
+    ?.focus();
 });
 
 refs.claimBoard.addEventListener("dragend", clearClaimDragState);
@@ -3022,6 +3461,7 @@ function loadDemo() {
   activeTab = "encounter";
   eventFilter = "all";
   briefCache.clear();
+  patientBriefCache.clear();
   render();
   setStatus("가상 환자 2명을 열었습니다. 데모 변경은 저장되지 않습니다.", "success");
 }
@@ -3033,6 +3473,7 @@ refs.exitDemo.addEventListener("click", () => {
   state = savedState;
   viewedEncounterId = "";
   briefCache.clear();
+  patientBriefCache.clear();
   const url = new URL(window.location.href);
   url.searchParams.delete("demo");
   history.replaceState(null, "", url.pathname + url.search + url.hash);
@@ -3098,7 +3539,7 @@ refs.importEmr.addEventListener("change", async () => {
       const backup = await readJsonFile(file);
       assertCurrentStateGeneration(expectedGeneration);
       const parsed = parseEmrBackup(backup);
-      if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자 전달에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙·감사 이력·담당자 검토 단계도 신뢰하지 않고 복원하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
+      if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자용 정제 연결에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙·감사 이력·담당자 검토 단계도 신뢰하지 않고 복원하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
         setStatus("백업 복원을 취소했습니다.");
         return;
       }
@@ -3121,7 +3562,7 @@ refs.importEmr.addEventListener("change", async () => {
       resetPatientForm();
       briefCache.clear();
       render();
-      setStatus("백업의 모든 임상 기록을 출처 미검증 상태로 복원·격리했습니다. 이 로컬 샌드박스에서는 AI·급여·FHIR·환자 전달·로컬 서명의 근거에서 제외합니다.", "success");
+      setStatus("백업의 모든 임상 기록을 출처 미검증 상태로 복원·격리했습니다. 이 로컬 샌드박스에서는 AI·급여·FHIR·환자용 정제 연결·로컬 서명의 근거에서 제외합니다.", "success");
     });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "백업 복원에 실패했습니다.", "error");
@@ -3143,49 +3584,29 @@ function exportBackup() {
 
 refs.exportEmr.addEventListener("click", exportBackup);
 refs.exportEmrSecondary.addEventListener("click", exportBackup);
-refs.exportPatientTransfer.addEventListener("click", async () => {
-  const patient = selectedPatient();
-  if (!patient) {
-    const message = "환자용 파일로 내보낼 환자를 먼저 선택하세요.";
-    setPatientTransferStatus(message, "error");
-    return;
-  }
-  if (state.demo) {
-    setPatientTransferStatus("샘플 환자는 환자 전달 파일로 내보낼 수 없습니다. 로컬 실제 기록에서 선택하세요.", "error");
-    return;
-  }
-  const blocker = currentExportBlocker();
-  if (blocker) {
-    setPatientTransferStatus(blocker, "error");
-    return;
-  }
+refs.syncPersonalRecord.addEventListener("click", () => {
+  personalConnectionSuspended = false;
   try {
-    const exportedAt = new Date().toISOString();
-    const transferPackage = createPatientTransferPackage(patient, exportedAt);
-    const { includedConditions, includedMeasurements } = transferPackage.summary;
-    if (!window.confirm(
-      `${patient.name} 환자의 최소 건강정보를 내보낼까요?\n\n전달 확인 코드: ${transferPackage.transferCode}\n확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개\n\n환자명과 코드를 대조하세요. 코드는 파일과 다른 경로로 환자에게 안내해야 합니다.`,
-    )) {
-      setPatientTransferStatus("환자용 파일 내보내기를 취소했습니다.");
-      return;
+    localStorage.removeItem(PERSONAL_SYNC_SUSPENDED_KEY);
+  } catch {
+    // The current tab can still resume even if the preference cannot persist.
+  }
+  syncSelectedClinicalSnapshot({ announce: true, force: true });
+});
+refs.disconnectPersonalRecord.addEventListener("click", () => {
+  if (!window.confirm("이 브라우저의 Personal 연결 기록과 환자가 공유한 질문을 지울까요? EMR 원본은 삭제되지 않습니다.")) return;
+  if (clearPersonalClinicalSnapshot()) {
+    personalConnectionSuspended = true;
+    try {
+      localStorage.setItem(PERSONAL_SYNC_SUSPENDED_KEY, "1");
+    } catch {
+      // The bridge is already cleared for this tab even if suspension cannot persist.
     }
-    await applyMutation(
-      (current) => appendStateAudit(
-        current,
-        "patient.transfer.exported",
-        `확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개`,
-        new Date().toISOString(),
-        patient.id,
-      ),
-      "환자 전달 내보내기 이력을 저장했습니다.",
-      { preserveDraft: false, announce: false },
-    );
-    downloadJson(transferPackage, patientTransferFilename(exportedAt));
-    const message = `${patient.name} 환자용 JSON을 내보냈습니다. 전달 확인 코드 ${transferPackage.transferCode} · 확정 질환 ${includedConditions}개 · 최종 측정 ${includedMeasurements}개. 코드는 별도 경로로 안내하세요.`;
-    setPatientTransferStatus(message, "success");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "환자용 VitaGraph JSON 내보내기에 실패했습니다.";
-    setPatientTransferStatus(message, "error");
+    setPersonalSyncStatus("Personal 연결을 해제했습니다.");
+    setStatus("Personal의 정제 기록과 환자 공유 질문 연결을 지웠습니다.", "success");
+  } else {
+    setPersonalSyncStatus("Personal 연결을 해제하지 못했습니다.", "error");
+    setStatus("이 브라우저의 Personal 연결 저장소를 사용할 수 없습니다.", "error");
   }
 });
 refs.exportFhir.addEventListener("click", async () => {
@@ -3267,6 +3688,21 @@ window.addEventListener("storage", (event) => {
 
 window.addEventListener("beforeunload", blockUnsafePageExit);
 
+window.addEventListener(CLINICAL_PATIENT_BRIEF_EVENT, (event) => {
+  const patient = selectedPatient();
+  if (!patient) return;
+  const detail = event instanceof CustomEvent ? event.detail : null;
+  if (!detail || typeof detail !== "object") return;
+  const changed = storePatientBrief(patient, detail.brief ?? detail, {
+    receivedAt: detail.receivedAt ?? detail.updatedAt ?? detail.preparedAt,
+    stale: detail.stale,
+  });
+  if (changed) {
+    renderPatientBriefUpdate();
+    setStatus("환자가 명시적으로 공유한 질문 브리프를 질문 초안에 반영했습니다. EMR 확정 사실로 저장하지 않았습니다.", "success");
+  }
+});
+
 refs.runCopilot.addEventListener("click", runCopilot);
 
 refs.eventDate.value = today();
@@ -3280,4 +3716,8 @@ render();
 if (!state.demo && state.storageError) {
   setStatus("로컬 저장을 읽지 못했습니다. 손상 원본을 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.", "error");
 }
+subscribeCareBridge((bridge) => {
+  if (!syncPatientBriefFromCareBridge(bridge)) return;
+  renderPatientBriefUpdate();
+});
 void checkAiStatus();

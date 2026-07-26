@@ -24,11 +24,12 @@
   position: relative;
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(300px, 0.82fr) minmax(420px, 1.18fr);
-  min-height: 430px;
-  gap: var(--space-8);
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  min-height: 400px;
+  gap: clamp(var(--space-8), 5vw, 72px);
   align-items: center;
   overflow: hidden;
+  padding: clamp(var(--space-8), 4vw, 64px);
   background:
     radial-gradient(circle at 72% 45%, color-mix(in srgb, var(--data-cyan) 12%, transparent), transparent 31%),
     linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--data-violet) 6%, var(--surface)));
@@ -37,43 +38,74 @@
 .connection-copy {
   position: relative;
   z-index: 2;
-  max-width: 620px;
+  min-width: 0;
+  max-width: none;
 }
 
 .connection-copy h2 {
-  max-width: 13ch;
+  max-width: 12.5em;
   margin: var(--space-2) 0 var(--space-4);
-  font-size: clamp(2rem, 3.5vw, 4.4rem);
+  font-size: clamp(2.25rem, 3.2vw, 3.35rem);
   letter-spacing: -0.055em;
   line-height: 1.1;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
-.connection-copy > p:not(.panel-index) {
-  max-width: 52ch;
+.connection-copy h2 > span,
+.connection-description > span {
+  display: block;
+}
+
+.connection-support {
+  width: min(calc(100% - var(--space-8)), 32rem);
+  margin-left: clamp(var(--space-6), 3vw, var(--space-10));
+}
+
+.connection-description {
+  max-width: 48ch;
+  margin: 0;
   color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.75;
+  overflow-wrap: normal;
+  text-wrap: pretty;
+  word-break: keep-all;
+}
+
+.connection-description > span + span {
+  margin-top: var(--space-1);
 }
 
 .connection-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  align-items: center;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
   margin-top: var(--space-6);
 }
 
 .connection-actions .primary-button {
   display: inline-flex;
-  width: auto;
+  width: min(100%, 19rem);
   align-items: center;
   justify-content: center;
+  text-align: center;
   text-decoration: none;
+  white-space: normal;
+  word-break: keep-all;
 }
 
-.connection-actions > span {
+.connection-actions__status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: baseline;
   color: var(--muted);
   font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .connection-actions strong {
@@ -82,7 +114,10 @@
 
 .connection-preview {
   position: relative;
+  width: 100%;
+  max-width: 620px;
   min-height: 310px;
+  justify-self: center;
 }
 
 .connection-preview::before {
@@ -170,9 +205,22 @@
 @media (max-width: 900px) {
   .connection-portal {
     grid-template-columns: 1fr;
+    min-height: 0;
+    padding: clamp(var(--space-7), 5vw, var(--space-10));
+  }
+
+  .connection-copy {
+    width: min(100%, 44rem);
+    justify-self: center;
+  }
+
+  .connection-support {
+    width: min(calc(100% - var(--space-5)), 35rem);
+    margin-left: clamp(var(--space-4), 3vw, var(--space-8));
   }
 
   .connection-preview {
+    max-width: 620px;
     min-height: 280px;
   }
 }
@@ -200,7 +248,27 @@
   }
 
   .connection-copy h2 {
-    font-size: clamp(2.25rem, 12vw, 3.5rem);
+    max-width: 12.5em;
+    font-size: clamp(1.9rem, 9vw, 2.55rem);
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  .connection-support {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .connection-actions {
+    justify-items: stretch;
+  }
+
+  .connection-actions .primary-button {
+    width: 100%;
+  }
+
+  .connection-actions__status {
+    justify-content: center;
   }
 
   .connection-preview {

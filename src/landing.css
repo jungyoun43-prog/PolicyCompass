@@ -241,14 +241,25 @@
 
 .patient-start-path__actions {
   grid-column: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-5);
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(max-content, 1fr);
+  gap: var(--space-4);
   align-items: center;
+  width: 100%;
   margin-top: 0;
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.patient-start-path__actions .landing-button {
+  width: 100%;
+  min-height: 52px;
+  padding-inline: var(--space-6);
+  font-size: 0.875rem;
 }
 
 .patient-start-path__actions .text-action {
+  justify-self: start;
   margin-top: 0;
 }
 
@@ -513,24 +524,48 @@
 }
 
 .closing {
-  display: flex;
-  gap: var(--space-8);
-  align-items: end;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  margin: var(--space-6) 0 var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background:
+    radial-gradient(circle at 50% 0, color-mix(in srgb, var(--data-cyan) 9%, transparent), transparent 22rem),
+    var(--surface-raised);
+  padding: clamp(48px, 5vw, 72px) clamp(var(--space-5), 5vw, var(--space-10));
+  text-align: center;
 }
 
 .closing > div:first-child {
+  display: grid;
   min-width: 0;
-  flex: 1;
+  justify-items: center;
 }
 
 .closing h2 {
-  max-width: 10em;
+  max-width: 12em;
+}
+
+.closing h2 > span {
+  display: block;
 }
 
 .closing .landing-actions {
-  flex: none;
-  margin-top: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 480px);
+  justify-self: center;
+  margin-top: var(--space-6);
+}
+
+.closing .landing-button {
+  width: 100%;
+  min-height: 52px;
+  padding-inline: var(--space-4);
+  text-align: center;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .reveal-ready [data-reveal] {
@@ -550,13 +585,6 @@
   will-change: opacity, transform;
 }
 
-@media (min-width: 801px) {
-  .closing h2 {
-    max-width: none;
-    white-space: nowrap;
-  }
-}
-
 @media (max-width: 960px) {
   .landing-hero__visual {
     left: 8%;
@@ -570,6 +598,7 @@
   .workflow__steps {
     grid-template-columns: repeat(2, 1fr);
   }
+
 }
 
 @media (max-width: 800px) {
@@ -625,13 +654,6 @@
     padding: 64px 0;
   }
 
-  .closing {
-    display: block;
-  }
-
-  .closing .landing-actions {
-    margin-top: var(--space-6);
-  }
 }
 
 @media (max-width: 620px) {
@@ -656,6 +678,15 @@
 
   .patient-start-path li:not(:last-child)::after {
     display: block;
+  }
+
+  .patient-start-path__actions,
+  .closing .landing-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-start-path__actions .text-action {
+    justify-self: center;
   }
 
   .landing-actions,

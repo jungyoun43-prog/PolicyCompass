@@ -12,6 +12,8 @@ test("배포 Worker가 로컬 EMR 화면과 모듈을 제공한다", async () =>
     "/emr-fhir.js",
     "/emr-fhir-export.js",
     "/patient-transfer.js",
+    "/care-bridge.js",
+    "/clinical-question-assistant.js",
     "/claim-rules.js",
   ];
 
@@ -43,8 +45,10 @@ test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 
   assert.match(html, /id="ruleServiceSystem"/);
   assert.match(html, /id="ruleApplicabilitySystem"/);
   assert.match(html, /id="fhirImport"/);
-  assert.match(html, /id="exportPatientTransfer"/);
-  assert.match(html, /id="patientTransferStatus"/);
+  assert.match(html, /id="syncPersonalRecord"/);
+  assert.match(html, /id="personalSyncStatus"/);
+  assert.match(html, /진료를 서명하거나 과거 기록을 확인·확정하면 필요한 사실과 서명 처방만 식별정보·원문 메모 없이 자동 연결/);
+  assert.match(html, /환자는 Personal에서 자신의 정제 사본을 JSON으로 내보낼 수 있습니다/);
   assert.match(html, /id="exportEmr"/);
   assert.match(html, /id="wipeEmr"/);
   assert.match(html, /의료진 검토 전 확정 기록 아님/);
@@ -54,10 +58,14 @@ test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 
   assert.match(script, /2 \* 1024 \* 1024/);
   assert.match(script, /오래된 로컬 AI 초안을 폐기/);
   assert.match(script, /copilotRequestFingerprint\(currentRequest\)/);
-  assert.match(script, /createPatientTransferPackage\(patient, exportedAt\)/);
-  assert.match(script, /patientTransferFilename\(exportedAt\)/);
+  assert.match(script, /createClinicalSnapshot/);
+  assert.match(script, /publishClinicalSnapshot/);
+  assert.match(script, /syncSelectedClinicalSnapshot/);
+  assert.match(script, /refs\.syncPersonalRecord\.addEventListener\("click"/);
+  assert.match(script, /syncPatientBriefFromCareBridge/);
   assert.match(script, /state\.demo/);
-  assert.match(script, /patient\.transfer\.exported/);
+  assert.doesNotMatch(script, /createPatientTransferPackage|exportPatientTransfer/);
+  assert.doesNotMatch(html, /id="exportPatientTransfer"|환자 전달 JSON/);
   assert.match(script, /data-confirm-event/);
   assert.match(script, /confirmPatientEvent/);
 });

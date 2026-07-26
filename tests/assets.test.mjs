@@ -51,3 +51,16 @@ test("랜딩 히어로 이미지를 PNG 자산으로 제공한다", async () => 
   const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 8).toString("hex");
   assert.equal(signature, "89504e470d0a1a0a");
 });
+
+test("임상 워크스페이스 빈 상태 이미지를 투명 PNG 자산으로 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+
+  const response = await worker.fetch(
+    new Request("https://example.com/assets/clinical-workspace-empty.png"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 8).toString("hex");
+  assert.equal(signature, "89504e470d0a1a0a");
+});

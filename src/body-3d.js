@@ -4,6 +4,10 @@ const STYLE_ID = "vitagraph-body-3d-styles";
 const VIEW_PREFERENCE_KEY = "vitagraph-body-view";
 const controllers = new WeakMap();
 
+export const CLINICAL_BODY_PALETTE = Object.freeze({
+  body: "#c6a18d",
+});
+
 /**
  * Default positions assume an upright, Y-up human model measuring about 1.8 m,
  * centred on X=0 with its front facing +Z. A model-specific map can be supplied
@@ -25,6 +29,40 @@ export const DEFAULT_BODY_HOTSPOTS = Object.freeze({
 });
 
 const BODY_3D_CSS = `
+  .body-stage[data-body-3d].is-body-3d {
+    background:
+      radial-gradient(ellipse at 50% 35%, rgb(255 255 255 / 96%) 0 18%, rgb(247 249 248 / 86%) 43%, transparent 69%),
+      linear-gradient(180deg, #f6f8f7 0%, #edf2f0 68%, #e5ebe8 100%);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--line, #d5dde6) 72%, transparent),
+      inset 0 -56px 92px rgb(41 71 70 / 5%);
+  }
+
+  .body-stage[data-body-3d].is-body-3d::before {
+    z-index: 0;
+    inset: 6% 17% 15%;
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 50% 42%, rgb(255 255 255 / 74%) 0 24%, rgb(213 226 222 / 20%) 57%, transparent 74%);
+    opacity: 1;
+  }
+
+  .body-stage[data-body-3d].is-body-3d::after {
+    z-index: 0;
+    inset: auto 16% 6%;
+    width: auto;
+    height: 11%;
+    border: 0;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgb(30 57 56 / 16%) 0%, rgb(41 74 72 / 6%) 46%, transparent 72%);
+    filter: blur(10px);
+    opacity: 0.78;
+    transform: none;
+  }
+
   .body-stage[data-body-3d] .body-3d-controls {
     position: absolute;
     z-index: 9;
@@ -32,33 +70,38 @@ const BODY_3D_CSS = `
     right: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     padding: 4px;
-    border: 1px solid color-mix(in srgb, var(--line, #d5dde6) 82%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--surface, #fff) 92%, transparent);
-    box-shadow: 0 8px 24px rgb(18 35 53 / 10%);
-    backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--line, #d5dde6) 88%, #fff);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface, #fff) 95%, transparent);
+    box-shadow:
+      0 10px 26px rgb(18 35 53 / 10%),
+      0 1px 2px rgb(18 35 53 / 8%);
+    backdrop-filter: blur(16px) saturate(115%);
   }
 
   .body-stage[data-body-3d] .body-3d-control {
-    min-width: 42px;
+    min-width: 46px;
     min-height: 44px;
     margin: 0;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 999px;
+    padding: 0 13px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: transparent;
-    color: var(--muted, #596979);
+    color: color-mix(in srgb, var(--ink, #172431) 70%, var(--muted, #596979));
     font: inherit;
     font-size: 0.78rem;
     font-weight: 700;
+    letter-spacing: -0.01em;
     line-height: 1;
     cursor: pointer;
+    transition: border-color 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out;
   }
 
   .body-stage[data-body-3d] .body-3d-control:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--data-cyan, #258aa3) 9%, var(--surface, #fff));
+    border-color: color-mix(in srgb, var(--data-cyan, #258aa3) 20%, var(--line, #d5dde6));
+    background: color-mix(in srgb, var(--data-cyan, #258aa3) 8%, var(--surface, #fff));
     color: var(--ink, #172431);
   }
 
@@ -68,8 +111,25 @@ const BODY_3D_CSS = `
   }
 
   .body-stage[data-body-3d] .body-3d-control[aria-pressed="true"] {
-    background: var(--ink, #172431);
+    border-color: color-mix(in srgb, var(--data-cyan, #258aa3) 68%, var(--ink, #172431));
+    background: color-mix(in srgb, var(--data-cyan, #258aa3) 52%, var(--ink, #172431));
     color: var(--surface, #fff);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--data-cyan, #258aa3) 22%, transparent);
+  }
+
+  .body-stage[data-body-3d] .body-3d-reset {
+    position: relative;
+    margin-left: 7px;
+  }
+
+  .body-stage[data-body-3d] .body-3d-reset::before {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: -6px;
+    width: 1px;
+    background: color-mix(in srgb, var(--line, #d5dde6) 86%, transparent);
+    content: "";
   }
 
   .body-stage[data-body-3d] .body-3d-control:disabled {
@@ -92,6 +152,7 @@ const BODY_3D_CSS = `
     min-height: 100%;
     overflow: hidden;
     background: transparent;
+    color: var(--ink, #172431);
     touch-action: pan-y;
     --poster-color: transparent;
     --progress-bar-color: var(--data-cyan, #258aa3);
@@ -114,7 +175,18 @@ const BODY_3D_CSS = `
 
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot:hover:not(:disabled),
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot:focus-visible:not(:disabled) {
-    transform: scale(1.12) !important;
+    transform: scale(1.08) !important;
+  }
+
+  .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot::before {
+    width: 48px;
+    height: 48px;
+    border-color: color-mix(in srgb, currentColor 26%, transparent);
+    background: radial-gradient(circle, color-mix(in srgb, currentColor 20%, transparent), transparent 67%);
+  }
+
+  .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot.is-current::before {
+    transform: scale(1.08);
   }
 
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot:not([data-visible]) {
@@ -142,7 +214,16 @@ const BODY_3D_CSS = `
 
     .body-stage[data-body-3d] .body-3d-control {
       min-height: 44px;
-      padding-inline: 11px;
+      min-width: 44px;
+      padding-inline: 10px;
+    }
+
+    .body-stage[data-body-3d].is-body-3d::before {
+      inset-inline: 7%;
+    }
+
+    .body-stage[data-body-3d].is-body-3d::after {
+      inset-inline: 8%;
     }
   }
 
@@ -249,6 +330,18 @@ function vectorString(value, fallback) {
   return fallback;
 }
 
+function numberString(value, fallback, minimum, maximum) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(fallback);
+  return String(Math.min(maximum, Math.max(minimum, number)));
+}
+
+function toneMappingValue(value) {
+  const supported = new Set(["auto", "aces", "agx", "commerce", "neutral", "reinhard", "cineon", "linear", "none"]);
+  const normalized = String(value || "neutral").toLowerCase();
+  return supported.has(normalized) ? normalized : "neutral";
+}
+
 function hotspotArea(button) {
   return button.dataset.area || button.dataset.bodyArea || "";
 }
@@ -321,9 +414,27 @@ export class Body3DController {
       || "";
     this.context = options.context || stage.dataset.bodyContext || "shared";
     this.initialMode = normalizeInitialMode(options.initialMode || stage.dataset.bodyInitial);
-    this.frontOrbit = options.frontOrbit || stage.dataset.bodyCameraOrbit || "0deg 75deg auto";
+    this.frontOrbit = options.frontOrbit || stage.dataset.bodyCameraOrbit || "0deg 82deg auto";
+    this.initialOrbit = options.initialOrbit || stage.dataset.bodyInitialCameraOrbit || "8deg 80deg auto";
     this.frontTarget = options.frontTarget || stage.dataset.bodyCameraTarget || "auto auto auto";
-    this.frontFieldOfView = options.frontFieldOfView || stage.dataset.bodyFieldOfView || "28deg";
+    this.frontFieldOfView = options.frontFieldOfView || stage.dataset.bodyFieldOfView || "26deg";
+    this.toneMapping = toneMappingValue(options.toneMapping || stage.dataset.bodyToneMapping);
+    this.exposure = numberString(options.exposure || stage.dataset.bodyExposure, 1.06, 0.5, 2);
+    this.shadowIntensity = numberString(
+      options.shadowIntensity || stage.dataset.bodyShadowIntensity,
+      0.92,
+      0,
+      2,
+    );
+    this.shadowSoftness = numberString(
+      options.shadowSoftness || stage.dataset.bodyShadowSoftness,
+      0.84,
+      0,
+      1,
+    );
+    this.materialTreatment = String(
+      options.materialTreatment || stage.dataset.bodyMaterialTreatment || "clinical-neutral",
+    ).toLowerCase();
     this.reducedMotion = prefersReducedMotion(this.ownerWindow);
     this.abortController = new AbortController();
     this.placeholders = new Map();
@@ -462,7 +573,9 @@ export class Body3DController {
         this.mountViewer();
         this.mode = "3d";
         this.stage.dataset.body3dState = this.ready ? "ready" : "loading";
+        this.stage.dataset.body3dPresentation = "clinical";
         this.stage.classList.remove("is-body-2d");
+        this.stage.classList.remove("has-body-3d-error");
         this.stage.classList.add("is-body-3d");
         this.image.hidden = true;
         this.viewer.hidden = false;
@@ -507,12 +620,16 @@ export class Body3DController {
     viewer.setAttribute("reveal", "auto");
     viewer.setAttribute("interaction-prompt", "none");
     viewer.setAttribute("touch-action", "pan-y");
-    viewer.setAttribute("camera-orbit", this.frontOrbit);
+    viewer.setAttribute("disable-tap", "");
+    viewer.setAttribute("camera-orbit", this.initialOrbit);
     viewer.setAttribute("camera-target", this.frontTarget);
     viewer.setAttribute("field-of-view", this.frontFieldOfView);
-    viewer.setAttribute("min-field-of-view", this.stage.dataset.bodyMinFieldOfView || "18deg");
-    viewer.setAttribute("max-field-of-view", this.stage.dataset.bodyMaxFieldOfView || "38deg");
-    viewer.setAttribute("shadow-intensity", this.stage.dataset.bodyShadowIntensity || "0.45");
+    viewer.setAttribute("min-field-of-view", this.stage.dataset.bodyMinFieldOfView || "20deg");
+    viewer.setAttribute("max-field-of-view", this.stage.dataset.bodyMaxFieldOfView || "36deg");
+    viewer.setAttribute("shadow-intensity", this.shadowIntensity);
+    viewer.setAttribute("shadow-softness", this.shadowSoftness);
+    viewer.setAttribute("exposure", this.exposure);
+    viewer.setAttribute("tone-mapping", this.toneMapping);
     viewer.setAttribute("environment-image", "neutral");
     if (this.reducedMotion) viewer.setAttribute("interpolation-decay", "0");
     viewer.hidden = true;
@@ -627,16 +744,51 @@ export class Body3DController {
     });
   }
 
+  applyClinicalMaterials() {
+    if (this.materialTreatment === "original") return 0;
+    const materials = this.viewer?.model?.materials;
+    if (!Array.isArray(materials)) return 0;
+
+    const bodyColor = this.options.bodyColor
+      || this.stage.dataset.bodySurfaceColor
+      || CLINICAL_BODY_PALETTE.body;
+    let changed = 0;
+
+    for (const material of materials) {
+      const pbr = material?.pbrMetallicRoughness;
+      if (!pbr || pbr.baseColorTexture?.texture) continue;
+      const name = String(material.name || "").toLowerCase();
+      const isBody = /clinicalbody|bodymatte|human|skin|derm/.test(name);
+      if (!isBody) continue;
+
+      try {
+        pbr.setBaseColorFactor(bodyColor);
+        pbr.setMetallicFactor(0);
+        pbr.setRoughnessFactor(0.58);
+        changed += 1;
+      } catch {
+        // A future textured or custom material may expose only part of the
+        // scene-graph API. Its authored appearance should remain untouched.
+      }
+    }
+
+    this.viewer.dataset.bodyMaterialTreatment = changed ? "clinical-neutral" : "authored";
+    return changed;
+  }
+
   handleLoad() {
     if (this.destroyed) return;
+    const adjustedMaterials = this.applyClinicalMaterials();
     this.ready = true;
     this.stage.dataset.body3dState = this.mode === "3d" ? "ready" : "2d";
+    this.stage.dataset.body3dMaterials = String(adjustedMaterials);
     restoreAttribute(this.figure, "aria-busy", this.originalFigureBusy);
     this.status.textContent = "3D 신체 지도를 불러왔습니다.";
     dispatchStageEvent(this.stage, "body-3d:ready", {
       controller: this,
       context: this.context,
       viewer: this.viewer,
+      adjustedMaterials,
     });
   }
 
@@ -691,6 +843,8 @@ export class Body3DController {
     for (const marker of this.placeholders.values()) marker.remove();
     this.stage.classList.remove("is-body-2d", "is-body-3d", "has-body-3d-error");
     delete this.stage.dataset.body3dState;
+    delete this.stage.dataset.body3dPresentation;
+    delete this.stage.dataset.body3dMaterials;
     controllers.delete(this.stage);
   }
 }

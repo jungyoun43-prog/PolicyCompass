@@ -44,25 +44,46 @@ try {
       const stage = document.querySelector('[data-body-context="patient"]');
       const viewer = stage.querySelector('model-viewer');
       const controls = [...stage.querySelectorAll('.body-3d-control')];
+      const bodyMaterial = viewer.model?.materials?.find(({ name = '' }) => /body|human|skin/i.test(name));
+      const bodyPbr = bodyMaterial?.pbrMetallicRoughness;
       return {
         state: stage.dataset.body3dState,
+        presentation: stage.dataset.body3dPresentation,
         viewerSource: new URL(viewer.getAttribute('src')).pathname,
         cameraControls: viewer.hasAttribute('camera-controls'),
         autoRotate: viewer.hasAttribute('auto-rotate'),
+        disableTap: viewer.hasAttribute('disable-tap'),
+        toneMapping: viewer.getAttribute('tone-mapping'),
+        exposure: Number(viewer.getAttribute('exposure')),
+        shadowIntensity: Number(viewer.getAttribute('shadow-intensity')),
+        shadowSoftness: Number(viewer.getAttribute('shadow-softness')),
+        materialTreatment: viewer.dataset.bodyMaterialTreatment,
+        adjustedMaterials: Number(stage.dataset.body3dMaterials),
+        bodyColor: bodyPbr ? [...bodyPbr.baseColorFactor] : [],
+        bodyRoughness: bodyPbr?.roughnessFactor,
         hotspots: viewer.querySelectorAll('.body-hotspot').length,
         slottedHotspots: viewer.querySelectorAll('.body-hotspot[slot^="hotspot-"][data-position][data-normal]').length,
         visibleHotspots: viewer.querySelectorAll('.body-hotspot[data-visible]').length,
         imageHidden: stage.querySelector('.human-figure__image').hidden,
         controlHeights: controls.map((node) => Math.round(node.getBoundingClientRect().height)),
+        controlRadius: getComputedStyle(stage.querySelector('.body-3d-controls')).borderRadius,
         overflow: document.documentElement.scrollWidth - innerWidth,
       };
     })()`);
     assert(patient.state === "ready", `환자 3D 상태 오류: ${JSON.stringify(patient)}`);
-    assert(patient.viewerSource === "/assets/body-atlas-3d-v1.glb", `환자 모델 경로 오류: ${JSON.stringify(patient)}`);
+    assert(patient.viewerSource === "/assets/body-atlas-3d-v2.glb", `환자 모델 경로 오류: ${JSON.stringify(patient)}`);
     assert(patient.cameraControls && !patient.autoRotate, `환자 카메라 제어 오류: ${JSON.stringify(patient)}`);
+    assert(patient.presentation === "clinical" && patient.disableTap && patient.toneMapping === "neutral",
+      `환자 3D 의료용 렌더 설정 오류: ${JSON.stringify(patient)}`);
+    assert(patient.exposure >= 1 && patient.shadowIntensity >= 0.8 && patient.shadowSoftness >= 0.8,
+      `환자 3D 조명·그림자 설정 오류: ${JSON.stringify(patient)}`);
+    assert(patient.materialTreatment === "clinical-neutral" && patient.adjustedMaterials >= 1
+      && patient.bodyColor[0] > patient.bodyColor[2] && patient.bodyRoughness < 0.7,
+    `환자 3D 재질 보정 오류: ${JSON.stringify(patient)}`);
     assert(patient.hotspots === 12 && patient.slottedHotspots === 12 && patient.visibleHotspots >= 8,
       `환자 3D 표식 오류: ${JSON.stringify(patient)}`);
-    assert(patient.imageHidden && patient.controlHeights.every((height) => height >= 44), `환자 3D 조작 크기 오류: ${JSON.stringify(patient)}`);
+    assert(patient.imageHidden && patient.controlHeights.every((height) => height >= 44) && patient.controlRadius === "12px",
+      `환자 3D 조작 크기 오류: ${JSON.stringify(patient)}`);
     assert(patient.overflow <= 0, `환자 1440 화면 가로 넘침: ${patient.overflow}`);
 
     await evaluate("document.querySelector('model-viewer .hotspot-cardio').click()");

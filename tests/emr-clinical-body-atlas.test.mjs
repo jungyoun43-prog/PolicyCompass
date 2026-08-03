@@ -16,7 +16,7 @@ test("임상 관계 그래프는 제거되고 12개 영역의 신체·진료과 
   assert.equal((html.match(/class="body-caption" data-body-area=/g) ?? []).length, 12);
   assert.match(html, /src="\/assets\/body-atlas-v4\.webp"/);
   assert.match(html, /data-body-context="emr"/);
-  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v1\.glb"/);
+  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v2\.glb"/);
 });
 
 test("진료과 선택은 진료·Encounter 연결 처방·활성 문제를 별도 목록으로 공개한다", () => {

@@ -33,7 +33,7 @@ await runBrowserSmoke({
     stored: localStorage.getItem('vitagraph-emr-v2'),
   })`);
   assert(creation.selectedName === "급여 검토 테스트", `Claim smoke patient was not created: ${JSON.stringify(creation)}`);
-  await evaluate("document.getElementById('tab-claims').click()");
+  await evaluate("document.getElementById('tab-claims').click(); document.getElementById('claimWorkflowDisclosure').open = true");
   await waitFor(
     "document.querySelectorAll('[data-claim-review-lane]').length === 4 && document.querySelectorAll('[data-claim-evaluation-id]').length === 3",
     "Claim review board did not render four workflow lanes and three rule cards.",
@@ -166,7 +166,7 @@ await runBrowserSmoke({
   assert(auditRollover.durableStage === "evidence" && auditRollover.fingerprintLength > 0, "Audit rollover removed the durable review state.");
 
   await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '급여 검토 테스트'");
-  await evaluate("document.getElementById('tab-claims').click()");
+  await evaluate("document.getElementById('tab-claims').click(); document.getElementById('claimWorkflowDisclosure').open = true");
   await waitFor(
     `document.querySelector('[data-claim-review-lane="evidence"] [data-claim-evaluation-id="${initial.cardId}"]') !== null`,
     "Review stage did not persist through a reload.",
@@ -237,7 +237,7 @@ await runBrowserSmoke({
   assert(changedComputation.invalidationCount === beforeStale.invalidationCount, "Direct clinical change audited review invalidation during a read-only calculation.");
 
   await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '급여 검토 테스트'");
-  await evaluate("document.getElementById('tab-claims').click()");
+  await evaluate("document.getElementById('tab-claims').click(); document.getElementById('claimWorkflowDisclosure').open = true");
   await waitFor(
     `document.querySelector('[data-claim-review-lane="new"] [data-claim-evaluation-id="${initial.cardId}"][data-claim-review-stale="true"]') !== null`,
     "Changed claim computation did not safely return the prior review to the unclassified lane.",

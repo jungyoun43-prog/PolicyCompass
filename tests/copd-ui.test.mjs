@@ -13,6 +13,8 @@ test("급여 주의와 질환별 적정성·진단 근거는 독립된 summary-f
   for (const id of [
     "claimAttentionSummary",
     "claimAttentionList",
+    "claimAttentionAllDisclosure",
+    "claimAttentionAllList",
     "diseaseAssessmentTabs",
     "diseaseAssessmentPanel",
     "diseaseQualitySummary",
@@ -21,13 +23,18 @@ test("급여 주의와 질환별 적정성·진단 근거는 독립된 summary-f
     "diseaseDiagnosticSummary",
     "diseaseDiagnosticDetails",
     "diseaseAssessmentMeta",
+    "diseaseAssessmentSources",
+    "claimWorkflowDisclosure",
   ]) {
     assert.equal((html.match(new RegExp(`id="${id}"`, "g")) ?? []).length, 1, id);
   }
-  assert.match(html, /환자의 확정 질환과 연결된 평가만 보여 줍니다/);
+  assert.match(html, /확정 질환을 선택하면 핵심 상태만 먼저 보여 줍니다/);
   assert.match(html, /공식 점수 아님/);
   assert.match(html, /공식 기관 점수·등급이나 가산금액을 계산하지 않으며/);
   assert.match(html, /<details class="claim-overview-disclosure/);
+  assert.match(html, /id="diseaseQualityDisclosure"[\s\S]*?id="diseaseQualityMetrics"/);
+  assert.match(html, /<details class="quality-diagnostic-panel" id="diseaseDiagnosticDisclosure"/);
+  assert.match(html, /<details class="claim-workflow-disclosure" id="claimWorkflowDisclosure"/);
   assert.doesNotMatch(html, /id="copd(?:Quality|Diagnostic|Assessment)/);
 });
 
@@ -65,6 +72,9 @@ test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 
   assert.match(js, /resolveClaimPresentation/);
   assert.match(js, /adjudications/);
   assert.match(js, /paymentBoundary/);
+  assert.match(js, /priorityClaimAttentionEntries/);
+  assert.match(js, /evaluation\.status === "not-applicable"/);
+  assert.match(js, /즉시 위험은 없지만 확인 대기/);
   assert.match(css, /data-claim-state="reduced"/);
   assert.match(css, /data-claim-state="risk"/);
   assert.match(css, /data-claim-state="verified"/);
@@ -72,6 +82,7 @@ test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 
 
 test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 모두 배포한다", () => {
   assert.match(css, /\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.94fr\) minmax\(0, 1\.06fr\)/);
+  assert.match(css, /\.quality-program-metrics\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 1180px\)[\s\S]*?\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.quality-program-metrics/);
   assert.doesNotMatch(css.match(/\.claim-overview-grid\s*\{[^}]+\}/)?.[0] ?? "", /overflow-x:\s*auto/);

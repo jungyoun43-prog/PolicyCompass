@@ -9,6 +9,7 @@ const pneumoniaPath = process.env.QUALITY_UI_PNEUMONIA_SCREENSHOT ?? "/tmp/vitag
 const mixedPath = process.env.QUALITY_UI_MIXED_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-toggle-1440.png";
 const reductionPath = process.env.QUALITY_UI_REDUCTION_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/claim-reduction-1440.png";
 const mobilePath = process.env.QUALITY_UI_MOBILE_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-quality-390.png";
+const detailPath = process.env.QUALITY_UI_DETAIL_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/pneumonia-detail-1440.png";
 
 async function capture(client, path) {
   const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -43,13 +44,17 @@ await runBrowserSmoke({
       diagnostic: document.getElementById('diseaseDiagnosticSummary').textContent,
       meta: document.getElementById('diseaseAssessmentMeta').textContent,
       claimSummary: document.getElementById('claimAttentionSummary').textContent,
-      claimText: document.getElementById('claimAttentionList').textContent,
+      claimText: [document.getElementById('claimAttentionList'), document.getElementById('claimAttentionAllList')].map((node) => node.textContent).join(' '),
       redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="reduced"]').length,
       yellowCount: document.querySelectorAll('.claim-attention-item[data-claim-state="risk"]').length,
       greenCount: document.querySelectorAll('.claim-attention-item[data-claim-state="verified"]').length,
       grayCount: document.querySelectorAll('.claim-attention-item[data-claim-state="insufficient"]').length,
       overflow: document.documentElement.scrollWidth - innerWidth,
       columns: getComputedStyle(document.querySelector('.claim-overview-grid')).gridTemplateColumns,
+      metricDetailsOpen: document.querySelectorAll('#diseaseQualityMetrics .quality-program-metric[open]').length,
+      qualityOpen: document.getElementById('diseaseQualityDisclosure').open,
+      diagnosticOpen: document.getElementById('diseaseDiagnosticDisclosure').open,
+      workflowOpen: document.getElementById('claimWorkflowDisclosure').open,
     })`);
   }
 
@@ -61,9 +66,24 @@ await runBrowserSmoke({
   assert(/영상/.test(kim.diagnostic) && /지역사회/.test(kim.diagnostic), `김비타 폐렴 진단 정합성 오류: ${kim.diagnostic}`);
   assert(/2026-7th-plan/.test(kim.meta) && /2026-publication/.test(kim.meta), `폐렴 기준 버전 오류: ${kim.meta}`);
   assert(kim.redCount === 0 && kim.greenCount >= 2 && kim.grayCount >= 1, `김비타 청구 분포 오류: ${JSON.stringify(kim)}`);
+  assert(!kim.qualityOpen && !kim.diagnosticOpen && !kim.workflowOpen && kim.metricDetailsOpen === 0, `김비타 기본 화면이 요약 상태가 아님: ${JSON.stringify(kim)}`);
   assert(kim.overflow <= 0, `김비타 1440 화면 가로 넘침: ${kim.overflow}`);
   await evaluate("scrollBy(0, -140)");
   await capture(client, pneumoniaPath);
+  const progressiveDisclosure = await evaluate(`(() => {
+    const quality = document.getElementById('diseaseQualityDisclosure');
+    quality.open = true;
+    const metric = quality.querySelector('.quality-program-metric');
+    metric.querySelector('summary').click();
+    const metricOpened = metric.open && /산소포화도/.test(metric.textContent);
+    quality.open = false;
+    const diagnostic = document.getElementById('diseaseDiagnosticDisclosure');
+    diagnostic.querySelector('summary').click();
+    const diagnosticOpened = diagnostic.open && diagnostic.querySelectorAll('.quality-diagnostic-axis').length === 4;
+    diagnostic.open = false;
+    return { metricOpened, diagnosticOpened, qualityClosed: !quality.open, diagnosticClosed: !diagnostic.open };
+  })()`);
+  assert(Object.values(progressiveDisclosure).every(Boolean), `클릭 상세 공개 동작 오류: ${JSON.stringify(progressiveDisclosure)}`);
 
   await selectPatient("demo-patient-choi", "최민아", 5);
   const choi = await snapshot();
@@ -71,6 +91,14 @@ await runBrowserSmoke({
   assert(/5개 지표 중 4개 기여 가능/.test(choi.headline), `최민아 4/5 요약 오류: ${choi.headline}`);
   assert(choi.metrics.filter(({ status }) => status === "not-included").length === 1 && /혈액배양/.test(choi.metrics.find(({ status }) => status === "not-included").text), `최민아 혈액배양 시점 오류: ${JSON.stringify(choi.metrics)}`);
   assert(choi.redCount === 0 && choi.yellowCount >= 1 && choi.greenCount >= 1 && choi.grayCount >= 1, `최민아 혼합 청구 분포 오류: ${JSON.stringify(choi)}`);
+  await evaluate(`(() => {
+    document.getElementById('diseaseQualityDisclosure').open = true;
+    document.querySelector('#diseaseQualityMetrics [data-metric-status="not-included"]').open = true;
+    document.querySelector('.disease-assessment-card').scrollIntoView({ block: 'start' });
+    scrollBy(0, -110);
+  })()`);
+  await capture(client, detailPath);
+  await evaluate("document.getElementById('diseaseQualityDisclosure').open = false");
 
   await selectPatient("demo-patient-lee", "이준호", 3);
   const lee = await snapshot();
@@ -101,7 +129,7 @@ await runBrowserSmoke({
   assert(jungPneumonia.tabs[1].selected === "true" && /5개 지표 중 4개 기여 가능/.test(jungPneumonia.headline), `정수진 폐렴 4/5 오류: ${JSON.stringify(jungPneumonia)}`);
   assert(jungPneumonia.metrics.filter(({ status }) => status === "not-included").length === 1 && /중증도/.test(jungPneumonia.metrics.find(({ status }) => status === "not-included").text), `정수진 폐렴 중증도 누락 오류: ${JSON.stringify(jungPneumonia.metrics)}`);
   assert(jungPneumonia.claimSummary === jungCopd.claimSummary && jungPneumonia.claimText === jungCopd.claimText, "질환 전환으로 전체 청구 주의사항이 바뀌었습니다.");
-  const closedOnSwitch = await evaluate("!document.getElementById('diseaseQualityDisclosure').open && !document.getElementById('diseaseDiagnosticDisclosure').open");
+  const closedOnSwitch = await evaluate("!document.getElementById('diseaseQualityDisclosure').open && !document.getElementById('diseaseDiagnosticDisclosure').open && !document.getElementById('diseaseAssessmentSources').open");
   assert(closedOnSwitch, "질환 전환 시 이전 상세 패널이 닫히지 않았습니다.");
   await evaluate("document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').focus(); document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))");
   await waitFor("document.querySelector('[data-disease-assessment-id=\"copd\"]')?.getAttribute('aria-selected') === 'true'", "질환 탭 키보드 순환 실패");
@@ -111,8 +139,13 @@ await runBrowserSmoke({
   await capture(client, mixedPath);
 
   await setViewport({ width: 390, height: 844, mobile: true });
-  await evaluate("document.querySelector('.disease-assessment-card').scrollIntoView({ block: 'start' }); scrollBy(0, -90)");
   const focusable = await tabTo(".disease-assessment-card .claim-overview-disclosure > summary", 160);
+  await evaluate(`new Promise((resolve) => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.querySelector('.disease-assessment-card').scrollIntoView({ block: 'start' });
+    scrollBy(0, -390);
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  })`);
   const mobile = await evaluate(`({
     overflow: document.documentElement.scrollWidth - innerWidth,
     overviewColumns: getComputedStyle(document.querySelector('.claim-overview-grid')).gridTemplateColumns,
@@ -126,5 +159,5 @@ await runBrowserSmoke({
   assert(!mobile.overviewColumns.includes(" ") && !mobile.metricColumns.includes(" "), `390 화면이 1열이 아님: ${JSON.stringify(mobile)}`);
   await capture(client, mobilePath);
 
-  process.stdout.write(`${JSON.stringify({ pneumoniaPath, mixedPath, reductionPath, mobilePath, kim, choi, lee, park, jungCopd, jungPneumonia, mobile }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ pneumoniaPath, mixedPath, reductionPath, mobilePath, detailPath, kim, choi, lee, park, jungCopd, jungPneumonia, mobile }, null, 2)}\n`);
 });

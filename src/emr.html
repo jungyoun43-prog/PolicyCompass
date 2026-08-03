@@ -613,13 +613,9 @@
               <section class="clinical-card claim-intro" aria-labelledby="claimBoardTitle">
                 <div class="card-heading">
                   <div><p class="rail-eyebrow">REIMBURSEMENT READINESS</p><h3 id="claimBoardTitle">급여 근거 한눈에 보기</h3></div>
-                  <div class="scope-switch" role="group" aria-label="급여 보드 범위">
-                    <button type="button" aria-pressed="true" data-board-scope="patient">이 환자</button>
-                    <button type="button" aria-pressed="false" data-board-scope="all">전체 환자</button>
-                  </div>
                 </div>
-                <p>먼저 이 환자의 청구 주의사항을 요약하고, 연결된 질환을 선택해 진단 근거와 적정성 평가 기여 가능성을 따로 확인합니다.</p>
-                <div class="rule-trust-note"><b>판정 경계</b><span>사전점검 통과는 지급 보장이 아니며, 환자별 기여 예상은 공식 기관 점수·등급이 아닙니다. 이 화면은 검사·내원·처방을 강제하지 않습니다.</span></div>
+                <p>조치가 필요한 항목부터 확인하고, 세부 근거는 필요한 경우에만 펼쳐보세요.</p>
+                <div class="rule-trust-note"><b>판정 경계</b><span>빨강만 최종 심사조정입니다. 다른 색은 내부 사전점검이며, 적정성 예상은 공식 점수나 개별 삭감이 아닙니다. 진료를 자동 결정하지 않습니다.</span></div>
               </section>
 
               <div class="claim-overview-grid" aria-label="환자별 급여와 질환별 근거 요약">
@@ -631,33 +627,43 @@
                     </div>
                     <span class="source-badge">환자별 사전점검</span>
                   </div>
-                  <p class="claim-overview-card__intro">서명·확정된 EMR의 시행일, 횟수와 근거 누락을 봅니다. 최종 심사결과와 사전 위험을 섞지 않습니다.</p>
+                  <p class="claim-overview-card__intro">최종 삭감과 사전 위험을 분리해 보여 줍니다. 항목을 누르면 근거와 다음 확인 내용을 볼 수 있습니다.</p>
 
                   <div class="claim-attention-summary" id="claimAttentionSummary" aria-live="polite" aria-atomic="true">
                     <p class="claim-overview-empty">환자 기록에서 청구 주의사항을 정리하는 중입니다.</p>
                   </div>
-                  <ol class="claim-attention-list" id="claimAttentionList" aria-label="환자별 청구 주의사항" aria-live="polite">
-                    <li class="claim-overview-empty">확인할 항목이 표시되면 상태와 다음 조치를 함께 보여 줍니다.</li>
+                  <ol class="claim-attention-list claim-attention-list--priority" id="claimAttentionList" aria-label="우선 확인할 청구 주의사항">
+                    <li class="claim-overview-empty">즉시 확인할 항목이 있으면 여기에 표시합니다.</li>
                   </ol>
 
-                  <div class="claim-status-legend" role="list" aria-label="급여 사전점검 상태 기준">
-                    <div class="claim-status-legend__item" data-claim-tone="red" role="listitem">
-                      <span class="claim-status-legend__mark" aria-hidden="true">×</span>
-                      <span><b>빨강 · 삭감 확정</b><small>최종 심사결과로 감액·불인정이 확인됨</small></span>
+                  <details class="claim-status-guide claim-attention-all" id="claimAttentionAllDisclosure">
+                    <summary><span><b>그 외 항목 보기</b><small id="claimAttentionAllDisclosureHint">확인 완료·자료 대기 항목</small></span></summary>
+                    <ol class="claim-attention-list claim-attention-list--all" id="claimAttentionAllList" aria-label="그 외 청구 사전점검 항목">
+                      <li class="claim-overview-empty">세부 항목을 정리하는 중입니다.</li>
+                    </ol>
+                  </details>
+
+                  <details class="claim-status-guide">
+                    <summary><span><b>상태 색상 기준</b><small>빨강은 최종 삭감 확정에만 사용</small></span></summary>
+                    <div class="claim-status-legend" role="list" aria-label="급여 사전점검 상태 기준">
+                      <div class="claim-status-legend__item" data-claim-tone="red" role="listitem">
+                        <span class="claim-status-legend__mark" aria-hidden="true">×</span>
+                        <span><b>빨강 · 삭감 확정</b><small>최종 심사결과로 감액·불인정이 확인됨</small></span>
+                      </div>
+                      <div class="claim-status-legend__item" data-claim-tone="yellow" role="listitem">
+                        <span class="claim-status-legend__mark" aria-hidden="true">!</span>
+                        <span><b>노랑 · 사전 위험 확인</b><small>판정 가능한 근거에서 보완 위험이 확인됨</small></span>
+                      </div>
+                      <div class="claim-status-legend__item" data-claim-tone="green" role="listitem">
+                        <span class="claim-status-legend__mark" aria-hidden="true">✓</span>
+                        <span><b>초록 · 사전점검 통과</b><small>내부 규칙 통과 · 지급 보장 아님</small></span>
+                      </div>
+                      <div class="claim-status-legend__item" data-claim-tone="gray" role="listitem">
+                        <span class="claim-status-legend__mark" aria-hidden="true">…</span>
+                        <span><b>회색 · 확인 불충분</b><small>근거 부족·미연결·아직 평가하지 않음</small></span>
+                      </div>
                     </div>
-                    <div class="claim-status-legend__item" data-claim-tone="yellow" role="listitem">
-                      <span class="claim-status-legend__mark" aria-hidden="true">!</span>
-                      <span><b>노랑 · 사전 위험 확인</b><small>판정 가능한 근거에서 보완 위험이 확인됨</small></span>
-                    </div>
-                    <div class="claim-status-legend__item" data-claim-tone="green" role="listitem">
-                      <span class="claim-status-legend__mark" aria-hidden="true">✓</span>
-                      <span><b>초록 · 사전점검 통과</b><small>내부 규칙 통과 · 지급 보장 아님</small></span>
-                    </div>
-                    <div class="claim-status-legend__item" data-claim-tone="gray" role="listitem">
-                      <span class="claim-status-legend__mark" aria-hidden="true">…</span>
-                      <span><b>회색 · 확인 불충분</b><small>근거 부족·미연결·아직 평가하지 않음</small></span>
-                    </div>
-                  </div>
+                  </details>
                 </section>
 
                 <section class="clinical-card claim-overview-card disease-assessment-card" aria-labelledby="diseaseAssessmentTitle">
@@ -668,7 +674,7 @@
                     </div>
                     <span class="source-badge source-badge--draft">공식 점수 아님</span>
                   </div>
-                  <p class="claim-overview-card__intro">환자의 확정 질환과 연결된 평가만 보여 줍니다. 질환을 바꾸어도 왼쪽의 최종 심사결과와 청구 주의사항은 그대로 유지됩니다.</p>
+                  <p class="claim-overview-card__intro">확정 질환을 선택하면 핵심 상태만 먼저 보여 줍니다. 각 지표를 누르면 판정 근거가 펼쳐집니다.</p>
 
                   <div class="disease-assessment-tabs" id="diseaseAssessmentTabs" role="tablist" aria-label="질환 평가 선택">
                     <span class="claim-overview-empty">연결된 질환을 확인하는 중입니다.</span>
@@ -682,65 +688,83 @@
                       </div>
                       <span id="diseaseProgramStatus">연결 확인</span>
                     </div>
-                    <p class="disease-program-intro" id="diseaseProgramIntro">선택한 질환의 평가대상·과정지표·임상 근거를 분리해 보여 줍니다.</p>
+                    <p class="disease-program-intro" id="diseaseProgramIntro" hidden>선택한 질환의 평가대상·과정지표·임상 근거를 분리해 보여 줍니다.</p>
 
                     <div class="quality-program-summary" id="diseaseQualitySummary" aria-live="polite" aria-atomic="true">
                       <p class="claim-overview-empty">평가대상과 자료 완전성을 확인하는 중입니다.</p>
                     </div>
-                    <div class="quality-program-metrics" id="diseaseQualityMetrics" aria-label="선택 질환의 환자별 지표 기여 예상">
-                      <p class="claim-overview-empty">선택 질환의 지표 근거가 여기에 표시됩니다.</p>
-                    </div>
-
                     <details class="claim-overview-disclosure" id="diseaseQualityDisclosure">
                       <summary>
-                        <span><b>기여 예상 근거 보기</b><small id="diseaseQualityDisclosureHint">대상조건·기간·기록 출처</small></span>
+                        <span><b>평가 지표 자세히 보기</b><small id="diseaseQualityDisclosureHint">대상조건·기간·기록 출처</small></span>
                       </summary>
-                      <div class="claim-overview-disclosure__body" id="diseaseQualityDetails">
-                        <p class="claim-overview-empty">연결된 기록과 확인이 필요한 자료를 구분해 보여 줍니다.</p>
+                      <div class="claim-overview-disclosure__body quality-program-details">
+                        <div class="quality-program-metrics" id="diseaseQualityMetrics" aria-label="선택 질환의 환자별 지표 기여 예상">
+                          <p class="claim-overview-empty">선택 질환의 지표 근거가 여기에 표시됩니다.</p>
+                        </div>
+                        <div id="diseaseQualityDetails">
+                          <p class="claim-overview-empty">연결된 기록과 확인이 필요한 자료를 구분해 보여 줍니다.</p>
+                        </div>
                       </div>
                     </details>
 
-                    <section class="quality-diagnostic-panel" aria-labelledby="diseaseDiagnosticTitle">
-                      <div class="quality-diagnostic-panel__heading">
-                        <div><p class="rail-eyebrow" id="diseaseDiagnosticEyebrow">CLINICAL CONCORDANCE</p><h4 id="diseaseDiagnosticTitle">진단 근거 확인</h4></div>
-                        <span>자동 진단 아님</span>
-                      </div>
-                      <div class="quality-diagnostic-summary" id="diseaseDiagnosticSummary" aria-live="polite" aria-atomic="true">
-                        <p class="claim-overview-empty">임상 맥락과 객관적 자료를 확인하는 중입니다.</p>
-                      </div>
-                      <details class="claim-overview-disclosure claim-overview-disclosure--diagnostic" id="diseaseDiagnosticDisclosure">
-                        <summary>
-                          <span><b>진단 근거 자세히 보기</b><small id="diseaseDiagnosticDisclosureHint">임상 맥락·객관적 자료·의료진 판단</small></span>
-                        </summary>
-                        <div class="claim-overview-disclosure__body" id="diseaseDiagnosticDetails">
+                    <details class="quality-diagnostic-panel" id="diseaseDiagnosticDisclosure">
+                      <summary>
+                        <span class="quality-diagnostic-panel__label">
+                          <span class="rail-eyebrow" id="diseaseDiagnosticEyebrow">CLINICAL CONCORDANCE</span>
+                          <b id="diseaseDiagnosticTitle">진단 근거 확인</b>
+                          <small id="diseaseDiagnosticDisclosureHint">임상 맥락·객관적 자료·의료진 판단</small>
+                        </span>
+                        <span class="quality-diagnostic-panel__badge">자동 진단 아님</span>
+                      </summary>
+                      <div class="quality-diagnostic-panel__body">
+                        <div class="quality-diagnostic-summary" id="diseaseDiagnosticSummary" aria-live="polite" aria-atomic="true">
+                          <p class="claim-overview-empty">임상 맥락과 객관적 자료를 확인하는 중입니다.</p>
+                        </div>
+                        <div class="claim-overview-disclosure__body quality-diagnostic-details" id="diseaseDiagnosticDetails">
                           <p class="claim-overview-empty">수치·검사만으로 진단을 확정하지 않습니다.</p>
                         </div>
-                      </details>
-                    </section>
+                      </div>
+                    </details>
 
-                    <p class="quality-assessment-meta" id="diseaseAssessmentMeta">질환별 공식 기준과 합성 연결 자료를 확인하는 중입니다.</p>
-                    <p class="quality-assessment-boundary"><b>사용 범위</b> 공식 기관 점수·등급이나 가산금액을 계산하지 않으며, 평가 충족만을 위한 검사·내원·처방 또는 자동 진단을 지시하지 않습니다.</p>
+                    <details class="claim-overview-disclosure quality-assessment-sources" id="diseaseAssessmentSources">
+                      <summary><span><b>기준·출처와 사용 범위</b><small>공식 문서·평가 시점·판정 경계</small></span></summary>
+                      <div class="claim-overview-disclosure__body">
+                        <p class="quality-assessment-meta" id="diseaseAssessmentMeta">질환별 공식 기준과 합성 연결 자료를 확인하는 중입니다.</p>
+                        <p class="quality-assessment-boundary"><b>사용 범위</b> 공식 기관 점수·등급이나 가산금액을 계산하지 않으며, 평가 충족만을 위한 검사·내원·처방 또는 자동 진단을 지시하지 않습니다.</p>
+                      </div>
+                    </details>
                   </div>
                 </section>
               </div>
 
-              <section class="clinical-card claim-review-section" aria-labelledby="claimWorkflowTitle">
-                <div class="card-heading">
-                  <div><p class="rail-eyebrow">MANUAL REVIEW WORKFLOW</p><h3 id="claimWorkflowTitle">자동 판정 뒤 담당자 검토</h3></div>
-                  <span class="source-badge">수동 단계 분리</span>
-                </div>
-                <div class="claim-review-guide" id="claimBoardInstructions">
-                  <span class="claim-review-guide__mark" aria-hidden="true">↔</span>
-                  <div>
-                    <b>규칙 판정과 담당자 검토 단계를 분리합니다.</b>
-                    <p>카드에는 자동 판정·보완 항목·기준 사용량만 먼저 표시합니다. 카드를 선택하면 연결 차트 근거·규칙 버전·출처·검토 단계가 펼쳐집니다. 카드를 끌어 놓거나 단계 선택을 사용하면 담당자의 수동 검토 단계만 이동합니다.</p>
-                  </div>
-                </div>
-                <div class="claim-result-summary" id="claimResultSummary" aria-label="변경되지 않는 자동 규칙 판정 요약"></div>
-              </section>
+              <details class="claim-workflow-disclosure" id="claimWorkflowDisclosure">
+                <summary class="clinical-card">
+                  <span><span class="rail-eyebrow">MANUAL REVIEW WORKFLOW</span><b id="claimWorkflowTitle">담당자 검토 보드 열기</b><small>자동 판정 이후의 수동 검토 단계</small></span>
+                  <span class="source-badge">고급 업무</span>
+                </summary>
+                <div class="claim-workflow-disclosure__body">
+                  <section class="clinical-card claim-review-section" aria-labelledby="claimWorkflowTitle">
+                    <div class="card-heading">
+                      <div><p class="rail-eyebrow">MANUAL REVIEW WORKFLOW</p><h3>자동 판정 뒤 담당자 검토</h3></div>
+                      <div class="scope-switch" role="group" aria-label="급여 보드 범위">
+                        <button type="button" aria-pressed="true" data-board-scope="patient">이 환자</button>
+                        <button type="button" aria-pressed="false" data-board-scope="all">전체 환자</button>
+                      </div>
+                    </div>
+                    <div class="claim-review-guide" id="claimBoardInstructions">
+                      <span class="claim-review-guide__mark" aria-hidden="true">↔</span>
+                      <div>
+                        <b>규칙 판정과 담당자 검토 단계를 분리합니다.</b>
+                        <p>카드에는 자동 판정·보완 항목·기준 사용량만 먼저 표시합니다. 카드를 선택하면 연결 차트 근거·규칙 버전·출처·검토 단계가 펼쳐집니다. 카드를 끌어 놓거나 단계 선택을 사용하면 담당자의 수동 검토 단계만 이동합니다.</p>
+                      </div>
+                    </div>
+                    <div class="claim-result-summary" id="claimResultSummary" aria-label="변경되지 않는 자동 규칙 판정 요약"></div>
+                  </section>
 
-              <div class="claim-board" id="claimBoard" aria-label="담당자 검토 단계별 급여 칸반" aria-describedby="claimBoardInstructions"></div>
-              <p class="visually-hidden" id="claimBoardLive" role="status" aria-live="polite" aria-atomic="true"></p>
+                  <div class="claim-board" id="claimBoard" aria-label="담당자 검토 단계별 급여 칸반" aria-describedby="claimBoardInstructions"></div>
+                  <p class="visually-hidden" id="claimBoardLive" role="status" aria-live="polite" aria-atomic="true"></p>
+                </div>
+              </details>
 
               <details class="clinical-card rule-composer">
                 <summary><span><b>기관 급여 규칙 버전 관리</b><small>기존 버전을 종료한 뒤 후속 버전을 추가</small></span><span aria-hidden="true">＋</span></summary>

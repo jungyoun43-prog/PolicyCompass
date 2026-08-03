@@ -333,6 +333,9 @@ const refs = {
   claimResultSummary: byId("claimResultSummary"),
   claimAttentionSummary: byId("claimAttentionSummary"),
   claimAttentionList: byId("claimAttentionList"),
+  claimAttentionAllDisclosure: byId("claimAttentionAllDisclosure"),
+  claimAttentionAllDisclosureHint: byId("claimAttentionAllDisclosureHint"),
+  claimAttentionAllList: byId("claimAttentionAllList"),
   diseaseAssessmentTabs: byId("diseaseAssessmentTabs"),
   diseaseAssessmentPanel: byId("diseaseAssessmentPanel"),
   diseaseProgramEyebrow: byId("diseaseProgramEyebrow"),
@@ -351,6 +354,7 @@ const refs = {
   diseaseDiagnosticDisclosureHint: byId("diseaseDiagnosticDisclosureHint"),
   diseaseDiagnosticDetails: byId("diseaseDiagnosticDetails"),
   diseaseAssessmentMeta: byId("diseaseAssessmentMeta"),
+  diseaseAssessmentSources: byId("diseaseAssessmentSources"),
   claimBoard: byId("claimBoard"),
   claimBoardLive: byId("claimBoardLive"),
   ruleVersionList: byId("ruleVersionList"),
@@ -1630,6 +1634,7 @@ function claimAttentionEntries(patient, evaluations, profile) {
   });
   const profileCodes = new Set(profileItems.map(({ code }) => code).filter(Boolean));
   for (const evaluation of evaluations) {
+    if (evaluation.status === "not-applicable") continue;
     if (profileCodes.has(evaluation.serviceCode)) continue;
     entries.push({
       id: evaluation.id,
@@ -1642,28 +1647,50 @@ function claimAttentionEntries(patient, evaluations, profile) {
   }
   const ordered = entries.sort((left, right) => CLAIM_ATTENTION_ORDER[left.presentation.state] - CLAIM_ATTENTION_ORDER[right.presentation.state]
     || left.title.localeCompare(right.title, "ko"));
-  const selected = [];
-  const selectedIds = new Set();
-  for (const stateName of ["reduced", "risk", "insufficient", "verified"]) {
-    const representative = ordered.find(({ presentation }) => presentation.state === stateName);
-    if (!representative) continue;
-    selected.push(representative);
-    selectedIds.add(representative.id);
+  return ordered;
+}
+
+function priorityClaimAttentionEntries(entries) {
+  return [
+    ...entries.filter(({ presentation }) => presentation.state === "reduced"),
+    ...entries.filter(({ presentation }) => presentation.state === "risk").slice(0, 2),
+  ];
+}
+
+function appendClaimAttentionEntry(container, entry) {
+  const { presentation } = entry;
+  const row = element("li", "claim-attention-item");
+  row.dataset.claimState = presentation.state;
+  const disclosure = element("details", "claim-attention-item__disclosure");
+  const itemSummary = element("summary", "claim-attention-item__summary");
+  const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
+  icon.setAttribute("aria-hidden", "true");
+  itemSummary.append(
+    icon,
+    element("strong", "", entry.title),
+    element("span", "claim-attention-item__status", presentation.label),
+  );
+  const content = element("div", "claim-attention-item__content");
+  content.append(element("p", "", presentation.reason));
+  if (presentation.missingData.length) {
+    content.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
   }
-  for (const entry of ordered) {
-    if (selected.length >= 5) break;
-    if (selectedIds.has(entry.id)) continue;
-    selected.push(entry);
-    selectedIds.add(entry.id);
-  }
-  return selected.sort((left, right) => CLAIM_ATTENTION_ORDER[left.presentation.state] - CLAIM_ATTENTION_ORDER[right.presentation.state]
-    || left.title.localeCompare(right.title, "ko"));
+  const meta = [entry.code, entry.date, entry.synthetic ? "합성 자료" : "EMR 자동 집계"].filter(Boolean).join(" · ");
+  content.append(element("small", "", meta), element("small", "claim-attention-item__boundary", presentation.paymentBoundary));
+  disclosure.append(itemSummary, content);
+  row.append(disclosure);
+  container.append(row);
 }
 
 function renderClaimAttention(patient, evaluations, profile) {
   const entries = claimAttentionEntries(patient, evaluations, profile);
+  const priorityEntries = priorityClaimAttentionEntries(entries);
+  const priorityIds = new Set(priorityEntries.map(({ id }) => id));
+  const otherEntries = entries.filter(({ id }) => !priorityIds.has(id));
   clear(refs.claimAttentionSummary);
   clear(refs.claimAttentionList);
+  clear(refs.claimAttentionAllList);
+  refs.claimAttentionAllDisclosure.open = false;
   const counts = Object.fromEntries(Object.keys(CLAIM_ATTENTION_ORDER).map((stateName) => [stateName, 0]));
   for (const entry of entries) counts[entry.presentation.state] += 1;
 
@@ -1672,8 +1699,10 @@ function renderClaimAttention(patient, evaluations, profile) {
     ? `최종 삭감 ${counts.reduced}건을 먼저 확인하세요.`
     : counts.risk
       ? `청구 전 확인할 위험 ${counts.risk}건이 있습니다.`
-      : counts.verified
-        ? "현재 연결 자료에서 우선 위험은 보이지 않습니다."
+      : counts.insufficient
+        ? `즉시 위험은 없지만 확인 대기 ${counts.insufficient}건이 있습니다.`
+        : counts.verified
+          ? "현재 연결 자료에서 즉시 확인할 위험은 없습니다."
         : "현재 자료로는 청구 위험을 판정하기 어렵습니다.";
   summary.append(
     element("strong", "", headline),
@@ -1683,27 +1712,16 @@ function renderClaimAttention(patient, evaluations, profile) {
   refs.claimAttentionSummary.append(summary);
 
   if (!entries.length) {
+    refs.claimAttentionList.hidden = false;
     refs.claimAttentionList.append(element("li", "claim-overview-empty", "연결된 규칙 또는 심사 자료가 없습니다."));
+    refs.claimAttentionAllDisclosure.hidden = true;
     return;
   }
-  for (const entry of entries) {
-    const { presentation } = entry;
-    const row = element("li", "claim-attention-item");
-    row.dataset.claimState = presentation.state;
-    const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
-    icon.setAttribute("aria-hidden", "true");
-    const content = element("div", "claim-attention-item__content");
-    const top = element("div", "claim-attention-item__top");
-    top.append(element("strong", "", entry.title), element("span", "claim-attention-item__status", presentation.label));
-    content.append(top, element("p", "", presentation.reason));
-    if (presentation.missingData.length) {
-      content.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
-    }
-    const meta = [entry.code, entry.date, entry.synthetic ? "합성 자료" : "EMR 자동 집계"].filter(Boolean).join(" · ");
-    content.append(element("small", "", meta), element("small", "claim-attention-item__boundary", presentation.paymentBoundary));
-    row.append(icon, content);
-    refs.claimAttentionList.append(row);
-  }
+  refs.claimAttentionList.hidden = priorityEntries.length === 0;
+  for (const entry of priorityEntries) appendClaimAttentionEntry(refs.claimAttentionList, entry);
+  refs.claimAttentionAllDisclosure.hidden = otherEntries.length === 0;
+  refs.claimAttentionAllDisclosureHint.textContent = `${otherEntries.length}건 · 확인 완료·자료 대기·추가 위험`;
+  for (const entry of otherEntries) appendClaimAttentionEntry(refs.claimAttentionAllList, entry);
 }
 
 const QUALITY_METRIC_STATUS = Object.freeze({
@@ -1748,7 +1766,7 @@ function qualityTargetHeadline(quality) {
   const countLabel = excludedCount
     ? `평가 분모 ${applicableCount}개 중 ${includedCount}개 기여 가능 · ${excludedCount}개 분모 제외`
     : `${quality.metrics.length}개 지표 중 ${includedCount}개 기여 가능`;
-  if (quality.target.status === "eligible") return `평가대상 예상 · ${countLabel}`;
+  if (quality.target.status === "eligible") return `환자 단위 대상 예상 · ${countLabel}`;
   if (quality.target.status === "insufficient") return "평가대상 여부를 판단할 자료가 부족합니다.";
   return "현재 연결 자료에서는 평가대상으로 예상되지 않습니다.";
 }
@@ -1772,29 +1790,36 @@ function renderDiseaseQuality(quality, profile, program) {
   clear(refs.diseaseQualityDetails);
   const summary = element("div", "quality-program-summary__content");
   summary.dataset.status = quality.target.status;
-  summary.append(
-    element("strong", "", qualityTargetHeadline(quality)),
-    element("p", "", quality.target.reason || "대상조건을 확인할 자료가 없습니다."),
-  );
-  if (profile?.synthetic) summary.append(element("span", "claim-synthetic-badge", profile.syntheticNotice));
+  summary.append(element("strong", "", qualityTargetHeadline(quality)));
+  const exceptions = quality.metrics.filter(({ status }) => ["not-included", "insufficient"].includes(status));
+  if (exceptions.length) {
+    summary.append(element("p", "quality-program-summary__exceptions", `확인할 지표 · ${exceptions.map(({ label }) => label).join(" · ")}`));
+  }
+  if (profile?.synthetic) {
+    const synthetic = element("span", "claim-synthetic-badge", "합성 데모");
+    synthetic.title = profile.syntheticNotice;
+    summary.append(synthetic);
+  }
   refs.diseaseQualitySummary.append(summary);
 
   for (const metric of quality.metrics) {
     const status = QUALITY_METRIC_STATUS[metric.status] ?? QUALITY_METRIC_STATUS.insufficient;
-    const card = element("article", "quality-program-metric");
+    const card = element("details", "quality-program-metric");
     card.dataset.metricStatus = metric.status;
-    const top = element("div", "quality-program-metric__top");
-    top.append(
+    const metricSummary = element("summary", "quality-program-metric__summary");
+    const label = element("span", "quality-program-metric__label");
+    label.append(element("b", "", metric.label), element("small", "quality-program-metric__status", status.label));
+    metricSummary.append(
       element("span", "quality-program-metric__mark", status.icon),
-      element("span", "quality-program-metric__status", status.label),
-    );
-    card.append(
-      top,
-      element("h4", "", metric.label),
+      label,
       element("strong", "quality-program-metric__value", qualityObservedLabel(metric)),
+    );
+    const detail = element("div", "quality-program-metric__detail");
+    detail.append(
       element("small", "", metricReferenceLabel(metric, program.id)),
       element("p", "", metric.reason),
     );
+    card.append(metricSummary, detail);
     refs.diseaseQualityMetrics.append(card);
   }
 
@@ -1804,16 +1829,6 @@ function renderDiseaseQuality(quality, profile, program) {
     element("p", "", quality.target.reason),
     element("p", "", qualityTargetDetail(quality, program.id)),
   );
-  const metricDetails = element("section", "quality-detail-section");
-  metricDetails.append(element("h5", "", `${quality.metrics.length}개 지표를 서로 독립 확인`));
-  const list = element("ul", "quality-detail-list");
-  for (const metric of quality.metrics) {
-    const status = QUALITY_METRIC_STATUS[metric.status] ?? QUALITY_METRIC_STATUS.insufficient;
-    const item = element("li");
-    item.append(element("b", "", `${metric.label} · ${status.label}`), element("span", "", metric.reason));
-    list.append(item);
-  }
-  metricDetails.append(list);
   const codeBoundary = element("section", "quality-detail-section quality-detail-section--boundary");
   codeBoundary.append(element("h5", "", "코드·판정 경계"));
   if (program.id === "copd") {
@@ -1826,7 +1841,7 @@ function renderDiseaseQuality(quality, profile, program) {
   }
   codeBoundary.append(element("p", "", quality.disclaimer));
   appendSourceLink(codeBoundary, quality.rule);
-  refs.diseaseQualityDetails.append(target, metricDetails, codeBoundary);
+  refs.diseaseQualityDetails.append(target, codeBoundary);
 }
 
 function copdDiagnosticHeadline(diagnostic) {
@@ -1847,6 +1862,7 @@ function diagnosticAxis(label, status, value) {
 }
 
 function renderCopdDiagnostic(diagnostic, profile) {
+  refs.diseaseDiagnosticDisclosureHint.textContent = copdDiagnosticHeadline(diagnostic);
   const summary = element("div", "quality-diagnostic-summary__content");
   summary.dataset.status = diagnostic.status;
   summary.append(element("strong", "", copdDiagnosticHeadline(diagnostic)));
@@ -1919,6 +1935,7 @@ function axisValue(status, supported, missing, mismatch) {
 }
 
 function renderPneumoniaDiagnostic(diagnostic) {
+  refs.diseaseDiagnosticDisclosureHint.textContent = pneumoniaDiagnosticHeadline(diagnostic);
   const summary = element("div", "quality-diagnostic-summary__content");
   summary.dataset.status = diagnostic.status;
   summary.append(element("strong", "", pneumoniaDiagnosticHeadline(diagnostic)));
@@ -1985,8 +2002,10 @@ function clearDiseaseAssessment(message = "이 환자에게 연결된 질환별 
   refs.diseaseDiagnosticSummary.append(element("p", "claim-overview-empty", "진단 근거 프로필이 연결되지 않았습니다."));
   refs.diseaseQualityDisclosure.open = false;
   refs.diseaseDiagnosticDisclosure.open = false;
+  refs.diseaseAssessmentSources.open = false;
   refs.diseaseQualityDisclosure.hidden = true;
   refs.diseaseDiagnosticDisclosure.hidden = true;
+  refs.diseaseAssessmentSources.hidden = true;
 }
 
 function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
@@ -2021,18 +2040,18 @@ function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
   refs.diseaseAssessmentPanel.setAttribute("aria-labelledby", diseaseTabId(patient.id, selectedId));
   refs.diseaseQualityDisclosure.hidden = false;
   refs.diseaseDiagnosticDisclosure.hidden = false;
+  refs.diseaseAssessmentSources.hidden = false;
   refs.diseaseProgramEyebrow.textContent = result.program.eyebrow;
   refs.diseaseProgramTitle.textContent = result.program.label;
   refs.diseaseProgramStatus.textContent = result.quality.target.status === "eligible"
-    ? "평가대상 예상"
+    ? "환자 단위 대상"
     : result.quality.target.status === "insufficient" ? "자료 확인" : "대상 아님";
   refs.diseaseProgramIntro.textContent = result.program.description;
   refs.diseaseDiagnosticEyebrow.textContent = result.program.diagnostic.eyebrow;
   refs.diseaseDiagnosticTitle.textContent = result.program.diagnostic.title;
-  refs.diseaseQualityDisclosureHint.textContent = `${result.quality.metrics.length}개 지표 · 대상조건·기간·기록 출처`;
-  refs.diseaseDiagnosticDisclosureHint.textContent = selectedId === "copd"
-    ? "임상 맥락·post-BD·반복 확인"
-    : "영상·감염 근거·발생 맥락";
+  const includedMetricCount = result.quality.metrics.filter(({ status }) => status === "included").length;
+  const attentionMetricCount = result.quality.metrics.filter(({ status }) => ["not-included", "insufficient"].includes(status)).length;
+  refs.diseaseQualityDisclosureHint.textContent = `${result.quality.metrics.length}개 지표 · 기여 ${includedMetricCount} · 확인 ${attentionMetricCount}`;
   clear(refs.diseaseDiagnosticSummary);
   clear(refs.diseaseDiagnosticDetails);
   renderDiseaseQuality(result.quality, result.profile, result.program);
@@ -2043,7 +2062,7 @@ function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
   const qualityRule = selectedId === "copd" ? HIRA_COPD_2026_RULESET : HIRA_PNEUMONIA_2026_RULESET;
   const diagnosticRule = selectedId === "copd" ? GOLD_COPD_2026_RULESET : KDCA_PNEUMONIA_2026_GUIDELINE;
   refs.diseaseAssessmentMeta.append(document.createTextNode(
-    `${qualityRule.version} · ${diagnosticRule.version} · 평가 ${displayTimestamp(result.evaluatedAt)} · `,
+    `${qualityRule.version} · ${diagnosticRule.version} · 데모 계산 ${displayTimestamp(result.evaluatedAt)} · `,
   ));
   appendSourceLink(refs.diseaseAssessmentMeta, qualityRule);
   refs.diseaseAssessmentMeta.append(document.createTextNode(" · "));
@@ -4001,6 +4020,7 @@ function selectDiseaseAssessment(diseaseId, { focus = false } = {}) {
   if (!patient || !diseaseId) return;
   refs.diseaseQualityDisclosure.open = false;
   refs.diseaseDiagnosticDisclosure.open = false;
+  refs.diseaseAssessmentSources.open = false;
   const selectedId = renderDiseaseAssessment(patient, diseaseId);
   if (!selectedId) return;
   if (focus) document.getElementById(diseaseTabId(patient.id, selectedId))?.focus();

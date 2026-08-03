@@ -64,6 +64,8 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
     assert.match(emr.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
     const insights = await fetch(`${baseUrl}/insights`);
     assert.match(insights.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
+    const map = await fetch(`${baseUrl}/map`);
+    assert.match(map.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
 
     const patientStatus = await fetch(`${baseUrl}/api/patient-question-assistant/status`);
     assert.equal(patientStatus.status, 200);

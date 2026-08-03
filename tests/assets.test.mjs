@@ -27,6 +27,8 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
     "/responsive.css",
     "/explorer.css",
     "/view-model.js",
+    "/body-3d.js",
+    "/vendor/model-viewer-4.3.1.min.js",
     "/explorer-model.js",
     "/connections.js",
   ];
@@ -36,6 +38,19 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
     assert.equal(response.status, 200, route);
     assert.match(response.headers.get("content-type") ?? "", /text\/(css|javascript)/);
   }
+});
+
+test("3D 신체 아틀라스를 GLB와 장기 캐시로 제공한다", async () => {
+  const { default: worker } = await import("../dist/server/index.js");
+  const response = await worker.fetch(
+    new Request("https://example.com/assets/body-atlas-3d-v1.glb"),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "model/gltf-binary");
+  assert.match(response.headers.get("cache-control") ?? "", /max-age=31536000, immutable/);
+  const signature = Buffer.from(await response.arrayBuffer()).subarray(0, 4).toString("ascii");
+  assert.equal(signature, "glTF");
 });
 
 test("Health Map 신체 아틀라스 이미지를 WebP 자산으로 제공한다", async () => {

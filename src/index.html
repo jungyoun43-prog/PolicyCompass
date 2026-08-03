@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="/clinician-hierarchy.css" />
     <link rel="stylesheet" href="/shell.css" />
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/body-3d.js"></script>
   </head>
   <body class="map-page clinician-hierarchy">
     <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
@@ -203,7 +204,7 @@
             </div>
             <ol id="mapInstructions">
               <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 연결된 정제 기록을 확인합니다.</span></li>
-              <li><b>2</b><span>색 있는 신체 표식을 선택해 관련 신호를 확인합니다.</span></li>
+              <li><b>2</b><span>3D로 돌려 보거나 2D로 전환한 뒤, 색 있는 신체 표식을 선택합니다.</span></li>
               <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
             </ol>
           </section>
@@ -229,7 +230,15 @@
             </ul>
           </section>
 
-          <div class="body-stage" aria-describedby="mapInstructions mapRelationshipMeaning bodyKeyText">
+          <div class="body-stage"
+            aria-describedby="mapInstructions mapRelationshipMeaning bodyKeyText"
+            data-body-3d
+            data-body-model="/assets/body-atlas-3d-v1.glb"
+            data-body-viewer-module="/vendor/model-viewer-4.3.1.min.js"
+            data-body-context="patient"
+            data-body-initial="auto"
+            data-body-alt="회전 가능한 3D 신체 건강 지도"
+          >
             <div class="human-figure" aria-label="신체 부위별 건강 신호">
               <img
                 class="human-figure__image"

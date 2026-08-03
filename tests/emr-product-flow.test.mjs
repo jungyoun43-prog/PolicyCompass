@@ -128,7 +128,7 @@ test("공개 Worker는 EMR 데이터를 받지 않고 로컬 개발 서버만 �
   assert.equal(response.status, 405);
 });
 
-test("공개 빌드는 AI 화면의 같은 출처 상태 확인만 허용하고 다른 화면의 연결은 차단한다", async () => {
+test("공개 빌드는 AI와 3D 모델에 필요한 같은 출처 연결만 허용한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const emr = await worker.fetch(new Request("https://example.com/emr"));
   const emrPolicy = emr.headers.get("content-security-policy") ?? "";
@@ -137,7 +137,8 @@ test("공개 빌드는 AI 화면의 같은 출처 상태 확인만 허용하고 
 
   assert.match(emrPolicy, /connect-src 'self'/);
   assert.doesNotMatch(emrPolicy, /https?:\/\//);
-  assert.match(mapPolicy, /connect-src 'none'/);
+  assert.match(mapPolicy, /connect-src 'self'/);
+  assert.doesNotMatch(mapPolicy, /https?:\/\//);
 });
 
 test("개발 명령은 새 체크아웃에서도 빌드 산출물을 먼저 만든다", async () => {

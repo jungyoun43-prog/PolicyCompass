@@ -42,6 +42,12 @@ const sourceAssets = [
   { route: "/data.js", file: "src/data.js", type: "text/javascript; charset=utf-8" },
   { route: "/view-model.js", file: "src/view-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/app.js", file: "src/app.js", type: "text/javascript; charset=utf-8" },
+  { route: "/body-3d.js", file: "src/body-3d.js", type: "text/javascript; charset=utf-8" },
+  {
+    route: "/vendor/model-viewer-4.3.1.min.js",
+    file: "node_modules/@google/model-viewer/dist/model-viewer.min.js",
+    type: "text/javascript; charset=utf-8",
+  },
   { route: "/explorer-model.js", file: "src/explorer-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/connections.js", file: "src/connections.js", type: "text/javascript; charset=utf-8" },
   { route: "/journey-model.js", file: "src/journey-model.js", type: "text/javascript; charset=utf-8" },
@@ -89,6 +95,11 @@ const binaryAssets = [
     route: "/assets/body-atlas-v4.webp",
     file: "src/assets/body-atlas-v4.webp",
     type: "image/webp",
+  },
+  {
+    route: "/assets/body-atlas-3d-v1.glb",
+    file: "src/assets/body-atlas-3d-v1.glb",
+    type: "model/gltf-binary",
   },
 ];
 
@@ -274,8 +285,11 @@ export default {
         : asset.body;
 
     const headers = { ...baseHeaders, "content-type": asset.type };
-    if (["/emr", "/emr.html", "/insights", "/insights.html"].includes(route)) {
+    if (["/map", "/map.html", "/emr", "/emr.html", "/insights", "/insights.html"].includes(route)) {
       headers["content-security-policy"] = headers["content-security-policy"].replace("connect-src 'none'", "connect-src 'self'");
+    }
+    if (["/assets/body-atlas-3d-v1.glb", "/vendor/model-viewer-4.3.1.min.js"].includes(route)) {
+      headers["cache-control"] = "public, max-age=31536000, immutable";
     }
     return new Response(body, {
       headers

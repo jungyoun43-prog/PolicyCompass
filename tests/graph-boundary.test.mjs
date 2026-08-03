@@ -60,6 +60,8 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
   assert.match(html, /류마티스내과/);
   assert.match(html, /기록과 연결됨/);
   assert.match(html, /현재 기록에 없음/);
+  assert.match(html, /data-body-context="patient"/);
+  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v1\.glb"/);
 });
 
 test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 분리되고 반응형 폭을 넘지 않는다", async () => {

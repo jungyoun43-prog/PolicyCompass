@@ -59,7 +59,8 @@ test("production server exposes same-origin patient AI status and keeps credenti
     assert.match(emr.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
     assert.doesNotMatch(emr.headers.get("content-security-policy") ?? "", /https?:\/\//);
     const map = await fetch(`${baseUrl}/map`);
-    assert.match(map.headers.get("content-security-policy") ?? "", /connect-src 'none'/);
+    assert.match(map.headers.get("content-security-policy") ?? "", /connect-src 'self'/);
+    assert.doesNotMatch(map.headers.get("content-security-policy") ?? "", /https?:\/\//);
 
     const crossOrigin = await fetch(`${baseUrl}/api/patient-question-assistant`, {
       method: "POST",

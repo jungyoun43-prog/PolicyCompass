@@ -95,3 +95,12 @@ test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 �
     "disease-assessment.js",
   ]) assert.match(build, new RegExp(file.replace(".", "\\.")));
 });
+
+test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 읽힌다", () => {
+  assert.match(css, /EMR review hierarchy/);
+  assert.match(css, /\.claim-attention-summary__content strong\s*\{[\s\S]*?font-size:\s*1rem/);
+  assert.match(css, /\.quality-program-summary__content > strong,[\s\S]*?font-size:\s*1rem/);
+  assert.match(css, /\.quality-diagnostic-panel__label b\s*\{[\s\S]*?font-size:\s*0\.9rem/);
+  assert.match(css, /\.claim-workflow-disclosure > summary b\s*\{[\s\S]*?font-size:\s*0\.95rem/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*?\.claim-attention-item__status\s*\{[\s\S]*?grid-row:\s*2/);
+});

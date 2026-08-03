@@ -4610,9 +4610,690 @@ body.emr-page {
   font-size: var(--font-size-caption);
 }
 
+/* Claims workbench: a quiet, row-based review surface with evidence on demand. */
+#panel-claims {
+  --claim-row-radius: 8px;
+  --claim-row-divider: color-mix(in srgb, var(--ink) 10%, var(--line));
+}
+
+#panel-claims details:not([open]) > :not(summary) {
+  display: none;
+}
+
+.claim-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr);
+  gap: var(--space-1) var(--space-6);
+  align-items: center;
+  border-radius: 12px;
+  background: var(--surface);
+  padding: var(--space-5) var(--space-6);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.claim-intro .card-heading {
+  margin: 0;
+}
+
+.claim-intro .card-heading h3 {
+  font-size: clamp(1.35rem, calc(1.18rem + 0.45vw), 1.65rem);
+  letter-spacing: -0.035em;
+}
+
+.claim-intro > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.claim-intro .rule-trust-note {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+  border-left: 3px solid color-mix(in srgb, var(--data-amber) 70%, var(--line));
+  border-radius: 0;
+  background: transparent;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.claim-intro .rule-trust-note b {
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
+  white-space: nowrap;
+}
+
+.claim-overview-grid {
+  grid-template-columns: minmax(0, 1.22fr) minmax(360px, 0.78fr);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.claim-overview-card {
+  gap: var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  padding: var(--space-6);
+  box-shadow: none;
+}
+
+.disease-assessment-card {
+  border-left: 1px solid var(--claim-row-divider);
+}
+
+.claim-overview-card .card-heading {
+  align-items: flex-start;
+}
+
+.claim-overview-card .card-heading h3 {
+  font-size: clamp(1.2rem, calc(1.08rem + 0.35vw), 1.42rem);
+  letter-spacing: -0.03em;
+}
+
+.claim-overview-card .source-badge {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.claim-overview-card__intro {
+  max-width: 58ch;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.claim-attention-summary {
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: var(--claim-row-radius);
+  background: var(--surface-soft);
+  padding: 0;
+}
+
+.claim-attention-summary__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+}
+
+.claim-attention-summary__content > strong {
+  font-size: 1.05rem;
+  letter-spacing: -0.025em;
+  line-height: 1.38;
+  word-break: keep-all;
+}
+
+.claim-attention-summary__content > .claim-synthetic-badge {
+  grid-column: 1;
+  justify-self: start;
+  margin: 0;
+}
+
+.claim-attention-counts {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  align-self: stretch;
+  border-left: 1px solid var(--claim-row-divider);
+  font-variant-numeric: tabular-nums;
+}
+
+.claim-attention-count {
+  --claim-count-tone: var(--muted);
+  display: grid;
+  min-width: 0;
+  place-content: center;
+  gap: 1px;
+  border-right: 1px solid var(--claim-row-divider);
+  padding: 0 var(--space-2);
+  text-align: center;
+}
+
+.claim-attention-count:last-child {
+  border-right: 0;
+}
+
+.claim-attention-count[data-claim-state="reduced"] { --claim-count-tone: var(--urgent); }
+.claim-attention-count[data-claim-state="risk"] { --claim-count-tone: var(--data-amber); }
+.claim-attention-count[data-claim-state="verified"] { --claim-count-tone: var(--data-lime); }
+
+.claim-attention-count b {
+  color: color-mix(in srgb, var(--claim-count-tone) 75%, var(--ink));
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.claim-attention-count small {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.claim-attention-column-head,
+.claim-attention-item__disclosure > summary {
+  display: grid;
+  grid-template-columns: 28px minmax(112px, 0.72fr) minmax(150px, 1fr) auto 18px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.claim-attention-column-head {
+  padding: 0 var(--space-3);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+
+.claim-attention-column-head span:nth-child(4) {
+  text-align: right;
+}
+
+.claim-attention-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: var(--claim-row-radius);
+  background: var(--surface);
+}
+
+.claim-attention-list > li,
+.claim-attention-list > .claim-attention-item {
+  border: 0;
+  border-bottom: 1px solid var(--claim-row-divider);
+  border-radius: 0;
+  background: var(--surface);
+  padding: 0;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--claim-attention-tone) 72%, var(--line));
+}
+
+.claim-attention-list > li:last-child {
+  border-bottom: 0;
+}
+
+.claim-attention-item__disclosure > summary {
+  min-height: 66px;
+  padding: var(--space-3);
+}
+
+.claim-attention-item__disclosure > summary:hover {
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+
+.claim-attention-item__mark {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--claim-attention-tone) 12%, var(--surface));
+  font-size: 0.72rem;
+}
+
+.claim-attention-item__identity {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.claim-attention-item__identity strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.claim-attention-item__identity small {
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claim-attention-item__reason {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.71rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.claim-attention-item__status {
+  justify-self: end;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--claim-attention-tone) 11%, var(--surface));
+  padding: 4px 8px;
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+.claim-attention-item__disclosure > summary::after,
+.claim-status-guide > summary::after,
+.claim-overview-disclosure > summary::after,
+.quality-diagnostic-panel > summary::after,
+.claim-workflow-disclosure > summary::after {
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  content: "›";
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.claim-attention-item__disclosure[open] > summary::after,
+.claim-status-guide[open] > summary::after,
+.claim-overview-disclosure[open] > summary::after,
+.quality-diagnostic-panel[open] > summary::after,
+.claim-workflow-disclosure[open] > summary::after {
+  content: "›";
+  transform: rotate(90deg);
+}
+
+.claim-attention-item__content {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  border-top: 1px solid var(--claim-row-divider);
+  background: var(--surface-soft);
+  padding: var(--space-4) var(--space-5) var(--space-4) calc(28px + var(--space-6));
+}
+
+.claim-attention-item__detail {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: var(--space-1);
+}
+
+.claim-attention-item__detail--boundary {
+  border-left: 1px solid var(--claim-row-divider);
+  padding-left: var(--space-5);
+}
+
+.claim-attention-item__detail b {
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+
+.claim-attention-item__content p,
+.claim-attention-item__content small {
+  color: var(--muted);
+  font-size: 0.69rem;
+  line-height: 1.5;
+}
+
+.claim-attention-item__missing {
+  font-size: 0.68rem;
+}
+
+.claim-attention-item__disclosure:not([open]) > .claim-attention-item__content,
+.claim-overview-disclosure:not([open]) > .claim-overview-disclosure__body,
+.quality-diagnostic-panel:not([open]) > .quality-diagnostic-panel__body,
+.quality-program-metric:not([open]) > .quality-program-metric__detail,
+.claim-workflow-disclosure:not([open]) > .claim-workflow-disclosure__body {
+  display: none;
+}
+
+.claim-status-guide,
+.claim-overview-disclosure,
+.quality-diagnostic-panel {
+  border-color: var(--claim-row-divider);
+  border-radius: var(--claim-row-radius);
+  background: var(--surface);
+}
+
+.claim-status-guide > summary,
+.claim-overview-disclosure > summary {
+  min-height: 46px;
+  padding: var(--space-3);
+}
+
+.claim-status-guide > summary b,
+.claim-overview-disclosure > summary b {
+  font-size: 0.8rem;
+}
+
+.claim-status-guide > summary small,
+.claim-overview-disclosure > summary small {
+  font-size: 0.64rem;
+}
+
+.claim-attention-all > .claim-attention-list {
+  gap: 0;
+  border: 0;
+  border-top: 1px solid var(--claim-row-divider);
+  border-radius: 0;
+  padding: 0;
+}
+
+.claim-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  border-top-color: var(--claim-row-divider);
+  padding: var(--space-4);
+}
+
+.claim-status-legend__item {
+  min-width: min(210px, 100%);
+  flex: 1 1 210px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--space-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.claim-status-legend__mark {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  font-size: 0.58rem;
+}
+
+.claim-status-legend__item b {
+  font-size: 0.71rem;
+}
+
+.claim-status-legend__item small {
+  font-size: 0.62rem;
+}
+
+.disease-assessment-tabs {
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: var(--claim-row-radius);
+  background: var(--surface-soft);
+  padding: 3px;
+}
+
+.disease-assessment-tab {
+  min-width: 126px;
+  min-height: 42px;
+  flex: 1 0 126px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: var(--space-2) var(--space-3);
+}
+
+.disease-assessment-tab:hover {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--ink) 4%, var(--surface));
+}
+
+.disease-assessment-tab[aria-selected="true"] {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.disease-assessment-tab b {
+  font-size: 0.8rem;
+}
+
+.disease-assessment-tab small {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.58rem;
+}
+
+.disease-program-heading h4 {
+  font-size: 1.18rem;
+}
+
+.disease-program-heading > span,
+.quality-diagnostic-panel__badge {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.quality-program-summary {
+  border-color: var(--claim-row-divider);
+  border-left: 3px solid color-mix(in srgb, var(--data-cyan) 68%, var(--line));
+  border-radius: var(--claim-row-radius);
+  background: var(--surface);
+  padding: var(--space-4);
+}
+
+.quality-program-summary__content {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.quality-program-score {
+  display: grid;
+  min-width: 58px;
+  gap: 2px;
+  border-right: 1px solid var(--claim-row-divider);
+  padding-right: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.quality-program-score b {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.quality-program-score small {
+  color: var(--muted);
+  font-size: 0.56rem;
+  white-space: nowrap;
+}
+
+.quality-program-summary__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.quality-program-summary__copy > strong {
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.quality-program-summary__copy > p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.quality-program-summary__content > .claim-synthetic-badge {
+  grid-column: 2;
+  margin: 0;
+}
+
+.quality-program-metrics {
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: var(--claim-row-radius);
+}
+
+.quality-program-metrics > .quality-program-metric,
+.quality-program-metrics > .quality-program-metric:nth-child(4):nth-last-child(2),
+.quality-program-metrics > .quality-program-metric:nth-child(5):last-child {
+  grid-column: 1;
+  border: 0;
+  border-bottom: 1px solid var(--claim-row-divider);
+  border-radius: 0;
+  background: var(--surface);
+}
+
+.quality-program-metrics > .quality-program-metric:last-child {
+  border-bottom: 0;
+}
+
+.quality-program-metric__summary {
+  min-height: 56px;
+  padding: var(--space-3);
+}
+
+.quality-program-metric__summary:hover {
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+
+.quality-program-metric__mark {
+  border-radius: 50%;
+}
+
+.quality-program-metric__label b {
+  font-size: 0.79rem;
+}
+
+.quality-program-metric__value {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.quality-program-metric__detail {
+  border-top-color: var(--claim-row-divider);
+  background: var(--surface-soft);
+}
+
+.claim-overview-disclosure__body {
+  border-top-color: var(--claim-row-divider);
+  background: var(--surface-soft);
+}
+
+.quality-diagnostic-panel {
+  background: var(--surface);
+}
+
+.quality-diagnostic-panel > summary {
+  min-height: 58px;
+  padding: var(--space-3);
+}
+
+.quality-diagnostic-panel__label b {
+  font-size: 0.86rem;
+}
+
+.quality-diagnostic-panel__body {
+  border-top-color: var(--claim-row-divider);
+  background: var(--surface-soft);
+}
+
+.quality-diagnostic-summary,
+.quality-diagnostic-details {
+  border-radius: var(--claim-row-radius);
+  background: var(--surface);
+}
+
+.quality-diagnostic-axis,
+.quality-highlight-result,
+.quality-stage-note,
+.quality-detail-section--boundary,
+.quality-assessment-boundary {
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.claim-workflow-disclosure > summary,
+.rule-composer {
+  border-color: var(--claim-row-divider);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.claim-workflow-disclosure > summary {
+  min-height: 62px;
+}
+
+.claim-result-chip {
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--claim-status-tone) 66%, var(--line));
+  border-radius: 4px;
+  background: var(--surface-soft);
+}
+
+.claim-board {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.claim-lane {
+  border: 0;
+  border-right: 1px solid var(--claim-row-divider);
+  border-radius: 0;
+  background: var(--surface-soft);
+}
+
+.claim-lane:last-child {
+  border-right: 0;
+}
+
+.claim-card {
+  border-color: var(--claim-row-divider);
+  border-left: 3px solid color-mix(in srgb, var(--claim-status-tone) 68%, var(--line));
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.claim-card__summary:hover {
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+}
+
+.claim-card b {
+  font-size: 0.78rem;
+}
+
+.claim-card p,
+.claim-patient,
+.claim-missing {
+  font-size: 0.68rem;
+}
+
 @media (max-width: 1180px) {
   .claim-overview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .disease-assessment-card {
+    border-top: 1px solid var(--claim-row-divider);
+    border-left: 0;
   }
 
   .claim-result-summary {
@@ -5057,11 +5738,78 @@ body.emr-page {
   .clinical-footer {
     display: grid;
   }
+
+  .claim-intro {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .claim-intro .rule-trust-note {
+    grid-column: 1;
+    grid-row: auto;
+    grid-template-columns: 1fr;
+    margin-top: var(--space-2);
+    border-top: 2px solid color-mix(in srgb, var(--data-amber) 65%, var(--line));
+    border-left: 0;
+    padding: var(--space-3) 0 0;
+  }
+
+  .claim-overview-card {
+    padding: var(--space-4);
+  }
+
+  .claim-attention-summary__content {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-attention-counts {
+    grid-column: 1;
+    grid-row: auto;
+    border-top: 1px solid var(--claim-row-divider);
+    border-left: 0;
+    padding-top: var(--space-3);
+  }
+
+  .claim-attention-summary__content > .claim-synthetic-badge {
+    grid-column: 1;
+  }
+
+  .claim-attention-column-head {
+    display: none;
+  }
+
+  .claim-attention-item__content {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .claim-attention-item__detail--boundary {
+    border-top: 1px solid var(--claim-row-divider);
+    border-left: 0;
+    padding-top: var(--space-3);
+    padding-left: 0;
+  }
+
+  .claim-board {
+    border-radius: var(--claim-row-radius);
+  }
+
+  .claim-lane {
+    border-right: 0;
+    border-bottom: 1px solid var(--claim-row-divider);
+  }
+
+  .claim-lane:last-child {
+    border-bottom: 0;
+  }
 }
 
 @media (max-width: 520px) {
   .claim-attention-item__disclosure > summary {
-    grid-template-columns: 34px minmax(0, 1fr) 22px;
+    grid-template-columns: 28px minmax(0, 1fr) auto 18px;
+    gap: var(--space-2);
+    padding: var(--space-3);
   }
 
   .claim-attention-item__mark {
@@ -5069,20 +5817,65 @@ body.emr-page {
     grid-row: 1 / span 2;
   }
 
-  .claim-attention-item__summary > strong {
+  .claim-attention-item__identity {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .claim-attention-item__status {
-    grid-column: 2;
+  .claim-attention-item__reason {
+    grid-column: 2 / span 2;
     grid-row: 2;
-    justify-self: start;
+  }
+
+  .claim-attention-item__status {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
   }
 
   .claim-attention-item__disclosure > summary::after {
-    grid-column: 3;
+    grid-column: 4;
     grid-row: 1 / span 2;
+  }
+
+  .claim-attention-counts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .claim-attention-count {
+    padding-inline: var(--space-1);
+  }
+
+  .claim-attention-count small {
+    font-size: 0.54rem;
+  }
+
+  .quality-program-summary__content {
+    grid-template-columns: 1fr;
+  }
+
+  .quality-program-score {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  .quality-program-summary__content > .claim-synthetic-badge {
+    grid-column: 1;
+  }
+
+  .disease-assessment-tab {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .disease-assessment-tab b {
+    word-break: keep-all;
+  }
+
+  .disease-assessment-tab small {
+    justify-self: start;
   }
 }
 

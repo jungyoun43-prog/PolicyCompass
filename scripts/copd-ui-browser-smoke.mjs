@@ -55,6 +55,8 @@ await runBrowserSmoke({
       qualityOpen: document.getElementById('diseaseQualityDisclosure').open,
       diagnosticOpen: document.getElementById('diseaseDiagnosticDisclosure').open,
       workflowOpen: document.getElementById('claimWorkflowDisclosure').open,
+      closedDetailsVisible: [...document.querySelectorAll('#panel-claims details:not([open]) > :not(summary)')]
+        .filter((node) => getComputedStyle(node).display !== 'none' && node.getClientRects().length > 0).length,
     })`);
   }
 
@@ -67,6 +69,7 @@ await runBrowserSmoke({
   assert(/2026-7th-plan/.test(kim.meta) && /2026-publication/.test(kim.meta), `폐렴 기준 버전 오류: ${kim.meta}`);
   assert(kim.redCount === 0 && kim.greenCount >= 2 && kim.grayCount >= 1, `김비타 청구 분포 오류: ${JSON.stringify(kim)}`);
   assert(!kim.qualityOpen && !kim.diagnosticOpen && !kim.workflowOpen && kim.metricDetailsOpen === 0, `김비타 기본 화면이 요약 상태가 아님: ${JSON.stringify(kim)}`);
+  assert(kim.closedDetailsVisible === 0, `닫힌 급여 상세 내용이 화면에 노출됨: ${JSON.stringify(kim)}`);
   assert(kim.overflow <= 0, `김비타 1440 화면 가로 넘침: ${kim.overflow}`);
   await evaluate("scrollBy(0, -140)");
   await capture(client, pneumoniaPath);

@@ -621,9 +621,9 @@
             <section class="workspace-panel" id="panel-claims" role="tabpanel" aria-labelledby="tab-claims" data-panel="claims" hidden>
               <section class="clinical-card claim-intro" aria-labelledby="claimBoardTitle">
                 <div class="card-heading">
-                  <div><p class="rail-eyebrow">REIMBURSEMENT READINESS</p><h3 id="claimBoardTitle">급여 근거 한눈에 보기</h3></div>
+                  <div><p class="rail-eyebrow">REIMBURSEMENT WORKLIST</p><h3 id="claimBoardTitle">급여 보드</h3></div>
                 </div>
-                <p>조치가 필요한 항목부터 확인하고, 세부 근거는 필요한 경우에만 펼쳐보세요.</p>
+                <p>최종 심사결과와 청구 전 확인 항목을 우선순위대로 정리했습니다.</p>
                 <div class="rule-trust-note"><b>판정 경계</b><span>빨강만 최종 심사조정입니다. 다른 색은 내부 사전점검이며, 적정성 예상은 공식 점수나 개별 삭감이 아닙니다. 진료를 자동 결정하지 않습니다.</span></div>
               </section>
 
@@ -632,14 +632,17 @@
                   <div class="card-heading">
                     <div>
                       <p class="rail-eyebrow">INDIVIDUAL CLAIM</p>
-                      <h3 id="claimAttentionTitle">이 환자에서 먼저 볼 항목</h3>
+                      <h3 id="claimAttentionTitle">먼저 확인할 청구 항목</h3>
                     </div>
                     <span class="source-badge">환자별 사전점검</span>
                   </div>
-                  <p class="claim-overview-card__intro">최종 삭감과 사전 위험을 분리해 보여 줍니다. 항목을 누르면 근거와 다음 확인 내용을 볼 수 있습니다.</p>
+                  <p class="claim-overview-card__intro">상태와 이유를 먼저 읽고, 행을 눌러 필요한 근거만 확인하세요.</p>
 
                   <div class="claim-attention-summary" id="claimAttentionSummary" aria-live="polite" aria-atomic="true">
                     <p class="claim-overview-empty">환자 기록에서 청구 주의사항을 정리하는 중입니다.</p>
+                  </div>
+                  <div class="claim-attention-column-head" aria-hidden="true">
+                    <span></span><span>항목</span><span>확인 이유</span><span>현재 판정</span><span></span>
                   </div>
                   <ol class="claim-attention-list claim-attention-list--priority" id="claimAttentionList" aria-label="우선 확인할 청구 주의사항">
                     <li class="claim-overview-empty">즉시 확인할 항목이 있으면 여기에 표시합니다.</li>
@@ -679,11 +682,11 @@
                   <div class="card-heading">
                     <div>
                       <p class="rail-eyebrow">DISEASE QUALITY REVIEW</p>
-                      <h3 id="diseaseAssessmentTitle">질환별 적정성·진단 근거</h3>
+                      <h3 id="diseaseAssessmentTitle">적정성 평가·진단 근거</h3>
                     </div>
                     <span class="source-badge source-badge--draft">공식 점수 아님</span>
                   </div>
-                  <p class="claim-overview-card__intro">확정 질환을 선택하면 핵심 상태만 먼저 보여 줍니다. 각 지표를 누르면 판정 근거가 펼쳐집니다.</p>
+                  <p class="claim-overview-card__intro">확정 질환을 선택하면 핵심 상태만 먼저 보여 줍니다. 필요한 경우에만 근거를 펼치세요.</p>
 
                   <div class="disease-assessment-tabs" id="diseaseAssessmentTabs" role="tablist" aria-label="질환 평가 선택">
                     <span class="claim-overview-empty">연결된 질환을 확인하는 중입니다.</span>

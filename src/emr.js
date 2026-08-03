@@ -1665,18 +1665,28 @@ function appendClaimAttentionEntry(container, entry) {
   const itemSummary = element("summary", "claim-attention-item__summary");
   const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
   icon.setAttribute("aria-hidden", "true");
+  const meta = [entry.code, entry.date].filter(Boolean).join(" · ");
+  const identity = element("span", "claim-attention-item__identity");
+  identity.append(element("strong", "", entry.title));
+  if (meta) identity.append(element("small", "", meta));
   itemSummary.append(
     icon,
-    element("strong", "", entry.title),
+    identity,
+    element("span", "claim-attention-item__reason", presentation.reason),
     element("span", "claim-attention-item__status", presentation.label),
   );
   const content = element("div", "claim-attention-item__content");
-  content.append(element("p", "", presentation.reason));
+  const review = element("div", "claim-attention-item__detail");
+  review.append(element("b", "", "확인할 내용"), element("p", "", presentation.reason));
   if (presentation.missingData.length) {
-    content.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
+    review.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
   }
-  const meta = [entry.code, entry.date, entry.synthetic ? "합성 자료" : "EMR 자동 집계"].filter(Boolean).join(" · ");
-  content.append(element("small", "", meta), element("small", "claim-attention-item__boundary", presentation.paymentBoundary));
+  const boundary = element("div", "claim-attention-item__detail claim-attention-item__detail--boundary");
+  boundary.append(
+    element("b", "", "판정 범위"),
+    element("small", "", `${entry.synthetic ? "합성 자료" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
+  );
+  content.append(review, boundary);
   disclosure.append(itemSummary, content);
   row.append(disclosure);
   container.append(row);
@@ -1704,10 +1714,21 @@ function renderClaimAttention(patient, evaluations, profile) {
         : counts.verified
           ? "현재 연결 자료에서 즉시 확인할 위험은 없습니다."
         : "현재 자료로는 청구 위험을 판정하기 어렵습니다.";
-  summary.append(
-    element("strong", "", headline),
-    element("p", "", `빨강 ${counts.reduced} · 노랑 ${counts.risk} · 회색 ${counts.insufficient} · 초록 ${counts.verified}`),
-  );
+  const countList = element("div", "claim-attention-counts");
+  countList.setAttribute("role", "list");
+  for (const [stateName, label] of [
+    ["reduced", "삭감 확정"],
+    ["risk", "사전 위험"],
+    ["insufficient", "확인 대기"],
+    ["verified", "통과"],
+  ]) {
+    const count = element("span", "claim-attention-count");
+    count.dataset.claimState = stateName;
+    count.setAttribute("role", "listitem");
+    count.append(element("b", "", String(counts[stateName])), element("small", "", label));
+    countList.append(count);
+  }
+  summary.append(element("strong", "", headline), countList);
   if (profile?.synthetic) summary.append(element("span", "claim-synthetic-badge", "합성 공모전 데모"));
   refs.claimAttentionSummary.append(summary);
 
@@ -1790,11 +1811,17 @@ function renderDiseaseQuality(quality, profile, program) {
   clear(refs.diseaseQualityDetails);
   const summary = element("div", "quality-program-summary__content");
   summary.dataset.status = quality.target.status;
-  summary.append(element("strong", "", qualityTargetHeadline(quality)));
+  const includedCount = quality.metrics.filter(({ status }) => status === "included").length;
+  const applicableCount = quality.metrics.filter(({ status }) => status !== "not-applicable").length;
+  const score = element("span", "quality-program-score");
+  score.append(element("b", "", `${includedCount}/${applicableCount}`), element("small", "", "지표 기여 가능"));
+  const copy = element("span", "quality-program-summary__copy");
+  copy.append(element("strong", "", qualityTargetHeadline(quality)));
   const exceptions = quality.metrics.filter(({ status }) => ["not-included", "insufficient"].includes(status));
   if (exceptions.length) {
-    summary.append(element("p", "quality-program-summary__exceptions", `확인할 지표 · ${exceptions.map(({ label }) => label).join(" · ")}`));
+    copy.append(element("p", "quality-program-summary__exceptions", `확인할 지표 · ${exceptions.map(({ label }) => label).join(" · ")}`));
   }
+  summary.append(score, copy);
   if (profile?.synthetic) {
     const synthetic = element("span", "claim-synthetic-badge", "합성 데모");
     synthetic.title = profile.syntheticNotice;

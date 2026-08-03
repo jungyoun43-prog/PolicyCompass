@@ -48,7 +48,7 @@ test("질환 선택은 환자별 관련 프로그램만 렌더하고 전환해�
   assert.match(js, /ArrowLeft/);
   assert.match(js, /ArrowRight/);
   assert.match(js, /왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다/);
-  assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*48px/);
+  assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*42px/);
 });
 
 test("COPD와 폐렴은 평가 지표와 임상 정합성을 서로 섞지 않는다", () => {
@@ -81,10 +81,11 @@ test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 
 });
 
 test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 모두 배포한다", () => {
-  assert.match(css, /\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.94fr\) minmax\(0, 1\.06fr\)/);
-  assert.match(css, /\.quality-program-metrics\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1\.22fr\) minmax\(360px, 0\.78fr\)/);
+  assert.match(css, /\.quality-program-metrics\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
   assert.match(css, /@media \(max-width: 1180px\)[\s\S]*?\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.quality-program-metrics/);
+  assert.match(css, /#panel-claims details:not\(\[open\]\) > :not\(summary\)\s*\{[\s\S]*?display:\s*none/);
   assert.doesNotMatch(css.match(/\.claim-overview-grid\s*\{[^}]+\}/)?.[0] ?? "", /overflow-x:\s*auto/);
   for (const file of [
     "claim-presentation.js",
@@ -98,9 +99,9 @@ test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 �
 
 test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 읽힌다", () => {
   assert.match(css, /EMR review hierarchy/);
-  assert.match(css, /\.claim-attention-summary__content strong\s*\{[\s\S]*?font-size:\s*1rem/);
-  assert.match(css, /\.quality-program-summary__content > strong,[\s\S]*?font-size:\s*1rem/);
+  assert.match(css, /\.claim-attention-summary__content > strong\s*\{[\s\S]*?font-size:\s*1\.05rem/);
+  assert.match(css, /\.quality-program-score b\s*\{[\s\S]*?font-size:\s*1\.35rem/);
   assert.match(css, /\.quality-diagnostic-panel__label b\s*\{[\s\S]*?font-size:\s*0\.9rem/);
   assert.match(css, /\.claim-workflow-disclosure > summary b\s*\{[\s\S]*?font-size:\s*0\.95rem/);
-  assert.match(css, /@media \(max-width: 520px\)[\s\S]*?\.claim-attention-item__status\s*\{[\s\S]*?grid-row:\s*2/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*?\.claim-attention-item__reason\s*\{[\s\S]*?grid-row:\s*2/);
 });

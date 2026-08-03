@@ -1,6 +1,6 @@
 # VitaGraph 3D body assets
 
-## `body-atlas-3d-v2.glb`
+## `body-atlas-3d-v3.glb`
 
 This GLB is derived from the MakeHuman Community core `base.obj` asset. The
 source file header and MakeHuman asset license explicitly release the asset
@@ -17,7 +17,7 @@ Only the closed `g body` surface is included. The source's `helper-genital`,
 `helper-tights`, `helper-skirt`, eyes, teeth, eyelashes, hair, tongue, joint
 markers, and every other helper group are excluded from the GLB.
 
-VitaGraph v2 modifications:
+VitaGraph v3 modifications:
 
 - extracted and remapped the core body surface into a single render mesh;
 - applied the official CC0 shaping target above at `0.40` weight, then gently
@@ -30,10 +30,17 @@ VitaGraph v2 modifications:
 - preserved `+Y` as up, oriented the front toward `+Z`, scaled the body to
   exactly 1.80 m, placed the feet at `y=0`, and aligned depth with VitaGraph's
   body-map hotspots;
-- applied one opaque, texture-free matte clinical-teal PBR material;
+- applied a neutral gray, texture-free translucent clinical shell material;
+- added original procedural navigation meshes for the brain, left and right
+  lungs, heart, liver, stomach, left and right kidneys, and intestines;
+- placed each organ as a separately named mesh and material so the application
+  can show or hide the internal-organ layer without moving it out of its
+  anatomical context;
 - omitted textures, UVs, rigs, animations, external buffers, and external
   resources.
 
-The v2 geometry modifications and conversion metadata are also made available
-under CC0 1.0 Universal. The result is a generic visual navigation aid and is
-not an anatomically diagnostic model.
+The v3 body modifications, original procedural organ meshes, and conversion
+metadata are also made available under CC0 1.0 Universal. The organ shapes and
+positions are simplified for health-map orientation; the result is a generic
+visual navigation aid and is not an anatomically diagnostic, surgical, or
+radiological model.

@@ -5,8 +5,96 @@ const VIEW_PREFERENCE_KEY = "vitagraph-body-view";
 const controllers = new WeakMap();
 
 export const CLINICAL_BODY_PALETTE = Object.freeze({
-  body: "#c6a18d",
+  body: "#aeb7b8",
+  brain: "#9685a5",
+  lung: "#b97982",
+  heart: "#a64f58",
+  liver: "#94634f",
+  stomach: "#b77e64",
+  kidney: "#855e70",
+  intestines: "#b28a5d",
 });
+
+export const CLINICAL_ORGAN_NODES = Object.freeze([
+  "Organ_Brain",
+  "Organ_Lung_L",
+  "Organ_Lung_R",
+  "Organ_Heart",
+  "Organ_Liver",
+  "Organ_Stomach",
+  "Organ_Kidney_L",
+  "Organ_Kidney_R",
+  "Organ_Intestines",
+]);
+
+const ORGAN_ROLE_BY_NODE = Object.freeze({
+  organ_brain: "brain",
+  organ_lung_l: "lung",
+  organ_lung_r: "lung",
+  organ_heart: "heart",
+  organ_liver: "liver",
+  organ_stomach: "stomach",
+  organ_kidney_l: "kidney",
+  organ_kidney_r: "kidney",
+  organ_intestines: "intestines",
+});
+
+export function classifyClinicalPartName(name) {
+  const normalized = String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (!normalized) return "";
+  if (normalized === "clinicalbody" || normalized.startsWith("clinicalbody")
+    || normalized.startsWith("clinical_body") || normalized.includes("bodymatte")) {
+    return "body";
+  }
+  for (const [nodeName, role] of Object.entries(ORGAN_ROLE_BY_NODE)) {
+    if (normalized === nodeName || normalized.startsWith(`${nodeName}_`) || normalized.endsWith(`_${nodeName}`)) {
+      return role;
+    }
+  }
+  return "";
+}
+
+export function collectClinicalMaterialRoles(gltf = {}) {
+  const roleByMaterial = new Map();
+  const nodeNamesByMaterial = new Map();
+  const meshes = Array.isArray(gltf.meshes) ? gltf.meshes : [];
+  const nodes = Array.isArray(gltf.nodes) ? gltf.nodes : [];
+
+  for (const node of nodes) {
+    const role = classifyClinicalPartName(node?.name);
+    const mesh = Number.isInteger(node?.mesh) ? meshes[node.mesh] : null;
+    if (!role || !Array.isArray(mesh?.primitives)) continue;
+    for (const primitive of mesh.primitives) {
+      if (!Number.isInteger(primitive?.material)) continue;
+      const currentRole = roleByMaterial.get(primitive.material);
+      if (!currentRole || currentRole === role) roleByMaterial.set(primitive.material, role);
+      else roleByMaterial.set(primitive.material, "mixed");
+      const names = nodeNamesByMaterial.get(primitive.material) || [];
+      names.push(String(node.name));
+      nodeNamesByMaterial.set(primitive.material, names);
+    }
+  }
+
+  const materials = Array.isArray(gltf.materials) ? gltf.materials : [];
+  for (let materialIndex = 0; materialIndex < materials.length; materialIndex += 1) {
+    if (roleByMaterial.has(materialIndex)) continue;
+    const role = classifyClinicalPartName(materials[materialIndex]?.name);
+    if (role) roleByMaterial.set(materialIndex, role);
+  }
+
+  return [...roleByMaterial.entries()]
+    .filter(([, role]) => role !== "mixed")
+    .map(([materialIndex, role]) => Object.freeze({
+      materialIndex,
+      role,
+      nodeNames: Object.freeze([...(nodeNamesByMaterial.get(materialIndex) || [])]),
+    }))
+    .sort((left, right) => left.materialIndex - right.materialIndex);
+}
 
 /**
  * Default positions assume an upright, Y-up human model measuring about 1.8 m,
@@ -117,12 +205,12 @@ const BODY_3D_CSS = `
     box-shadow: 0 3px 10px color-mix(in srgb, var(--data-cyan, #258aa3) 22%, transparent);
   }
 
-  .body-stage[data-body-3d] .body-3d-reset {
+  .body-stage[data-body-3d] .body-3d-organs {
     position: relative;
     margin-left: 7px;
   }
 
-  .body-stage[data-body-3d] .body-3d-reset::before {
+  .body-stage[data-body-3d] .body-3d-organs::before {
     position: absolute;
     top: 8px;
     bottom: 8px;
@@ -132,12 +220,20 @@ const BODY_3D_CSS = `
     content: "";
   }
 
+  .body-stage[data-body-3d] .body-3d-organs[aria-pressed="true"] {
+    border-color: color-mix(in srgb, #a64f58 38%, var(--line, #d5dde6));
+    background: color-mix(in srgb, #a64f58 10%, var(--surface, #fff));
+    color: color-mix(in srgb, #7b3039 82%, var(--ink, #172431));
+    box-shadow: none;
+  }
+
   .body-stage[data-body-3d] .body-3d-control:disabled {
     opacity: 0.46;
     cursor: not-allowed;
   }
 
   .body-stage[data-body-3d] .body-3d-reset[hidden],
+  .body-stage[data-body-3d] .body-3d-organs[hidden],
   .body-stage[data-body-3d] model-viewer[hidden] {
     display: none !important;
   }
@@ -435,6 +531,12 @@ export class Body3DController {
     this.materialTreatment = String(
       options.materialTreatment || stage.dataset.bodyMaterialTreatment || "clinical-neutral",
     ).toLowerCase();
+    this.organsVisible = options.organsVisible !== undefined
+      ? Boolean(options.organsVisible)
+      : stage.dataset.bodyOrgans !== "hidden";
+    this.bodyMaterials = [];
+    this.organMaterials = [];
+    this.clinicalMaterialStates = new Map();
     this.reducedMotion = prefersReducedMotion(this.ownerWindow);
     this.abortController = new AbortController();
     this.placeholders = new Map();
@@ -484,10 +586,14 @@ export class Body3DController {
 
     this.twoDButton = createButton(this.ownerDocument, "body-3d-mode-2d", "2D", "2D 신체 지도 보기");
     this.threeDButton = createButton(this.ownerDocument, "body-3d-mode-3d", "3D", "회전 가능한 3D 신체 지도 보기");
+    this.organsButton = createButton(this.ownerDocument, "body-3d-organs", "장기", "내부 장기 숨기기");
+    this.organsButton.setAttribute("aria-pressed", String(this.organsVisible));
+    this.organsButton.hidden = true;
+    this.organsButton.disabled = true;
     this.resetButton = createButton(this.ownerDocument, "body-3d-reset", "정면", "3D 신체 지도를 정면으로 되돌리기");
     this.resetButton.hidden = true;
 
-    controls.append(this.twoDButton, this.threeDButton, this.resetButton);
+    controls.append(this.twoDButton, this.threeDButton, this.organsButton, this.resetButton);
     this.stage.append(controls);
     this.controls = controls;
 
@@ -501,6 +607,9 @@ export class Body3DController {
     const signal = this.abortController.signal;
     this.twoDButton.addEventListener("click", () => this.set2D({ reason: "user" }), { signal });
     this.threeDButton.addEventListener("click", () => this.activate3D({ reason: "user" }), { signal });
+    this.organsButton.addEventListener("click", () => {
+      this.setOrgansVisible(!this.organsVisible, { reason: "user" });
+    }, { signal });
     this.resetButton.addEventListener("click", () => this.resetFrontView(), { signal });
   }
 
@@ -635,7 +744,7 @@ export class Body3DController {
     viewer.hidden = true;
 
     const signal = this.abortController.signal;
-    viewer.addEventListener("load", () => this.handleLoad(), { signal });
+    viewer.addEventListener("load", () => { void this.handleLoad(); }, { signal });
     viewer.addEventListener("error", (event) => {
       const message = event?.detail?.message || "3D 모델을 불러오지 못했습니다.";
       this.handleError(new Error(message), "model-error");
@@ -724,8 +833,16 @@ export class Body3DController {
 
   updateControls() {
     const is3D = this.mode === "3d";
+    const hasOrgans = this.organMaterials.length > 0;
     this.twoDButton.setAttribute("aria-pressed", String(!is3D));
     this.threeDButton.setAttribute("aria-pressed", String(is3D));
+    this.organsButton.hidden = !is3D || !hasOrgans;
+    this.organsButton.disabled = !is3D || !hasOrgans;
+    this.organsButton.setAttribute("aria-pressed", String(this.organsVisible));
+    this.organsButton.setAttribute(
+      "aria-label",
+      this.organsVisible ? "내부 장기 숨기기" : "내부 장기 표시하기",
+    );
     this.resetButton.hidden = !is3D;
   }
 
@@ -744,41 +861,205 @@ export class Body3DController {
     });
   }
 
-  applyClinicalMaterials() {
-    if (this.materialTreatment === "original") return 0;
+  async discoverClinicalMaterials() {
     const materials = this.viewer?.model?.materials;
-    if (!Array.isArray(materials)) return 0;
+    if (!Array.isArray(materials)) return;
+    await Promise.all(materials.map(async (material) => {
+      if (typeof material?.ensureLoaded === "function") await material.ensureLoaded();
+    }));
+    const mappedRoles = collectClinicalMaterialRoles(this.viewer?.originalGltfJson || {});
+    const roleByMaterial = new Map(mappedRoles.map(({ materialIndex, role }) => [materialIndex, role]));
 
+    this.bodyMaterials = [];
+    this.organMaterials = [];
+    this.clinicalMaterialStates.clear();
+
+    for (let materialIndex = 0; materialIndex < materials.length; materialIndex += 1) {
+      const material = materials[materialIndex];
+      const role = roleByMaterial.get(materialIndex) || classifyClinicalPartName(material?.name);
+      if (!role || role === "mixed") continue;
+      const pbr = material?.pbrMetallicRoughness;
+      if (!pbr) continue;
+      const state = Object.freeze({
+        material,
+        materialIndex,
+        role,
+        originalColor: Object.freeze([...pbr.baseColorFactor]),
+        originalAlphaMode: typeof material.getAlphaMode === "function" ? material.getAlphaMode() : "OPAQUE",
+        originalAlphaCutoff: typeof material.getAlphaCutoff === "function" ? material.getAlphaCutoff() : 0.5,
+      });
+      this.clinicalMaterialStates.set(material, state);
+      if (role === "body") this.bodyMaterials.push(state);
+      else if (CLINICAL_BODY_PALETTE[role]) this.organMaterials.push(state);
+    }
+
+    const organNodeNames = new Set(
+      mappedRoles
+        .filter(({ role }) => role !== "body")
+        .flatMap(({ nodeNames }) => nodeNames),
+    );
+    this.stage.dataset.body3dOrganNodes = String(organNodeNames.size);
+    this.stage.dataset.body3dOrganMaterials = String(this.organMaterials.length);
+  }
+
+  setMaterialAppearance(state, color, alpha, roughness, { discard = false } = {}) {
+    const { material } = state;
+    const pbr = material?.pbrMetallicRoughness;
+    if (!pbr) return false;
+    try {
+      pbr.setBaseColorFactor(color);
+      const adjustedColor = [...pbr.baseColorFactor];
+      pbr.setBaseColorFactor([
+        adjustedColor[0],
+        adjustedColor[1],
+        adjustedColor[2],
+        alpha,
+      ]);
+      pbr.setMetallicFactor(0);
+      pbr.setRoughnessFactor(roughness);
+      if (typeof material.setAlphaMode === "function") {
+        material.setAlphaMode(discard ? "MASK" : (alpha < 1 ? "BLEND" : state.originalAlphaMode));
+      }
+      if (typeof material.setAlphaCutoff === "function") {
+        material.setAlphaCutoff(discard ? 1 : state.originalAlphaCutoff);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async applyClinicalMaterials() {
+    await this.discoverClinicalMaterials();
+    const hasOrgans = this.organMaterials.length > 0;
     const bodyColor = this.options.bodyColor
       || this.stage.dataset.bodySurfaceColor
       || CLINICAL_BODY_PALETTE.body;
+    const configuredBodyOpacity = Number(
+      this.options.bodyOpacity ?? this.stage.dataset.bodySurfaceOpacity,
+    );
+    const bodyOpacity = hasOrgans
+      ? (Number.isFinite(configuredBodyOpacity) ? Math.min(0.5, Math.max(0.12, configuredBodyOpacity)) : 0.26)
+      : 1;
     let changed = 0;
 
-    for (const material of materials) {
-      const pbr = material?.pbrMetallicRoughness;
-      if (!pbr || pbr.baseColorTexture?.texture) continue;
-      const name = String(material.name || "").toLowerCase();
-      const isBody = /clinicalbody|bodymatte|human|skin|derm/.test(name);
-      if (!isBody) continue;
-
-      try {
-        pbr.setBaseColorFactor(bodyColor);
-        pbr.setMetallicFactor(0);
-        pbr.setRoughnessFactor(0.58);
-        changed += 1;
-      } catch {
-        // A future textured or custom material may expose only part of the
-        // scene-graph API. Its authored appearance should remain untouched.
+    if (this.materialTreatment !== "original") {
+      for (const state of this.bodyMaterials) {
+        if (this.setMaterialAppearance(state, bodyColor, bodyOpacity, 0.72)) changed += 1;
+      }
+      for (const state of this.organMaterials) {
+        const color = CLINICAL_BODY_PALETTE[state.role];
+        if (this.setMaterialAppearance(
+          state,
+          color,
+          this.organsVisible ? 1 : 0,
+          0.62,
+          { discard: !this.organsVisible },
+        )) changed += 1;
+      }
+    } else {
+      for (const state of this.organMaterials) {
+        const alpha = this.organsVisible ? (state.originalColor[3] ?? 1) : 0;
+        if (this.setMaterialAppearance(
+          state,
+          state.originalColor,
+          alpha,
+          state.material.pbrMetallicRoughness.roughnessFactor,
+          { discard: !this.organsVisible },
+        )) {
+          changed += 1;
+        }
       }
     }
 
-    this.viewer.dataset.bodyMaterialTreatment = changed ? "clinical-neutral" : "authored";
+    this.viewer.dataset.bodyMaterialTreatment = hasOrgans ? "clinical-layered" : "clinical-neutral";
+    const organsState = hasOrgans
+      ? (this.organsVisible ? "visible" : "hidden")
+      : "unsupported";
+    this.stage.dataset.body3dOrgans = organsState;
+    this.viewer.dataset.bodyOrgans = organsState;
+    this.updateControls();
     return changed;
   }
 
-  handleLoad() {
+  setOrgansVisible(visible, { announce = true, reason = "api" } = {}) {
+    this.organsVisible = Boolean(visible);
+    if (!this.organMaterials.length) {
+      this.stage.dataset.body3dOrgans = "unsupported";
+      this.updateControls();
+      return false;
+    }
+
+    let changed = 0;
+    const bodyColor = this.options.bodyColor
+      || this.stage.dataset.bodySurfaceColor
+      || CLINICAL_BODY_PALETTE.body;
+    const configuredBodyOpacity = Number(
+      this.options.bodyOpacity ?? this.stage.dataset.bodySurfaceOpacity,
+    );
+    const visibleBodyOpacity = Number.isFinite(configuredBodyOpacity)
+      ? Math.min(0.5, Math.max(0.12, configuredBodyOpacity))
+      : 0.26;
+    for (const state of this.bodyMaterials) {
+      if (this.setMaterialAppearance(
+        state,
+        bodyColor,
+        this.organsVisible ? visibleBodyOpacity : 1,
+        0.72,
+      )) {
+        changed += 1;
+      }
+    }
+    for (const state of this.organMaterials) {
+      const color = this.materialTreatment === "original"
+        ? state.originalColor
+        : CLINICAL_BODY_PALETTE[state.role];
+      const visibleAlpha = this.materialTreatment === "original"
+        ? (state.originalColor[3] ?? 1)
+        : 1;
+      const roughness = this.materialTreatment === "original"
+        ? state.material.pbrMetallicRoughness.roughnessFactor
+        : 0.62;
+      if (this.setMaterialAppearance(
+        state,
+        color,
+        this.organsVisible ? visibleAlpha : 0,
+        roughness,
+        { discard: !this.organsVisible },
+      )) {
+        changed += 1;
+      }
+    }
+
+    const state = this.organsVisible ? "visible" : "hidden";
+    this.stage.dataset.body3dOrgans = state;
+    this.viewer.dataset.bodyOrgans = state;
+    this.updateControls();
+    if (announce) {
+      this.status.textContent = this.organsVisible
+        ? "3D 신체 지도에 내부 장기를 표시했습니다."
+        : "3D 신체 지도에서 내부 장기를 숨겼습니다.";
+    }
+    dispatchStageEvent(this.stage, "body-3d:organschange", {
+      controller: this,
+      context: this.context,
+      visible: this.organsVisible,
+      changedMaterials: changed,
+      reason,
+    });
+    return changed > 0;
+  }
+
+  async handleLoad() {
     if (this.destroyed) return;
-    const adjustedMaterials = this.applyClinicalMaterials();
+    let adjustedMaterials;
+    try {
+      adjustedMaterials = await this.applyClinicalMaterials();
+    } catch (error) {
+      this.handleError(error, "material-error");
+      return;
+    }
+    if (this.destroyed) return;
     this.ready = true;
     this.stage.dataset.body3dState = this.mode === "3d" ? "ready" : "2d";
     this.stage.dataset.body3dMaterials = String(adjustedMaterials);
@@ -789,6 +1070,8 @@ export class Body3DController {
       context: this.context,
       viewer: this.viewer,
       adjustedMaterials,
+      organMaterials: this.organMaterials.length,
+      organsVisible: this.organsVisible,
     });
   }
 
@@ -845,6 +1128,9 @@ export class Body3DController {
     delete this.stage.dataset.body3dState;
     delete this.stage.dataset.body3dPresentation;
     delete this.stage.dataset.body3dMaterials;
+    delete this.stage.dataset.body3dOrgans;
+    delete this.stage.dataset.body3dOrganNodes;
+    delete this.stage.dataset.body3dOrganMaterials;
     controllers.delete(this.stage);
   }
 }

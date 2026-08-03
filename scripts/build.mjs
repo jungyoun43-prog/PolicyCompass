@@ -97,8 +97,8 @@ const binaryAssets = [
     type: "image/webp",
   },
   {
-    route: "/assets/body-atlas-3d-v2.glb",
-    file: "src/assets/body-atlas-3d-v2.glb",
+    route: "/assets/body-atlas-3d-v3.glb",
+    file: "src/assets/body-atlas-3d-v3.glb",
     type: "model/gltf-binary",
   },
 ];
@@ -286,9 +286,14 @@ export default {
 
     const headers = { ...baseHeaders, "content-type": asset.type };
     if (["/map", "/map.html", "/emr", "/emr.html", "/insights", "/insights.html"].includes(route)) {
-      headers["content-security-policy"] = headers["content-security-policy"].replace("connect-src 'none'", "connect-src 'self'");
+      headers["content-security-policy"] = headers["content-security-policy"]
+        .replace("connect-src 'none'", "connect-src 'self'");
     }
-    if (["/assets/body-atlas-3d-v2.glb", "/vendor/model-viewer-4.3.1.min.js"].includes(route)) {
+    if (["/map", "/map.html", "/emr", "/emr.html"].includes(route)) {
+      headers["content-security-policy"] = headers["content-security-policy"]
+        .replace("script-src 'self'", "script-src 'self' 'wasm-unsafe-eval'");
+    }
+    if (["/assets/body-atlas-3d-v3.glb", "/vendor/model-viewer-4.3.1.min.js"].includes(route)) {
       headers["cache-control"] = "public, max-age=31536000, immutable";
     }
     return new Response(body, {

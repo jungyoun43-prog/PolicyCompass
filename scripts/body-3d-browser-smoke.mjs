@@ -12,6 +12,9 @@ const screenshotRoot = process.env.BODY_3D_SCREENSHOT_ROOT ?? "/tmp/vitagraph-bo
 const reportPath = process.env.BODY_3D_SMOKE_REPORT ?? `${screenshotRoot}/body-3d-report.json`;
 const patientScreenshot = `${screenshotRoot}/patient-body-3d-1440.png`;
 const patientAngledScreenshot = `${screenshotRoot}/patient-body-3d-angled-1440.png`;
+const patientSideScreenshot = `${screenshotRoot}/patient-body-3d-side-1440.png`;
+const patientRearScreenshot = `${screenshotRoot}/patient-body-3d-rear-1440.png`;
+const patientOrgansOffScreenshot = `${screenshotRoot}/patient-body-3d-organs-off-1440.png`;
 const patientMobileScreenshot = `${screenshotRoot}/patient-body-3d-390.png`;
 const emrScreenshot = `${screenshotRoot}/emr-body-3d-1440.png`;
 
@@ -30,21 +33,36 @@ try {
     appUrl: app.appUrl,
     profilePrefix: "vitagraph-body-3d-",
     initialViewport: { width: 1440, height: 1100, mobile: false },
-  }, async ({ client, evaluate, navigate, setViewport, waitFor }) => {
+  }, async ({ client, delay, evaluate, navigate, setViewport, waitFor }) => {
     await navigate("/map?sample=1", "Boolean(document.querySelector('[data-body-3d]'))");
     await evaluate("document.querySelector('[data-body-3d]').scrollIntoView({ block: 'center' })");
     await evaluate("document.querySelector('[data-body-3d] .body-3d-mode-3d').click()");
     await waitFor(
       "document.querySelector('[data-body-3d]')?.dataset.body3dState === 'ready'",
       "환자 3D 신체 지도가 준비되지 않았습니다.",
-      { timeoutMs: 20_000 },
+      { timeoutMs: 45_000 },
     );
 
     const patient = await evaluate(`(() => {
       const stage = document.querySelector('[data-body-context="patient"]');
       const viewer = stage.querySelector('model-viewer');
-      const controls = [...stage.querySelectorAll('.body-3d-control')];
-      const bodyMaterial = viewer.model?.materials?.find(({ name = '' }) => /body|human|skin/i.test(name));
+      const controls = [...stage.querySelectorAll('.body-3d-control')].filter((control) => !control.hidden);
+      const organToggle = stage.querySelector('.body-3d-organs');
+      const expectedOrganNodes = [
+        'Organ_Brain', 'Organ_Lung_L', 'Organ_Lung_R', 'Organ_Heart', 'Organ_Liver',
+        'Organ_Stomach', 'Organ_Kidney_L', 'Organ_Kidney_R', 'Organ_Intestines',
+      ];
+      const gltf = viewer.originalGltfJson;
+      const nodeMaterialIndexes = (nodeNames) => nodeNames.flatMap((nodeName) => {
+        const node = gltf.nodes?.find(({ name }) => name === nodeName);
+        const mesh = Number.isInteger(node?.mesh) ? gltf.meshes?.[node.mesh] : null;
+        return mesh?.primitives?.map(({ material }) => material).filter(Number.isInteger) || [];
+      });
+      const organNodeNames = expectedOrganNodes.filter((name) => gltf.nodes?.some((node) => node.name === name));
+      const organMaterialIndexes = [...new Set(nodeMaterialIndexes(organNodeNames))];
+      const bodyMaterialIndex = nodeMaterialIndexes(['ClinicalBody'])[0];
+      const bodyMaterial = viewer.model?.materials?.[bodyMaterialIndex]
+        || viewer.model?.materials?.find(({ name = '' }) => /body|human|skin/i.test(name));
       const bodyPbr = bodyMaterial?.pbrMetallicRoughness;
       return {
         state: stage.dataset.body3dState,
@@ -59,7 +77,16 @@ try {
         shadowSoftness: Number(viewer.getAttribute('shadow-softness')),
         materialTreatment: viewer.dataset.bodyMaterialTreatment,
         adjustedMaterials: Number(stage.dataset.body3dMaterials),
+        organState: stage.dataset.body3dOrgans,
+        organNodeNames,
+        organMaterialIndexes,
+        organMaterialCount: organMaterialIndexes.length,
+        organAlphas: organMaterialIndexes.map((index) => viewer.model.materials[index].pbrMetallicRoughness.baseColorFactor[3]),
+        organToggleHidden: organToggle.hidden,
+        organTogglePressed: organToggle.getAttribute('aria-pressed'),
+        organToggleHeight: Math.round(organToggle.getBoundingClientRect().height),
         bodyColor: bodyPbr ? [...bodyPbr.baseColorFactor] : [],
+        bodyAlpha: bodyPbr?.baseColorFactor?.[3],
         bodyRoughness: bodyPbr?.roughnessFactor,
         hotspots: viewer.querySelectorAll('.body-hotspot').length,
         slottedHotspots: viewer.querySelectorAll('.body-hotspot[slot^="hotspot-"][data-position][data-normal]').length,
@@ -71,15 +98,20 @@ try {
       };
     })()`);
     assert(patient.state === "ready", `환자 3D 상태 오류: ${JSON.stringify(patient)}`);
-    assert(patient.viewerSource === "/assets/body-atlas-3d-v2.glb", `환자 모델 경로 오류: ${JSON.stringify(patient)}`);
+    assert(patient.viewerSource === "/assets/body-atlas-3d-v3.glb", `환자 모델 경로 오류: ${JSON.stringify(patient)}`);
     assert(patient.cameraControls && !patient.autoRotate, `환자 카메라 제어 오류: ${JSON.stringify(patient)}`);
     assert(patient.presentation === "clinical" && patient.disableTap && patient.toneMapping === "neutral",
       `환자 3D 의료용 렌더 설정 오류: ${JSON.stringify(patient)}`);
     assert(patient.exposure >= 1 && patient.shadowIntensity >= 0.8 && patient.shadowSoftness >= 0.8,
       `환자 3D 조명·그림자 설정 오류: ${JSON.stringify(patient)}`);
-    assert(patient.materialTreatment === "clinical-neutral" && patient.adjustedMaterials >= 1
-      && patient.bodyColor[0] > patient.bodyColor[2] && patient.bodyRoughness < 0.7,
-    `환자 3D 재질 보정 오류: ${JSON.stringify(patient)}`);
+    assert(patient.materialTreatment === "clinical-layered" && patient.adjustedMaterials >= 10
+      && Math.max(...patient.bodyColor.slice(0, 3)) - Math.min(...patient.bodyColor.slice(0, 3)) < 0.08
+      && patient.bodyAlpha > 0.1 && patient.bodyAlpha < 0.6 && patient.bodyRoughness >= 0.7,
+      `환자 3D 외피 재질 보정 오류: ${JSON.stringify(patient)}`);
+    assert(patient.organState === "visible" && patient.organNodeNames.length === 9
+      && patient.organMaterialCount === 9 && patient.organAlphas.every((alpha) => alpha > 0.95)
+      && !patient.organToggleHidden && patient.organTogglePressed === "true" && patient.organToggleHeight >= 44,
+      `환자 3D 장기 기본 표시 오류: ${JSON.stringify(patient)}`);
     assert(patient.hotspots === 12 && patient.slottedHotspots === 12 && patient.visibleHotspots >= 8,
       `환자 3D 표식 오류: ${JSON.stringify(patient)}`);
     assert(patient.imageHidden && patient.controlHeights.every((height) => height >= 44) && patient.controlRadius === "12px",
@@ -103,7 +135,56 @@ try {
       "3D 카메라 회전이 적용되지 않았습니다.",
     );
     await capture(client, patientAngledScreenshot);
+    await evaluate(`(() => {
+      const viewer = document.querySelector('[data-body-context="patient"] model-viewer');
+      viewer.setAttribute('camera-orbit', '90deg 80deg auto');
+      viewer.jumpCameraToGoal?.();
+    })()`);
+    await waitFor(
+      "Math.abs(document.querySelector('[data-body-context=\"patient\"] model-viewer').getCameraOrbit().theta - Math.PI / 2) < 0.12",
+      "3D 측면 카메라가 적용되지 않았습니다.",
+    );
+    await capture(client, patientSideScreenshot);
+    await evaluate(`(() => {
+      const viewer = document.querySelector('[data-body-context="patient"] model-viewer');
+      viewer.setAttribute('camera-orbit', '180deg 80deg auto');
+      viewer.jumpCameraToGoal?.();
+    })()`);
+    await waitFor(
+      "Math.abs(Math.abs(document.querySelector('[data-body-context=\"patient\"] model-viewer').getCameraOrbit().theta) - Math.PI) < 0.12",
+      "3D 후면 카메라가 적용되지 않았습니다.",
+    );
+    await capture(client, patientRearScreenshot);
     await evaluate("document.querySelector('[data-body-context=\"patient\"] .body-3d-reset').click()");
+
+    await evaluate("document.querySelector('[data-body-context=\"patient\"] .body-3d-organs').click()");
+    await waitFor(
+      "document.querySelector('[data-body-context=\"patient\"]')?.dataset.body3dOrgans === 'hidden'",
+      "내부 장기 숨기기 동작이 적용되지 않았습니다.",
+    );
+    const organsHidden = await evaluate(`(() => {
+      const stage = document.querySelector('[data-body-context="patient"]');
+      const viewer = stage.querySelector('model-viewer');
+      const organMaterials = viewer.model.materials.filter(({ name = '' }) => /organ/i.test(name));
+      const bodyMaterial = viewer.model.materials.find(({ name = '' }) => /body/i.test(name));
+      return {
+        state: stage.dataset.body3dOrgans,
+        pressed: stage.querySelector('.body-3d-organs').getAttribute('aria-pressed'),
+        alphas: organMaterials.map(({ pbrMetallicRoughness }) => pbrMetallicRoughness.baseColorFactor[3]),
+        bodyAlpha: bodyMaterial?.pbrMetallicRoughness.baseColorFactor[3],
+      };
+    })()`);
+    assert(organsHidden.state === "hidden" && organsHidden.pressed === "false"
+      && organsHidden.alphas.length === 9 && organsHidden.alphas.every((alpha) => alpha === 0)
+      && organsHidden.bodyAlpha === 1,
+      `환자 3D 장기 숨기기 오류: ${JSON.stringify(organsHidden)}`);
+    await delay(250);
+    await capture(client, patientOrgansOffScreenshot);
+    await evaluate("document.querySelector('[data-body-context=\"patient\"] .body-3d-organs').click()");
+    await waitFor(
+      "document.querySelector('[data-body-context=\"patient\"]')?.dataset.body3dOrgans === 'visible'",
+      "내부 장기 다시 표시하기 동작이 적용되지 않았습니다.",
+    );
 
     await evaluate("document.querySelector('[data-body-context=\"patient\"] .body-3d-mode-2d').click()");
     const fallback = await evaluate(`(() => {
@@ -171,10 +252,19 @@ try {
 
     const report = {
       patient,
+      organsHidden,
       fallback,
       patientMobile,
       emr,
-      screenshots: { patientScreenshot, patientAngledScreenshot, patientMobileScreenshot, emrScreenshot },
+      screenshots: {
+        patientScreenshot,
+        patientAngledScreenshot,
+        patientSideScreenshot,
+        patientRearScreenshot,
+        patientOrgansOffScreenshot,
+        patientMobileScreenshot,
+        emrScreenshot,
+      },
     };
     await writeSmokeReport(reportPath, report);
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

@@ -43,7 +43,7 @@ test("화면 모듈과 분리된 스타일 자산을 모두 제공한다", async
 test("3D 신체 아틀라스를 GLB와 장기 캐시로 제공한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const response = await worker.fetch(
-    new Request("https://example.com/assets/body-atlas-3d-v2.glb"),
+    new Request("https://example.com/assets/body-atlas-3d-v3.glb"),
   );
 
   assert.equal(response.status, 200);

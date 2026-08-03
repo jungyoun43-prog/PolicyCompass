@@ -61,6 +61,9 @@ const sourceAssets = [
   { route: "/emr-fhir-export.js", file: "src/emr-fhir-export.js", type: "text/javascript; charset=utf-8" },
   { route: "/clinical-observations.js", file: "src/clinical-observations.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-rules.js", file: "src/claim-rules.js", type: "text/javascript; charset=utf-8" },
+  { route: "/claim-presentation.js", file: "src/claim-presentation.js", type: "text/javascript; charset=utf-8" },
+  { route: "/copd-demo-data.js", file: "src/copd-demo-data.js", type: "text/javascript; charset=utf-8" },
+  { route: "/copd-assessment.js", file: "src/copd-assessment.js", type: "text/javascript; charset=utf-8" },
 ];
 
 const binaryAssets = [

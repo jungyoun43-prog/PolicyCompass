@@ -17,6 +17,7 @@ const MAX_MEDICATIONS = 40;
 const providerNames = new Set(["local", "frontier"]);
 const measurementByKey = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.key, spec]));
 const measurementByCode = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.code, spec]));
+const CLINICAL_ONLY_CONDITION_IDS = new Set(["copd"]);
 const PATIENT_CONDITION_QUESTION_RULES = {
   diabetes: [
     {
@@ -56,6 +57,24 @@ const PATIENT_CONDITION_QUESTION_RULES = {
     {
       question: "운동할 때 숨이 차면 언제 쉬고, 어떤 경우에 병원에 연락해야 할까요?",
       reason: "활동 중 불편한 증상이 생겼을 때 어떻게 물어볼지 준비하기 위해서입니다.",
+    },
+  ],
+  copd: [
+    {
+      question: "COPD가 있을 때 평소 무엇을 먹으면 좋고, 숨이 차면 식사를 어떻게 나누면 좋을까요?",
+      reason: "식사할 때 숨이 차거나 체중이 달라질 때 실천할 방법을 물어보기 위해서입니다.",
+    },
+    {
+      question: "숨이 덜 차게 할 수 있는 운동은 무엇이고, 일주일에 몇 번·한 번에 몇 분 하면 좋을까요?",
+      reason: "내 상태에 맞는 활동 종류와 쉬는 기준을 구체적으로 물어보기 위해서입니다.",
+    },
+    {
+      question: "흡입기는 언제, 어떤 순서로 쓰는지 다시 보여 주실 수 있나요?",
+      reason: "집에서 흡입기를 올바르게 사용하는 방법을 확인하기 위해서입니다.",
+    },
+    {
+      question: "평소보다 숨이 더 차거나 가래가 달라지면 언제 병원에 연락하고, 언제 바로 도움을 받아야 할까요?",
+      reason: "집에서 지켜볼 변화와 빨리 도움받아야 할 때를 구분해 두기 위해서입니다.",
     },
   ],
   migraine: [
@@ -114,7 +133,7 @@ const directIdentifierPatterns = [
 
 const unsafeGeneratedClaim = new RegExp([
   "(?:진단|확진)(?:입니다|이다|됐습니다|되었습니다|으로\\s*보입니다)",
-  "(?:고혈압|당뇨병|이상지질혈증|편두통|위식도역류|천식|우울|불안|관절염)(?:입니다|이다|으로\\s*보입니다|일\\s*가능성이\\s*높습니다)",
+  "(?:고혈압|당뇨병|이상지질혈증|편두통|위식도역류|천식|COPD|만성폐쇄성폐질환|우울|불안|관절염)(?:입니다|이다|으로\\s*보입니다|일\\s*가능성이\\s*높습니다)",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)하세요",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)해야\\s*합니다",
   "(?:반드시|즉시)\\s*(?:복용|중단)하세요",
@@ -167,6 +186,7 @@ export function sanitizePatientSelfReport(value) {
 }
 
 function conditionIdsFrom(session) {
+  const signedConditionIds = new Set(signedConditionIdsFrom(session));
   const structuredConditions = valueCandidates(
     session?.clinicalSnapshot?.healthMap?.conditions,
     session?.clinicalSnapshot?.conditions,
@@ -178,13 +198,17 @@ function conditionIdsFrom(session) {
     session?.refinedContext?.conditionIds,
     session?.visibleIds,
     structuredConditions,
-  ).filter((id) => typeof id === "string" && CONDITIONS[id]))
+  ).filter((id) => typeof id === "string"
+    && CONDITIONS[id]
+    && (!CLINICAL_ONLY_CONDITION_IDS.has(id) || signedConditionIds.has(id))))
     .slice(0, Object.keys(CONDITIONS).length);
 }
 
 function signedConditionIdsFrom(session) {
   return unique(valueCandidates(session?.clinicalSnapshot?.healthMap?.conditions)
-    .map((item) => (typeof item === "string" ? item : item?.id ?? item?.conditionId))
+    .map((item) => (item && typeof item === "object" && item.basis === "confirmed-condition"
+      ? item.id ?? item.conditionId
+      : ""))
     .filter((id) => typeof id === "string" && CONDITIONS[id]));
 }
 
@@ -286,7 +310,7 @@ function evidenceForContext(context) {
       kind: "condition",
       label: CONDITIONS[id].label,
       basis: context.signedConditionIds.includes(id)
-        ? "EMR 서명·확정 기록에서 환자용으로 정제된 건강 항목"
+        ? "EMR 서명 또는 의료진 최종 확인을 거쳐 환자용으로 정제된 건강 항목"
         : "환자가 건강 지도에서 표시한 확인 필요 신호 · 진단 아님",
     })),
     ...context.measurements.map((measurement) => ({

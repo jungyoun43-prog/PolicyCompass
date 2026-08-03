@@ -1115,7 +1115,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     id: "demo-patient-park",
     mrn: "VG-1002",
     name: "박여정",
-    birthDate: "1988-11-03",
+    birthDate: "1958-11-03",
     sex: "male",
     bloodType: "unknown",
     insuranceType: "national-health",
@@ -1142,7 +1142,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     id: "demo-patient-lee",
     mrn: "VG-1003",
     name: "이준호",
-    birthDate: "1967-02-18",
+    birthDate: "1959-02-18",
     sex: "male",
     bloodType: "B+",
     insuranceType: "national-health",
@@ -1174,6 +1174,38 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("lee-hypertension", "condition", "I10", "고혈압", dateBefore(asOf, 1_825), {
         system: KCD_SYSTEM,
         status: "active",
+      }),
+      demoEvent("lee-copd-encounter", "encounter", "AMB", "호흡기내과 외래", dateBefore(asOf, 92), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        room: "8진료실",
+        chiefComplaint: "만성 운동 시 호흡곤란·기침·객담 추적",
+        note: "COPD 합성 예시의 이전 확정 진료",
+      }),
+      demoEvent("lee-copd", "condition", "J44.9", "만성폐쇄성폐질환", dateBefore(asOf, 92), {
+        encounterId: "lee-copd-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
+      demoEvent("lee-copd-symptom", "symptom", "SYM-COPD-CONTEXT", "만성 운동 시 호흡곤란·기침·객담", dateBefore(asOf, 92), {
+        encounterId: "lee-copd-encounter",
+        note: "40갑년 흡연력과 함께 기록된 합성 임상 맥락",
+      }),
+      demoEvent("lee-copd-pft", "procedure", "F6002", "기관지확장제 전후 폐활량검사", dateBefore(asOf, 90), {
+        encounterId: "lee-copd-encounter",
+        system: "urn:hira:fee-code",
+        status: "completed",
+        note: "post-BD FEV₁/FVC 0.64 · 구조화 상세는 COPD 평가 데모 패널 참조",
+      }),
+      demoEvent("lee-copd-lama", "medication", "DEMO-LAMA", "합성 LAMA 흡입제", dateBefore(asOf, 89), {
+        encounterId: "lee-copd-encounter",
+        system: "urn:vitagraph:demo:drug",
+        status: "active",
+        note: "흡입기 사용법과 증상 변화를 추적한 합성 기록",
       }),
     ],
   }, timestamp);
@@ -1279,6 +1311,7 @@ function conditionIdForEvent(event) {
   if (/\bg43\b|편두통/.test(searchable)) return "migraine";
   if (/\bk21\b|역류|속쓰림/.test(searchable)) return "reflux";
   if (/\bj45\b|천식/.test(searchable)) return "asthma";
+  if ((/\bj4[34](?:\.|\b)|copd|만성폐쇄성폐질환|폐기종/.test(searchable)) && !/\bj43\.0(?:\b|\.)/.test(searchable)) return "copd";
   if (/\bf3[2-4]\b|\bf4[01]\b|우울|불안/.test(searchable)) return "mood";
   if (/\bm(?:05|06|1[5-9])\b|관절염/.test(searchable)) return "arthritis";
   return "";

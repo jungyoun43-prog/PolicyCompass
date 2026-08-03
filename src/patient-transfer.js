@@ -35,6 +35,7 @@ const conditionSpecs = [
   { id: "migraine", label: "편두통", codeRule: /^G43(?:\..+)?$/i },
   { id: "reflux", label: "위식도역류", codeRule: /^K21(?:\..+)?$/i },
   { id: "asthma", label: "천식", codeRule: /^J45(?:\..+)?$/i },
+  { id: "copd", label: "만성폐쇄성폐질환(COPD)", codeRule: /^(?:J44(?:\..+)?|J43(?:\.(?!0).+)?)$/i },
   { id: "mood", label: "우울·불안", codeRule: /^F(?:3[2-4]|4[0-1])(?:\..+)?$/i },
   { id: "arthritis", label: "관절염", codeRule: /^M(?:0[5-6]|1[5-9])(?:\..+)?$/i },
 ];

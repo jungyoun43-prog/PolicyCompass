@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { inferConditionIds } from "../src/data.js";
+import { CONDITIONS, inferConditionIds } from "../src/data.js";
 
 test("입력한 건강 신호에서 관련 상태를 찾는다", () => {
   // Given
@@ -23,6 +24,28 @@ test("직접 선택한 상태와 텍스트 신호를 중복 없이 합친다", (
 
   // Then
   assert.deepEqual(result, ["migraine", "hypertension", "dyslipidemia"]);
+});
+
+test("COPD는 호흡기 모델에 등록하되 환자 입력이나 문구만으로 추론하지 않는다", async () => {
+  assert.deepEqual(Object.keys(CONDITIONS), [
+    "hypertension",
+    "diabetes",
+    "dyslipidemia",
+    "migraine",
+    "reflux",
+    "asthma",
+    "copd",
+    "mood",
+    "arthritis",
+  ]);
+  assert.deepEqual(CONDITIONS.copd.departments, ["respiratory"]);
+  assert.deepEqual(inferConditionIds("COPD 같고 숨이 찹니다", []), []);
+
+  const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /data-condition="copd"/);
+  assert.match(html, /COPD는 입력한 증상만으로 추가하지 않습니다/);
+  assert.match(html, /서명 완료 진료나 의료진이 최종 확정한\s+KCD 진단만/);
+  assert.match(html, /새 진단이나 중증도 판정이 아닙니다/);
 });
 
 test("빌드된 Worker가 역할 게이트웨이와 보안 헤더를 제공한다", async () => {

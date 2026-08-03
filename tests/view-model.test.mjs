@@ -25,6 +25,15 @@ test("진료과 선택은 현재 표시된 질환만 활성화한다", () => {
   assert.equal(selectBodyArea(visible, "respiratory"), "");
 });
 
+test("확정 COPD 신호는 환자 신체 지도의 폐·호흡 영역에만 놓인다", () => {
+  const model = createBodyModel(["copd"], "copd");
+
+  assert.deepEqual(model.areas, { respiratory: ["copd"] });
+  assert.equal(model.keyTone, "cyan");
+  assert.match(model.keyText, /호흡기 · 만성폐쇄성폐질환\(COPD\)/);
+  assert.equal(selectBodyArea(["copd"], "respiratory"), "copd");
+});
+
 test("재분석과 상세 패널이 같은 활성 질환을 유지한다", () => {
   assert.equal(normalizeActiveId(["hypertension", "diabetes"], "diabetes"), "diabetes");
   assert.equal(normalizeActiveId(["hypertension"], "diabetes"), "hypertension");

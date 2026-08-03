@@ -52,6 +52,9 @@ const PRIVATE_VALUES = [
   "오더-노출금지",
   "청구-노출금지",
   "감사-노출금지",
+  "COPD-심사결과-노출금지",
+  "COPD-PFT-노출금지",
+  "COPD-기관평가-노출금지",
 ];
 
 test("선택한 환자 전달 파일은 별도 입력 코드를 정규화한 뒤 일치할 때만 그대로 승인한다", () => {
@@ -189,6 +192,20 @@ function buildTransferPatient() {
       source: { kind: "manual", label: "확정 과거자료" },
     }),
     normalizedEvent({
+      id: "standalone-confirmed-copd",
+      type: "condition",
+      recordStatus: "final",
+      system: KCD_SYSTEM,
+      code: "J44.9",
+      label: "COPD 원문",
+      date: "2026-07-17",
+      status: "active",
+      clinicalStatus: "active",
+      verificationStatus: "confirmed",
+      certainty: "confirmed",
+      source: { kind: "manual", label: "확정 과거자료" },
+    }),
+    normalizedEvent({
       id: "standalone-final-observation",
       type: "observation",
       recordStatus: "final",
@@ -245,6 +262,9 @@ function buildTransferPatient() {
     events: [...patient.events, ...extraEvents],
     claimRules: [{ title: "청구-노출금지" }],
     audit: [{ detail: "감사-노출금지" }],
+    claimAdjudication: { outcome: "COPD-심사결과-노출금지" },
+    pftProfile: { result: "COPD-PFT-노출금지" },
+    copdQualityProfile: { score: "COPD-기관평가-노출금지" },
   };
 }
 
@@ -269,15 +289,15 @@ test("환자 안전 전송 파일은 확정 VitaGraph 정보만 내보내고 앱
   assert.equal(transfer.transferCode, TRANSFER_CODE);
   assert.equal(transfer.scope, "patient-vita-graph");
   assert.equal(transfer.trust, "unsigned-local-export");
-  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id).sort(), ["diabetes", "hypertension"]);
+  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id).sort(), ["copd", "diabetes", "hypertension"]);
   assert.deepEqual(
     transfer.healthMap.measurements.map(({ key, code }) => [key, code]).sort(),
     [["hba1c", "4548-4"], ["ldl", "2089-1"]],
   );
-  assert.equal(transfer.summary.includedConditions, 2);
+  assert.equal(transfer.summary.includedConditions, 3);
   assert.equal(transfer.summary.includedMeasurements, 2);
 
-  assert.deepEqual([...parsed.conditionIds].sort(), ["diabetes", "hypertension"]);
+  assert.deepEqual([...parsed.conditionIds].sort(), ["copd", "diabetes", "hypertension"]);
   assert.deepEqual(
     parsed.measurements.map(({ key, code, value, unit }) => [key, code, value, unit]).sort(),
     [["hba1c", "4548-4", 7.1, "%"], ["ldl", "2089-1", 156, "mg/dL"]],
@@ -349,6 +369,7 @@ test("전송 파일은 정확한 allowlist shape만 가지며 식별자와 임�
     "patientId", "encounterId", "eventId", "mrn", "birthDate", "sex", "phone", "address",
     "insuranceType", "emergencyContact", "memo", "soap", "clinician", "room", "signature",
     "medication", "prescription", "order", "allergy", "claim", "rule", "audit", "copilot", "resourceId",
+    "claimAdjudication", "pftProfile", "copdQualityProfile", "copdProfile",
   ]) {
     assert.equal(new RegExp(`"${forbiddenKey}"`, "i").test(serialized), false, `forbidden key leaked: ${forbiddenKey}`);
   }
@@ -359,7 +380,7 @@ test("서명되지 않았거나 의증·초안·외부 미검증인 기록은 �
   const serialized = JSON.stringify(transfer);
 
   assert.doesNotMatch(serialized, /provisional|의증|draft-observation|외부 미검증|9999-9|140/);
-  assert.match(serialized, /hypertension|diabetes|4548-4|2089-1/);
+  assert.match(serialized, /hypertension|diabetes|copd|4548-4|2089-1/);
 });
 
 test("서명자·시각이 없는 legacy 이관 진료는 환자 전달 사실로 사용하지 않는다", () => {
@@ -372,8 +393,46 @@ test("서명자·시각이 없는 legacy 이관 진료는 환자 전달 사실�
     : event);
   const transfer = createPatientTransferPackage({ ...patient, events: legacyEvents }, EXPORTED_AT, TRANSFER_CODE);
 
-  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["diabetes"]);
+  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["copd", "diabetes"]);
   assert.deepEqual(transfer.healthMap.measurements.map(({ key }) => key), ["ldl"]);
+});
+
+test("COPD는 확정 KCD J43·J44만 환자 항목으로 정제하고 J43.0은 제외한다", () => {
+  const condition = (code, overrides = {}) => normalizedEvent({
+    id: `copd-${code.replace(".", "-")}-${overrides.id ?? "confirmed"}`,
+    type: "condition",
+    recordStatus: "final",
+    system: KCD_SYSTEM,
+    code,
+    label: "원문 표시명",
+    date: "2026-07-18",
+    status: "active",
+    verificationStatus: "confirmed",
+    certainty: "confirmed",
+    source: { kind: "manual", label: "의료진 확정" },
+    ...overrides,
+  });
+
+  for (const code of ["J43", "J43.1", "J44", "J44.9"]) {
+    const transfer = createPatientTransferPackage({ events: [condition(code)] }, EXPORTED_AT, TRANSFER_CODE);
+    assert.deepEqual(transfer.healthMap.conditions, [{
+      id: "copd",
+      label: "만성폐쇄성폐질환(COPD)",
+      recordedOn: "2026-07-18",
+      basis: "confirmed-condition",
+    }]);
+  }
+
+  const hypertension = condition("I10", { id: "hypertension", label: "고혈압" });
+  const transfer = createPatientTransferPackage({
+    events: [
+      hypertension,
+      condition("J43.0"),
+      condition("J44.9", { id: "draft", recordStatus: "draft" }),
+      condition("J44.9", { id: "provisional", verificationStatus: "provisional", certainty: "provisional" }),
+    ],
+  }, EXPORTED_AT, TRANSFER_CODE);
+  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["hypertension"]);
 });
 
 test("코드 시스템과 구조화 코드가 표시명보다 우선하며 임의 시스템·분리 혈압·데모·생성·고아 진료 기록을 제외한다", () => {

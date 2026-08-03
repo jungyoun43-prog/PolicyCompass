@@ -110,6 +110,28 @@ test("clinical bridge publishes only signed, sanitized patient facts", () => {
   }
 });
 
+test("clinical bridge links only the canonical COPD condition and drops physician-only profiles", () => {
+  const patient = patientFixture();
+  patient.events[1] = {
+    ...patient.events[1],
+    code: "J44.9",
+    label: "기관 원문 COPD 표시명",
+  };
+  patient.claimAdjudication = { outcome: "심사결과-노출금지" };
+  patient.pftProfile = { result: "폐기능-노출금지" };
+  patient.copdQualityProfile = { score: "기관평가-노출금지" };
+
+  const snapshot = createClinicalSnapshot(patient, PREPARED_AT);
+
+  assert.deepEqual(snapshot.healthMap.conditions, [{
+    id: "copd",
+    label: "만성폐쇄성폐질환(COPD)",
+    recordedOn: "2026-07-25",
+    basis: "confirmed-condition",
+  }]);
+  assert.doesNotMatch(JSON.stringify(snapshot), /claimAdjudication|pftProfile|copdQualityProfile|심사결과|폐기능|기관평가/);
+});
+
 test("care bridge carries a patient brief back without identifiers", () => {
   const storage = memoryStorage();
   const snapshot = createClinicalSnapshot(patientFixture(), PREPARED_AT);

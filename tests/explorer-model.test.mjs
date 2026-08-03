@@ -14,6 +14,7 @@ const visible = [
   "migraine",
   "reflux",
   "asthma",
+  "copd",
   "mood",
   "arthritis",
 ];
@@ -26,7 +27,7 @@ test("전체 질환을 불규칙하지만 겹치지 않는 장면으로 배치�
   const settled = settleExplorerScene(scene, 1180, 720);
 
   // Then
-  assert.equal(settled.nodes.length, 8);
+  assert.equal(settled.nodes.length, 9);
   assert.equal(settled.nodes.every(({ type }) => type === "condition"), true);
   const xs = settled.nodes.map(({ x }) => x);
   const ys = settled.nodes.map(({ y }) => y);

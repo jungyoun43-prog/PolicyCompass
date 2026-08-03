@@ -148,6 +148,52 @@ test("환자용 질환 질문은 식사와 횟수·시간이 있는 운동을 �
   assert.ok(brief.questions.every(({ question }) => question.endsWith("?")));
 });
 
+test("COPD 질문은 서명·확정 임상 항목에만 열리고 생활 언어 네 범주를 제공한다", () => {
+  const unsignedContext = createPatientQuestionContext({
+    visibleIds: ["copd"],
+    refinedContext: { conditionIds: ["copd"] },
+  });
+  assert.deepEqual(unsignedContext.conditionIds, []);
+
+  const copdSnapshot = structuredClone(signedSnapshot);
+  copdSnapshot.healthMap.conditions = [{
+    id: "copd",
+    label: "만성폐쇄성폐질환(COPD)",
+    recordedOn: "2026-07-18",
+    basis: "confirmed-condition",
+  }];
+  copdSnapshot.healthMap.measurements = [];
+  copdSnapshot.medications = [];
+  copdSnapshot.summary = {
+    includedConditions: 1,
+    includedMeasurements: 0,
+    includedMedications: 0,
+  };
+  copdSnapshot.claimAdjudication = { outcome: "심사결과-노출금지" };
+  copdSnapshot.pftProfile = { result: "PFT-노출금지" };
+  copdSnapshot.copdQualityProfile = { score: "기관평가-노출금지" };
+  const brief = createPatientFallbackBrief({
+    visibleIds: ["copd"],
+    clinicalSnapshot: copdSnapshot,
+  });
+  const request = createPatientQuestionRequest({
+    visibleIds: ["copd"],
+    clinicalSnapshot: copdSnapshot,
+  }, "", { asOf: "2026-07-26" });
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
+
+  assert.deepEqual(brief.ids, ["copd"]);
+  assert.equal(brief.questions.length, 4);
+  assert.ok(brief.questions.every(({ evidenceIds }) => evidenceIds.includes("condition:copd")));
+  assert.match(questionText, /무엇을 먹으면 좋고/);
+  assert.match(questionText, /일주일에 몇 번·한 번에 몇 분/);
+  assert.match(questionText, /흡입기는 언제/);
+  assert.match(questionText, /언제 병원에 연락하고/);
+  assert.doesNotMatch(JSON.stringify(brief), /기관 점수|심사결과|급여|PFT/);
+  assert.deepEqual(request.clinicalSnapshot.healthMap.conditions, copdSnapshot.healthMap.conditions);
+  assert.doesNotMatch(JSON.stringify(request), /claimAdjudication|pftProfile|copdQualityProfile|심사결과|PFT|기관평가/);
+});
+
 test("정제 기록이 많아도 식사·운동 생활 질문을 최소 두 자리 우선 보장한다", () => {
   const richSnapshot = structuredClone(signedSnapshot);
   richSnapshot.healthMap.measurements.push({
@@ -222,6 +268,13 @@ test("모델 질문과 AI 공유 요약은 정제 근거만 허용하고 진단�
     () => createModelPatientBrief({
       ...response,
       summary: "고혈압으로 확진되었습니다.",
+    }, scene, "밤에 기침", "local"),
+    /진단 또는 처방 표현/,
+  );
+  assert.throws(
+    () => createModelPatientBrief({
+      ...response,
+      summary: "COPD입니다.",
     }, scene, "밤에 기침", "local"),
     /진단 또는 처방 표현/,
   );

@@ -21,6 +21,7 @@ test("여러 입력 신호를 고르게 반영하고 질문은 최대 다섯 개
     "hypertension",
     "diabetes",
     "asthma",
+    "copd",
     "migraine",
     "reflux",
     "mood",
@@ -30,10 +31,26 @@ test("여러 입력 신호를 고르게 반영하고 질문은 최대 다섯 개
   assert.equal(brief.questions.length, 5);
   assert.deepEqual(
     brief.questions.map(({ sourceId }) => sourceId),
-    ["hypertension", "diabetes", "asthma", "migraine", "reflux"],
+    ["hypertension", "diabetes", "asthma", "copd", "migraine"],
   );
   assert.equal(new Set(brief.questions.map(({ question }) => question)).size, 5);
   assert.equal(brief.countLabel, "5개 질문");
+});
+
+test("확정 COPD 신호는 식사·활동·흡입기·진료 시점을 쉬운 질문으로 정리한다", () => {
+  const brief = createVisitBrief(["copd"]);
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
+
+  assert.equal(brief.questions.length, 4);
+  assert.deepEqual(brief.questions.map(({ sourceId }) => sourceId), ["copd", "copd", "copd", "copd"]);
+  assert.match(questionText, /무엇을 먹으면 좋고/);
+  assert.match(questionText, /일주일에 몇 번·한 번에 몇 분/);
+  assert.match(questionText, /흡입기는 언제/);
+  assert.match(questionText, /언제 병원에 연락하고/);
+  assert.ok(brief.questions.every(({ question, sourceLabel }) => (
+    question.endsWith("?") && sourceLabel === "만성폐쇄성폐질환(COPD)"
+  )));
+  assert.doesNotMatch(questionText, /진단 확정|기관 점수|급여|폐기능 수치/);
 });
 
 test("각 질문은 확인 이유와 입력 근거를 함께 제공한다", () => {

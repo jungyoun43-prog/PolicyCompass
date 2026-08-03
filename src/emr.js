@@ -65,6 +65,14 @@ import {
   CLAIM_LANE_LABELS,
   CLAIM_LANE_ORDER,
 } from "./claim-rules.js";
+import { resolveClaimPresentation } from "./claim-presentation.js";
+import { getCopdDemoProfile } from "./copd-demo-data.js";
+import {
+  evaluateGoldCopdConcordance,
+  evaluateHiraCopd2026Contribution,
+  GOLD_COPD_2026_RULESET,
+  HIRA_COPD_2026_RULESET,
+} from "./copd-assessment.js";
 import {
   CLINICAL_PATIENT_BRIEF_EVENT,
   normalizeClinicalPatientBrief,
@@ -316,6 +324,14 @@ const refs = {
   bodyConditionList: byId("bodyConditionList"),
   bodyDetailBoundary: byId("bodyDetailBoundary"),
   claimResultSummary: byId("claimResultSummary"),
+  claimAttentionSummary: byId("claimAttentionSummary"),
+  claimAttentionList: byId("claimAttentionList"),
+  copdQualitySummary: byId("copdQualitySummary"),
+  copdQualityMetrics: byId("copdQualityMetrics"),
+  copdDiagnosticSummary: byId("copdDiagnosticSummary"),
+  copdDiagnosticDetails: byId("copdDiagnosticDetails"),
+  copdQualityDetails: byId("copdQualityDetails"),
+  copdAssessmentMeta: byId("copdAssessmentMeta"),
   claimBoard: byId("claimBoard"),
   claimBoardLive: byId("claimBoardLive"),
   ruleVersionList: byId("ruleVersionList"),
@@ -1530,6 +1546,313 @@ function renderRuleVersions() {
   if (!rules.length) refs.ruleVersionList.append(createEmptyMessage("저장된 급여 규칙이 없습니다."));
 }
 
+const CLAIM_ATTENTION_ORDER = Object.freeze({ reduced: 0, risk: 1, insufficient: 2, verified: 3 });
+const CLAIM_ATTENTION_ICON = Object.freeze({ reduced: "×", risk: "!", insufficient: "…", verified: "✓" });
+const DEMO_CLAIM_REASON_LABELS = Object.freeze({
+  DEMO_REQUIRED_EVIDENCE_VERIFIED: "필요 근거 확인",
+  DEMO_TIME_COUNT_PASS: "기간·횟수 사전점검 통과",
+  DEMO_RULE_NOT_APPLICABLE: "이 항목에 적용할 규칙 없음",
+  DEMO_DIAGNOSTIC_EVIDENCE_MISSING: "COPD 진단 근거 확인 필요",
+  DEMO_RECORD_CONTEXT_MISSING: "증상·노출력 기록 확인 필요",
+  DEMO_REQUIRED_DATA_MISSING: "필수 자료 부족",
+  DEMO_EXTERNAL_PROVENANCE_UNVERIFIED: "타기관 자료 출처·환자 일치 미검증",
+});
+
+function demoClaimEvaluation(item) {
+  const status = item?.preflight?.status;
+  const evaluationStatus = status === "GREEN"
+    ? "ready"
+    : status === "YELLOW" ? "missing-evidence" : "unknown";
+  return {
+    id: item.id,
+    title: item.label,
+    serviceCode: item.code,
+    status: evaluationStatus,
+    calculationAvailable: status !== "GRAY",
+    missingEvidence: status === "YELLOW" ? item.preflight.reasonCodes ?? [] : [],
+    explanation: item.preflight?.disclaimer ?? "합성 사전점검 자료",
+  };
+}
+
+function demoClaimInput(item) {
+  const reason = (item?.preflight?.reasonCodes ?? [])
+    .map((code) => DEMO_CLAIM_REASON_LABELS[code] ?? code)
+    .join(" · ");
+  return {
+    claimItemId: item.id,
+    riskConfirmed: item?.preflight?.riskConfirmed === true,
+    riskEvaluable: item?.preflight?.status !== "GRAY",
+    riskReason: reason,
+    insufficientReason: item?.preflight?.status === "GRAY" ? reason || item.preflight.disclaimer : "",
+    requiredEvidenceVerified: item?.preflight?.status === "GREEN",
+    verifiedReason: reason,
+    missingData: item?.preflight?.status === "YELLOW" ? (item.preflight.reasonCodes ?? []).map((code) => DEMO_CLAIM_REASON_LABELS[code] ?? code) : [],
+  };
+}
+
+function claimAttentionEntries(patient, evaluations, profile) {
+  const profileItems = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
+  const adjudications = Array.isArray(profile?.adjudications) ? profile.adjudications : [];
+  const entries = profileItems.map((item) => {
+    const evaluation = demoClaimEvaluation(item);
+    return {
+      id: item.id,
+      title: item.label,
+      code: item.code,
+      date: item.serviceDate,
+      synthetic: true,
+      presentation: resolveClaimPresentation({
+        evaluation,
+        claimItem: demoClaimInput(item),
+        adjudications,
+      }),
+    };
+  });
+  const profileCodes = new Set(profileItems.map(({ code }) => code).filter(Boolean));
+  for (const evaluation of evaluations) {
+    if (profileCodes.has(evaluation.serviceCode)) continue;
+    entries.push({
+      id: evaluation.id,
+      title: evaluation.title,
+      code: evaluation.serviceCode,
+      date: evaluation.asOf,
+      synthetic: evaluation.rule?.sample === true,
+      presentation: resolveClaimPresentation({ evaluation }),
+    });
+  }
+  return entries
+    .sort((left, right) => CLAIM_ATTENTION_ORDER[left.presentation.state] - CLAIM_ATTENTION_ORDER[right.presentation.state]
+      || left.title.localeCompare(right.title, "ko"))
+    .slice(0, 5);
+}
+
+function renderClaimAttention(patient, evaluations, profile) {
+  const entries = claimAttentionEntries(patient, evaluations, profile);
+  clear(refs.claimAttentionSummary);
+  clear(refs.claimAttentionList);
+  const counts = Object.fromEntries(Object.keys(CLAIM_ATTENTION_ORDER).map((stateName) => [stateName, 0]));
+  for (const entry of entries) counts[entry.presentation.state] += 1;
+
+  const summary = element("div", "claim-attention-summary__content");
+  const headline = counts.reduced
+    ? `최종 삭감 ${counts.reduced}건을 먼저 확인하세요.`
+    : counts.risk
+      ? `청구 전 확인할 위험 ${counts.risk}건이 있습니다.`
+      : counts.verified
+        ? "현재 연결 자료에서 우선 위험은 보이지 않습니다."
+        : "현재 자료로는 청구 위험을 판정하기 어렵습니다.";
+  summary.append(
+    element("strong", "", headline),
+    element("p", "", `빨강 ${counts.reduced} · 노랑 ${counts.risk} · 회색 ${counts.insufficient} · 초록 ${counts.verified}`),
+  );
+  if (profile?.synthetic) summary.append(element("span", "claim-synthetic-badge", "합성 공모전 데모"));
+  refs.claimAttentionSummary.append(summary);
+
+  if (!entries.length) {
+    refs.claimAttentionList.append(element("li", "claim-overview-empty", "연결된 규칙 또는 심사 자료가 없습니다."));
+    return;
+  }
+  for (const entry of entries) {
+    const { presentation } = entry;
+    const row = element("li", "claim-attention-item");
+    row.dataset.claimState = presentation.state;
+    const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
+    icon.setAttribute("aria-hidden", "true");
+    const content = element("div", "claim-attention-item__content");
+    const top = element("div", "claim-attention-item__top");
+    top.append(element("strong", "", entry.title), element("span", "claim-attention-item__status", presentation.label));
+    content.append(top, element("p", "", presentation.reason));
+    if (presentation.missingData.length) {
+      content.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
+    }
+    const meta = [entry.code, entry.date, entry.synthetic ? "합성 자료" : "EMR 자동 집계"].filter(Boolean).join(" · ");
+    content.append(element("small", "", meta), element("small", "claim-attention-item__boundary", presentation.paymentBoundary));
+    row.append(icon, content);
+    refs.claimAttentionList.append(row);
+  }
+}
+
+const QUALITY_METRIC_STATUS = Object.freeze({
+  included: { label: "기여 예상", icon: "✓" },
+  "not-included": { label: "미포함 예상", icon: "!" },
+  insufficient: { label: "확인 필요", icon: "…" },
+  "not-applicable": { label: "대상 아님", icon: "—" },
+});
+
+function qualityObservedLabel(metric) {
+  if (metric.id === "continuing-visits") return `${metric.observed}회`;
+  if (metric.id === "pft") return `${metric.observed}건`;
+  return `${metric.observed}건`;
+}
+
+function appendSourceLink(container, rule) {
+  const href = safeExternalUrl(rule?.sourceUrl);
+  if (!href) return;
+  const link = element("a", "copd-source-link", `${rule.sourceLabel} ↗`);
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  container.append(link);
+}
+
+function renderCopdQuality(quality, profile) {
+  clear(refs.copdQualitySummary);
+  clear(refs.copdQualityMetrics);
+  clear(refs.copdQualityDetails);
+  const includedCount = quality.metrics.filter(({ status }) => status === "included").length;
+  const headline = quality.target.status === "eligible"
+    ? `평가대상 예상 · 3개 지표 중 ${includedCount}개 기여 가능`
+    : quality.target.status === "insufficient"
+      ? "평가대상 여부를 판단할 자료가 부족합니다."
+      : "현재 연결 자료에서는 평가대상으로 예상되지 않습니다.";
+  const summary = element("div", "copd-quality-summary__content");
+  summary.dataset.status = quality.target.status;
+  summary.append(
+    element("strong", "", headline),
+    element("p", "", quality.target.reason || "대상조건을 확인할 자료가 없습니다."),
+  );
+  if (profile?.synthetic) summary.append(element("span", "claim-synthetic-badge", profile.syntheticNotice));
+  refs.copdQualitySummary.append(summary);
+
+  for (const metric of quality.metrics) {
+    const status = QUALITY_METRIC_STATUS[metric.status] ?? QUALITY_METRIC_STATUS.insufficient;
+    const card = element("article", "copd-quality-metric");
+    card.dataset.metricStatus = metric.status;
+    const top = element("div", "copd-quality-metric__top");
+    top.append(
+      element("span", "copd-quality-metric__mark", status.icon),
+      element("span", "copd-quality-metric__status", status.label),
+    );
+    card.append(
+      top,
+      element("h4", "", metric.label),
+      element("strong", "copd-quality-metric__value", qualityObservedLabel(metric)),
+      element("small", "", `지표 가중치 ${metric.weight}% · 기준 ${metric.minimum}회 이상`),
+      element("p", "", metric.reason),
+    );
+    refs.copdQualityMetrics.append(card);
+  }
+
+  const target = element("section", "copd-detail-section");
+  target.append(
+    element("h5", "", "평가대상 예상 근거"),
+    element("p", "", quality.target.reason),
+    element("p", "", `평가기간 ${quality.period.start}~${quality.period.end} · 만 ${quality.target.ageYears ?? "?"}세 · 상병 ${quality.target.diagnosisCode || "확인 안 됨"}`),
+  );
+  const metricDetails = element("section", "copd-detail-section");
+  metricDetails.append(element("h5", "", "세 지표를 서로 독립 확인"));
+  const list = element("ul", "copd-detail-list");
+  for (const metric of quality.metrics) {
+    const status = QUALITY_METRIC_STATUS[metric.status] ?? QUALITY_METRIC_STATUS.insufficient;
+    const item = element("li");
+    item.append(element("b", "", `${metric.label} · ${status.label}`), element("span", "", metric.reason));
+    list.append(item);
+  }
+  metricDetails.append(list);
+  const codeBoundary = element("section", "copd-detail-section copd-detail-section--boundary");
+  codeBoundary.append(
+    element("h5", "", "코드·판정 경계"),
+    element("p", "", `PFT 코드는 ${HIRA_COPD_2026_RULESET.pftCodes.join(", ")}를 확인합니다. 타기관 검사는 출처·환자 일치·검토자·검증 시각이 모두 확인된 경우에만 기여 근거로 사용합니다.`),
+    element("p", "", quality.disclaimer),
+  );
+  appendSourceLink(codeBoundary, quality.rule);
+  refs.copdQualityDetails.append(target, metricDetails, codeBoundary);
+}
+
+function diagnosticHeadline(diagnostic) {
+  if (diagnostic.status === "matched-repeat-confirmed") return "별도 시점 검사에서도 폐활량측정 기준이 반복 확인됐습니다.";
+  if (diagnostic.status === "matched-repeat-pending") return "이번 검사에서 기준 일치 · 별도 시점 반복확인이 필요합니다.";
+  if (diagnostic.status === "clinician-review") return "별도 시점 검사 결과가 달라 의료진 검토가 필요합니다.";
+  if (diagnostic.status === "not-matched-repeat-pending") return "이번 값은 기준에 일치하지 않지만 반복확인 범위에 있습니다.";
+  if (diagnostic.status === "criterion-not-demonstrated") return "현재 검증 자료에서는 폐활량측정 기준이 확인되지 않았습니다.";
+  if (diagnostic.status === "matched") return "이번 검사에서 폐활량측정 기준에 일치합니다.";
+  return "진단 근거 정합성을 판단할 자료가 부족합니다.";
+}
+
+function diagnosticAxis(label, status, value) {
+  const item = element("div", "copd-diagnostic-axis");
+  item.dataset.axisStatus = status;
+  item.append(element("small", "", label), element("strong", "", value));
+  return item;
+}
+
+function renderCopdDiagnostic(diagnostic, profile) {
+  clear(refs.copdDiagnosticSummary);
+  clear(refs.copdDiagnosticDetails);
+  const summary = element("div", "copd-diagnostic-summary__content");
+  summary.dataset.status = diagnostic.status;
+  summary.append(element("strong", "", diagnosticHeadline(diagnostic)));
+  const axes = element("div", "copd-diagnostic-axes");
+  axes.append(
+    diagnosticAxis("임상 맥락", diagnostic.clinicalContext.status, diagnostic.clinicalContext.status === "documented" ? "기록 확인" : "자료 부족"),
+    diagnosticAxis("post-BD 기준", diagnostic.criterion.status, diagnostic.criterion.status === "matched" ? "< 0.70 일치" : diagnostic.criterion.status === "not-matched" ? "≥ 0.70" : "판정 불가"),
+    diagnosticAxis("반복 확인", diagnostic.repeatConfirmation.status, diagnostic.repeatConfirmation.status === "confirmed" ? "별도 시점 확인" : diagnostic.repeatConfirmation.status === "pending" ? "대기" : diagnostic.repeatConfirmation.status === "clinician-review" ? "의료진 검토" : "해당 상태 확인"),
+    diagnosticAxis("의료진 진단", diagnostic.clinicianDiagnosis.status, diagnostic.clinicianDiagnosis.status === "documented" ? "기록 있음" : "기록 없음"),
+  );
+  summary.append(axes, element("p", "copd-diagnostic-boundary", diagnostic.disclaimer));
+  refs.copdDiagnosticSummary.append(summary);
+
+  const calculation = element("section", "copd-detail-section");
+  calculation.append(element("h5", "", "post-BD 계산과 엄격한 경계"));
+  if (diagnostic.criterion.latestRatio !== null) {
+    calculation.append(
+      element("p", "copd-ratio-result", `FEV₁/FVC ${diagnostic.criterion.displayRatio} ${diagnostic.criteriaMatch ? "<" : "≥"} 0.70`),
+      element("p", "", `검사 ${diagnostic.criterion.sessionDate} · 세션 ${diagnostic.criterion.sessionId} · ${diagnostic.criterion.basis === "reported-ratio" ? "보고 비율" : "같은 세션 FEV₁÷FVC 계산"}`),
+    );
+  } else {
+    calculation.append(element("p", "", diagnostic.criterion.reason));
+  }
+  calculation.append(element("p", "", "정확히 0.70은 ‘< 0.70’에 해당하지 않습니다. 화면 반올림값이 아니라 원시 비율로 판정합니다."));
+
+  const repeat = element("section", "copd-detail-section");
+  repeat.append(element("h5", "", "별도 시점 반복확인"), element("p", "", diagnostic.repeatConfirmation.reason));
+  if (diagnostic.sessions.length) {
+    const list = element("ol", "copd-session-list");
+    for (const [index, session] of diagnostic.sessions.entries()) {
+      const item = element("li");
+      const ratio = session.ratio === null ? "비율 판정 불가" : `post-BD ${session.ratio.toFixed(3)}`;
+      item.append(
+        element("b", "", `${index + 1}차 · ${session.date || "날짜 없음"} · ${ratio}`),
+        element("span", "", session.valid ? `${session.id} · 출처·품질 확인` : session.reasons.join(" · ")),
+      );
+      list.append(item);
+    }
+    repeat.append(list);
+  }
+  if (profile?.scenario?.kind === "NORMAL_STAGED") {
+    repeat.append(element("p", "copd-stage-note", "1차 0.640만 있을 때는 ‘기준 일치 + 반복확인 대기’였고, 별도 날짜의 2차 0.650이 연결된 뒤 ‘반복 확인’으로 바뀐 합성 흐름입니다."));
+  }
+
+  const context = element("section", "copd-detail-section");
+  const symptomText = diagnostic.clinicalContext.symptoms.length ? diagnostic.clinicalContext.symptoms.join(", ") : "확인 안 됨";
+  const exposure = diagnostic.clinicalContext.exposure;
+  context.append(
+    element("h5", "", "임상 맥락과 최종 판단"),
+    element("p", "", `증상: ${symptomText}`),
+    element("p", "", exposure ? `노출력: ${exposure.kind === "TOBACCO" ? "흡연" : exposure.kind}${exposure.packYears ? ` ${exposure.packYears}갑년` : ""}` : "노출력: 확인 안 됨"),
+    element("p", "", diagnostic.clinicianDiagnosis.reason),
+    element("p", "", "수치만으로 진단명을 자동 입력·삭제하지 않으며 천식·기관지확장증 등 다른 원인은 의료진이 함께 판단합니다."),
+  );
+  appendSourceLink(context, diagnostic.rule);
+  refs.copdDiagnosticDetails.append(calculation, repeat, context);
+}
+
+function renderCopdAssessment(patient, profile) {
+  const input = profile ?? patient;
+  const evaluatedAt = profile?.evaluatedAt ?? new Date().toISOString();
+  const quality = evaluateHiraCopd2026Contribution(input, { evaluatedAt });
+  const diagnostic = evaluateGoldCopdConcordance(input, { evaluatedAt });
+  renderCopdQuality(quality, profile);
+  renderCopdDiagnostic(diagnostic, profile);
+  refs.copdAssessmentMeta.replaceChildren();
+  refs.copdAssessmentMeta.append(document.createTextNode(
+    `${HIRA_COPD_2026_RULESET.version} · ${GOLD_COPD_2026_RULESET.version} · 평가 ${displayTimestamp(evaluatedAt)} · `,
+  ));
+  appendSourceLink(refs.copdAssessmentMeta, HIRA_COPD_2026_RULESET);
+  refs.copdAssessmentMeta.append(document.createTextNode(" · "));
+  appendSourceLink(refs.copdAssessmentMeta, GOLD_COPD_2026_RULESET);
+}
+
 async function moveClaimReview(evaluation, nextStage, inputMethod) {
   if (!evaluation || !CLAIM_REVIEW_STAGE_ORDER.includes(nextStage)) return false;
   const review = resolveClaimReview(state, evaluation);
@@ -1574,6 +1897,10 @@ function renderClaimBoard(patient) {
     .flatMap((status) => board.lanes[status])
     .sort((left, right) => left.patientName.localeCompare(right.patientName, "ko") || left.title.localeCompare(right.title, "ko"));
   claimEvaluationById = new Map(evaluations.map((evaluation) => [evaluation.id, evaluation]));
+  const selectedEvaluations = evaluations.filter((evaluation) => evaluation.patientId === patient.id);
+  const copdDemoProfile = getCopdDemoProfile(patient);
+  renderClaimAttention(patient, selectedEvaluations, copdDemoProfile);
+  renderCopdAssessment(patient, copdDemoProfile);
 
   clear(refs.claimResultSummary);
   refs.claimResultSummary.setAttribute("role", "list");
@@ -2425,6 +2752,13 @@ function clearPatientWorkspaceUi() {
     refs.bodyVisitList,
     refs.bodyMedicationList,
     refs.bodyConditionList,
+    refs.claimAttentionSummary,
+    refs.claimAttentionList,
+    refs.copdQualitySummary,
+    refs.copdQualityMetrics,
+    refs.copdDiagnosticSummary,
+    refs.copdDiagnosticDetails,
+    refs.copdQualityDetails,
     refs.claimResultSummary,
     refs.claimBoard,
     refs.ruleVersionList,

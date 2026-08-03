@@ -612,14 +612,108 @@
             <section class="workspace-panel" id="panel-claims" role="tabpanel" aria-labelledby="tab-claims" data-panel="claims" hidden>
               <section class="clinical-card claim-intro" aria-labelledby="claimBoardTitle">
                 <div class="card-heading">
-                  <div><p class="rail-eyebrow">REIMBURSEMENT READINESS</p><h3 id="claimBoardTitle">급여 적합성 칸반</h3></div>
+                  <div><p class="rail-eyebrow">REIMBURSEMENT READINESS</p><h3 id="claimBoardTitle">급여 근거 한눈에 보기</h3></div>
                   <div class="scope-switch" role="group" aria-label="급여 보드 범위">
                     <button type="button" aria-pressed="true" data-board-scope="patient">이 환자</button>
                     <button type="button" aria-pressed="false" data-board-scope="all">전체 환자</button>
                   </div>
                 </div>
-                <p>서명·확정된 EMR의 시행일과 최근 기간 내 횟수를 기관 규칙에 맞춰 자동 집계하고, 필요한 문서 근거까지 사전 점검합니다. 의료적 필요를 막거나 급여를 확정하지 않습니다.</p>
-                <div class="rule-trust-note"><b>샘플 규칙 주의</b><span>기본 규칙은 UI 검증용입니다. 실제 심평원·기관 기준은 시행일과 출처를 검증해 직접 등록하세요.</span></div>
+                <p>먼저 이 환자의 청구 주의사항과 COPD 관련 근거를 요약하고, 필요한 경우에만 세부 근거와 담당자 검토 칸반을 펼쳐 확인합니다.</p>
+                <div class="rule-trust-note"><b>판정 경계</b><span>사전점검 통과는 지급 보장이 아니며, COPD 기여 예상은 공식 기관 점수·등급이 아닙니다. 이 화면은 검사·내원·처방을 강제하지 않습니다.</span></div>
+              </section>
+
+              <div class="claim-overview-grid" aria-label="환자별 급여와 COPD 근거 요약">
+                <section class="clinical-card claim-overview-card claim-attention-card" aria-labelledby="claimAttentionTitle">
+                  <div class="card-heading">
+                    <div>
+                      <p class="rail-eyebrow">INDIVIDUAL CLAIM</p>
+                      <h3 id="claimAttentionTitle">이 환자에서 먼저 볼 항목</h3>
+                    </div>
+                    <span class="source-badge">환자별 사전점검</span>
+                  </div>
+                  <p class="claim-overview-card__intro">서명·확정된 EMR의 시행일, 횟수와 근거 누락을 봅니다. 최종 심사결과와 사전 위험을 섞지 않습니다.</p>
+
+                  <div class="claim-attention-summary" id="claimAttentionSummary" aria-live="polite" aria-atomic="true">
+                    <p class="claim-overview-empty">환자 기록에서 청구 주의사항을 정리하는 중입니다.</p>
+                  </div>
+                  <ol class="claim-attention-list" id="claimAttentionList" aria-label="환자별 청구 주의사항" aria-live="polite">
+                    <li class="claim-overview-empty">확인할 항목이 표시되면 상태와 다음 조치를 함께 보여 줍니다.</li>
+                  </ol>
+
+                  <div class="claim-status-legend" role="list" aria-label="급여 사전점검 상태 기준">
+                    <div class="claim-status-legend__item" data-claim-tone="red" role="listitem">
+                      <span class="claim-status-legend__mark" aria-hidden="true">×</span>
+                      <span><b>빨강 · 삭감 확정</b><small>최종 심사결과로 감액·불인정이 확인됨</small></span>
+                    </div>
+                    <div class="claim-status-legend__item" data-claim-tone="yellow" role="listitem">
+                      <span class="claim-status-legend__mark" aria-hidden="true">!</span>
+                      <span><b>노랑 · 사전 위험 확인</b><small>판정 가능한 근거에서 보완 위험이 확인됨</small></span>
+                    </div>
+                    <div class="claim-status-legend__item" data-claim-tone="green" role="listitem">
+                      <span class="claim-status-legend__mark" aria-hidden="true">✓</span>
+                      <span><b>초록 · 사전점검 통과</b><small>내부 규칙 통과 · 지급 보장 아님</small></span>
+                    </div>
+                    <div class="claim-status-legend__item" data-claim-tone="gray" role="listitem">
+                      <span class="claim-status-legend__mark" aria-hidden="true">…</span>
+                      <span><b>회색 · 확인 불충분</b><small>근거 부족·미연결·아직 평가하지 않음</small></span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="clinical-card claim-overview-card copd-assessment-card" aria-labelledby="copdQualityTitle">
+                  <div class="card-heading">
+                    <div>
+                      <p class="rail-eyebrow">COPD 2026 · DEMO</p>
+                      <h3 id="copdQualityTitle">환자별 기여 예상</h3>
+                    </div>
+                    <span class="source-badge source-badge--draft">공식 점수 아님</span>
+                  </div>
+                  <p class="claim-overview-card__intro">심평원 2026년 COPD 적정성 평가의 세 지표에 이 환자 기록이 어떤 근거로 기여할 수 있는지만 분리해 봅니다.</p>
+
+                  <div class="copd-quality-summary" id="copdQualitySummary" aria-live="polite" aria-atomic="true">
+                    <p class="claim-overview-empty">COPD 평가대상과 자료 완전성을 확인하는 중입니다.</p>
+                  </div>
+                  <div class="copd-quality-metrics" id="copdQualityMetrics" aria-label="COPD 환자별 지표 기여 예상">
+                    <p class="claim-overview-empty">폐기능검사·지속방문·흡입기관지확장제 근거가 여기에 표시됩니다.</p>
+                  </div>
+
+                  <details class="claim-overview-disclosure">
+                    <summary>
+                      <span><b>기여 예상 근거 보기</b><small>대상조건·기간·수가코드·타기관 자료 출처</small></span>
+                    </summary>
+                    <div class="claim-overview-disclosure__body" id="copdQualityDetails">
+                      <p class="claim-overview-empty">연결된 기록과 확인하지 못한 외부 자료를 구분해 보여 줍니다.</p>
+                    </div>
+                  </details>
+
+                  <section class="copd-diagnostic-panel" aria-labelledby="copdDiagnosticTitle">
+                    <div class="copd-diagnostic-panel__heading">
+                      <div><p class="rail-eyebrow">GOLD 2026 · CONCORDANCE</p><h4 id="copdDiagnosticTitle">진단 일치도 확인</h4></div>
+                      <span>자동 진단 아님</span>
+                    </div>
+                    <div class="copd-diagnostic-summary" id="copdDiagnosticSummary" aria-live="polite" aria-atomic="true">
+                      <p class="claim-overview-empty">임상 맥락과 기관지확장제 투여 후 폐활량검사 자료를 확인하는 중입니다.</p>
+                    </div>
+                    <details class="claim-overview-disclosure claim-overview-disclosure--diagnostic">
+                      <summary>
+                        <span><b>진단 일치도 근거 보기</b><small>임상 맥락·post-BD 수치·반복확인 상태</small></span>
+                      </summary>
+                      <div class="claim-overview-disclosure__body" id="copdDiagnosticDetails">
+                        <p class="claim-overview-empty">검사 시행 코드만으로 진단을 확정하지 않습니다.</p>
+                      </div>
+                    </details>
+                  </section>
+
+                  <p class="copd-assessment-meta" id="copdAssessmentMeta">HIRA COPD 2026 데모 규칙 · GOLD 2026 진단 일치도 · 연결 자료 기준</p>
+                  <p class="copd-assessment-boundary"><b>사용 범위</b> 공식 기관 점수·등급이나 가산금액을 계산하지 않으며, 검사·내원·처방 또는 진단을 자동으로 결정하지 않습니다.</p>
+                </section>
+              </div>
+
+              <section class="clinical-card claim-review-section" aria-labelledby="claimWorkflowTitle">
+                <div class="card-heading">
+                  <div><p class="rail-eyebrow">MANUAL REVIEW WORKFLOW</p><h3 id="claimWorkflowTitle">자동 판정 뒤 담당자 검토</h3></div>
+                  <span class="source-badge">수동 단계 분리</span>
+                </div>
                 <div class="claim-review-guide" id="claimBoardInstructions">
                   <span class="claim-review-guide__mark" aria-hidden="true">↔</span>
                   <div>

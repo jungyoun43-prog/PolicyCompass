@@ -64,6 +64,9 @@ const sourceAssets = [
   { route: "/claim-presentation.js", file: "src/claim-presentation.js", type: "text/javascript; charset=utf-8" },
   { route: "/copd-demo-data.js", file: "src/copd-demo-data.js", type: "text/javascript; charset=utf-8" },
   { route: "/copd-assessment.js", file: "src/copd-assessment.js", type: "text/javascript; charset=utf-8" },
+  { route: "/pneumonia-demo-data.js", file: "src/pneumonia-demo-data.js", type: "text/javascript; charset=utf-8" },
+  { route: "/pneumonia-assessment.js", file: "src/pneumonia-assessment.js", type: "text/javascript; charset=utf-8" },
+  { route: "/disease-assessment.js", file: "src/disease-assessment.js", type: "text/javascript; charset=utf-8" },
 ];
 
 const binaryAssets = [

@@ -57,6 +57,8 @@ function baseProfile(patient, scenario) {
   return {
     schema: "vitagraph-copd-demo-profile",
     version: 1,
+    programId: "copd",
+    preferred: true,
     physicianOnly: true,
     synthetic: true,
     syntheticNotice: "합성 의사용 공모전 데모 · 실제 환자·공식 심사결과 아님",
@@ -265,7 +267,18 @@ const MISSING_EVIDENCE_PROFILE = {
     { id: "park-copd-visit-2026-05", date: "2026-05-20", setting: "OUTPATIENT", institutionId: "demo-institution-01", diagnosisCodes: ["J44.9"], purpose: "반복 상병·경구약 기록" },
     { id: "park-copd-visit-2026-10", date: "2026-10-20", setting: "OUTPATIENT", institutionId: "demo-institution-01", diagnosisCodes: ["J44.9"], purpose: "반복 상병·경구약 기록" },
   ],
-  pftSessions: [],
+  pftSessions: [
+    {
+      id: "park-pft-procedure-only-2026-02",
+      serviceDate: "2026-02-03",
+      encounterId: "park-copd-visit-2026-01",
+      procedureCode: "F6002",
+      procedureSystem: "urn:hira:fee-code",
+      eligibleQualityProcedure: true,
+      quality: { status: "ACCEPTABLE", standard: "synthetic procedure record only" },
+      provenance: verifiedProvenance("park-pft-procedure-record-2026-02", "2026-02-04T09:00:00.000Z"),
+    },
+  ],
   medications: [
     { id: "park-oral-med-2026-01", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-01-20", visitId: "park-copd-visit-2026-01", qualifiesTargetMedication: true, eligibleQualityMedication: false },
     { id: "park-oral-med-2026-05", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-05-20", visitId: "park-copd-visit-2026-05", qualifiesTargetMedication: true, eligibleQualityMedication: false },
@@ -308,6 +321,20 @@ const MISSING_EVIDENCE_PROFILE = {
         verifiedAt: "",
         synthetic: true,
       },
+    },
+    {
+      id: "park-claim-oral-2026-10",
+      code: "DEMO-ORAL-COPD",
+      label: "COPD 추적 처방 합성 청구 항목",
+      serviceDate: "2026-10-20",
+      workflowStatus: "CLAIMED",
+      preflight: {
+        status: "YELLOW",
+        riskConfirmed: true,
+        reasonCodes: ["DEMO_DIAGNOSTIC_EVIDENCE_MISSING", "DEMO_RECORD_CONTEXT_MISSING"],
+        disclaimer: "청구 전 기록 보완 위험 · 삭감 확정 아님 · 이전 최종 삭감과 별개의 신규 항목",
+      },
+      provenance: verifiedProvenance("park-claim-source-2026-10", "2026-10-21T09:00:00.000Z"),
     },
   ],
   adjudications: [
@@ -395,6 +422,7 @@ const EXTERNAL_UNVERIFIED_PROFILE = {
   medications: [
     { id: "jung-oral-med-2026-03", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-03-18", visitId: "jung-copd-visit-2026-03", qualifiesTargetMedication: true, eligibleQualityMedication: false },
     { id: "jung-oral-med-2026-09", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "jung-lama-2026-09", code: "DEMO-LAMA", label: "합성 LAMA 흡입제", class: "LAMA", route: "INHALED", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: true, provenance: verifiedProvenance("jung-lama-prescription-2026-09", "2026-09-09T10:00:00.000Z") },
   ],
   claimItems: [
     {
@@ -410,6 +438,20 @@ const EXTERNAL_UNVERIFIED_PROFILE = {
         disclaimer: "외부자료 미확인 · 검사 미시행 또는 삭감 확정을 의미하지 않음",
       },
       provenance: externalUnverifiedProvenance("jung-external-pft-document-2026-02"),
+    },
+    {
+      id: "jung-claim-lama-2026-09",
+      code: "DEMO-LAMA",
+      label: "LAMA 흡입제 합성 청구 항목",
+      serviceDate: "2026-09-09",
+      workflowStatus: "CLAIMED",
+      preflight: {
+        status: "GREEN",
+        riskConfirmed: false,
+        reasonCodes: ["DEMO_REQUIRED_EVIDENCE_VERIFIED"],
+        disclaimer: "내부 사전점검 통과 · 지급 보장 아님",
+      },
+      provenance: verifiedProvenance("jung-claim-lama-source-2026-09", "2026-09-10T09:00:00.000Z"),
     },
   ],
   adjudications: [],

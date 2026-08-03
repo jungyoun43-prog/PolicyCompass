@@ -194,6 +194,33 @@ test("COPD 질문은 서명·확정 임상 항목에만 열리고 생활 언어 
   assert.doesNotMatch(JSON.stringify(request), /claimAdjudication|pftProfile|copdQualityProfile|심사결과|PFT|기관평가/);
 });
 
+test("폐렴 질문은 확정 정제 기록에만 열리고 평가·청구 내부자료를 노출하지 않는다", () => {
+  const pneumoniaSnapshot = structuredClone(signedSnapshot);
+  pneumoniaSnapshot.healthMap.conditions = [{
+    id: "pneumonia",
+    label: "폐렴",
+    recordedOn: "2026-07-18",
+    basis: "confirmed-condition",
+  }];
+  pneumoniaSnapshot.healthMap.measurements = [];
+  pneumoniaSnapshot.medications = [];
+  pneumoniaSnapshot.summary = { includedConditions: 1, includedMeasurements: 0, includedMedications: 0 };
+  pneumoniaSnapshot.pneumoniaQualityProfile = { score: "기관평가-노출금지" };
+  pneumoniaSnapshot.claimAdjudication = { outcome: "심사결과-노출금지" };
+
+  const brief = createPatientFallbackBrief({ visibleIds: ["pneumonia"], clinicalSnapshot: pneumoniaSnapshot });
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
+
+  assert.deepEqual(brief.ids, ["pneumonia"]);
+  assert.equal(brief.questions.length, 4);
+  assert.ok(brief.questions.every(({ evidenceIds }) => evidenceIds.includes("condition:pneumonia")));
+  assert.match(questionText, /무엇을 먹고/);
+  assert.match(questionText, /산책이나 가벼운 운동은 언제부터/);
+  assert.match(questionText, /항생제는 어떻게 끝까지 먹어야/);
+  assert.match(questionText, /바로 도움을 받아야/);
+  assert.doesNotMatch(JSON.stringify(brief), /기관 점수|심사결과|기관평가|급여/);
+});
+
 test("정제 기록이 많아도 식사·운동 생활 질문을 최소 두 자리 우선 보장한다", () => {
   const richSnapshot = structuredClone(signedSnapshot);
   richSnapshot.healthMap.measurements.push({

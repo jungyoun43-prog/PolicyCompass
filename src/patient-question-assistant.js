@@ -17,7 +17,7 @@ const MAX_MEDICATIONS = 40;
 const providerNames = new Set(["local", "frontier"]);
 const measurementByKey = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.key, spec]));
 const measurementByCode = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.code, spec]));
-const CLINICAL_ONLY_CONDITION_IDS = new Set(["copd"]);
+const CLINICAL_ONLY_CONDITION_IDS = new Set(["copd", "pneumonia"]);
 const PATIENT_CONDITION_QUESTION_RULES = {
   diabetes: [
     {
@@ -77,6 +77,24 @@ const PATIENT_CONDITION_QUESTION_RULES = {
       reason: "집에서 지켜볼 변화와 빨리 도움받아야 할 때를 구분해 두기 위해서입니다.",
     },
   ],
+  pneumonia: [
+    {
+      question: "폐렴에서 회복할 때 무엇을 먹고, 물은 얼마나 마시면 좋을까요?",
+      reason: "식욕이 떨어지거나 숨이 찰 때 실천할 식사 방법을 물어보기 위해서입니다.",
+    },
+    {
+      question: "산책이나 가벼운 운동은 언제부터, 일주일에 몇 번·한 번에 몇 분 시작하면 좋을까요?",
+      reason: "무리하지 않고 활동을 다시 늘리는 방법을 확인하기 위해서입니다.",
+    },
+    {
+      question: "항생제는 어떻게 끝까지 먹어야 하고, 빼먹었을 때는 어떻게 해야 하나요?",
+      reason: "처방받은 약을 집에서 안전하게 사용하는 방법을 확인하기 위해서입니다.",
+    },
+    {
+      question: "열·기침·가래나 숨참이 어떻게 달라지면 병원에 연락하거나 바로 도움을 받아야 할까요?",
+      reason: "회복 중 지켜볼 변화와 응급 신호를 미리 구분해 두기 위해서입니다.",
+    },
+  ],
   migraine: [
     {
       question: "두통이 있을 때 집에서 해도 되는 일과 피하면 좋은 일은 무엇인가요?",
@@ -133,7 +151,7 @@ const directIdentifierPatterns = [
 
 const unsafeGeneratedClaim = new RegExp([
   "(?:진단|확진)(?:입니다|이다|됐습니다|되었습니다|으로\\s*보입니다)",
-  "(?:고혈압|당뇨병|이상지질혈증|편두통|위식도역류|천식|COPD|만성폐쇄성폐질환|우울|불안|관절염)(?:입니다|이다|으로\\s*보입니다|일\\s*가능성이\\s*높습니다)",
+  "(?:고혈압|당뇨병|이상지질혈증|편두통|위식도역류|천식|COPD|만성폐쇄성폐질환|폐렴|우울|불안|관절염)(?:입니다|이다|으로\\s*보입니다|일\\s*가능성이\\s*높습니다)",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)하세요",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)해야\\s*합니다",
   "(?:반드시|즉시)\\s*(?:복용|중단)하세요",

@@ -9,26 +9,55 @@ const [html, css, js, build] = await Promise.all([
   readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8"),
 ]);
 
-test("claim and COPD domains are separate summary-first panels with drilldown", () => {
+test("급여 주의와 질환별 적정성·진단 근거는 독립된 summary-first 패널이다", () => {
   for (const id of [
     "claimAttentionSummary",
     "claimAttentionList",
-    "copdQualitySummary",
-    "copdQualityMetrics",
-    "copdQualityDetails",
-    "copdDiagnosticSummary",
-    "copdDiagnosticDetails",
-    "copdAssessmentMeta",
+    "diseaseAssessmentTabs",
+    "diseaseAssessmentPanel",
+    "diseaseQualitySummary",
+    "diseaseQualityMetrics",
+    "diseaseQualityDetails",
+    "diseaseDiagnosticSummary",
+    "diseaseDiagnosticDetails",
+    "diseaseAssessmentMeta",
   ]) {
-    assert.equal((html.match(new RegExp(`id=\"${id}\"`, "g")) ?? []).length, 1, id);
+    assert.equal((html.match(new RegExp(`id="${id}"`, "g")) ?? []).length, 1, id);
   }
-  assert.match(html, /환자별 기여 예상/);
+  assert.match(html, /환자의 확정 질환과 연결된 평가만 보여 줍니다/);
   assert.match(html, /공식 점수 아님/);
-  assert.match(html, /검사·내원·처방 또는 진단을 자동으로 결정하지 않습니다/);
+  assert.match(html, /공식 기관 점수·등급이나 가산금액을 계산하지 않으며/);
   assert.match(html, /<details class="claim-overview-disclosure/);
+  assert.doesNotMatch(html, /id="copd(?:Quality|Diagnostic|Assessment)/);
 });
 
-test("claim colors have text labels and red comes through final adjudication resolver", () => {
+test("질환 선택은 환자별 관련 프로그램만 렌더하고 전환해도 전체 청구 요약을 유지한다", () => {
+  assert.match(js, /getDiseaseAssessmentOptions/);
+  assert.match(js, /getPreferredDiseaseAssessmentId/);
+  assert.match(js, /evaluateDiseaseAssessment/);
+  assert.match(js, /getCombinedDiseaseClaimProfile/);
+  assert.match(js, /selectedDiseaseByPatientId/);
+  assert.match(js, /data-disease-assessment-id/);
+  assert.match(js, /ArrowLeft/);
+  assert.match(js, /ArrowRight/);
+  assert.match(js, /왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다/);
+  assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*48px/);
+});
+
+test("COPD와 폐렴은 평가 지표와 임상 정합성을 서로 섞지 않는다", () => {
+  assert.match(js, /HIRA_COPD_2026_RULESET/);
+  assert.match(js, /HIRA_PNEUMONIA_2026_RULESET/);
+  assert.match(js, /post-BD 기준/);
+  assert.match(js, /정확히 0\.70/);
+  assert.match(js, /흉부 영상/);
+  assert.match(js, /CURB-65·PSI는 중증도를 확인하는 도구/);
+  assert.match(js, /혈액배양을 시행하지 않은 사례/);
+  assert.match(js, /개별 진료비 삭감 확정과 같지 않습니다/);
+  assert.match(js, /자동 입력·삭제하지 않으며/);
+  assert.match(js, /appendSourceLink/);
+});
+
+test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 심사결과에서만 온다", () => {
   assert.match(html, /빨강 · 삭감 확정/);
   assert.match(html, /노랑 · 사전 위험 확인/);
   assert.match(html, /초록 · 사전점검 통과/);
@@ -41,23 +70,17 @@ test("claim colors have text labels and red comes through final adjudication res
   assert.match(css, /data-claim-state="verified"/);
 });
 
-test("COPD renderer exposes three metrics, four diagnostic axes, source/version and safety boundary", () => {
-  assert.match(js, /evaluateHiraCopd2026Contribution/);
-  assert.match(js, /evaluateGoldCopdConcordance/);
-  assert.match(js, /지표 가중치/);
-  assert.match(js, /임상 맥락/);
-  assert.match(js, /post-BD 기준/);
-  assert.match(js, /반복 확인/);
-  assert.match(js, /의료진 진단/);
-  assert.match(js, /정확히 0\.70/);
-  assert.match(js, /자동 입력·삭제하지 않으며/);
-  assert.match(js, /appendSourceLink/);
-});
-
-test("responsive panels collapse without horizontal scrolling and new modules are built", () => {
+test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 모두 배포한다", () => {
   assert.match(css, /\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 0\.94fr\) minmax\(0, 1\.06fr\)/);
   assert.match(css, /@media \(max-width: 1180px\)[\s\S]*?\.claim-overview-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
-  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.copd-diagnostic-axes/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.quality-program-metrics/);
   assert.doesNotMatch(css.match(/\.claim-overview-grid\s*\{[^}]+\}/)?.[0] ?? "", /overflow-x:\s*auto/);
-  for (const file of ["claim-presentation.js", "copd-demo-data.js", "copd-assessment.js"]) assert.match(build, new RegExp(file.replace(".", "\\.")));
+  for (const file of [
+    "claim-presentation.js",
+    "copd-demo-data.js",
+    "copd-assessment.js",
+    "pneumonia-demo-data.js",
+    "pneumonia-assessment.js",
+    "disease-assessment.js",
+  ]) assert.match(build, new RegExp(file.replace(".", "\\.")));
 });

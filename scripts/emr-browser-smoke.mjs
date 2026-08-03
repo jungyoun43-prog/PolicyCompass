@@ -263,17 +263,17 @@ try {
   assert(new Set(bodyMap.hotspotIds).size === 12
     && JSON.stringify(bodyMap.hotspotIds) === JSON.stringify(bodyMap.captionIds),
   `Body hotspot and caption department identities diverged: ${JSON.stringify(bodyMap)}`);
-  assert(JSON.stringify(bodyMap.careAreaIds) === JSON.stringify(["endocrine"])
-    && bodyMap.careCount === "1개"
-    && bodyMap.visitCount === "2건"
+  assert(JSON.stringify(bodyMap.careAreaIds) === JSON.stringify(["endocrine", "respiratory"])
+    && bodyMap.careCount === "2개"
+    && bodyMap.visitCount === "3건"
     && bodyMap.medicationCount === "1건",
-  `Demo care records were not limited to the explicitly declared department: ${JSON.stringify(bodyMap)}`);
+  `Demo care records did not preserve the explicitly declared endocrine and respiratory departments: ${JSON.stringify(bodyMap)}`);
   assert(JSON.stringify(bodyMap.candidateAreaIds) === JSON.stringify(["endocrine"])
     && bodyMap.candidateOnlyAreaIds.length === 0,
   `Label-derived department candidates were not visually separated from confirmed care: ${JSON.stringify(bodyMap)}`);
-  assert(JSON.stringify(bodyMap.signalAreaIds) === JSON.stringify(["cardio", "endocrine", "renal", "sensory"])
+  assert(JSON.stringify(bodyMap.signalAreaIds) === JSON.stringify(["cardio", "endocrine", "renal", "respiratory", "sensory"])
     && JSON.stringify(bodyMap.signalOnlyAreaIds) === JSON.stringify(["cardio", "renal", "sensory"])
-    && bodyMap.signalCount === "4개",
+    && bodyMap.signalCount === "5개",
   `Condition-derived navigation signals were not separated from care records: ${JSON.stringify(bodyMap)}`);
   assert(/진료 기록 연결/.test(bodyMap.legend)
     && /진료명 기반 분류 후보/.test(bodyMap.legend)
@@ -327,10 +327,10 @@ try {
   assert(endocrineDetail.unassignedSummary === "1건"
     && /진료과 연결 정보가 없는 약물 1건/.test(endocrineDetail.boundary)
     && /임의로 배정하지 않아/.test(endocrineDetail.boundary)
-    && /진료과 필드로 확인된 진료 1건/.test(endocrineDetail.projection)
+    && /진료과 필드로 확인된 진료 2건을 2개 영역/.test(endocrineDetail.projection)
     && /진료명 기반 분류 후보 1건과 연결 처방 0건/.test(endocrineDetail.projection)
     && /확인된 진료과 이력에서 제외/.test(endocrineDetail.projection)
-    && /질환 기반 탐색 영역 4개는 진료 이력과 분리/.test(endocrineDetail.projection)
+    && /질환 기반 탐색 영역 5개는 진료 이력과 분리/.test(endocrineDetail.projection)
     && !endocrineDetail.unassignedRendered,
   `Care, candidate, signal, or unassigned-medication boundaries were not disclosed: ${JSON.stringify(endocrineDetail)}`);
   assert(endocrineDetail.selectedAreas.length === 2

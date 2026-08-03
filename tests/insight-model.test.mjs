@@ -53,6 +53,18 @@ test("확정 COPD 신호는 식사·활동·흡입기·진료 시점을 쉬운 �
   assert.doesNotMatch(questionText, /진단 확정|기관 점수|급여|폐기능 수치/);
 });
 
+test("확정 폐렴 신호는 회복기 식사·운동·다시 연락할 때를 쉬운 질문으로 정리한다", () => {
+  const brief = createVisitBrief(["pneumonia"]);
+  const questionText = brief.questions.map(({ question }) => question).join(" ");
+
+  assert.equal(brief.questions.length, 3);
+  assert.ok(brief.questions.every(({ sourceId, sourceLabel }) => sourceId === "pneumonia" && sourceLabel === "폐렴"));
+  assert.match(questionText, /어떤 음식을 먹고/);
+  assert.match(questionText, /걷기 같은 운동은 언제부터/);
+  assert.match(questionText, /다시 병원에 연락해야/);
+  assert.doesNotMatch(questionText, /기관 점수|급여|중증도 가중치|항생제 자동/);
+});
+
 test("각 질문은 확인 이유와 입력 근거를 함께 제공한다", () => {
   const brief = createVisitBrief(["arthritis"]);
 

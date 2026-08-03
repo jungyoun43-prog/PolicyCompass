@@ -78,22 +78,25 @@ test("검증된 PFT에는 환자 일치, 출처, 검토자와 검증 시각이 �
   }
 });
 
-test("근거 부족 흐름은 반복 J44.9와 경구약만 있고 하나의 확인된 노랑 위험을 가진다", () => {
+test("혼합 COPD 흐름은 반복 J44.9·결과 없는 PFT 시행 코드·경구약과 두 노랑 위험을 가진다", () => {
   const profile = getCopdDemoProfile("demo-patient-park");
 
   assert.equal(profile.scenario.kind, "MISSING_EVIDENCE");
   assert.equal(profile.clinicalContext.exposure, null);
   assert.deepEqual(profile.clinicalContext.symptoms, []);
-  assert.deepEqual(profile.pftSessions, []);
+  assert.equal(profile.pftSessions.length, 1);
+  assert.equal(profile.pftSessions[0].procedureCode, "F6002");
+  assert.equal(profile.pftSessions[0].eligibleQualityProcedure, true);
+  assert.equal(profile.pftSessions[0].postBronchodilator, undefined);
   assert.equal(profile.diagnoses.filter(({ code }) => code === "J44.9").length, 3);
   assert.ok(profile.medications.every(({ route }) => route === "ORAL"));
   assert.ok(profile.medications.every(({ eligibleQualityMedication }) => !eligibleQualityMedication));
 
   const confirmedYellowRisks = profiles().flatMap(({ claimItems }) => claimItems)
     .filter(({ preflight }) => preflight.status === "YELLOW" && preflight.riskConfirmed);
-  assert.equal(confirmedYellowRisks.length, 1);
-  assert.equal(confirmedYellowRisks[0].id, "park-claim-oral-2026-05");
-  assert.match(confirmedYellowRisks[0].preflight.disclaimer, /삭감 확정 아님/);
+  assert.equal(confirmedYellowRisks.length, 2);
+  assert.deepEqual(confirmedYellowRisks.map(({ id }) => id), ["park-claim-oral-2026-05", "park-claim-oral-2026-10"]);
+  assert.ok(confirmedYellowRisks.every(({ preflight }) => /삭감 확정 아님/.test(preflight.disclaimer)));
 });
 
 test("타기관 PFT는 출처 검증 전에는 품질 근거와 확정 진단 근거가 아니다", () => {
@@ -110,6 +113,7 @@ test("타기관 PFT는 출처 검증 전에는 품질 근거와 확정 진단 �
   assert.equal(profile.claimItems[0].preflight.status, "GRAY");
   assert.match(profile.claimItems[0].preflight.disclaimer, /외부자료 미확인/);
   assert.match(profile.claimItems[0].preflight.disclaimer, /검사 미시행.*의미하지 않음/);
+  assert.ok(profile.medications.some(({ class: medicationClass, eligibleQualityMedication }) => medicationClass === "LAMA" && eligibleQualityMedication));
 });
 
 test("빨강의 유일한 근거는 출처가 완전한 합성 FINAL 부분 삭감 결정이다", () => {

@@ -4,11 +4,11 @@ import { dirname } from "node:path";
 import { assert, runBrowserSmoke } from "./browser-smoke-harness.mjs";
 
 const appUrl = process.env.EMR_URL ?? "http://127.0.0.1:4173";
-const debugPort = Number.parseInt(process.env.COPD_UI_DEBUG_PORT ?? "9242", 10);
-const desktopPath = process.env.COPD_UI_DESKTOP_SCREENSHOT ?? "/tmp/vitagraph-copd-screens/copd-quality-1440.png";
-const reductionPath = process.env.COPD_UI_REDUCTION_SCREENSHOT ?? "/tmp/vitagraph-copd-screens/copd-reduction-1440.png";
-const mobilePath = process.env.COPD_UI_MOBILE_SCREENSHOT ?? "/tmp/vitagraph-copd-screens/copd-quality-390.png";
-const mobileQualityPath = process.env.COPD_UI_MOBILE_QUALITY_SCREENSHOT ?? "/tmp/vitagraph-copd-screens/copd-quality-detail-390.png";
+const debugPort = Number.parseInt(process.env.QUALITY_UI_DEBUG_PORT ?? process.env.COPD_UI_DEBUG_PORT ?? "9242", 10);
+const pneumoniaPath = process.env.QUALITY_UI_PNEUMONIA_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/pneumonia-quality-1440.png";
+const mixedPath = process.env.QUALITY_UI_MIXED_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-toggle-1440.png";
+const reductionPath = process.env.QUALITY_UI_REDUCTION_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/claim-reduction-1440.png";
+const mobilePath = process.env.QUALITY_UI_MOBILE_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-quality-390.png";
 
 async function capture(client, path) {
   const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -19,81 +19,112 @@ async function capture(client, path) {
 await runBrowserSmoke({
   appUrl,
   debugPort,
-  profilePrefix: "vitagraph-copd-ui-",
+  profilePrefix: "vitagraph-quality-ui-",
   initialViewport: { width: 1440, height: 1200, mobile: false },
 }, async ({ client, evaluate, navigate, setViewport, tabTo, waitFor }) => {
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
 
-  async function selectPatient(patientId, name) {
+  async function selectPatient(patientId, name, metricCount) {
     await evaluate(`document.querySelector('[data-patient-id="${patientId}"]').click()`);
     await waitFor(`document.getElementById('selectedPatientName')?.textContent === ${JSON.stringify(name)}`, `${name} 선택 실패`);
     await evaluate("document.getElementById('tab-claims').click()");
-    await waitFor("document.querySelectorAll('#copdQualityMetrics .copd-quality-metric').length === 3", "COPD 세 지표 렌더 실패");
+    await waitFor(`document.querySelectorAll('#diseaseQualityMetrics .quality-program-metric').length === ${metricCount}`, `${name} 질환 지표 렌더 실패`);
     await evaluate("document.getElementById('claimBoardTitle').scrollIntoView({ block: 'start' })");
     await evaluate("new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   }
 
-  await selectPatient("demo-patient-lee", "이준호");
-  const normal = await evaluate(`({
-    headline: document.getElementById('copdQualitySummary').textContent,
-    metrics: [...document.querySelectorAll('#copdQualityMetrics .copd-quality-metric')].map((node) => node.textContent),
-    diagnostic: document.getElementById('copdDiagnosticSummary').textContent,
-    meta: document.getElementById('copdAssessmentMeta').textContent,
-    overflow: document.documentElement.scrollWidth - innerWidth,
-    columns: getComputedStyle(document.querySelector('.claim-overview-grid')).gridTemplateColumns,
-  })`);
-  assert(/평가대상 예상/.test(normal.headline) && /3개 기여/.test(normal.headline), `정상 기여 요약 오류: ${JSON.stringify(normal)}`);
-  assert(normal.metrics.length === 3 && normal.metrics.every((text) => /기여 예상/.test(text)), `정상 세 지표 오류: ${JSON.stringify(normal.metrics)}`);
-  assert(/반복 확인/.test(normal.diagnostic) && /자동 진단/.test(normal.diagnostic), `진단 정합성 요약 오류: ${normal.diagnostic}`);
-  assert(/2026-12th-plan/.test(normal.meta) && /2026-v1.3/.test(normal.meta), `버전 메타 오류: ${normal.meta}`);
-  assert(normal.overflow <= 0, `1440 정상 화면 가로 넘침: ${normal.overflow}`);
-  await evaluate("scrollBy(0, -150)");
-  await capture(client, desktopPath);
+  async function snapshot() {
+    return evaluate(`({
+      tabs: [...document.querySelectorAll('#diseaseAssessmentTabs [role="tab"]')].map((node) => ({ id: node.dataset.diseaseAssessmentId, selected: node.getAttribute('aria-selected'), text: node.textContent })),
+      panelLabelledBy: document.getElementById('diseaseAssessmentPanel').getAttribute('aria-labelledby'),
+      title: document.getElementById('diseaseProgramTitle').textContent,
+      headline: document.getElementById('diseaseQualitySummary').textContent,
+      metrics: [...document.querySelectorAll('#diseaseQualityMetrics .quality-program-metric')].map((node) => ({ status: node.dataset.metricStatus, text: node.textContent })),
+      diagnostic: document.getElementById('diseaseDiagnosticSummary').textContent,
+      meta: document.getElementById('diseaseAssessmentMeta').textContent,
+      claimSummary: document.getElementById('claimAttentionSummary').textContent,
+      claimText: document.getElementById('claimAttentionList').textContent,
+      redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="reduced"]').length,
+      yellowCount: document.querySelectorAll('.claim-attention-item[data-claim-state="risk"]').length,
+      greenCount: document.querySelectorAll('.claim-attention-item[data-claim-state="verified"]').length,
+      grayCount: document.querySelectorAll('.claim-attention-item[data-claim-state="insufficient"]').length,
+      overflow: document.documentElement.scrollWidth - innerWidth,
+      columns: getComputedStyle(document.querySelector('.claim-overview-grid')).gridTemplateColumns,
+    })`);
+  }
 
-  await selectPatient("demo-patient-park", "박여정");
-  const reduced = await evaluate(`({
-    redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="reduced"]').length,
-    redText: document.querySelector('.claim-attention-item[data-claim-state="reduced"]')?.textContent,
-    summary: document.getElementById('claimAttentionSummary').textContent,
-    overflow: document.documentElement.scrollWidth - innerWidth,
-  })`);
-  assert(reduced.redCount === 1, `최종 삭감 빨강은 정확히 한 건이어야 함: ${JSON.stringify(reduced)}`);
-  assert(/일부 삭감 확정/.test(reduced.redText) && /합성 심사 결과/.test(reduced.redText), `빨강 근거 오류: ${reduced.redText}`);
-  assert(/최종 삭감 1건/.test(reduced.summary), `빨강 요약 오류: ${reduced.summary}`);
-  assert(reduced.overflow <= 0, `1440 삭감 화면 가로 넘침: ${reduced.overflow}`);
-  await evaluate("scrollBy(0, -150)");
+  await selectPatient("demo-patient-kim", "김비타", 5);
+  const kim = await snapshot();
+  assert(kim.tabs.length === 1 && kim.tabs[0].id === "pneumonia" && kim.tabs[0].selected === "true", `김비타 폐렴 전용 탭 오류: ${JSON.stringify(kim.tabs)}`);
+  assert(/5개 지표 중 5개 기여 가능/.test(kim.headline), `김비타 5/5 요약 오류: ${kim.headline}`);
+  assert(kim.metrics.length === 5 && kim.metrics.every(({ status }) => status === "included"), `김비타 폐렴 지표 오류: ${JSON.stringify(kim.metrics)}`);
+  assert(/영상/.test(kim.diagnostic) && /지역사회/.test(kim.diagnostic), `김비타 폐렴 진단 정합성 오류: ${kim.diagnostic}`);
+  assert(/2026-7th-plan/.test(kim.meta) && /2026-publication/.test(kim.meta), `폐렴 기준 버전 오류: ${kim.meta}`);
+  assert(kim.redCount === 0 && kim.greenCount >= 2 && kim.grayCount >= 1, `김비타 청구 분포 오류: ${JSON.stringify(kim)}`);
+  assert(kim.overflow <= 0, `김비타 1440 화면 가로 넘침: ${kim.overflow}`);
+  await evaluate("scrollBy(0, -140)");
+  await capture(client, pneumoniaPath);
+
+  await selectPatient("demo-patient-choi", "최민아", 5);
+  const choi = await snapshot();
+  assert(choi.tabs.length === 1 && choi.tabs[0].id === "pneumonia", `최민아 관련 질환 탭 오류: ${JSON.stringify(choi.tabs)}`);
+  assert(/5개 지표 중 4개 기여 가능/.test(choi.headline), `최민아 4/5 요약 오류: ${choi.headline}`);
+  assert(choi.metrics.filter(({ status }) => status === "not-included").length === 1 && /혈액배양/.test(choi.metrics.find(({ status }) => status === "not-included").text), `최민아 혈액배양 시점 오류: ${JSON.stringify(choi.metrics)}`);
+  assert(choi.redCount === 0 && choi.yellowCount >= 1 && choi.greenCount >= 1 && choi.grayCount >= 1, `최민아 혼합 청구 분포 오류: ${JSON.stringify(choi)}`);
+
+  await selectPatient("demo-patient-lee", "이준호", 3);
+  const lee = await snapshot();
+  assert(lee.tabs.length === 1 && lee.tabs[0].id === "copd", `이준호 COPD 전용 탭 오류: ${JSON.stringify(lee.tabs)}`);
+  assert(/3개 지표 중 3개 기여 가능/.test(lee.headline), `이준호 COPD 3/3 오류: ${lee.headline}`);
+  assert(lee.metrics.every(({ status }) => status === "included"), `이준호 COPD 지표 오류: ${JSON.stringify(lee.metrics)}`);
+  assert(/반복 확인/.test(lee.diagnostic) && /자동 진단/.test(lee.diagnostic), `이준호 COPD 진단 정합성 오류: ${lee.diagnostic}`);
+
+  await selectPatient("demo-patient-park", "박여정", 3);
+  const park = await snapshot();
+  assert(/3개 지표 중 2개 기여 가능/.test(park.headline), `박여정 COPD 2/3 오류: ${park.headline}`);
+  assert(park.metrics.filter(({ status }) => status === "included").length === 2 && park.metrics.filter(({ status }) => status === "not-included").length === 1, `박여정 COPD 혼합 지표 오류: ${JSON.stringify(park.metrics)}`);
+  assert(park.redCount === 1 && park.yellowCount >= 1 && park.grayCount >= 1, `박여정 빨강·노랑·회색 분포 오류: ${JSON.stringify(park)}`);
+  assert(/최종 삭감 1건/.test(park.claimSummary) && /일부 삭감 확정/.test(park.claimText), `박여정 최종 삭감 근거 오류: ${JSON.stringify(park)}`);
+  await evaluate("scrollBy(0, -140)");
   await capture(client, reductionPath);
 
-  await selectPatient("demo-patient-jung", "정수진");
-  const external = await evaluate(`({
-    pftStatus: document.querySelector('#copdQualityMetrics .copd-quality-metric')?.dataset.metricStatus,
-    pftText: document.querySelector('#copdQualityMetrics .copd-quality-metric')?.textContent,
-    redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="reduced"]').length,
-    grayTexts: [...document.querySelectorAll('.claim-attention-item[data-claim-state="insufficient"]')].map((node) => node.textContent),
-    diagnostic: document.getElementById('copdDiagnosticSummary').textContent,
-  })`);
-  assert(external.pftStatus === "insufficient" && /타기관/.test(external.pftText), `타기관 PFT 회색 확인 오류: ${JSON.stringify(external)}`);
-  assert(external.redCount === 0 && external.grayTexts.some((text) => /외부자료|타기관/.test(text)), `타기관 자료를 빨강으로 오인: ${JSON.stringify(external)}`);
-  assert(/자료가 부족/.test(external.diagnostic), `타기관 PFT가 진단 기준으로 사용됨: ${external.diagnostic}`);
+  await selectPatient("demo-patient-jung", "정수진", 3);
+  const jungCopd = await snapshot();
+  assert(jungCopd.tabs.length === 2 && jungCopd.tabs.map(({ id }) => id).join(",") === "copd,pneumonia", `정수진 질환 토글 오류: ${JSON.stringify(jungCopd.tabs)}`);
+  assert(jungCopd.tabs[0].selected === "true" && /3개 지표 중 1개 기여 가능/.test(jungCopd.headline), `정수진 기본 COPD 상태 오류: ${JSON.stringify(jungCopd)}`);
+  assert(jungCopd.metrics.map(({ status }) => status).join(",") === "insufficient,not-included,included", `정수진 COPD 지표 분포 오류: ${JSON.stringify(jungCopd.metrics)}`);
+  assert(jungCopd.redCount === 0 && /타기관/.test(jungCopd.claimText), `정수진 타기관 자료를 빨강으로 오인: ${JSON.stringify(jungCopd)}`);
+
+  await evaluate("document.getElementById('diseaseQualityDisclosure').open = true; document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').click()");
+  await waitFor("document.getElementById('diseaseProgramTitle')?.textContent === '폐렴'", "정수진 폐렴 전환 실패");
+  const jungPneumonia = await snapshot();
+  assert(jungPneumonia.tabs[1].selected === "true" && /5개 지표 중 4개 기여 가능/.test(jungPneumonia.headline), `정수진 폐렴 4/5 오류: ${JSON.stringify(jungPneumonia)}`);
+  assert(jungPneumonia.metrics.filter(({ status }) => status === "not-included").length === 1 && /중증도/.test(jungPneumonia.metrics.find(({ status }) => status === "not-included").text), `정수진 폐렴 중증도 누락 오류: ${JSON.stringify(jungPneumonia.metrics)}`);
+  assert(jungPneumonia.claimSummary === jungCopd.claimSummary && jungPneumonia.claimText === jungCopd.claimText, "질환 전환으로 전체 청구 주의사항이 바뀌었습니다.");
+  const closedOnSwitch = await evaluate("!document.getElementById('diseaseQualityDisclosure').open && !document.getElementById('diseaseDiagnosticDisclosure').open");
+  assert(closedOnSwitch, "질환 전환 시 이전 상세 패널이 닫히지 않았습니다.");
+  await evaluate("document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').focus(); document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))");
+  await waitFor("document.querySelector('[data-disease-assessment-id=\"copd\"]')?.getAttribute('aria-selected') === 'true'", "질환 탭 키보드 순환 실패");
+  const keyFocus = await evaluate("document.activeElement?.dataset?.diseaseAssessmentId");
+  assert(keyFocus === "copd", `질환 탭 roving focus 오류: ${keyFocus}`);
+  await evaluate("document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').click(); document.querySelector('.disease-assessment-card').scrollIntoView({ block: 'start' }); scrollBy(0, -110)");
+  await capture(client, mixedPath);
 
   await setViewport({ width: 390, height: 844, mobile: true });
-  await selectPatient("demo-patient-lee", "이준호");
-  const focusable = await tabTo(".copd-assessment-card .claim-overview-disclosure > summary", 140);
+  await evaluate("document.querySelector('.disease-assessment-card').scrollIntoView({ block: 'start' }); scrollBy(0, -90)");
+  const focusable = await tabTo(".disease-assessment-card .claim-overview-disclosure > summary", 160);
   const mobile = await evaluate(`({
     overflow: document.documentElement.scrollWidth - innerWidth,
     overviewColumns: getComputedStyle(document.querySelector('.claim-overview-grid')).gridTemplateColumns,
-    metricColumns: getComputedStyle(document.getElementById('copdQualityMetrics')).gridTemplateColumns,
+    metricColumns: getComputedStyle(document.getElementById('diseaseQualityMetrics')).gridTemplateColumns,
     activeTag: document.activeElement?.tagName,
+    selected: document.querySelector('#diseaseAssessmentTabs [aria-selected="true"]')?.dataset.diseaseAssessmentId,
   })`);
   assert(focusable && mobile.activeTag === "SUMMARY", `모바일 상세 토글 키보드 포커스 실패: ${JSON.stringify(mobile)}`);
+  assert(mobile.selected === "pneumonia", `모바일 선택 질환 유지 실패: ${JSON.stringify(mobile)}`);
   assert(mobile.overflow <= 0, `390 화면 가로 넘침: ${mobile.overflow}`);
   assert(!mobile.overviewColumns.includes(" ") && !mobile.metricColumns.includes(" "), `390 화면이 1열이 아님: ${JSON.stringify(mobile)}`);
-  await evaluate("document.getElementById('claimBoardTitle').scrollIntoView({ block: 'start' })");
-  await evaluate("scrollBy(0, -120)");
   await capture(client, mobilePath);
-  await evaluate("document.querySelector('.copd-assessment-card').scrollIntoView({ block: 'start' })");
-  await evaluate("scrollBy(0, -120)");
-  await capture(client, mobileQualityPath);
 
-  process.stdout.write(`${JSON.stringify({ desktopPath, reductionPath, mobilePath, mobileQualityPath, normal, reduced, external, mobile }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ pneumoniaPath, mixedPath, reductionPath, mobilePath, kim, choi, lee, park, jungCopd, jungPneumonia, mobile }, null, 2)}\n`);
 });

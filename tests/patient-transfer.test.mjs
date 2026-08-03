@@ -435,6 +435,43 @@ test("COPD는 확정 KCD J43·J44만 환자 항목으로 정제하고 J43.0은 �
   assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["hypertension"]);
 });
 
+test("폐렴은 확정 KCD J12~J18과 인플루엔자성 폐렴 코드만 환자 항목으로 정제한다", () => {
+  const condition = (code, overrides = {}) => normalizedEvent({
+    id: `pneumonia-${code.replace(".", "-")}-${overrides.id ?? "confirmed"}`,
+    type: "condition",
+    recordStatus: "final",
+    system: KCD_SYSTEM,
+    code,
+    label: "기관 원문 폐렴 표시명",
+    date: "2026-07-18",
+    status: "active",
+    verificationStatus: "confirmed",
+    certainty: "confirmed",
+    source: { kind: "manual", label: "의료진 확정" },
+    ...overrides,
+  });
+
+  for (const code of ["J12", "J13", "J18.9", "J10.0", "J11.0"]) {
+    const transfer = createPatientTransferPackage({ events: [condition(code)] }, EXPORTED_AT, TRANSFER_CODE);
+    assert.deepEqual(transfer.healthMap.conditions, [{
+      id: "pneumonia",
+      label: "폐렴",
+      recordedOn: "2026-07-18",
+      basis: "confirmed-condition",
+    }]);
+  }
+
+  const transfer = createPatientTransferPackage({
+    events: [
+      condition("I10", { id: "hypertension", label: "고혈압" }),
+      condition("J11.1"),
+      condition("J18.9", { id: "draft", recordStatus: "draft" }),
+      condition("J18.9", { id: "provisional", verificationStatus: "provisional", certainty: "provisional" }),
+    ],
+  }, EXPORTED_AT, TRANSFER_CODE);
+  assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id), ["hypertension"]);
+});
+
 test("코드 시스템과 구조화 코드가 표시명보다 우선하며 임의 시스템·분리 혈압·데모·생성·고아 진료 기록을 제외한다", () => {
   const diabetesWithMisleadingLabel = normalizedEvent({
     id: "coded-diabetes",

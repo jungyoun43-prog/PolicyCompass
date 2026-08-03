@@ -85,17 +85,18 @@ test("EMR 헤더는 워크스페이스 여백에 맞춰 단일 로고 열을 정
   );
 });
 
-test("EMR 탭은 단일 키보드 모델만 사용한다", async () => {
+test("EMR 워크스페이스 탭과 질환 평가 탭은 각각 독립된 키보드 모델을 사용한다", async () => {
   const [html, script, css] = await Promise.all([
     readFile("src/emr.html", "utf8"),
     readFile("src/emr.js", "utf8"),
     readFile("src/emr.css", "utf8"),
   ]);
 
-  assert.equal((html.match(/role="tablist"/g) ?? []).length, 1);
+  assert.equal((html.match(/role="tablist"/g) ?? []).length, 2);
   assert.equal((html.match(/role="tab"/g) ?? []).length, 7);
   assert.doesNotMatch(html + script, /data-tab-target/);
   assert.match(script, /"ArrowLeft", "ArrowRight", "Home", "End"/);
   assert.match(script, /switchTab\(next\.dataset\.tab, true\)/);
+  assert.match(script, /selectDiseaseAssessment\(next\.dataset\.diseaseAssessmentId, \{ focus: true \}\)/);
   assert.match(css, /\.workspace-tabs button:focus\s*\{[^}]*outline:\s*3px solid var\(--focus-ring\);/s);
 });

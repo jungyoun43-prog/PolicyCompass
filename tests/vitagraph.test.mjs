@@ -26,7 +26,7 @@ test("직접 선택한 상태와 텍스트 신호를 중복 없이 합친다", (
   assert.deepEqual(result, ["migraine", "hypertension", "dyslipidemia"]);
 });
 
-test("COPD는 호흡기 모델에 등록하되 환자 입력이나 문구만으로 추론하지 않는다", async () => {
+test("COPD와 폐렴은 호흡기 모델에 등록하되 환자 입력이나 문구만으로 추론하지 않는다", async () => {
   assert.deepEqual(Object.keys(CONDITIONS), [
     "hypertension",
     "diabetes",
@@ -35,11 +35,14 @@ test("COPD는 호흡기 모델에 등록하되 환자 입력이나 문구만으�
     "reflux",
     "asthma",
     "copd",
+    "pneumonia",
     "mood",
     "arthritis",
   ]);
   assert.deepEqual(CONDITIONS.copd.departments, ["respiratory"]);
+  assert.deepEqual(CONDITIONS.pneumonia.departments, ["respiratory"]);
   assert.deepEqual(inferConditionIds("COPD 같고 숨이 찹니다", []), []);
+  assert.deepEqual(inferConditionIds("폐렴 같고 열이 납니다", []), []);
 
   const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
   assert.doesNotMatch(html, /data-condition="copd"/);

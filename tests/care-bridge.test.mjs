@@ -132,6 +132,23 @@ test("clinical bridge links only the canonical COPD condition and drops physicia
   assert.doesNotMatch(JSON.stringify(snapshot), /claimAdjudication|pftProfile|copdQualityProfile|심사결과|폐기능|기관평가/);
 });
 
+test("clinical bridge는 확정 폐렴만 연결하고 폐렴 적정성·청구 내부자료는 버린다", () => {
+  const patient = patientFixture();
+  patient.events[1] = { ...patient.events[1], code: "J18.9", label: "기관 원문 폐렴 표시명" };
+  patient.pneumoniaQualityProfile = { score: "폐렴-기관평가-노출금지" };
+  patient.claimAdjudication = { outcome: "폐렴-심사결과-노출금지" };
+
+  const snapshot = createClinicalSnapshot(patient, PREPARED_AT);
+
+  assert.deepEqual(snapshot.healthMap.conditions, [{
+    id: "pneumonia",
+    label: "폐렴",
+    recordedOn: "2026-07-25",
+    basis: "confirmed-condition",
+  }]);
+  assert.doesNotMatch(JSON.stringify(snapshot), /pneumoniaQualityProfile|claimAdjudication|기관평가|심사결과/);
+});
+
 test("care bridge carries a patient brief back without identifiers", () => {
   const storage = memoryStorage();
   const snapshot = createClinicalSnapshot(patientFixture(), PREPARED_AT);

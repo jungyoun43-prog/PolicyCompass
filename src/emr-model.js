@@ -1109,6 +1109,28 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("kim-diabetes", "condition", "E11", "제2형 당뇨병", dateBefore(asOf, 940), { system: KCD_SYSTEM, status: "active" }),
       demoEvent("kim-hypertension", "condition", "I10", "고혈압", dateBefore(asOf, 1_460), { system: KCD_SYSTEM, status: "active" }),
       demoEvent("kim-allergy", "allergy", "ALG-PEN", "페니실린 알레르기", dateBefore(asOf, 2_100), { status: "active", note: "발진" }),
+      demoEvent("kim-pneumonia-encounter", "encounter", "IMP", "호흡기내과 입원", dateBefore(asOf, 150), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        chiefComplaint: "발열·기침·호흡곤란을 동반한 지역사회획득 폐렴 입원",
+        note: "7차 폐렴 적정성 평가 흐름을 설명하기 위한 합성 과거 입원",
+        soap: {
+          subjective: "발열, 객담을 동반한 기침과 운동 시 호흡곤란을 호소함.",
+          objective: "산소포화도·흉부 영상·초기 미생물검사와 중증도 기록을 확인함.",
+          assessment: "지역사회획득 폐렴으로 입원 치료가 필요한 상태를 평가함.",
+          plan: "정맥 항생제 투여와 호흡 상태 추적, 퇴원 후 경과 확인을 계획함.",
+        },
+        signature: { status: "signed", signer: "한가람", signedAt: `${dateBefore(asOf, 150)}T12:00:00.000Z` },
+      }),
+      demoEvent("kim-pneumonia", "condition", "J18.9", "상세불명 병원체의 폐렴", dateBefore(asOf, 150), {
+        encounterId: "kim-pneumonia-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
     ],
   }, timestamp);
   const second = createPatient({
@@ -1136,6 +1158,34 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("park-med", "medication", "MED-TRIPTAN", "예시 편두통 약", dateBefore(asOf, 35), { status: "active", note: "증상 시 복용" }),
       demoEvent("park-bmd-indication", "condition", "DEMO-BMD-INDICATION", "골밀도검사 적응증 확인 기록", dateBefore(asOf, 40), { system: "urn:vitagraph:demo:condition", status: "active" }),
       demoEvent("park-bmd", "procedure", "DEMO-BMD", "골밀도검사", dateBefore(asOf, 350), { system: "urn:vitagraph:demo:service", status: "completed" }),
+      demoEvent("park-copd-encounter", "encounter", "AMB", "호흡기내과 외래", dateBefore(asOf, 90), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        chiefComplaint: "반복 COPD 상병과 처방 근거 재확인",
+        note: "진단 근거 보완이 필요한 합성 COPD 사례",
+        soap: {
+          subjective: "반복된 COPD 상병과 경구약 처방 기록을 함께 검토하기 위해 내원함.",
+          objective: "F6002 시행 코드는 있으나 구조화된 post-BD 결과와 노출력 기록은 확인되지 않음.",
+          assessment: "COPD 진단 근거와 현재 처방의 임상·청구 정합성을 재확인할 필요가 있음.",
+          plan: "과거 PFT 판독과 증상·노출력 자료를 확인하고 진단 및 치료 계획을 재검토함.",
+        },
+        signature: { status: "signed", signer: "한가람", signedAt: `${dateBefore(asOf, 90)}T12:00:00.000Z` },
+      }),
+      demoEvent("park-copd", "condition", "J44.9", "만성폐쇄성폐질환", dateBefore(asOf, 90), {
+        encounterId: "park-copd-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
+      demoEvent("park-copd-pft-procedure", "procedure", "F6002", "폐기능검사 시행 기록", dateBefore(asOf, 88), {
+        encounterId: "park-copd-encounter",
+        system: "urn:hira:fee-code",
+        status: "completed",
+        note: "시행 코드는 확인되지만 post-BD 구조화 결과는 없는 합성 기록",
+      }),
     ],
   }, timestamp);
   const third = createPatient({
@@ -1245,6 +1295,28 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         value: 62.4,
         unit: "kg",
       }),
+      demoEvent("choi-pneumonia-encounter", "encounter", "IMP", "호흡기내과 입원", dateBefore(asOf, 175), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        chiefComplaint: "발열·기침을 동반한 지역사회획득 폐렴 입원",
+        note: "혈액배양 채혈 순서를 확인하는 합성 혼합 사례",
+        soap: {
+          subjective: "발열과 누런 객담을 동반한 기침이 지속되어 내원함.",
+          objective: "흉부 영상의 폐침윤과 산소포화도, 초기 항생제·배양검사 시각을 확인함.",
+          assessment: "지역사회획득 폐렴 입원 치료 사례로 평가함.",
+          plan: "정맥 항생제 치료와 호흡 상태를 추적하고 배양검사 시각 기록을 보완함.",
+        },
+        signature: { status: "signed", signer: "한가람", signedAt: `${dateBefore(asOf, 175)}T12:00:00.000Z` },
+      }),
+      demoEvent("choi-pneumonia", "condition", "J18.9", "상세불명 병원체의 폐렴", dateBefore(asOf, 175), {
+        encounterId: "choi-pneumonia-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
     ],
   }, timestamp);
   const fifth = createPatient({
@@ -1283,6 +1355,65 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         value: 26.1,
         unit: "kg/m2",
       }),
+      demoEvent("jung-copd-encounter", "encounter", "AMB", "호흡기내과 외래", dateBefore(asOf, 53), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        chiefComplaint: "타기관 폐기능검사 출처 확인과 흡입제 추적",
+        soap: {
+          subjective: "타기관 폐기능검사 자료 확인과 현재 흡입제 사용 상태 점검을 위해 내원함.",
+          objective: "외부 PFT는 환자 일치·검증 시각 확인 전이며 LAMA 흡입제 처방은 확인됨.",
+          assessment: "COPD 진단 근거의 출처 검증과 지속 방문 기준을 추가 확인할 필요가 있음.",
+          plan: "외부 원본과 판독을 확인하고 흡입기 사용법 및 다음 추적 일정을 검토함.",
+        },
+        signature: { status: "signed", signer: "한가람", signedAt: `${dateBefore(asOf, 53)}T12:00:00.000Z` },
+      }),
+      demoEvent("jung-copd", "condition", "J44.9", "만성폐쇄성폐질환", dateBefore(asOf, 53), {
+        encounterId: "jung-copd-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
+      demoEvent("jung-copd-lama", "medication", "DEMO-LAMA", "합성 LAMA 흡입제", dateBefore(asOf, 53), {
+        encounterId: "jung-copd-encounter",
+        system: "urn:vitagraph:demo:drug",
+        status: "active",
+        intent: "order",
+        prescription: {
+          dose: 1,
+          doseUnit: "회",
+          route: "흡입",
+          frequency: "1일 1회",
+          durationDays: 30,
+          quantity: 30,
+          instructions: "매일 같은 시간에 흡입하고 사용법을 추적 진료에서 확인",
+        },
+        note: "타기관 PFT는 확인 중이며 흡입제 처방 기록은 확인됨",
+      }),
+      demoEvent("jung-pneumonia-encounter", "encounter", "IMP", "호흡기내과 입원", dateBefore(asOf, 230), {
+        status: "finished",
+        department: "호흡기내과",
+        clinician: "한가람",
+        chiefComplaint: "지역사회획득 폐렴 입원 치료",
+        note: "중증도 판정도구 기록 보완이 필요한 합성 사례",
+        soap: {
+          subjective: "발열과 객담성 기침, 호흡 불편을 호소하여 내원함.",
+          objective: "흉부 영상과 산소포화도, 배양검사 및 초기 항생제 기록을 확인함.",
+          assessment: "지역사회획득 폐렴으로 입원 치료하며 중증도 도구 기록 보완이 필요함.",
+          plan: "정맥 항생제와 경과 관찰을 시행하고 CURB-65·PSI 기록 여부를 재확인함.",
+        },
+        signature: { status: "signed", signer: "한가람", signedAt: `${dateBefore(asOf, 230)}T12:00:00.000Z` },
+      }),
+      demoEvent("jung-pneumonia", "condition", "J18.9", "상세불명 병원체의 폐렴", dateBefore(asOf, 230), {
+        encounterId: "jung-pneumonia-encounter",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "primary",
+      }),
     ],
   }, timestamp);
   return {
@@ -1312,6 +1443,7 @@ function conditionIdForEvent(event) {
   if (/\bk21\b|역류|속쓰림/.test(searchable)) return "reflux";
   if (/\bj45\b|천식/.test(searchable)) return "asthma";
   if ((/\bj4[34](?:\.|\b)|copd|만성폐쇄성폐질환|폐기종/.test(searchable)) && !/\bj43\.0(?:\b|\.)/.test(searchable)) return "copd";
+  if (/\bj1[2-8](?:\.|\b)|\bj1[01]\.0(?:\.|\b)|폐렴/.test(searchable)) return "pneumonia";
   if (/\bf3[2-4]\b|\bf4[01]\b|우울|불안/.test(searchable)) return "mood";
   if (/\bm(?:05|06|1[5-9])\b|관절염/.test(searchable)) return "arthritis";
   return "";

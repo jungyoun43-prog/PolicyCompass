@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -9,6 +10,8 @@ import {
   getDiseaseAssessmentProfiles,
   getPreferredDiseaseAssessmentId,
 } from "../src/disease-assessment.js";
+
+const diseaseAssessmentSource = readFileSync(new URL("../src/disease-assessment.js", import.meta.url), "utf8");
 
 test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 empty guard를 제공한다", () => {
   assert.deepEqual(Object.keys(DISEASE_ASSESSMENT_PROGRAMS), ["copd", "pneumonia"]);
@@ -114,6 +117,8 @@ test("모든 관련 질환의 청구와 심사결과를 병합하면서 식별�
   );
   assert.ok(combined.claimItems.every(({ assessmentId }) => ["copd", "pneumonia"].includes(assessmentId)));
   assert.ok(combined.adjudications.every(({ assessmentId }) => ["copd", "pneumonia"].includes(assessmentId)));
+  assert.match(diseaseAssessmentSource, /merged\.push\(\{[\s\S]*?assessmentId:\s*profile\.assessmentId/);
+  assert.doesNotMatch(diseaseAssessmentSource, /assessmentId:\s*cleanText\(value\.assessmentId\)/);
   assert.equal(getCombinedDiseaseClaimProfile("not-a-demo-patient"), null);
 });
 

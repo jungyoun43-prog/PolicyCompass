@@ -647,6 +647,22 @@
                 <a class="claim-rule-trust__link" href="#ruleVersionManager">규칙 버전 관리</a>
               </section>
 
+              <section class="claim-search" aria-labelledby="claimSearchTitle">
+                <div class="claim-search__heading">
+                  <label for="claimSearch">
+                    <strong id="claimSearchTitle">급여 업무 통합 검색</strong>
+                    <small>청구 · 심사 결과 · 적정성 평가 · 규칙</small>
+                  </label>
+                  <div class="claim-search__field">
+                    <span aria-hidden="true">⌕</span>
+                    <input id="claimSearch" type="search" autocomplete="off" spellcheck="false" placeholder="환자, 검사·약제, 서비스 코드, 규칙 검색" />
+                    <button id="claimSearchClear" type="button" aria-label="급여 업무 검색어 지우기">지우기</button>
+                  </div>
+                </div>
+                <p class="claim-search__summary" id="claimSearchSummary" aria-live="polite">환자와 업무 항목을 한 번에 찾을 수 있습니다.</p>
+                <ol class="claim-search__results" id="claimSearchResults" aria-label="급여 업무 통합 검색 결과" hidden></ol>
+              </section>
+
               <div class="claim-overview-grid" aria-label="환자별 급여와 질환별 근거 요약">
                 <section class="clinical-card claim-overview-card claim-attention-card" aria-labelledby="claimAttentionTitle">
                   <div class="card-heading">
@@ -669,7 +685,7 @@
                   </ol>
 
                   <details class="claim-status-guide claim-attention-all" id="claimAttentionAllDisclosure">
-                    <summary><span><b>그 외 항목 보기</b><small id="claimAttentionAllDisclosureHint">확인 완료·자료 대기 항목</small></span></summary>
+                    <summary><span><b>그 외 항목 보기</b><small id="claimAttentionAllDisclosureHint">기준 충족·자료 대기 항목</small></span></summary>
                     <ol class="claim-attention-list claim-attention-list--all" id="claimAttentionAllList" aria-label="그 외 청구 사전점검 항목">
                       <li class="claim-overview-empty">세부 항목을 정리하는 중입니다.</li>
                     </ol>
@@ -807,15 +823,26 @@
                     <div class="claim-review-guide" id="claimBoardInstructions">
                       <span class="claim-review-guide__mark" aria-hidden="true">↔</span>
                       <div>
-                        <b>규칙 판정과 담당자 검토 단계를 분리합니다.</b>
-                        <p>카드에는 자동 판정과 빠른 판단 정보만 표시합니다. 카드를 선택해 적용 규칙·EMR 근거·시간 흐름을 확인하고, 담당자·이동 사유·의견을 남긴 뒤 수동 검토 단계를 적용합니다. 모든 변경은 검토 이력에 남습니다.</p>
+                        <b>규칙 판정 뒤 담당자를 배정하고, 해야 할 작업부터 확인합니다.</b>
+                        <p>카드를 선택하면 오른쪽 근거 패널에서 적용 규칙·EMR 기록·시간 흐름과 완료 조건을 함께 볼 수 있습니다. 담당자·이동 사유·의견·최종 판정을 남긴 뒤 수동 검토 단계를 적용하며, 모든 변경은 검토 이력에 남습니다.</p>
                       </div>
                     </div>
                     <div class="claim-result-summary" id="claimResultSummary" aria-label="변경되지 않는 자동 규칙 판정 요약"></div>
                   </section>
 
-                  <div class="claim-board" id="claimBoard" aria-label="담당자 검토 단계별 급여 칸반" aria-describedby="claimBoardInstructions"></div>
-                  <p class="visually-hidden" id="claimBoardLive" role="status" aria-live="polite" aria-atomic="true"></p>
+                  <div class="claim-review-workbench">
+                    <div class="claim-review-master">
+                      <div class="claim-board" id="claimBoard" aria-label="담당자 검토 단계별 급여 칸반" aria-describedby="claimBoardInstructions"></div>
+                      <p class="visually-hidden" id="claimBoardLive" role="status" aria-live="polite" aria-atomic="true"></p>
+                    </div>
+                    <aside class="claim-review-detail-host" id="claimReviewDetailHost" aria-label="선택한 청구 항목의 근거와 담당자 조치" tabindex="-1">
+                      <div class="claim-review-detail-empty" id="claimReviewDetailEmpty">
+                        <p class="rail-eyebrow">REVIEW DETAIL</p>
+                        <h4>검토할 항목을 선택하세요.</h4>
+                        <p>왼쪽 카드에서 담당 업무를 선택하면 적용 규칙, EMR 근거, 해야 할 작업과 최종 판정 입력란이 여기에 열립니다.</p>
+                      </div>
+                    </aside>
+                  </div>
                 </div>
               </details>
 
@@ -841,6 +868,7 @@
                     <label>시행일<input id="ruleEffectiveFrom" type="date" required /></label>
                     <label>종료일<input id="ruleEffectiveTo" type="date" /></label>
                     <label>공식 출처명<input id="ruleSourceLabel" required maxlength="160" placeholder="고시·기관 검증 문서명" /></label>
+                    <label>고시·문서번호<input id="ruleSourceDocumentNumber" maxlength="120" placeholder="예: 고시 제2026-114호" /></label>
                     <label class="rule-source-url">공식 출처 URL<input id="ruleSourceUrl" type="url" maxlength="500" placeholder="https://..." /></label>
                   </div>
                   <p class="form-message" id="ruleFormMessage" role="alert"></p>

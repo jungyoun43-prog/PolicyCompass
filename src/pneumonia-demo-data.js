@@ -225,7 +225,7 @@ function medicationAdministration({ prefix, encounterId, id, label, administered
   };
 }
 
-function claimItem({ id, code, label, serviceDate, workflowStatus, status, reasonCodes, disclaimer }) {
+function claimItem({ id, code, label, serviceDate, workflowStatus, claimUnit = null, status, reasonCodes, evidenceIds = [], disclaimer }) {
   return {
     id,
     physicianOnly: true,
@@ -234,10 +234,12 @@ function claimItem({ id, code, label, serviceDate, workflowStatus, status, reaso
     label,
     serviceDate,
     workflowStatus,
+    ...(claimUnit ? { claimUnit } : {}),
     preflight: {
       status,
       riskConfirmed: status === "YELLOW",
       reasonCodes,
+      evidenceIds,
       disclaimer,
     },
     provenance: verifiedProvenance(`${id}-source`, `${serviceDate || EVALUATION_PERIOD.end}T18:00:00.000+09:00`),
@@ -294,9 +296,9 @@ const COMPLETE_PROFILE = {
     medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day5", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-16T10:15:00.000+09:00", therapyDay: 5 }),
   ],
   claimItems: [
-    claimItem({ id: "kim-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "kim-pna-claim-chest-radiograph", code: "DEMO-CHEST-XRAY", label: "폐렴 흉부 단순촬영", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_IMAGE_REPORT_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "kim-pna-claim-discharge-review", code: "DEMO-PNA-DISCHARGE-REVIEW", label: "퇴원 후 추적 자료 상태", serviceDate: "2026-11-17", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
+    claimItem({ id: "kim-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "1", quantity: 5, unit: "일" }, status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], evidenceIds: ["kim-pna-admission-2026-11", "kim-pna-j189", "kim-pna-ceftriaxone-day1"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "kim-pna-claim-chest-radiograph", code: "DEMO-CHEST-XRAY", label: "폐렴 흉부 단순촬영", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "2", quantity: 1, unit: "회" }, status: "GREEN", reasonCodes: ["DEMO_IMAGE_REPORT_VERIFIED"], evidenceIds: ["kim-pna-chest-radiograph"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "kim-pna-claim-discharge-review", code: "DEMO-PNA-DISCHARGE-REVIEW", label: "퇴원 후 추적 자료 상태", serviceDate: "2026-11-17", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], evidenceIds: [], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
   ],
   adjudications: [],
 };
@@ -348,9 +350,9 @@ const BLOOD_AFTER_ANTIBIOTIC_PROFILE = {
     medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day4", label: "암피실린·설박탐 정맥 투여", administeredAt: "2027-01-21T19:40:00.000+09:00", therapyDay: 4 }),
   ],
   claimItems: [
-    claimItem({ id: "choi-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-01-18", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "choi-pna-claim-repeat-ct", code: "DEMO-PNA-CHEST-CT", label: "폐렴 추적 흉부 CT", serviceDate: "2027-01-19", workflowStatus: "CLAIMED", status: "YELLOW", reasonCodes: ["DEMO_REPEAT_IMAGE_INDICATION_NOTE_MISSING"], disclaimer: "청구 전 적응증 기록 확인 필요 · 삭감 확정 아님" }),
-    claimItem({ id: "choi-pna-claim-followup-unassessed", code: "DEMO-PNA-FOLLOWUP", label: "폐렴 추적 진료 자료 상태", serviceDate: "2027-01-22", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
+    claimItem({ id: "choi-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-01-18", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "1", quantity: 4, unit: "일" }, status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], evidenceIds: ["choi-pna-admission-2027-01", "choi-pna-j189", "choi-pna-ampicillin-sulbactam-day1"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "choi-pna-claim-repeat-ct", code: "DEMO-PNA-CHEST-CT", label: "폐렴 추적 흉부 CT", serviceDate: "2027-01-19", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "3", quantity: 1, unit: "회" }, status: "YELLOW", reasonCodes: ["DEMO_REPEAT_IMAGE_INDICATION_NOTE_MISSING"], evidenceIds: ["choi-pna-chest-radiograph"], disclaimer: "청구 전 적응증 기록 확인 필요 · 삭감 확정 아님" }),
+    claimItem({ id: "choi-pna-claim-followup-unassessed", code: "DEMO-PNA-FOLLOWUP", label: "폐렴 추적 진료 자료 상태", serviceDate: "2027-01-22", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], evidenceIds: [], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
   ],
   adjudications: [],
 };
@@ -403,8 +405,8 @@ const MISSING_SEVERITY_PROFILE = {
     medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day4", label: "세프트리악손 정맥 투여", administeredAt: "2027-03-11T08:40:00.000+09:00", therapyDay: 4 }),
   ],
   claimItems: [
-    claimItem({ id: "jung-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "jung-pna-claim-cultures", code: "DEMO-PNA-CULTURES", label: "폐렴 배양검사", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_SPECIMEN_TIMING_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "jung-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "1", quantity: 4, unit: "일" }, status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], evidenceIds: ["jung-pna-admission-2027-03", "jung-pna-j189", "jung-pna-ceftriaxone-day1"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "jung-pna-claim-cultures", code: "DEMO-PNA-CULTURES", label: "폐렴 배양검사", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", claimUnit: { lineNumber: "2", quantity: 2, unit: "건" }, status: "GREEN", reasonCodes: ["DEMO_SPECIMEN_TIMING_VERIFIED"], evidenceIds: ["jung-pna-sputum-culture-order", "jung-pna-blood-culture-collection"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
   ],
   adjudications: [],
 };

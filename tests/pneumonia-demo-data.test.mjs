@@ -166,6 +166,32 @@ test("청구 예시는 지정된 초록·노랑·회색 분포만 가지며 빨�
     assert.deepEqual(counts, expected[profile.patient.id]);
     assert.deepEqual(profile.adjudications, []);
   }
+
+  const evidenceCounts = [];
+  for (const profile of profiles()) {
+    const knownEvidenceIds = new Set([
+      profile.admission,
+      ...profile.diagnoses,
+      ...profile.clinicalContext.chestImaging,
+      ...profile.observations,
+      ...profile.severityAssessments,
+      ...profile.microbiologyOrders,
+      ...profile.specimenCollections,
+      ...profile.medicationAdministrations,
+    ].filter(Boolean).map(({ id }) => id));
+    for (const claim of profile.claimItems) {
+      assert.ok(Array.isArray(claim.preflight.evidenceIds));
+      evidenceCounts.push(claim.preflight.evidenceIds.length);
+      assert.ok(claim.preflight.evidenceIds.every((id) => knownEvidenceIds.has(id)));
+    }
+  }
+  assert.ok(evidenceCounts.includes(0));
+  assert.ok(evidenceCounts.includes(1));
+  assert.ok(evidenceCounts.some((count) => count >= 2));
+  const claimUnits = profiles().flatMap(({ claimItems }) => claimItems).map(({ claimUnit }) => claimUnit);
+  assert.ok(claimUnits.some(Boolean));
+  assert.ok(claimUnits.some((claimUnit) => !claimUnit));
+  assert.ok(claimUnits.some(({ quantity, unit } = {}) => quantity >= 4 && unit === "일"));
 });
 
 test("진단·임상 맥락·검사·투약은 식별 가능한 검증 출처를 가진다", () => {

@@ -45,8 +45,11 @@ await runBrowserSmoke({
       meta: document.getElementById('diseaseAssessmentMeta').textContent,
       claimSummary: document.getElementById('claimAttentionSummary').textContent,
       claimText: [document.getElementById('claimAttentionList'), document.getElementById('claimAttentionAllList')].map((node) => node.textContent).join(' '),
-      redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="reduced"]').length,
-      yellowCount: document.querySelectorAll('.claim-attention-item[data-claim-state="risk"]').length,
+      adjudicationSummary: document.getElementById('claimAdjudicationSummary').textContent,
+      adjudicationText: document.getElementById('claimAdjudicationList').textContent,
+      adjustedCount: document.querySelectorAll('.claim-adjudication-item[data-adjudication-state="adjusted"]').length,
+      redCount: document.querySelectorAll('.claim-attention-item[data-claim-state="high-risk"]').length,
+      yellowCount: document.querySelectorAll('.claim-attention-item[data-claim-state="needs-review"]').length,
       greenCount: document.querySelectorAll('.claim-attention-item[data-claim-state="verified"]').length,
       grayCount: document.querySelectorAll('.claim-attention-item[data-claim-state="insufficient"]').length,
       overflow: document.documentElement.scrollWidth - innerWidth,
@@ -63,7 +66,7 @@ await runBrowserSmoke({
   await selectPatient("demo-patient-kim", "김비타", 5);
   const kim = await snapshot();
   assert(kim.tabs.length === 1 && kim.tabs[0].id === "pneumonia" && kim.tabs[0].selected === "true", `김비타 폐렴 전용 탭 오류: ${JSON.stringify(kim.tabs)}`);
-  assert(/5개 지표 중 5개 기여 가능/.test(kim.headline), `김비타 5/5 요약 오류: ${kim.headline}`);
+  assert(/5\/5\s*지표 충족 예상/.test(kim.headline), `김비타 5/5 요약 오류: ${kim.headline}`);
   assert(kim.metrics.length === 5 && kim.metrics.every(({ status }) => status === "included"), `김비타 폐렴 지표 오류: ${JSON.stringify(kim.metrics)}`);
   assert(/영상/.test(kim.diagnostic) && /지역사회/.test(kim.diagnostic), `김비타 폐렴 진단 정합성 오류: ${kim.diagnostic}`);
   assert(/2026-7th-plan/.test(kim.meta) && /2026-publication/.test(kim.meta), `폐렴 기준 버전 오류: ${kim.meta}`);
@@ -91,7 +94,7 @@ await runBrowserSmoke({
   await selectPatient("demo-patient-choi", "최민아", 5);
   const choi = await snapshot();
   assert(choi.tabs.length === 1 && choi.tabs[0].id === "pneumonia", `최민아 관련 질환 탭 오류: ${JSON.stringify(choi.tabs)}`);
-  assert(/5개 지표 중 4개 기여 가능/.test(choi.headline), `최민아 4/5 요약 오류: ${choi.headline}`);
+  assert(/4\/5\s*지표 충족 예상/.test(choi.headline), `최민아 4/5 요약 오류: ${choi.headline}`);
   assert(choi.metrics.filter(({ status }) => status === "not-included").length === 1 && /혈액배양/.test(choi.metrics.find(({ status }) => status === "not-included").text), `최민아 혈액배양 시점 오류: ${JSON.stringify(choi.metrics)}`);
   assert(choi.redCount === 0 && choi.yellowCount >= 1 && choi.greenCount >= 1 && choi.grayCount >= 1, `최민아 혼합 청구 분포 오류: ${JSON.stringify(choi)}`);
   await evaluate(`(() => {
@@ -106,30 +109,30 @@ await runBrowserSmoke({
   await selectPatient("demo-patient-lee", "이준호", 3);
   const lee = await snapshot();
   assert(lee.tabs.length === 1 && lee.tabs[0].id === "copd", `이준호 COPD 전용 탭 오류: ${JSON.stringify(lee.tabs)}`);
-  assert(/3개 지표 중 3개 기여 가능/.test(lee.headline), `이준호 COPD 3/3 오류: ${lee.headline}`);
+  assert(/3\/3\s*지표 충족 예상/.test(lee.headline), `이준호 COPD 3/3 오류: ${lee.headline}`);
   assert(lee.metrics.every(({ status }) => status === "included"), `이준호 COPD 지표 오류: ${JSON.stringify(lee.metrics)}`);
   assert(/반복 확인/.test(lee.diagnostic) && /자동 진단/.test(lee.diagnostic), `이준호 COPD 진단 정합성 오류: ${lee.diagnostic}`);
 
   await selectPatient("demo-patient-park", "박여정", 3);
   const park = await snapshot();
-  assert(/3개 지표 중 2개 기여 가능/.test(park.headline), `박여정 COPD 2/3 오류: ${park.headline}`);
+  assert(/2\/3\s*지표 충족 예상/.test(park.headline), `박여정 COPD 2/3 오류: ${park.headline}`);
   assert(park.metrics.filter(({ status }) => status === "included").length === 2 && park.metrics.filter(({ status }) => status === "not-included").length === 1, `박여정 COPD 혼합 지표 오류: ${JSON.stringify(park.metrics)}`);
-  assert(park.redCount === 1 && park.yellowCount >= 1 && park.grayCount >= 1, `박여정 빨강·노랑·회색 분포 오류: ${JSON.stringify(park)}`);
-  assert(/최종 삭감 1건/.test(park.claimSummary) && /일부 삭감 확정/.test(park.claimText), `박여정 최종 삭감 근거 오류: ${JSON.stringify(park)}`);
+  assert(park.redCount === 0 && park.adjustedCount === 1 && park.yellowCount >= 1 && park.grayCount >= 1, `박여정 사전점검·실제 조정 분리 오류: ${JSON.stringify(park)}`);
+  assert(park.adjustedCount === 1 && /보험자 최종 결과 1건 · 조정 1건/.test(park.adjudicationSummary) && /심사 조정/.test(park.adjudicationText), `박여정 실제 심사 조정 근거 오류: ${JSON.stringify(park)}`);
   await evaluate("scrollBy(0, -140)");
   await capture(client, reductionPath);
 
   await selectPatient("demo-patient-jung", "정수진", 3);
   const jungCopd = await snapshot();
   assert(jungCopd.tabs.length === 2 && jungCopd.tabs.map(({ id }) => id).join(",") === "copd,pneumonia", `정수진 질환 토글 오류: ${JSON.stringify(jungCopd.tabs)}`);
-  assert(jungCopd.tabs[0].selected === "true" && /3개 지표 중 1개 기여 가능/.test(jungCopd.headline), `정수진 기본 COPD 상태 오류: ${JSON.stringify(jungCopd)}`);
+  assert(jungCopd.tabs[0].selected === "true" && /1\/3\s*지표 충족 예상/.test(jungCopd.headline), `정수진 기본 COPD 상태 오류: ${JSON.stringify(jungCopd)}`);
   assert(jungCopd.metrics.map(({ status }) => status).join(",") === "insufficient,not-included,included", `정수진 COPD 지표 분포 오류: ${JSON.stringify(jungCopd.metrics)}`);
   assert(jungCopd.redCount === 0 && /타기관/.test(jungCopd.claimText), `정수진 타기관 자료를 빨강으로 오인: ${JSON.stringify(jungCopd)}`);
 
   await evaluate("document.getElementById('diseaseQualityDisclosure').open = true; document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').click()");
   await waitFor("document.getElementById('diseaseProgramTitle')?.textContent === '폐렴'", "정수진 폐렴 전환 실패");
   const jungPneumonia = await snapshot();
-  assert(jungPneumonia.tabs[1].selected === "true" && /5개 지표 중 4개 기여 가능/.test(jungPneumonia.headline), `정수진 폐렴 4/5 오류: ${JSON.stringify(jungPneumonia)}`);
+  assert(jungPneumonia.tabs[1].selected === "true" && /4\/5\s*지표 충족 예상/.test(jungPneumonia.headline), `정수진 폐렴 4/5 오류: ${JSON.stringify(jungPneumonia)}`);
   assert(jungPneumonia.metrics.filter(({ status }) => status === "not-included").length === 1 && /중증도/.test(jungPneumonia.metrics.find(({ status }) => status === "not-included").text), `정수진 폐렴 중증도 누락 오류: ${JSON.stringify(jungPneumonia.metrics)}`);
   assert(jungPneumonia.claimSummary === jungCopd.claimSummary && jungPneumonia.claimText === jungCopd.claimText, "질환 전환으로 전체 청구 주의사항이 바뀌었습니다.");
   const closedOnSwitch = await evaluate("!document.getElementById('diseaseQualityDisclosure').open && !document.getElementById('diseaseDiagnosticDisclosure').open && !document.getElementById('diseaseAssessmentSources').open");

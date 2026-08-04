@@ -50,8 +50,15 @@ const CLAIM_REVIEW_STAGE_LABELS = {
   reviewed: "최종 판정",
 };
 const CLAIM_REVIEW_OUTCOMES = new Set(["approved", "hold", "exception"]);
+const CLAIM_EVALUATION_STATUSES = new Set(["missing-evidence", "due-soon", "ready", "waiting", "not-applicable", "unknown"]);
+const PROFILE_CLAIM_WORKFLOW_STATUSES = new Set(["DRAFT", "PERFORMED", "CLAIMED", "SUBMITTED", "ADJUDICATED"]);
+const PROFILE_CLAIM_PREFLIGHT_STATUSES = new Set(["GREEN", "YELLOW", "RED", "GRAY"]);
 const CLAIM_REVIEW_HISTORY_LIMIT = 50;
 const CLAIM_REVIEW_ACTION_PREFIX = "claim-review.stage.";
+const PROFILE_CLAIM_SOURCE_ID_LIMIT = 241;
+const CLAIM_REVIEW_RULE_ID_LIMIT = 260;
+const CLAIM_REVIEW_EVALUATION_ID_LIMIT = 512;
+const PROFILE_CLAIM_SOURCE_ID_PATTERN = new RegExp(`^[A-Za-z0-9][A-Za-z0-9._-]{0,${PROFILE_CLAIM_SOURCE_ID_LIMIT - 1}}$`);
 const SHA256_CONSTANTS = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -446,7 +453,7 @@ function normalizeAuditEvent(input = {}) {
     action,
     patientId: cleanText(input.patientId, "", 160),
     encounterId: cleanText(input.encounterId, "", 160),
-    entityId: cleanText(input.entityId, "", 400),
+    entityId: cleanText(input.entityId, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT),
     detail: cleanText(input.detail, "", 500),
   };
 }
@@ -468,16 +475,189 @@ function normalizeClaimReviewOutcome(value) {
   return CLAIM_REVIEW_OUTCOMES.has(value) ? value : "";
 }
 
+function isStableProfileSourceId(value) {
+  return typeof value === "string" && PROFILE_CLAIM_SOURCE_ID_PATTERN.test(value);
+}
+
+function normalizeProfileContextText(value, label, maxLength, { optional = false } = {}) {
+  if (value === undefined || value === null || value === "") {
+    if (optional) return "";
+    throw new TypeError(`${label}이(가) 유효하지 않습니다.`);
+  }
+  if (typeof value !== "string") throw new TypeError(`${label}이(가) 유효하지 않습니다.`);
+  const text = value.trim();
+  if ((!optional && !text) || text.length > maxLength || /[\u0000-\u001f\u007f-\u009f]/u.test(text)) {
+    throw new TypeError(`${label}이(가) 유효하지 않습니다.`);
+  }
+  return text;
+}
+
+function normalizeProfileContextList(values, label, maxLength = 500) {
+  if (values === undefined || values === null) return [];
+  if (!Array.isArray(values) || values.length > 100) throw new TypeError(`${label}이(가) 유효하지 않습니다.`);
+  const normalized = values.map((value) => normalizeProfileContextText(value, label, maxLength));
+  return [...new Set(normalized)].sort((left, right) => left.localeCompare(right, "en", { numeric: true }));
+}
+
+function normalizeProfileClaimUnit(input) {
+  if (input === undefined || input === null) return { lineNumber: "", quantity: null, unit: "" };
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("청구 line 단위가 유효하지 않습니다.");
+  }
+  let lineNumber = "";
+  if (input.lineNumber !== undefined && input.lineNumber !== null && input.lineNumber !== "") {
+    lineNumber = typeof input.lineNumber === "number" && Number.isSafeInteger(input.lineNumber) && input.lineNumber >= 0
+      ? String(input.lineNumber)
+      : normalizeProfileContextText(input.lineNumber, "청구 line 번호", 80);
+  }
+  let quantity = null;
+  if (input.quantity !== undefined && input.quantity !== null && input.quantity !== "") {
+    const parsed = typeof input.quantity === "number" ? input.quantity : Number(input.quantity);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1_000_000_000) {
+      throw new TypeError("청구 수량이 유효하지 않습니다.");
+    }
+    quantity = parsed;
+  }
+  const unit = normalizeProfileContextText(input.unit, "청구 수량 단위", 80, { optional: true });
+  return { lineNumber, quantity, unit };
+}
+
+function normalizeProfileEvidenceRecords(values, evidenceIds) {
+  if (!Array.isArray(values) || values.length > 100) throw new TypeError("프로필 근거 기록이 유효하지 않습니다.");
+  const allowedIds = new Set(evidenceIds);
+  const seen = new Set();
+  const records = values.map((record) => {
+    if (!record || typeof record !== "object" || Array.isArray(record)) throw new TypeError("프로필 근거 기록이 유효하지 않습니다.");
+    const id = normalizeProfileContextText(record.id, "프로필 근거 기록 식별자", 160);
+    if (!allowedIds.has(id) || seen.has(id)) throw new TypeError("프로필 근거 기록 식별자가 연결 목록과 일치하지 않습니다.");
+    seen.add(id);
+    const dateRaw = normalizeProfileContextText(record.date, "프로필 근거 기록일", 10, { optional: true });
+    const date = dateRaw ? validDate(dateRaw) : "";
+    if (dateRaw && !date) throw new TypeError("프로필 근거 기록일이 유효하지 않습니다.");
+    const verifiedAtRaw = normalizeProfileContextText(record.verifiedAt, "프로필 근거 검증 시각", 80, { optional: true });
+    const verifiedAt = optionalTimestamp(verifiedAtRaw);
+    if (verifiedAtRaw && !verifiedAt) throw new TypeError("프로필 근거 검증 시각이 유효하지 않습니다.");
+    return {
+      id,
+      label: normalizeProfileContextText(record.label, "프로필 근거 이름", 240),
+      date,
+      sourceId: normalizeProfileContextText(record.sourceId, "프로필 근거 출처 식별자", 160, { optional: true }),
+      sourceLabel: normalizeProfileContextText(record.sourceLabel, "프로필 근거 출처 이름", 240, { optional: true }),
+      verificationStatus: normalizeProfileContextText(record.verificationStatus, "프로필 근거 검증 상태", 80, { optional: true }),
+      patientMatch: normalizeProfileContextText(record.patientMatch, "프로필 근거 환자 일치 상태", 80, { optional: true }),
+      reviewerId: normalizeProfileContextText(record.reviewerId, "프로필 근거 검토자", 160, { optional: true }),
+      verifiedAt,
+      synthetic: record.synthetic === true,
+    };
+  });
+  if (records.length !== evidenceIds.length) throw new TypeError("프로필 근거 기록이 연결 목록과 일치하지 않습니다.");
+  return records.sort((left, right) => left.id.localeCompare(right.id, "en", { numeric: true }));
+}
+
+function normalizeProfileClaimContext(input, { sourceId, asOf }) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("프로필 청구 line 맥락이 유효하지 않습니다.");
+  }
+  const assessmentId = normalizeProfileContextText(input.assessmentId, "질환 평가 식별자", 80);
+  if (!isStableProfileSourceId(assessmentId)) throw new TypeError("질환 평가 식별자가 유효하지 않습니다.");
+  const claimItemId = normalizeProfileContextText(input.claimItemId, "청구 line 식별자", 160);
+  const serviceDate = validDate(input.serviceDate);
+  const workflowStatus = normalizeProfileContextText(input.workflowStatus, "청구 업무 상태", 40).toUpperCase();
+  const preflightStatus = normalizeProfileContextText(input.preflightStatus, "사전점검 상태", 20).toUpperCase();
+  if (`${assessmentId}.${claimItemId}` !== sourceId || !serviceDate || serviceDate !== asOf) {
+    throw new TypeError("프로필 청구 line의 식별자 또는 진료일이 일치하지 않습니다.");
+  }
+  if (!PROFILE_CLAIM_WORKFLOW_STATUSES.has(workflowStatus) || !PROFILE_CLAIM_PREFLIGHT_STATUSES.has(preflightStatus)) {
+    throw new TypeError("프로필 청구 line의 업무 또는 사전점검 상태가 유효하지 않습니다.");
+  }
+  if (typeof input.riskConfirmed !== "boolean") throw new TypeError("사전점검 위험 확인 상태가 유효하지 않습니다.");
+  const evidenceIds = normalizeProfileContextList(input.evidenceIds, "프로필 근거 식별자", 160);
+  const evidenceCount = boundedInteger(input.evidenceCount, { minimum: 0, maximum: 100_000 });
+  if (evidenceCount === null || evidenceCount !== evidenceIds.length) {
+    throw new TypeError("프로필 근거 개수가 유효하지 않습니다.");
+  }
+  const evidenceRecords = normalizeProfileEvidenceRecords(input.evidenceRecords, evidenceIds);
+  const disclaimer = normalizeProfileContextText(input.disclaimer, "사전점검 경계 문구", 2_000, { optional: true });
+  const provenanceInput = input.provenance;
+  if (!provenanceInput || typeof provenanceInput !== "object" || Array.isArray(provenanceInput)) {
+    throw new TypeError("프로필 청구 line 출처가 유효하지 않습니다.");
+  }
+  const verifiedAtRaw = normalizeProfileContextText(provenanceInput.verifiedAt, "출처 검증 시각", 80, { optional: true });
+  const verifiedAt = optionalTimestamp(verifiedAtRaw);
+  if (verifiedAtRaw && !verifiedAt) throw new TypeError("출처 검증 시각이 유효하지 않습니다.");
+  return {
+    assessmentId,
+    claimItemId,
+    serviceDate,
+    workflowStatus,
+    claimUnit: normalizeProfileClaimUnit(input.claimUnit),
+    preflightStatus,
+    riskConfirmed: input.riskConfirmed,
+    reasonCodes: normalizeProfileContextList(input.reasonCodes, "사전점검 사유 코드", 160),
+    reasonLabels: normalizeProfileContextList(input.reasonLabels, "사전점검 사유", 500),
+    evidenceIds,
+    evidenceCount,
+    evidenceRecords,
+    disclaimer,
+    provenance: {
+      kind: normalizeProfileContextText(provenanceInput.kind, "출처 유형", 120),
+      sourceId: normalizeProfileContextText(provenanceInput.sourceId, "출처 식별자", 160),
+      sourceLabel: normalizeProfileContextText(provenanceInput.sourceLabel, "출처 이름", 240, { optional: true }),
+      verificationStatus: normalizeProfileContextText(provenanceInput.verificationStatus, "출처 검증 상태", 80, { optional: true }),
+      patientMatch: normalizeProfileContextText(provenanceInput.patientMatch, "환자 일치 상태", 80, { optional: true }),
+      reviewerId: normalizeProfileContextText(provenanceInput.reviewerId, "출처 검토자", 160, { optional: true }),
+      verifiedAt,
+      synthetic: provenanceInput.synthetic === true,
+    },
+  };
+}
+
+function profileClaimDecisionContext(context) {
+  return {
+    assessmentId: context.assessmentId,
+    claimItemId: context.claimItemId,
+    serviceDate: context.serviceDate,
+    workflowStatus: context.workflowStatus,
+    claimUnit: context.claimUnit,
+    preflightStatus: context.preflightStatus,
+    riskConfirmed: context.riskConfirmed,
+    reasonCodes: context.reasonCodes,
+    evidenceIds: context.evidenceIds,
+    evidenceCount: context.evidenceCount,
+    evidenceRecords: context.evidenceRecords.map((record) => ({
+      id: record.id,
+      date: record.date,
+      sourceId: record.sourceId,
+      verificationStatus: record.verificationStatus,
+      patientMatch: record.patientMatch,
+      reviewerId: record.reviewerId,
+      verifiedAt: record.verifiedAt,
+      synthetic: record.synthetic,
+    })),
+    provenance: {
+      kind: context.provenance.kind,
+      sourceId: context.provenance.sourceId,
+      verificationStatus: context.provenance.verificationStatus,
+      patientMatch: context.provenance.patientMatch,
+      reviewerId: context.provenance.reviewerId,
+      verifiedAt: context.provenance.verifiedAt,
+      synthetic: context.provenance.synthetic,
+    },
+  };
+}
+
 function normalizeClaimReviewHistoryEntry(input = {}) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const at = optionalTimestamp(input.at);
   const from = CLAIM_REVIEW_STAGES.has(input.from) ? input.from : "";
   const to = CLAIM_REVIEW_STAGES.has(input.to) ? input.to : "";
   if (!at || !from || !to) return null;
+  const assignee = cleanText(input.assignee, "", 120);
   return {
     at,
     from,
     to,
+    ...(assignee ? { assignee } : {}),
     reviewer: cleanText(input.reviewer, "", 120),
     reason: cleanText(input.reason, "", 2_000),
     opinion: cleanText(input.opinion, "", 8_000),
@@ -503,29 +683,35 @@ function appendClaimReviewHistory(history, entry) {
 
 function normalizeClaimReview(input = {}, now = new Date().toISOString()) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
-  const evaluationId = cleanText(input.evaluationId, "", 400);
+  const evaluationId = cleanText(input.evaluationId, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT);
   const patientId = cleanText(input.patientId, "", 160);
-  const ruleId = cleanText(input.ruleId, "", 160);
+  const ruleId = cleanText(input.ruleId, "", CLAIM_REVIEW_RULE_ID_LIMIT);
   const stage = CLAIM_REVIEW_STAGES.has(input.stage) ? input.stage : "";
   const fingerprint = cleanText(input.fingerprint, "", 80);
   const calculatedStatus = cleanText(input.calculatedStatus, "", 80);
   const calculatedAsOf = validDate(input.calculatedAsOf);
   if (!evaluationId || !patientId || !ruleId || !/^sha256:[0-9a-f]{64}$/.test(fingerprint) || !stage || !calculatedStatus || !calculatedAsOf) return null;
+  const sourceKind = input.sourceKind === "profile" ? "profile" : "";
+  const sourceId = cleanText(input.sourceId, "", PROFILE_CLAIM_SOURCE_ID_LIMIT);
+  if ((sourceKind && !isStableProfileSourceId(sourceId)) || (!sourceKind && sourceId)) return null;
   const requestedInvalidatedAt = optionalTimestamp(input.invalidatedAt);
   const requestedInvalidatedFrom = CLAIM_REVIEW_STAGES.has(input.invalidatedFrom) && input.invalidatedFrom !== "new"
     ? input.invalidatedFrom
     : "";
   const keepsInvalidation = stage === "new" && Boolean(requestedInvalidatedAt) && Boolean(requestedInvalidatedFrom);
+  const assignee = cleanText(input.assignee, "", 120);
   return {
     evaluationId,
     patientId,
     ruleId,
+    ...(sourceKind ? { sourceKind, sourceId } : {}),
     stage,
     fingerprint,
     calculatedStatus,
     calculatedAsOf,
     invalidatedAt: keepsInvalidation ? requestedInvalidatedAt : "",
     invalidatedFrom: keepsInvalidation ? requestedInvalidatedFrom : "",
+    ...(assignee ? { assignee } : {}),
     reviewer: cleanText(input.reviewer, "", 120),
     transitionReason: cleanText(input.transitionReason, "", 2_000),
     opinion: cleanText(input.opinion, "", 8_000),
@@ -586,11 +772,13 @@ export function normalizeEmrState(input = {}) {
   const claimReviewIds = new Set();
   for (const item of Array.isArray(input.claimReviews) ? input.claimReviews : []) {
     const review = normalizeClaimReview(item, now);
-    if (!review
-      || claimReviewIds.has(review.evaluationId)
-      || !patientIds.has(review.patientId)
-      || !ruleIds.has(review.ruleId)
-      || review.evaluationId !== `${review.patientId}:${review.ruleId}`) continue;
+    if (!review || claimReviewIds.has(review.evaluationId) || !patientIds.has(review.patientId)) continue;
+    const profileReview = review.sourceKind === "profile";
+    const validReference = profileReview
+      ? isStableProfileSourceId(review.sourceId)
+        && review.evaluationId === `${review.patientId}:profile:${review.sourceId}`
+      : ruleIds.has(review.ruleId) && review.evaluationId === `${review.patientId}:${review.ruleId}`;
+    if (!validReference) continue;
     claimReviewIds.add(review.evaluationId);
     claimReviews.push(review);
   }
@@ -884,18 +1072,28 @@ export function claimEvaluationFingerprint(evaluationInput = {}, patientInput = 
     .filter(Boolean))].sort();
   const eventById = new Map(patient.events.map((event) => [event.id, event]));
   const canonical = clinicalContextFingerprint({
-    evaluationId: cleanText(evaluation.id, "", 400),
+    evaluationId: cleanText(evaluation.id, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT),
     patientId: cleanText(evaluation.patientId, "", 160),
-    ruleId: cleanText(evaluation.ruleId ?? evaluation.rule?.id, "", 160),
+    ruleId: cleanText(evaluation.ruleId ?? evaluation.rule?.id, "", CLAIM_REVIEW_RULE_ID_LIMIT),
+    ...(evaluation.sourceKind === "profile" ? {
+      sourceKind: "profile",
+      sourceId: cleanText(evaluation.sourceId, "", PROFILE_CLAIM_SOURCE_ID_LIMIT),
+      profileContext: profileClaimDecisionContext(normalizeProfileClaimContext(evaluation.claimContext, {
+        sourceId: cleanText(evaluation.sourceId, "", PROFILE_CLAIM_SOURCE_ID_LIMIT),
+        asOf: validDate(evaluation.asOf),
+      })),
+    } : {}),
     asOf: validDate(evaluation.asOf),
     result: {
       status: cleanText(evaluation.status, "", 80),
       usedCount: boundedInteger(evaluation.usedCount),
       remainingCount: boundedInteger(evaluation.remainingCount),
       nextEligibleDate: validDate(evaluation.nextEligibleDate),
-      missingEvidence: [...new Set((Array.isArray(evaluation.missingEvidence) ? evaluation.missingEvidence : [])
-        .map((item) => cleanText(item, "", 500))
-        .filter(Boolean))].sort(),
+      missingEvidence: evaluation.sourceKind === "profile"
+        ? []
+        : [...new Set((Array.isArray(evaluation.missingEvidence) ? evaluation.missingEvidence : [])
+          .map((item) => cleanText(item, "", 500))
+          .filter(Boolean))].sort(),
     },
     rule: normalizeClaimRule(evaluation.rule),
     evidence: evidenceIds.map((id) => claimReviewEvidenceSnapshot(eventById.get(id))).filter(Boolean),
@@ -903,15 +1101,79 @@ export function claimEvaluationFingerprint(evaluationInput = {}, patientInput = 
   return `sha256:${sha256Hex(canonical)}`;
 }
 
+function normalizeProfileClaimEvaluation(evaluationInput, patient) {
+  const sourceId = cleanText(evaluationInput?.sourceId, "", PROFILE_CLAIM_SOURCE_ID_LIMIT);
+  const patientId = cleanText(evaluationInput?.patientId, "", 160);
+  const ruleId = cleanText(evaluationInput?.ruleId ?? evaluationInput?.rule?.id, "", CLAIM_REVIEW_RULE_ID_LIMIT);
+  const asOf = validDate(evaluationInput?.asOf);
+  const status = cleanText(evaluationInput?.status, "", 80);
+  const rule = normalizeClaimRule(evaluationInput?.rule);
+  const expectedId = `${patientId}:profile:${sourceId}`;
+  if (!isStableProfileSourceId(sourceId)
+    || !patientId
+    || !asOf
+    || !CLAIM_EVALUATION_STATUSES.has(status)
+    || !rule
+    || !ruleId
+    || rule.id !== ruleId
+    || cleanText(evaluationInput?.id, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT) !== expectedId) {
+    throw new TypeError("담당자 검토에 연결할 환자·프로필 항목·판정일이 유효하지 않습니다.");
+  }
+  const eventIds = new Set(patient.events.map(({ id }) => id));
+  const normalizeEventIds = (values) => [...new Set((Array.isArray(values) ? values : [])
+    .map((id) => cleanText(id, "", 160))
+    .filter((id) => id && eventIds.has(id)))];
+  const normalizeLabels = (values) => [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => cleanText(value, "", 500))
+    .filter(Boolean))];
+  const optionalDate = (value) => validDate(value);
+  const daysSinceLastService = evaluationInput?.daysSinceLastService === null
+    ? null
+    : boundedInteger(evaluationInput?.daysSinceLastService, { minimum: 0, maximum: 100_000 });
+  const claimContext = normalizeProfileClaimContext(evaluationInput?.claimContext, { sourceId, asOf });
+  return {
+    id: expectedId,
+    patientId,
+    patientName: patient.name,
+    patientMrn: patient.mrn,
+    sourceKind: "profile",
+    sourceId,
+    ruleId,
+    title: cleanText(evaluationInput?.title, rule.title, 300),
+    serviceCode: rule.serviceCode,
+    status,
+    asOf,
+    calculationAvailable: evaluationInput?.calculationAvailable === true,
+    windowStart: optionalDate(evaluationInput?.windowStart),
+    windowEnd: optionalDate(evaluationInput?.windowEnd) || asOf,
+    usedCount: boundedInteger(evaluationInput?.usedCount, { minimum: 0, maximum: 100_000 }) ?? 0,
+    remainingCount: boundedInteger(evaluationInput?.remainingCount, { minimum: 0, maximum: 100_000 }) ?? 0,
+    serviceEventIds: normalizeEventIds(evaluationInput?.serviceEventIds),
+    lastServiceDate: optionalDate(evaluationInput?.lastServiceDate),
+    daysSinceLastService,
+    nextEligibleDate: optionalDate(evaluationInput?.nextEligibleDate),
+    missingEvidence: normalizeLabels(evaluationInput?.missingEvidence),
+    evidenceEventIds: normalizeEventIds(evaluationInput?.evidenceEventIds),
+    explanation: cleanText(evaluationInput?.explanation, "프로필 청구 항목을 담당자가 검토합니다.", 2_000),
+    rule,
+    claimContext,
+  };
+}
+
 function currentClaimEvaluation(state, evaluationInput) {
   const patientId = cleanText(evaluationInput?.patientId, "", 160);
-  const ruleId = cleanText(evaluationInput?.ruleId ?? evaluationInput?.rule?.id, "", 160);
-  const asOf = validDate(evaluationInput?.asOf);
   const patient = state.patients.find(({ id }) => id === patientId);
+  if (evaluationInput?.sourceKind === "profile") {
+    if (!patient) throw new TypeError("담당자 검토에 연결할 환자·프로필 항목·판정일이 유효하지 않습니다.");
+    const evaluation = normalizeProfileClaimEvaluation(evaluationInput, patient);
+    return { evaluation, patient, fingerprint: claimEvaluationFingerprint(evaluation, patient) };
+  }
+  const ruleId = cleanText(evaluationInput?.ruleId ?? evaluationInput?.rule?.id, "", CLAIM_REVIEW_RULE_ID_LIMIT);
+  const asOf = validDate(evaluationInput?.asOf);
   const rule = state.rules.find(({ id }) => id === ruleId);
   if (!patient || !rule || !asOf) throw new TypeError("담당자 검토에 연결할 환자·규칙·판정일이 유효하지 않습니다.");
   const evaluation = evaluateClaimRule(patient, rule, asOf);
-  if (evaluation.id !== cleanText(evaluationInput?.id, "", 400)) {
+  if (evaluation.id !== cleanText(evaluationInput?.id, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT)) {
     throw new TypeError("담당자 검토와 자동 규칙 판정의 식별자가 일치하지 않습니다.");
   }
   return { evaluation, patient, fingerprint: claimEvaluationFingerprint(evaluation, patient) };
@@ -939,6 +1201,7 @@ function resolveClaimReviewFromState(state, evaluationInput) {
       legacy: legacyStage !== "new",
       invalidatedFrom: legacyStage !== "new" ? legacyStage : "",
       invalidatedAt: "",
+      assignee: "",
       reviewer: "",
       transitionReason: "",
       opinion: "",
@@ -956,6 +1219,7 @@ function resolveClaimReviewFromState(state, evaluationInput) {
     legacy: false,
     invalidatedFrom: fingerprintChanged && stored.stage !== "new" ? stored.stage : stored.invalidatedFrom,
     invalidatedAt: stored.invalidatedAt,
+    assignee: stored.assignee ?? "",
     reviewer: stored.reviewer,
     transitionReason: stored.transitionReason,
     opinion: stored.opinion,
@@ -975,12 +1239,15 @@ function claimReviewRecord(context, stage, now, options = {}) {
     evaluationId: context.evaluation.id,
     patientId: context.evaluation.patientId,
     ruleId: context.evaluation.ruleId,
+    sourceKind: context.evaluation.sourceKind ?? stored.sourceKind ?? "",
+    sourceId: context.evaluation.sourceId ?? stored.sourceId ?? "",
     stage,
     fingerprint: context.fingerprint,
     calculatedStatus: context.evaluation.status,
     calculatedAsOf: context.evaluation.asOf,
     invalidatedAt: options.invalidatedAt ?? "",
     invalidatedFrom: options.invalidatedFrom ?? "",
+    assignee: options.assignee ?? stored.assignee ?? "",
     reviewer: options.reviewer ?? stored.reviewer ?? "",
     transitionReason: options.transitionReason ?? stored.transitionReason ?? "",
     opinion: options.opinion ?? stored.opinion ?? "",
@@ -1002,6 +1269,7 @@ function claimReviewInvalidationHistory(view, now, history = view.stored?.histor
     at: now,
     from,
     to: "new",
+    assignee: view.stored?.assignee ?? "",
     reviewer: "자동 규칙 엔진",
     reason: claimReviewInvalidationReason(view),
     opinion: "",
@@ -1036,6 +1304,7 @@ export function setClaimReviewStage(
   const stored = view.stored ?? {};
   const stageChanged = view.stage !== nextStage;
   const legacyDetail = cleanText(detail, "", 2_000);
+  const assignee = has("assignee") ? cleanText(input.assignee, "", 120) : stored.assignee ?? "";
   const reviewer = has("reviewer") ? cleanText(input.reviewer, "", 120) : stored.reviewer ?? "";
   const transitionReason = has("reason")
     ? cleanText(input.reason, "", 2_000)
@@ -1046,7 +1315,8 @@ export function setClaimReviewStage(
   let outcome = has("outcome") ? normalizeClaimReviewOutcome(input.outcome) : stored.outcome ?? "";
   if (stageChanged && nextStage !== "reviewed" && !has("outcome")) outcome = "";
   if (stageChanged && view.stale && !has("outcome")) outcome = "";
-  const metadataChanged = reviewer !== (stored.reviewer ?? "")
+  const metadataChanged = assignee !== (stored.assignee ?? "")
+    || reviewer !== (stored.reviewer ?? "")
     || transitionReason !== (stored.transitionReason ?? "")
     || opinion !== (stored.opinion ?? "")
     || outcome !== (stored.outcome ?? "");
@@ -1060,6 +1330,7 @@ export function setClaimReviewStage(
     at,
     from: view.stage,
     to: nextStage,
+    assignee,
     reviewer,
     reason: has("reason") ? transitionReason : stageChanged ? legacyDetail || transitionReason : "",
     opinion,
@@ -1070,6 +1341,7 @@ export function setClaimReviewStage(
   const next = claimReviewRecord(view, nextStage, at, {
     invalidatedAt: preservesInvalidation ? view.invalidatedAt : "",
     invalidatedFrom: preservesInvalidation ? view.invalidatedFrom : "",
+    assignee,
     reviewer,
     transitionReason,
     opinion,
@@ -1097,7 +1369,7 @@ export function setClaimReviewStage(
 export function reconcileClaimReviews(stateInput, evaluationInputs = [], now = new Date().toISOString()) {
   const state = normalizeEmrState(stateInput);
   const inputs = new Map((Array.isArray(evaluationInputs) ? evaluationInputs : [])
-    .map((evaluation) => [cleanText(evaluation?.id, "", 400), evaluation])
+    .map((evaluation) => [cleanText(evaluation?.id, "", CLAIM_REVIEW_EVALUATION_ID_LIMIT), evaluation])
     .filter(([id]) => Boolean(id)));
   const at = validTimestamp(now);
   const reviews = [];

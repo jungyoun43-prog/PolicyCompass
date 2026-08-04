@@ -160,6 +160,28 @@ test("빨강의 유일한 근거는 출처가 완전한 합성 FINAL 부분 삭�
   }
   assert.ok(allProfiles.flatMap(({ claimItems }) => claimItems)
     .filter(({ preflight }) => preflight.status === "GRAY").length >= 2);
+
+  const evidenceCounts = [];
+  for (const profile of allProfiles) {
+    const knownEvidenceIds = new Set([
+      ...profile.diagnoses,
+      ...profile.visits,
+      ...profile.pftSessions,
+      ...profile.medications,
+    ].map(({ id }) => id));
+    for (const claim of profile.claimItems) {
+      assert.ok(Array.isArray(claim.preflight.evidenceIds));
+      evidenceCounts.push(claim.preflight.evidenceIds.length);
+      assert.ok(claim.preflight.evidenceIds.every((id) => knownEvidenceIds.has(id)));
+    }
+  }
+  assert.ok(evidenceCounts.includes(0));
+  assert.ok(evidenceCounts.includes(1));
+  assert.ok(evidenceCounts.some((count) => count >= 2));
+  const claimUnits = allProfiles.flatMap(({ claimItems }) => claimItems).map(({ claimUnit }) => claimUnit);
+  assert.ok(claimUnits.some(Boolean));
+  assert.ok(claimUnits.some((claimUnit) => !claimUnit));
+  assert.ok(claimUnits.some(({ quantity, unit } = {}) => quantity === 30 && unit === "정"));
 });
 
 test("호출마다 깊은 복제본을 반환해 합성 원본과 다른 화면 호출을 오염시키지 않는다", () => {

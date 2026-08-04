@@ -179,17 +179,18 @@ export function evaluateDiseaseAssessment(patient, diseaseId) {
   };
 }
 
-function dedupeKey(value, kind, index) {
+function dedupeKey(value, kind, index, assessmentId = "") {
+  const scope = cleanText(assessmentId) || "unscoped";
   const id = cleanText(value?.id);
-  if (id) return `id:${id}`;
+  if (id) return `${scope}:id:${id}`;
   if (kind === "claim") {
     const composite = [value?.code, value?.serviceDate, value?.label].map(cleanText).join("|");
-    return composite.replaceAll("|", "") ? `claim:${composite}` : `claim-index:${index}`;
+    return composite.replaceAll("|", "") ? `${scope}:claim:${composite}` : `${scope}:claim-index:${index}`;
   }
   const composite = [value?.claimItemId, value?.sourceId, value?.decidedAt, value?.reasonCode]
     .map(cleanText)
     .join("|");
-  return composite.replaceAll("|", "") ? `adjudication:${composite}` : `adjudication-index:${index}`;
+  return composite.replaceAll("|", "") ? `${scope}:adjudication:${composite}` : `${scope}:adjudication-index:${index}`;
 }
 
 function mergeUnique(profiles, field, kind) {
@@ -200,13 +201,13 @@ function mergeUnique(profiles, field, kind) {
     const values = Array.isArray(profile[field]) ? profile[field] : [];
     for (const value of values) {
       if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-      const key = dedupeKey(value, kind, index);
+      const key = dedupeKey(value, kind, index, profile.assessmentId);
       index += 1;
       if (seen.has(key)) continue;
       seen.add(key);
       merged.push({
         ...clone(value),
-        assessmentId: cleanText(value.assessmentId) || profile.assessmentId,
+        assessmentId: profile.assessmentId,
       });
     }
   }

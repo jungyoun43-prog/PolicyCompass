@@ -119,6 +119,7 @@ test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 �
   assert.doesNotMatch(css.match(/\.claim-overview-grid\s*\{[^}]+\}/)?.[0] ?? "", /overflow-x:\s*auto/);
   for (const file of [
     "claim-presentation.js",
+    "claim-search.js",
     "copd-demo-data.js",
     "copd-assessment.js",
     "pneumonia-demo-data.js",
@@ -139,6 +140,6 @@ test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 �
   assert.doesNotMatch(js, /claim-attention-item__reason/);
   assert.doesNotMatch(claimsWorkbenchCss, /border-left:\s*3px|box-shadow:\s*inset 3px/);
   assert.match(claimsWorkbenchCss, /\.claim-attention-list > li,[\s\S]*?background:\s*linear-gradient/);
-  assert.match(claimsWorkbenchCss, /\.claim-attention-item__content\s*\{[\s\S]*?background:\s*linear-gradient/);
+  assert.match(claimsWorkbenchCss, /button\.claim-attention-item__summary:hover\s*\{[\s\S]*?background:\s*linear-gradient/);
   assert.match(claimsWorkbenchCss, /\.quality-program-metric__detail\s*\{[\s\S]*?background:\s*linear-gradient/);
 });

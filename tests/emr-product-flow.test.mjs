@@ -15,6 +15,7 @@ test("배포 Worker가 로컬 EMR 화면과 모듈을 제공한다", async () =>
     "/care-bridge.js",
     "/clinical-question-assistant.js",
     "/claim-rules.js",
+    "/claim-search.js",
   ];
 
   for (const route of routes) {

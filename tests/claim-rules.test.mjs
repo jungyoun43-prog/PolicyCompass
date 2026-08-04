@@ -38,6 +38,28 @@ test("급여 규칙은 시행일·종료일·횟수·기간·근거를 정규화
   assert.deepEqual(rule.requiredEvidenceCodes, ["I10", "85354-9"]);
 });
 
+test("고시·문서번호는 선택 필드로 보존하고 내장 샘플은 공식 고시를 사칭하지 않는다", () => {
+  const withoutDocumentNumber = normalizeClaimRule({
+    id: "legacy-rule",
+    title: "기존 규칙",
+    serviceCode: "LEGACY-SERVICE",
+    effectiveFrom: "2026-01-01",
+  });
+  assert.equal(Object.hasOwn(withoutDocumentNumber, "sourceDocumentNumber"), false);
+
+  const withDocumentNumber = normalizeClaimRule({
+    id: "documented-rule",
+    title: "문서 연결 규칙",
+    serviceCode: "DOCUMENTED-SERVICE",
+    effectiveFrom: "2026-01-01",
+    sourceDocumentNumber: "보험급여과-1234",
+  });
+  assert.equal(withDocumentNumber.sourceDocumentNumber, "보험급여과-1234");
+  assert.ok(DEFAULT_CLAIM_RULES.every(({ sourceDocumentNumber }) => /^기관 규칙 VG-2026-\d{2}$/.test(sourceDocumentNumber)));
+  assert.ok(DEFAULT_CLAIM_RULES.every(({ sourceDocumentNumber }) => !/고시|심평원/.test(sourceDocumentNumber)));
+  assert.ok(DEFAULT_CLAIM_RULES.every(({ ruleSetId, version }) => !/demo/i.test(`${ruleSetId} ${version}`)));
+});
+
 test("근거 최근성을 비우면 무제한 0일로 명시 저장할 수 있다", () => {
   const rule = normalizeClaimRule({
     id: "no-lookback",

@@ -50,8 +50,8 @@ export const CLAIM_LANE_LABELS = {
 export const DEFAULT_CLAIM_RULES = [
   {
     id: "demo-bp-follow-up",
-    ruleSetId: "demo-bp-follow-up",
-    version: "demo-1",
+    ruleSetId: "VG-2026-01",
+    version: "2026.1",
     title: "고혈압 추적검사",
     serviceCode: "DEMO-BP-FOLLOWUP",
     serviceSystem: "urn:vitagraph:demo:service",
@@ -65,12 +65,13 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
+    sourceDocumentNumber: "기관 규칙 VG-2026-01",
     sample: true,
   },
   {
     id: "demo-diabetes-monitoring",
-    ruleSetId: "demo-diabetes-monitoring",
-    version: "demo-1",
+    ruleSetId: "VG-2026-02",
+    version: "2026.1",
     title: "당뇨 추적검사",
     serviceCode: "DEMO-A1C-FOLLOWUP",
     serviceSystem: "urn:vitagraph:demo:service",
@@ -84,12 +85,13 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
+    sourceDocumentNumber: "기관 규칙 VG-2026-02",
     sample: true,
   },
   {
     id: "demo-bone-density",
-    ruleSetId: "demo-bone-density",
-    version: "demo-1",
+    ruleSetId: "VG-2026-03",
+    version: "2026.1",
     title: "골밀도검사",
     serviceCode: "DEMO-BMD",
     serviceSystem: "urn:vitagraph:demo:service",
@@ -103,6 +105,7 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
+    sourceDocumentNumber: "기관 규칙 VG-2026-03",
     sample: true,
   },
 ];
@@ -196,6 +199,7 @@ export function normalizeClaimRule(input = {}) {
   const requiredEvidenceCodes = requiredEvidence.map(({ code }) => code);
   const evidenceLabels = Object.fromEntries(requiredEvidence.map(({ code, label }) => [code, label]));
   const serviceEventType = cleanText(input.serviceEventType, "procedure");
+  const sourceDocumentNumber = cleanText(input.sourceDocumentNumber).slice(0, 240);
   if (!SERVICE_STATUS_BY_TYPE[serviceEventType]) return null;
   return {
     id,
@@ -217,6 +221,7 @@ export function normalizeClaimRule(input = {}) {
     effectiveTo,
     sourceLabel: cleanText(input.sourceLabel, "기관 내부 규칙"),
     sourceUrl: cleanText(input.sourceUrl),
+    ...(sourceDocumentNumber ? { sourceDocumentNumber } : {}),
     note: cleanText(input.note),
     sample: input.sample === true,
   };

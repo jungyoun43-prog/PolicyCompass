@@ -82,8 +82,10 @@ import {
   evaluateDiseaseAssessment,
   getCombinedDiseaseClaimProfile,
   getDiseaseAssessmentOptions,
+  getDiseaseAssessmentProfiles,
   getPreferredDiseaseAssessmentId,
 } from "./disease-assessment.js";
+import { createClaimSearchEntry, searchClaimIndex } from "./claim-search.js";
 import {
   CLINICAL_PATIENT_BRIEF_EVENT,
   normalizeClinicalPatientBrief,
@@ -338,6 +340,10 @@ const refs = {
   claimResultSummary: byId("claimResultSummary"),
   claimBoardKpis: byId("claimBoardKpis"),
   claimRuleTrust: byId("claimRuleTrust"),
+  claimSearch: byId("claimSearch"),
+  claimSearchClear: byId("claimSearchClear"),
+  claimSearchSummary: byId("claimSearchSummary"),
+  claimSearchResults: byId("claimSearchResults"),
   claimAttentionSummary: byId("claimAttentionSummary"),
   claimAttentionList: byId("claimAttentionList"),
   claimAttentionAllDisclosure: byId("claimAttentionAllDisclosure"),
@@ -365,6 +371,8 @@ const refs = {
   diseaseAssessmentMeta: byId("diseaseAssessmentMeta"),
   diseaseAssessmentSources: byId("diseaseAssessmentSources"),
   claimBoard: byId("claimBoard"),
+  claimReviewDetailHost: byId("claimReviewDetailHost"),
+  claimReviewDetailEmpty: byId("claimReviewDetailEmpty"),
   claimBoardLive: byId("claimBoardLive"),
   ruleVersionList: byId("ruleVersionList"),
   ruleForm: byId("ruleForm"),
@@ -385,6 +393,7 @@ const refs = {
   ruleEffectiveFrom: byId("ruleEffectiveFrom"),
   ruleEffectiveTo: byId("ruleEffectiveTo"),
   ruleSourceLabel: byId("ruleSourceLabel"),
+  ruleSourceDocumentNumber: byId("ruleSourceDocumentNumber"),
   ruleSourceUrl: byId("ruleSourceUrl"),
   ruleFormMessage: byId("ruleFormMessage"),
   clinicalJourney: byId("clinicalJourney"),
@@ -436,6 +445,11 @@ let aiCapability = { checked: false, configured: false, model: "" };
 let lastFhirReport = null;
 let draggedClaimReviewId = "";
 let claimEvaluationById = new Map();
+let claimAttentionById = new Map();
+let claimSearchIndex = [];
+let claimSearchEntryById = new Map();
+let activeClaimDetailId = "";
+const claimDetailMediaQuery = window.matchMedia("(max-width: 900px)");
 let lastPublishedPatientId = "";
 let lastPublishedSnapshotFingerprint = "";
 const PERSONAL_SYNC_SUSPENDED_KEY = "vitagraph-personal-sync-suspended-v1";
@@ -1616,21 +1630,28 @@ function safeExternalUrl(value) {
   }
 }
 
+function claimRuleDisplayReference(rule) {
+  if (!rule || typeof rule !== "object") return "규칙 식별자 미연결";
+  if (rule.sample === true) return rule.sourceDocumentNumber || "기관 내부 규칙";
+  return [rule.ruleSetId, rule.version ? `v${rule.version}` : ""].filter(Boolean).join(" · ") || "규칙 식별자 미연결";
+}
+
 function renderRuleVersions() {
   clear(refs.ruleVersionList);
   const rules = [...state.rules].sort((left, right) => left.ruleSetId.localeCompare(right.ruleSetId)
     || right.effectiveFrom.localeCompare(left.effectiveFrom));
   for (const rule of rules) {
     const row = element("article", "rule-version-row");
+    row.dataset.ruleVersionRow = rule.id;
     const summary = element("div", "rule-version-summary");
     summary.append(
-      element("b", "", `${rule.title} · v${rule.version}`),
+      element("b", "", `${rule.title} · ${claimRuleDisplayReference(rule)}`),
       element(
         "span",
         "",
         rule.sample
-          ? `기관 내부 규칙 · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`
-          : `${rule.ruleSetId} · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`,
+          ? ["기관 내부 규칙", rule.sourceDocumentNumber, `${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"}`, rule.sourceLabel].filter(Boolean).join(" · ")
+          : [rule.ruleSetId, rule.sourceDocumentNumber, `${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"}`, rule.sourceLabel].filter(Boolean).join(" · "),
       ),
     );
     const actions = element("div", "rule-version-actions");
@@ -1655,6 +1676,7 @@ const CLAIM_ATTENTION_ORDER = Object.freeze({ "high-risk": 0, "needs-review": 1,
 const CLAIM_ATTENTION_ICON = Object.freeze({ "high-risk": "!", "needs-review": "!", insufficient: "…", verified: "✓" });
 const CLAIM_WORKFLOW_LABELS = Object.freeze({
   DRAFT: "청구 전",
+  PERFORMED: "시행됨",
   CLAIMED: "제출됨",
   SUBMITTED: "제출됨",
   ADJUDICATED: "심사 완료",
@@ -1675,20 +1697,154 @@ const DEMO_CLAIM_REASON_LABELS = Object.freeze({
   DEMO_SPECIMEN_TIMING_VERIFIED: "검체 채취 시점 확인",
 });
 
-function demoClaimEvaluation(item) {
+function profileEvidenceSnapshots(profile, item) {
+  const context = profile?.clinicalContext && typeof profile.clinicalContext === "object" ? profile.clinicalContext : {};
+  const candidates = [
+    profile?.admission,
+    ...(profile?.diagnoses ?? []),
+    ...(profile?.visits ?? []),
+    ...(profile?.pftSessions ?? []),
+    ...(profile?.medications ?? []),
+    ...(context.symptoms ?? []),
+    ...(context.chestImaging ?? []),
+    ...(profile?.observations ?? []),
+    ...(profile?.severityAssessments ?? []),
+    ...(profile?.microbiologyOrders ?? []),
+    ...(profile?.specimenCollections ?? []),
+    ...(profile?.medicationAdministrations ?? []),
+  ].filter((record) => record && typeof record === "object" && !Array.isArray(record));
+  const candidateById = new Map(candidates.map((record) => [record.id, record]).filter(([id]) => typeof id === "string" && id));
+  return (item?.preflight?.evidenceIds ?? []).map((id) => {
+    const record = candidateById.get(id);
+    if (!record) return null;
+    const provenance = record.provenance || record.source || {};
+    const rawDate = record.date || record.serviceDate || record.recordedAt || record.prescribedAt || record.arrivedAt
+      || record.performedAt || record.administeredAt || record.orderedAt || record.collectedAt || record.assessedAt || "";
+    const label = record.label || record.purpose || record.tool || (record.procedureCode ? `검사 ${record.procedureCode}` : "연결 임상 기록");
+    return {
+      id,
+      label,
+      date: typeof rawDate === "string" ? rawDate.slice(0, 10) : "",
+      sourceId: provenance.sourceId || "",
+      sourceLabel: provenance.sourceLabel || provenance.label || "",
+      verificationStatus: provenance.verificationStatus || "",
+      patientMatch: provenance.patientMatch || "",
+      reviewerId: provenance.reviewerId || "",
+      verifiedAt: provenance.verifiedAt || "",
+      synthetic: provenance.synthetic === true,
+    };
+  }).filter(Boolean);
+}
+
+function profileClaimSourceId(item) {
+  const assessmentId = String(item?.assessmentId || "linked-claim").trim().toLowerCase();
+  const claimItemId = String(item?.id || "claim-line").trim();
+  return `${assessmentId}.${claimItemId}`;
+}
+
+function profileClaimRule(item) {
+  const assessmentId = String(item?.assessmentId || "linked-claim").trim().toLowerCase();
+  const sourceId = String(item?.id || "claim-line").trim();
+  const serviceCode = String(item?.code || "UNLINKED").trim();
+  return {
+    id: `profile-${assessmentId}-${sourceId}`,
+    ruleSetId: `VG-PROFILE-${assessmentId.toUpperCase()}`,
+    version: "2026.1",
+    title: `${item?.label || "청구 항목"} 사전점검`,
+    serviceCode,
+    serviceSystem: serviceCode.startsWith("DEMO-") ? "urn:vitagraph:linked-claim" : "urn:hira:fee-code",
+    serviceEventType: "procedure",
+    windowDays: 365,
+    maxCount: 1,
+    dueSoonDays: 30,
+    applicabilityCodes: [],
+    applicabilitySystem: "",
+    requiredEvidence: [],
+    requiredEvidenceCodes: [],
+    evidenceLabels: {},
+    effectiveFrom: "2026-01-01",
+    effectiveTo: "",
+    sourceLabel: "연결된 청구 line 사전점검 프로필",
+    sourceDocumentNumber: `기관 프로필 ${assessmentId.toUpperCase()}`,
+    note: "실제 보험자 심사결과가 아닌 연결 자료 기반 사전점검",
+    sample: true,
+  };
+}
+
+function profileClaimEvaluation(patient, item, diseaseProfile = null) {
   const status = item?.preflight?.status;
   const evaluationStatus = status === "GREEN"
     ? "ready"
     : status === "YELLOW" ? "missing-evidence" : "unknown";
+  const reasonLabels = (item?.preflight?.reasonCodes ?? [])
+    .map((code) => DEMO_CLAIM_REASON_LABELS[code] ?? code);
+  const rule = profileClaimRule(item);
+  const serviceDate = item?.serviceDate || today();
+  const evidenceRecords = profileEvidenceSnapshots(diseaseProfile, item);
+  const sourceId = profileClaimSourceId(item);
   return {
-    id: item.id,
+    id: `${patient.id}:profile:${sourceId}`,
+    sourceKind: "profile",
+    sourceId,
+    patientId: patient.id,
+    patientName: patient.name,
+    patientMrn: patient.mrn,
+    ruleId: rule.id,
     title: item.label,
     serviceCode: item.code,
     status: evaluationStatus,
+    asOf: serviceDate,
     calculationAvailable: status !== "GRAY",
-    missingEvidence: status === "YELLOW" ? item.preflight.reasonCodes ?? [] : [],
+    windowStart: serviceDate,
+    windowEnd: serviceDate,
+    usedCount: status === "GREEN" ? 1 : 0,
+    remainingCount: status === "GREEN" ? 0 : 1,
+    serviceEventIds: [],
+    lastServiceDate: serviceDate,
+    daysSinceLastService: 0,
+    nextEligibleDate: "",
+    missingEvidence: status === "YELLOW" || status === "RED" ? reasonLabels : [],
+    evidenceEventIds: [],
     explanation: item.preflight?.disclaimer ?? "연결 사전점검 자료",
+    rule,
+    claimContext: {
+      assessmentId: item.assessmentId || "",
+      claimItemId: item.id,
+      serviceDate,
+      workflowStatus: item.workflowStatus || "",
+      claimUnit: item.claimUnit || null,
+      preflightStatus: status || "GRAY",
+      riskConfirmed: item?.preflight?.riskConfirmed === true,
+      reasonCodes: Array.isArray(item?.preflight?.reasonCodes) ? item.preflight.reasonCodes : [],
+      reasonLabels,
+      evidenceIds: Array.isArray(item?.preflight?.evidenceIds) ? item.preflight.evidenceIds : [],
+      evidenceCount: item?.preflight?.evidenceIds?.length ?? 0,
+      evidenceRecords,
+      disclaimer: item?.preflight?.disclaimer || "",
+      provenance: item?.provenance || null,
+      provenanceLabel: item?.provenance?.sourceLabel || item?.provenance?.sourceId || "연결 출처 확인 필요",
+    },
   };
+}
+
+function claimReviewEvaluationsForPatient(patient) {
+  const profile = state.demo ? getCombinedDiseaseClaimProfile(patient) : null;
+  const profileItems = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
+  const diseaseProfileById = new Map((state.demo ? getDiseaseAssessmentProfiles(patient) : [])
+    .map((diseaseProfile) => [diseaseProfile.assessmentId, diseaseProfile]));
+  const profileEvaluations = profileItems.map((item) => profileClaimEvaluation(patient, item, diseaseProfileById.get(item.assessmentId)));
+  const board = buildClaimBoard([patient], state.rules, today());
+  const ruleEvaluations = CLAIM_LANE_ORDER
+    .flatMap((status) => board.lanes[status])
+    .filter((evaluation) => evaluation.status !== "not-applicable");
+  return [...profileEvaluations, ...ruleEvaluations];
+}
+
+function claimReviewEvaluationsForPatients(patients) {
+  return patients.flatMap((patient) => claimReviewEvaluationsForPatient(patient))
+    .sort((left, right) => left.patientName.localeCompare(right.patientName, "ko")
+      || left.title.localeCompare(right.title, "ko")
+      || String(left.asOf).localeCompare(String(right.asOf)));
 }
 
 function demoClaimInput(item) {
@@ -1709,10 +1865,15 @@ function demoClaimInput(item) {
 
 function claimAttentionEntries(patient, evaluations, profile) {
   const profileItems = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
+  const profileEvaluationBySourceId = new Map(evaluations
+    .filter(({ sourceKind }) => sourceKind === "profile")
+    .map((evaluation) => [evaluation.sourceId, evaluation]));
   const entries = profileItems.map((item) => {
-    const evaluation = demoClaimEvaluation(item);
+    const evaluation = profileEvaluationBySourceId.get(profileClaimSourceId(item)) || profileClaimEvaluation(patient, item);
     return {
-      id: item.id,
+      id: profileClaimSourceId(item),
+      workItemId: evaluation.id,
+      evaluation,
       title: item.label,
       code: item.code,
       displayCode: String(item.code || "").startsWith("DEMO-") ? "" : item.code,
@@ -1729,12 +1890,13 @@ function claimAttentionEntries(patient, evaluations, profile) {
       }),
     };
   });
-  const profileCodes = new Set(profileItems.map(({ code }) => code).filter(Boolean));
   for (const evaluation of evaluations) {
+    if (evaluation.sourceKind === "profile") continue;
     if (evaluation.status === "not-applicable") continue;
-    if (profileCodes.has(evaluation.serviceCode)) continue;
     entries.push({
       id: evaluation.id,
+      workItemId: evaluation.id,
+      evaluation,
       title: evaluation.title,
       code: evaluation.serviceCode,
       displayCode: evaluation.rule?.sample === true ? "" : evaluation.serviceCode,
@@ -1758,12 +1920,57 @@ function priorityClaimAttentionEntries(entries) {
   return (actionable.length ? actionable : entries).slice(0, 3);
 }
 
+function profileClaimUnitLabel(claimUnit) {
+  if (!claimUnit || typeof claimUnit !== "object") return "단위 정보 미연결";
+  return [
+    claimUnit.lineNumber ? `line ${claimUnit.lineNumber}` : "",
+    claimUnit.quantity !== undefined && claimUnit.quantity !== null && claimUnit.quantity !== ""
+      ? `${claimUnit.quantity}${claimUnit.unit || ""}`
+      : claimUnit.unit || "",
+  ].filter(Boolean).join(" · ") || "단위 정보 미연결";
+}
+
+function claimRequiredActions(evaluation) {
+  const actions = [];
+  const add = (id, label, completionCriterion) => {
+    if (!label || actions.some((item) => item.id === id || item.label === label)) return;
+    actions.push({ id, label, completionCriterion });
+  };
+  if (evaluation.sourceKind === "profile") {
+    for (const [index, reason] of (evaluation.claimContext?.reasonLabels ?? []).entries()) {
+      add(`profile-reason-${index + 1}`, reason, `${reason} 항목의 원본·기록 위치와 환자 일치 여부가 확인됨`);
+    }
+    if (evaluation.claimContext?.preflightStatus === "GRAY") {
+      add("profile-data-scope", "판정 가능한 자료 범위 확인", "원내·외부 자료의 연결 여부와 판정 제외 사유가 기록됨");
+    }
+    add("claim-line-context", "진료일·청구 line·상병 연결 대조", "진료일, 청구 단위, 적용 상병이 같은 진료 맥락으로 확인됨");
+  } else {
+    for (const [index, evidence] of (evaluation.missingEvidence ?? []).entries()) {
+      add(`evidence-${index + 1}`, `${evidence} 확인·연결`, `${evidence}의 확정 결과·기록일·출처가 EMR에 연결됨`);
+    }
+    if (["waiting", "due-soon"].includes(evaluation.status)) {
+      add("prior-service", "원내·외부 최근 시행일 확인", "동일 행위의 최근 시행일과 집계 구간 포함 여부가 확인됨");
+      add("eligibility-date", "다음 기준일 확인", "다음 적용 가능일과 예외 조건을 담당자가 검토함");
+    }
+    if (evaluation.status === "ready") {
+      add("claim-context", "적용 상병·진료일·청구 line 대조", "현재 규칙과 청구 단위가 같은 진료 맥락으로 확인됨");
+    }
+    if (evaluation.status === "unknown") {
+      add("rule-scope", "규칙 적용기간·필수값 확인", "규칙 버전, 적용일, 환자 조건의 누락 여부가 확인됨");
+    }
+  }
+  add("human-decision", "담당자 의견과 내부 결론 기록", "자동 판정과 별도로 검토자·담당·사유·결론이 이력에 저장됨");
+  return actions.slice(0, 5);
+}
+
 function appendClaimAttentionEntry(container, entry) {
   const { presentation } = entry;
   const row = element("li", "claim-attention-item");
   row.dataset.claimState = presentation.state;
-  const disclosure = element("details", "claim-attention-item__disclosure");
-  const itemSummary = element("summary", "claim-attention-item__summary");
+  const itemSummary = element("button", "claim-attention-item__summary");
+  itemSummary.type = "button";
+  itemSummary.dataset.claimWorkItemOpen = entry.workItemId;
+  itemSummary.setAttribute("aria-label", `${entry.title} · 보험심사팀 검토와 근거 패널 열기`);
   const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
   icon.setAttribute("aria-hidden", "true");
   const meta = [entry.displayCode, entry.date ? `${entry.dateLabel} ${entry.date}` : "진료일 미연결"].filter(Boolean).join(" · ");
@@ -1774,39 +1981,15 @@ function appendClaimAttentionEntry(container, entry) {
     icon,
     identity,
     element("span", "claim-attention-item__status", presentation.label),
+    element("span", "claim-attention-item__open", "검토 열기"),
   );
-  const content = element("div", "claim-attention-item__content");
-  const review = element("div", "claim-attention-item__detail");
-  review.append(element("b", "", "확인할 내용"), element("p", "", presentation.reason));
-  if (presentation.missingData.length) {
-    review.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
-  }
-  const facts = element("dl", "claim-attention-item__facts");
-  const claimUnit = entry.claimUnit && typeof entry.claimUnit === "object"
-    ? [entry.claimUnit.lineNumber ? `line ${entry.claimUnit.lineNumber}` : "", entry.claimUnit.quantity ? `${entry.claimUnit.quantity}${entry.claimUnit.unit || ""}` : ""].filter(Boolean).join(" · ")
-    : "단위 정보 미연결";
-  for (const [label, value] of [
-    [entry.dateLabel, entry.date || "연결 자료 없음"],
-    ["청구 상태", CLAIM_WORKFLOW_LABELS[entry.workflowStatus] || "명세서 상태 미연결"],
-    ["청구 단위", claimUnit],
-    ["EMR 근거", entry.evidenceCount ? `${entry.evidenceCount}건 연결` : "연결 여부 확인 필요"],
-    ["예상 영향", "기관 단가 미연결"],
-  ]) {
-    facts.append(element("dt", "", label), element("dd", "", value));
-  }
-  const boundary = element("div", "claim-attention-item__detail claim-attention-item__detail--boundary");
-  boundary.append(
-    element("b", "", "판정 범위"),
-    element("small", "", `${entry.synthetic ? "연결 프로필" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
-  );
-  content.append(review, facts, boundary);
-  disclosure.append(itemSummary, content);
-  row.append(disclosure);
+  row.append(itemSummary);
   container.append(row);
 }
 
 function renderClaimAttention(patient, evaluations, profile) {
   const entries = claimAttentionEntries(patient, evaluations, profile);
+  claimAttentionById = new Map(entries.map((entry) => [entry.workItemId, entry]));
   const priorityEntries = priorityClaimAttentionEntries(entries);
   const priorityIds = new Set(priorityEntries.map(({ id }) => id));
   const otherEntries = entries.filter(({ id }) => !priorityIds.has(id));
@@ -1861,14 +2044,20 @@ function renderClaimAttention(patient, evaluations, profile) {
 function claimAdjudicationEntries(profile) {
   const items = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
   const adjudications = Array.isArray(profile?.adjudications) ? profile.adjudications : [];
-  const itemById = new Map(items.map((item) => [item.id, item]));
-  const claimItemIds = [...new Set(adjudications.map(({ claimItemId }) => claimItemId).filter(Boolean))];
-  return claimItemIds.map((claimItemId) => {
-    const adjudication = latestFinalAdjudication(adjudications, claimItemId);
+  const scopeKey = (assessmentId, claimItemId) => `${assessmentId || "unscoped"}:${claimItemId}`;
+  const itemById = new Map(items.map((item) => [scopeKey(item.assessmentId, item.id), item]));
+  const claimItemKeys = [...new Set(adjudications
+    .map(({ assessmentId, claimItemId }) => claimItemId ? scopeKey(assessmentId, claimItemId) : "")
+    .filter(Boolean))];
+  return claimItemKeys.map((claimItemKey) => {
+    const [assessmentId, ...claimItemIdParts] = claimItemKey.split(":");
+    const claimItemId = claimItemIdParts.join(":");
+    const scopedAdjudications = adjudications.filter((item) => scopeKey(item.assessmentId, item.claimItemId) === claimItemKey);
+    const adjudication = latestFinalAdjudication(scopedAdjudications, claimItemId);
     if (!adjudication) return null;
-    const item = itemById.get(claimItemId);
+    const item = itemById.get(claimItemKey);
     return {
-      id: adjudication.id || claimItemId,
+      id: `${assessmentId}:${adjudication.id || claimItemId}`,
       title: item?.label || "연결된 청구 항목",
       code: String(item?.code || "").startsWith("DEMO-") ? "" : item?.code || "",
       serviceDate: item?.serviceDate || "",
@@ -1905,6 +2094,8 @@ function renderClaimAdjudications(profile) {
     const { adjudication, presentation } = entry;
     const row = element("li", "claim-adjudication-item");
     row.dataset.adjudicationState = presentation.state;
+    row.dataset.claimAdjudicationId = entry.id;
+    row.tabIndex = -1;
     const heading = element("div", "claim-adjudication-item__heading");
     const identity = element("span", "");
     identity.append(
@@ -1928,6 +2119,109 @@ function renderClaimAdjudications(profile) {
     refs.claimAdjudicationList.append(row);
   }
   return entries;
+}
+
+function buildClaimSearchIndex(patient, evaluations, profile) {
+  const entries = [];
+  for (const evaluation of evaluations) {
+    entries.push(createClaimSearchEntry({
+      id: `workflow:${evaluation.id}`,
+      kind: "workflow",
+      domain: "claim",
+      title: evaluation.title,
+      subtitle: `${evaluation.patientName} · ${evaluation.asOf || "판정일 미연결"} · ${CLAIM_LANE_LABELS[evaluation.status] || "기준 확인"}`,
+      searchText: [
+        evaluation.patientName,
+        evaluation.patientMrn,
+        evaluation.serviceCode,
+        evaluation.rule?.title,
+        evaluation.rule?.ruleSetId,
+        evaluation.rule?.sourceLabel,
+        evaluation.rule?.sourceDocumentNumber,
+        evaluation.explanation,
+        evaluation.sourceKind === "profile" ? profileClaimUnitLabel(evaluation.claimContext?.claimUnit) : "",
+        ...(evaluation.missingEvidence ?? []),
+        ...(evaluation.claimContext?.evidenceRecords ?? []).flatMap(({ id, label, sourceId, sourceLabel }) => [id, label, sourceId, sourceLabel]),
+        ...claimRequiredActions(evaluation).flatMap(({ label, completionCriterion }) => [label, completionCriterion]),
+      ].filter(Boolean).join(" "),
+      target: { targetType: "workflow", evaluationId: evaluation.id },
+    }));
+  }
+  for (const entry of claimAdjudicationEntries(profile)) {
+    entries.push(createClaimSearchEntry({
+      id: `adjudication:${entry.id}`,
+      kind: "adjudication",
+      domain: "adjudication",
+      title: entry.title,
+      subtitle: `${entry.presentation.label} · ${entry.serviceDate || "진료일 미연결"}`,
+      searchText: [entry.code, entry.adjudication.reasonCode, entry.adjudication.sourceId, entry.adjudication.provenance?.sourceLabel, entry.presentation.reason].filter(Boolean).join(" "),
+      target: { targetType: "adjudication", adjudicationId: entry.id },
+    }));
+  }
+  for (const option of state.demo ? getDiseaseAssessmentOptions(patient) : []) {
+    const assessment = evaluateDiseaseAssessment(patient, option.id);
+    if (!assessment) continue;
+    for (const metric of assessment.quality?.metrics ?? []) {
+      entries.push(createClaimSearchEntry({
+        id: `quality:${patient.id}:${option.id}:${metric.id}`,
+        kind: "quality",
+        domain: "quality",
+        title: `${option.label} · ${metric.label || metric.title || metric.id}`,
+        subtitle: `${QUALITY_METRIC_STATUS[metric.status]?.label || "자료 확인"} · 기관 질 평가 예상`,
+        searchText: [patient.name, patient.mrn, option.shortLabel, option.description, metric.observedLabel, metric.displayValue, metric.reason, ...(metric.evidence ?? [])].filter(Boolean).join(" "),
+        target: { targetType: "quality", diseaseId: option.id, metricId: metric.id },
+      }));
+    }
+  }
+  for (const rule of state.rules) {
+    entries.push(createClaimSearchEntry({
+      id: `rule:${rule.id}`,
+      kind: "rule",
+      domain: "rule",
+      title: rule.title,
+      subtitle: [rule.sourceDocumentNumber || "고시·문서번호 미연결", rule.sample ? "기관 내부 규칙" : `v${rule.version}`, `적용 ${rule.effectiveFrom}–${rule.effectiveTo || "현재"}`].join(" · "),
+      searchText: [rule.ruleSetId, rule.serviceCode, rule.serviceSystem, rule.sourceLabel, rule.sourceDocumentNumber, rule.note].filter(Boolean).join(" "),
+      target: { targetType: "rule", ruleId: rule.id },
+    }));
+  }
+  return entries.filter(Boolean);
+}
+
+function renderClaimSearchResults() {
+  if (!refs.claimSearch || !refs.claimSearchResults || !refs.claimSearchSummary) return;
+  const query = refs.claimSearch.value;
+  const results = searchClaimIndex(claimSearchIndex, query, 12);
+  clear(refs.claimSearchResults);
+  refs.claimSearchClear.hidden = !query.trim();
+  if (!query.trim()) {
+    refs.claimSearchResults.hidden = true;
+    refs.claimSearchSummary.textContent = "환자, 청구 항목, 실제 심사 결과, 적정성 지표와 규칙을 함께 찾습니다.";
+    return;
+  }
+  refs.claimSearchResults.hidden = false;
+  refs.claimSearchSummary.textContent = results.length
+    ? `검색 결과 ${results.length}건 · 업무 항목을 선택하면 같은 카드와 근거 패널로 이동합니다.`
+    : "일치하는 급여 업무가 없습니다. 환자명, 코드, 검사·약제명 또는 고시·문서번호를 확인해 주세요.";
+  const domainLabel = { claim: "청구·Workflow", workflow: "Workflow", adjudication: "심사 결과", quality: "적정성 평가", rule: "규칙" };
+  for (const result of results) {
+    const item = element("li", "claim-search-result");
+    const button = element("button", "");
+    button.type = "button";
+    button.dataset.claimSearchResult = result.id;
+    button.append(
+      element("strong", "claim-search-result__title", result.title),
+      element("span", "claim-search-result__type", domainLabel[result.domain] || result.kind),
+      element("small", "claim-search-result__meta", result.subtitle),
+    );
+    item.append(button);
+    refs.claimSearchResults.append(item);
+  }
+}
+
+function renderClaimSearch(patient, evaluations, profile) {
+  claimSearchIndex = buildClaimSearchIndex(patient, evaluations, profile);
+  claimSearchEntryById = new Map(claimSearchIndex.map((entry) => [entry.id, entry]));
+  renderClaimSearchResults();
 }
 
 function renderClaimBoardKpis(counts, quality) {
@@ -1957,9 +2251,9 @@ function renderClaimRuleTrust(evaluations) {
   const identity = element("div", "");
   identity.append(
     element("span", "claim-rule-trust__label", "판정 기준"),
-    element("strong", "", latest ? `${latest.title} · v${latest.version}` : "연결된 급여 규칙 확인 필요"),
+    element("strong", "", latest ? `${latest.title} · ${claimRuleDisplayReference(latest)}` : "연결된 급여 규칙 확인 필요"),
     element("small", "", latest
-      ? `적용 ${latest.effectiveFrom}–${latest.effectiveTo || "현재"} · 산출 ${displayDate(today())} · 출처 ${latest.sourceLabel} · ${latest.sample ? "기관 내부 규칙" : "공식 출처 연결"}`
+      ? [`적용 ${latest.effectiveFrom}–${latest.effectiveTo || "현재"}`, `산출 ${displayDate(today())}`, latest.sourceDocumentNumber ? `고시·문서번호 ${latest.sourceDocumentNumber}` : "고시·문서번호 미연결", `출처 ${latest.sourceLabel}`, latest.sample ? "기관 내부 규칙" : "공식 출처 연결"].join(" · ")
       : "규칙 버전·적용일·출처를 연결한 뒤 판정할 수 있습니다."),
   );
   const boundary = element("p", "");
@@ -2059,6 +2353,7 @@ function renderDiseaseQuality(quality, profile, program) {
     const status = QUALITY_METRIC_STATUS[metric.status] ?? QUALITY_METRIC_STATUS.insufficient;
     const card = element("details", "quality-program-metric");
     card.dataset.metricStatus = metric.status;
+    card.dataset.qualityMetricId = metric.id;
     const metricSummary = element("summary", "quality-program-metric__summary");
     const label = element("span", "quality-program-metric__label");
     label.append(element("b", "", metric.label), element("small", "quality-program-metric__status", status.label));
@@ -2262,6 +2557,10 @@ function clearDiseaseAssessment(message = "이 환자에게 연결된 질환별 
 }
 
 function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
+  if (!state.demo) {
+    clearDiseaseAssessment("질환별 적정성 평가는 검증된 기관 데이터 연결 뒤 표시합니다.");
+    return "";
+  }
   const options = getDiseaseAssessmentOptions(patient);
   if (!options.length) {
     clearDiseaseAssessment();
@@ -2328,11 +2627,13 @@ async function moveClaimReview(evaluation, nextStage, inputMethod, metadata = {}
   const review = resolveClaimReview(state, evaluation);
   const currentStage = review.stage;
   const nextLabel = CLAIM_REVIEW_STAGE_LABELS[nextStage];
+  const assignee = String(metadata.assignee || "").trim();
   const reviewer = String(metadata.reviewer || "").trim();
   const reason = String(metadata.reason || "").trim();
   const opinion = String(metadata.opinion || "").trim();
   const outcome = String(metadata.outcome || "").trim();
-  if (!reviewer) throw new Error("검토자 이름을 입력해 주세요.");
+  if (nextStage !== "new" && !assignee) throw new Error("담당자를 배정해 주세요.");
+  if (!reviewer) throw new Error("기록자 이름을 입력해 주세요.");
   if (currentStage !== nextStage && !reason) throw new Error("단계를 이동한 이유를 입력해 주세요.");
   if (nextStage === "reviewed" && !["approved", "hold", "exception"].includes(outcome)) {
     throw new Error("최종 판정에서 승인·보류·예외 인정 중 하나를 선택해 주세요.");
@@ -2348,7 +2649,7 @@ async function moveClaimReview(evaluation, nextStage, inputMethod, metadata = {}
         nextStage,
         detail,
         new Date().toISOString(),
-        { reviewer, reason, opinion, outcome: nextStage === "reviewed" ? outcome : "", inputMethod },
+        { assignee, reviewer, reason, opinion, outcome: nextStage === "reviewed" ? outcome : "", inputMethod },
       ),
       `${evaluation.title}의 담당자 검토 단계를 '${nextLabel}' 단계로 옮겼습니다. 규칙 판정 '${computedLabel}'은 유지됩니다.`,
       { preserveDraft: false },
@@ -2368,29 +2669,28 @@ async function moveClaimReview(evaluation, nextStage, inputMethod, metadata = {}
 function renderClaimBoard(patient) {
   renderRuleVersions();
   const patients = boardScope === "all" ? state.patients : [patient];
-  const board = buildClaimBoard(patients, state.rules, today());
-  const evaluations = CLAIM_LANE_ORDER
-    .flatMap((status) => board.lanes[status])
-    .sort((left, right) => left.patientName.localeCompare(right.patientName, "ko") || left.title.localeCompare(right.title, "ko"));
+  const evaluations = claimReviewEvaluationsForPatients(patients);
   claimEvaluationById = new Map(evaluations.map((evaluation) => [evaluation.id, evaluation]));
   const selectedEvaluations = evaluations.filter((evaluation) => evaluation.patientId === patient.id);
-  const diseaseClaimProfile = getCombinedDiseaseClaimProfile(patient);
+  const diseaseClaimProfile = state.demo ? getCombinedDiseaseClaimProfile(patient) : null;
   const claimCounts = renderClaimAttention(patient, selectedEvaluations, diseaseClaimProfile);
   renderClaimAdjudications(diseaseClaimProfile);
   const selectedDiseaseId = renderDiseaseAssessment(patient);
-  const selectedAssessment = selectedDiseaseId ? evaluateDiseaseAssessment(patient, selectedDiseaseId) : null;
+  const selectedAssessment = state.demo && selectedDiseaseId ? evaluateDiseaseAssessment(patient, selectedDiseaseId) : null;
   renderClaimBoardKpis(claimCounts, selectedAssessment?.quality);
-  renderClaimRuleTrust(selectedEvaluations);
+  renderClaimRuleTrust(selectedEvaluations.filter(({ sourceKind }) => sourceKind !== "profile"));
 
   clear(refs.claimResultSummary);
   refs.claimResultSummary.setAttribute("role", "list");
+  const calculatedCounts = Object.fromEntries(CLAIM_LANE_ORDER.map((status) => [status, 0]));
+  for (const evaluation of evaluations) calculatedCounts[evaluation.status] = (calculatedCounts[evaluation.status] ?? 0) + 1;
   for (const status of CLAIM_LANE_ORDER) {
     const result = element("span", "claim-result-chip");
     result.dataset.status = status;
     result.setAttribute("role", "listitem");
     result.append(
       element("span", "", CLAIM_LANE_LABELS[status]),
-      element("b", "", board.lanes[status].length),
+      element("b", "", calculatedCounts[status] ?? 0),
     );
     refs.claimResultSummary.append(result);
   }
@@ -2399,6 +2699,15 @@ function renderClaimBoard(patient) {
   const reviewLanes = Object.fromEntries(CLAIM_REVIEW_STAGE_ORDER.map((stage) => [stage, []]));
   for (const evaluation of evaluations) reviewLanes[reviewById.get(evaluation.id).stage].push(evaluation);
   clear(refs.claimBoard);
+  clear(refs.claimReviewDetailHost);
+  const detailEmpty = element("div", "claim-review-detail-empty");
+  detailEmpty.id = "claimReviewDetailEmpty";
+  detailEmpty.append(
+    element("span", "claim-review-detail-empty__mark", "↗"),
+    element("strong", "", "검토할 항목을 선택하세요."),
+    element("p", "", "왼쪽 업무 카드나 위 청구 전 점검 행을 누르면 적용 규칙, EMR 근거, 해야 할 작업과 담당자 기록이 이곳에 이어집니다."),
+  );
+  refs.claimReviewDetailHost.append(detailEmpty);
   for (const stage of CLAIM_REVIEW_STAGE_ORDER) {
     const lane = element("section", "claim-lane");
     const laneTitleId = `claim-review-lane-${stage}`;
@@ -2411,7 +2720,7 @@ function renderClaimBoard(patient) {
     heading.append(
       title,
       element("p", "", stage === "new"
-        ? "자동 판정 뒤 담당자 배정 전"
+        ? "자동 판정 완료 · 담당 배정"
         : stage === "evidence"
           ? "검사·처방·외부 자료 확인"
           : stage === "reviewing"
@@ -2469,18 +2778,32 @@ function renderClaimBoard(patient) {
         summary.append(stale);
       }
       if (boardScope === "all") summary.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
+      const owner = element("span", "claim-card__owner", `담당 · ${review.assignee || "미배정"}`);
+      owner.dataset.assigned = String(Boolean(review.assignee));
+      summary.append(owner);
       const quickFacts = element("span", "claim-card__quick-facts");
+      const connectedEvidenceCount = evaluation.sourceKind === "profile"
+        ? evaluation.claimContext?.evidenceCount ?? 0
+        : evaluation.evidenceEventIds?.length ?? 0;
       for (const [label, value] of [
         ["환자", evaluation.patientName],
-        ["판정 기준일", evaluation.asOf || "미연결"],
-        ["자료", `${evaluation.evidenceEventIds?.length ?? 0}건 연결${evaluation.missingEvidence?.length ? ` · ${evaluation.missingEvidence.length}건 보완` : ""}`],
-        ["예상 영향", "기관 단가 미연결"],
+        [evaluation.sourceKind === "profile" ? "진료일" : "판정 기준일", evaluation.asOf || "미연결"],
+        ["자료", `${connectedEvidenceCount ? `${connectedEvidenceCount}건 연결` : "자료 미연결"}${evaluation.missingEvidence?.length ? ` · ${evaluation.missingEvidence.length}건 보완` : ""}`],
+        [evaluation.sourceKind === "profile" ? "청구 단위" : "예상 영향", evaluation.sourceKind === "profile" ? profileClaimUnitLabel(evaluation.claimContext?.claimUnit) : "기관 단가 미연결"],
       ]) {
         const fact = element("span", "claim-card__quick-fact");
         fact.append(element("small", "", label), element("b", "", value));
         quickFacts.append(fact);
       }
       summary.append(quickFacts);
+      const requiredActions = claimRequiredActions(evaluation);
+      const nextAction = element("span", "claim-card__next-action");
+      nextAction.append(
+        element("small", "", "해야 할 작업"),
+        element("b", "", requiredActions[0]?.label || "담당자 확인"),
+        requiredActions.length > 1 ? element("em", "", `외 ${requiredActions.length - 1}개`) : document.createTextNode(""),
+      );
+      summary.append(nextAction);
       const disclosure = element("span", "claim-card__disclosure");
       disclosure.dataset.claimDetailLabel = "";
       disclosure.textContent = "근거·세부정보 보기";
@@ -2491,9 +2814,10 @@ function renderClaimBoard(patient) {
       details.className = "claim-card__details";
       details.id = detailsId;
       details.setAttribute("role", "dialog");
-      details.setAttribute("aria-modal", "true");
+      details.setAttribute("aria-modal", "false");
       details.setAttribute("aria-labelledby", detailTitleId);
       details.setAttribute("aria-describedby", detailBoundaryId);
+      details.dataset.claimReviewCurrentStage = stage;
       const detailHeader = element("header", "claim-card__details-header");
       const detailHeading = element("div");
       detailHeading.append(
@@ -2514,6 +2838,9 @@ function renderClaimBoard(patient) {
       const evidenceEvents = evaluation.evidenceEventIds
         .map((id) => state.patients.find((item) => item.id === evaluation.patientId)?.events.find((event) => event.id === id))
         .filter(Boolean);
+      const profileEvidenceRecords = evaluation.sourceKind === "profile"
+        ? evaluation.claimContext?.evidenceRecords ?? []
+        : [];
       const judgment = element("section", "claim-xai-section claim-xai-section--judgment");
       judgment.dataset.claimDetailSection = "judgment";
       judgment.append(
@@ -2533,9 +2860,12 @@ function renderClaimBoard(patient) {
         element(
           "p",
           "claim-rule-version",
-          `${evaluation.rule.ruleSetId} · v${evaluation.rule.version} · 적용 ${evaluation.rule.effectiveFrom}–${evaluation.rule.effectiveTo || "현재"}`,
+          `${claimRuleDisplayReference(evaluation.rule)} · 적용 ${evaluation.rule.effectiveFrom}–${evaluation.rule.effectiveTo || "현재"}`,
         ),
       );
+      if (evaluation.rule.sourceDocumentNumber) {
+        ruleDetail.append(element("p", "claim-rule-document", `고시·문서번호 · ${evaluation.rule.sourceDocumentNumber}`));
+      }
       const sourceUrl = safeExternalUrl(evaluation.rule.sourceUrl);
       if (sourceUrl) {
         const source = element("a", "claim-source", evaluation.rule.sourceLabel + " ↗");
@@ -2555,7 +2885,14 @@ function renderClaimBoard(patient) {
         element("h6", "", "시간·횟수 계산"),
       );
       const autoMetrics = element("div", "claim-auto-calculation__metrics");
-      const calculationFacts = evaluation.calculationAvailable
+      const calculationFacts = evaluation.sourceKind === "profile"
+        ? [
+            ["진료일", evaluation.claimContext?.serviceDate || "미연결"],
+            ["명세서 상태", CLAIM_WORKFLOW_LABELS[evaluation.claimContext?.workflowStatus] || "상태 미연결"],
+            ["청구 단위", profileClaimUnitLabel(evaluation.claimContext?.claimUnit)],
+            ["연결 자료", evaluation.claimContext?.evidenceCount ? `${evaluation.claimContext.evidenceCount}건` : "자료 미연결"],
+          ]
+        : evaluation.calculationAvailable
         ? [
             ["집계 구간", `${evaluation.windowStart} ~ ${evaluation.windowEnd}`],
             ["시행 횟수", `${evaluation.usedCount}/${evaluation.rule.maxCount}회`],
@@ -2581,7 +2918,9 @@ function renderClaimBoard(patient) {
         element(
           "p",
           "",
-          evaluation.calculationAvailable
+          evaluation.sourceKind === "profile"
+            ? "질환별 연결 프로필의 청구 line 사실만 표시합니다. 기간·횟수 급여기준은 별도 규칙이 연결된 경우에만 계산합니다."
+            : evaluation.calculationAvailable
             ? `서명·확정된 EMR의 ${EVENT_LABELS[evaluation.rule.serviceEventType] ?? evaluation.rule.serviceEventType} 기록 중 코드·상태·집계일이 규칙과 일치하는 항목만 자동 계산했습니다.`
             : "규칙 적용 조건이 충족된 경우에만 기간과 횟수를 계산합니다.",
         ),
@@ -2599,7 +2938,15 @@ function renderClaimBoard(patient) {
         element("span", "claim-xai-section__step", "03"),
         element("h6", "", "EMR에서 확인한 사실"),
       );
-      if (evidenceEvents.length) {
+      if (profileEvidenceRecords.length) {
+        for (const record of profileEvidenceRecords.slice(0, 5)) {
+          evidence.append(element(
+            "span",
+            "",
+            [record.label, record.date, record.sourceLabel, record.sourceId].filter(Boolean).join(" · "),
+          ));
+        }
+      } else if (evidenceEvents.length) {
         for (const event of evidenceEvents.slice(0, 5)) {
           const coding = isExampleRule ? "" : [event.system, event.code].filter(Boolean).join(" | ");
           evidence.append(element(
@@ -2609,16 +2956,47 @@ function renderClaimBoard(patient) {
           ));
         }
       } else {
-        evidence.append(element("span", "claim-evidence__empty", "직접 연결된 확정 차트 근거가 없습니다."));
+        evidence.append(element(
+          "span",
+          "claim-evidence__empty",
+          evaluation.sourceKind === "profile"
+            ? `청구 line 연결 자료 · 진료일 ${evaluation.claimContext?.serviceDate || "미연결"} · ${evaluation.claimContext?.provenanceLabel || "출처 확인 필요"}`
+            : "직접 연결된 확정 차트 근거가 없습니다.",
+        ));
+      }
+      const unresolvedProfileEvidence = evaluation.sourceKind === "profile"
+        ? Math.max(0, (evaluation.claimContext?.evidenceCount ?? 0) - Math.min(5, profileEvidenceRecords.length))
+        : 0;
+      if (unresolvedProfileEvidence) {
+        evidence.append(element("span", "claim-evidence__excluded", `상세 연결을 확인할 프로필 근거 · ${unresolvedProfileEvidence}건`));
       }
       if (evaluation.missingEvidence.length) {
         evidence.append(element("span", "claim-evidence__excluded", `확인되지 않은 후보 · ${evaluation.missingEvidence.join(", ")}`));
       }
 
+      const actionPanel = element("section", "claim-xai-section claim-xai-section--actions");
+      actionPanel.dataset.claimDetailSection = "actions";
+      actionPanel.append(
+        element("span", "claim-xai-section__step", "05"),
+        element("h6", "", "해야 할 작업·완료 조건"),
+        element("p", "", "카드를 다음 단계로 옮기기 전에 확인할 작업입니다. 자동 판정과 별도로 담당자가 완료 여부를 판단합니다."),
+      );
+      const actionList = element("ol", "claim-required-actions");
+      for (const action of requiredActions) {
+        const actionItem = element("li", "");
+        actionItem.append(
+          element("span", "claim-required-actions__check", "□"),
+          element("b", "", action.label),
+          element("small", "", `완료 조건 · ${action.completionCriterion}`),
+        );
+        actionList.append(actionItem);
+      }
+      actionPanel.append(actionList);
+
       const reviewPanel = element("section", "claim-xai-section claim-xai-section--review");
       reviewPanel.dataset.claimDetailSection = "review";
       reviewPanel.append(
-        element("span", "claim-xai-section__step", "05"),
+        element("span", "claim-xai-section__step", "06"),
         element("h6", "", "담당자 의견·결론"),
         element("p", "", "자동 판정의 근거를 확인한 뒤 내부 업무 단계와 의견을 기록합니다. 이 결론은 보험자 심사결과를 바꾸지 않습니다."),
       );
@@ -2639,8 +3017,18 @@ function renderClaimBoard(patient) {
         select.append(option);
       }
       control.append(select);
+      const assigneeControl = element("label", "claim-review-control");
+      assigneeControl.append(element("span", "", "담당"));
+      const assigneeInput = document.createElement("input");
+      assigneeInput.type = "text";
+      assigneeInput.maxLength = 120;
+      assigneeInput.required = stage !== "new";
+      assigneeInput.value = review.assignee || "";
+      assigneeInput.placeholder = "예: 김심사 · 보험심사팀";
+      assigneeInput.dataset.claimReviewAssignee = evaluation.id;
+      assigneeControl.append(assigneeInput);
       const reviewerControl = element("label", "claim-review-control");
-      reviewerControl.append(element("span", "", "검토자"));
+      reviewerControl.append(element("span", "", "기록자"));
       const reviewerInput = document.createElement("input");
       reviewerInput.type = "text";
       reviewerInput.maxLength = 120;
@@ -2655,6 +3043,7 @@ function renderClaimBoard(patient) {
       const reasonInput = document.createElement("textarea");
       reasonInput.maxLength = 800;
       reasonInput.rows = 2;
+      reasonInput.required = false;
       reasonInput.placeholder = "예: 외부 검사 결과 확인 필요";
       reasonInput.value = review.transitionReason || "";
       reasonInput.dataset.claimReviewReason = evaluation.id;
@@ -2692,12 +3081,17 @@ function renderClaimBoard(patient) {
       const applyReview = element("button", "clinical-button clinical-button--primary claim-review-apply", "검토 기록 저장");
       applyReview.type = "button";
       applyReview.dataset.claimReviewApply = evaluation.id;
-      reviewGrid.append(control, reviewerControl, reasonControl, opinionControl, outcomeControl, applyReview);
-      reviewPanel.append(reviewGrid);
+      const reviewMessage = element("p", "claim-review-message");
+      reviewMessage.dataset.claimReviewMessage = evaluation.id;
+      reviewMessage.setAttribute("role", "alert");
+      reviewMessage.setAttribute("aria-live", "assertive");
+      reviewMessage.hidden = true;
+      reviewGrid.append(control, assigneeControl, reviewerControl, reasonControl, opinionControl, outcomeControl, applyReview);
+      reviewPanel.append(reviewMessage, reviewGrid);
 
       const historyPanel = element("section", "claim-xai-section claim-xai-section--history");
       historyPanel.dataset.claimDetailSection = "history";
-      historyPanel.append(element("span", "claim-xai-section__step", "06"), element("h6", "", "검토 이력"));
+      historyPanel.append(element("span", "claim-xai-section__step", "07"), element("h6", "", "검토 이력"));
       const historyList = element("ol", "claim-review-history");
       const outcomeLabels = { approved: "승인", hold: "보류", exception: "예외 인정" };
       for (const item of [...(review.history || [])].reverse().slice(0, 10)) {
@@ -2705,7 +3099,7 @@ function renderClaimBoard(patient) {
         historyItem.append(
           element("time", "", displayTimestamp(item.at)),
           element("b", "", `${CLAIM_REVIEW_STAGE_LABELS[item.from] || item.from || "기록"} → ${CLAIM_REVIEW_STAGE_LABELS[item.to] || item.to || stage}`),
-          element("span", "", [item.reviewer, item.reason, outcomeLabels[item.outcome]].filter(Boolean).join(" · ")),
+          element("span", "", [item.assignee ? `담당 ${item.assignee}` : "", item.reviewer ? `기록 ${item.reviewer}` : "", item.reason, outcomeLabels[item.outcome]].filter(Boolean).join(" · ")),
         );
         historyList.append(historyItem);
       }
@@ -2714,23 +3108,38 @@ function renderClaimBoard(patient) {
 
       const detailBoundary = element("p", "claim-detail-boundary", "자동 규칙 판정 → 사람 검토 → 내부 최종 의견의 순서로 기록합니다. 실제 인정·조정·삭감은 보험자 또는 심사기관 결과 영역에서만 표시합니다.");
       detailBoundary.id = detailBoundaryId;
-      detailContent.append(judgment, ruleDetail, evidence, autoCalculation, reviewPanel, historyPanel, detailBoundary);
+      detailContent.append(judgment, ruleDetail, evidence, autoCalculation, actionPanel, reviewPanel, historyPanel, detailBoundary);
       details.append(detailHeader, detailContent);
       details.addEventListener("close", () => {
+        const closeReason = details.dataset.claimCloseReason || "";
+        delete details.dataset.claimCloseReason;
         summary.setAttribute("aria-expanded", "false");
         summary.setAttribute("aria-label", `${summary.dataset.claimDetailSummary} · 근거·세부정보 보기`);
         disclosure.textContent = "근거·세부정보 보기";
         card.dataset.claimDetailOpen = "false";
-        refs.claimBoardLive.textContent = `${evaluation.title}의 연결 차트 근거와 규칙 세부정보를 닫았습니다.`;
-        summary.focus({ preventScroll: true });
+        card.removeAttribute("aria-current");
+        if (closeReason !== "switch") {
+          activeClaimDetailId = "";
+          refs.claimReviewDetailHost.dataset.active = "false";
+          refs.claimReviewDetailHost.querySelector(".claim-review-detail-empty")?.removeAttribute("hidden");
+          refs.claimBoardLive.textContent = `${evaluation.title}의 연결 차트 근거와 규칙 세부정보를 닫았습니다.`;
+          summary.focus({ preventScroll: true });
+        }
       });
-      card.append(details);
+      refs.claimReviewDetailHost.append(details);
       cards.append(card);
     }
     if (!cards.childElementCount) cards.append(createEmptyMessage("카드를 여기에 놓을 수 있습니다.", "claim-empty"));
     lane.append(cards);
     refs.claimBoard.append(lane);
   }
+  if (activeClaimDetailId && claimEvaluationById.has(activeClaimDetailId)) {
+    requestAnimationFrame(() => openClaimReviewDetail(activeClaimDetailId, { inputMethod: "선택 유지", focus: false }));
+  } else {
+    activeClaimDetailId = "";
+    refs.claimReviewDetailHost.dataset.active = "false";
+  }
+  renderClaimSearch(patient, evaluations, diseaseClaimProfile);
 }
 
 function renderJourney(patient, brief) {
@@ -3348,6 +3757,8 @@ function clearPatientWorkspaceUi() {
     refs.bodyConditionList,
     refs.claimBoardKpis,
     refs.claimRuleTrust,
+    refs.claimSearchSummary,
+    refs.claimSearchResults,
     refs.claimAttentionSummary,
     refs.claimAttentionList,
     refs.claimAdjudicationSummary,
@@ -3361,10 +3772,18 @@ function clearPatientWorkspaceUi() {
     refs.diseaseAssessmentMeta,
     refs.claimResultSummary,
     refs.claimBoard,
+    refs.claimReviewDetailHost,
     refs.ruleVersionList,
     refs.clinicalJourney,
     refs.visitQuestions,
   ]) clear(node);
+  refs.claimSearch.value = "";
+  refs.claimSearchResults.hidden = true;
+  refs.claimSearchClear.hidden = true;
+  claimSearchIndex = [];
+  claimSearchEntryById = new Map();
+  claimAttentionById = new Map();
+  activeClaimDetailId = "";
 }
 
 function renderWorkspace() {
@@ -3758,6 +4177,7 @@ refs.patientSearch.addEventListener("input", renderPatients);
 refs.patientList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-patient-id]");
   if (!button) return;
+  const patientChanged = button.dataset.patientId !== state.selectedPatientId;
   if (refs.patientFormMode.value !== "create" && refs.patientFormMode.value !== button.dataset.patientId) {
     setStatus("현재 환자 정보 편집을 저장하거나 취소한 뒤 다른 환자를 선택하세요.", "error");
     return;
@@ -3780,6 +4200,7 @@ refs.patientList.addEventListener("click", async (event) => {
       viewedEncounterId = "";
       eventFilter = "all";
       activeTab = "encounter";
+      if (patientChanged) activeClaimDetailId = "";
       render();
       centerSelectedPatientCard(button.dataset.patientId);
     });
@@ -4304,6 +4725,7 @@ refs.ruleForm.addEventListener("submit", async (event) => {
       effectiveFrom: refs.ruleEffectiveFrom.value,
       effectiveTo: refs.ruleEffectiveTo.value,
       sourceLabel: refs.ruleSourceLabel.value,
+      sourceDocumentNumber: refs.ruleSourceDocumentNumber.value,
       sourceUrl: refs.ruleSourceUrl.value,
       sample: false,
     }), "기관 급여 규칙을 저장했습니다.");
@@ -4397,6 +4819,72 @@ for (const button of document.querySelectorAll("[data-board-scope]")) {
   });
 }
 
+function handleClaimAttentionOpen(event) {
+  const target = event.target.closest?.("[data-claim-work-item-open]");
+  if (!target) return;
+  const evaluationId = target.dataset.claimWorkItemOpen;
+  if (!claimAttentionById.has(evaluationId)) return;
+  openClaimWorkflowItem(evaluationId, { inputMethod: "청구 전 점검", focus: true });
+}
+
+refs.claimAttentionList.addEventListener("click", handleClaimAttentionOpen);
+refs.claimAttentionAllList.addEventListener("click", handleClaimAttentionOpen);
+
+function activateClaimSearchEntry(entry) {
+  const target = entry?.target || {};
+  if (target.targetType === "workflow") {
+    return openClaimWorkflowItem(target.evaluationId, { inputMethod: "통합 검색", focus: true });
+  }
+  if (target.targetType === "adjudication") {
+    const row = refs.claimAdjudicationList.querySelector(`[data-claim-adjudication-id="${CSS.escape(target.adjudicationId)}"]`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    row?.focus({ preventScroll: true });
+    return row;
+  }
+  if (target.targetType === "quality") {
+    selectDiseaseAssessment(target.diseaseId);
+    refs.diseaseQualityDisclosure.open = true;
+    const metric = refs.diseaseQualityMetrics.querySelector(`[data-quality-metric-id="${CSS.escape(target.metricId)}"]`);
+    if (metric) {
+      metric.open = true;
+      metric.scrollIntoView({ behavior: "smooth", block: "center" });
+      metric.querySelector("summary")?.focus({ preventScroll: true });
+      return metric;
+    }
+    refs.diseaseAssessmentPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    refs.diseaseAssessmentPanel.focus({ preventScroll: true });
+    return refs.diseaseAssessmentPanel;
+  }
+  if (target.targetType === "rule") {
+    const evaluation = [...claimEvaluationById.values()].find(({ ruleId }) => ruleId === target.ruleId);
+    if (evaluation) return openClaimWorkflowItem(evaluation.id, { inputMethod: "규칙 검색", focus: true });
+    const manager = byId("ruleVersionManager");
+    if (manager) manager.open = true;
+    const row = refs.ruleVersionList.querySelector(`[data-rule-version-row="${CSS.escape(target.ruleId)}"]`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return row;
+  }
+  return null;
+}
+
+refs.claimSearch.addEventListener("input", renderClaimSearchResults);
+refs.claimSearch.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  refs.claimSearch.value = "";
+  renderClaimSearchResults();
+});
+refs.claimSearchClear.addEventListener("click", () => {
+  refs.claimSearch.value = "";
+  renderClaimSearchResults();
+  refs.claimSearch.focus();
+});
+refs.claimSearchResults.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-claim-search-result]");
+  if (!button) return;
+  const entry = claimSearchEntryById.get(button.dataset.claimSearchResult);
+  if (entry) activateClaimSearchEntry(entry);
+});
+
 function selectDiseaseAssessment(diseaseId, { focus = false } = {}) {
   const patient = selectedPatient();
   if (!patient || !diseaseId) return;
@@ -4430,13 +4918,28 @@ refs.diseaseAssessmentTabs.addEventListener("keydown", (event) => {
   selectDiseaseAssessment(next.dataset.diseaseAssessmentId, { focus: true });
 });
 
-function openClaimReviewDetail(evaluationId, { targetStage = "", inputMethod = "카드 선택" } = {}) {
+function openClaimReviewDetail(evaluationId, { targetStage = "", inputMethod = "카드 선택", focus = true } = {}) {
   const card = refs.claimBoard.querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"]`);
   const toggle = card?.querySelector("[data-claim-detail-toggle]");
   const details = toggle ? document.getElementById(toggle.getAttribute("aria-controls")) : null;
   if (!toggle || !details || !card) return null;
-  if (!details.open) details.showModal();
+  for (const opened of refs.claimReviewDetailHost.querySelectorAll("dialog[open]")) {
+    if (opened === details) continue;
+    opened.dataset.claimCloseReason = "switch";
+    opened.close();
+  }
+  const isMobileDetail = claimDetailMediaQuery.matches;
+  if (!details.open) {
+    details.setAttribute("aria-modal", String(isMobileDetail));
+    if (isMobileDetail) details.showModal();
+    else details.show();
+  }
+  activeClaimDetailId = evaluationId;
+  refs.claimReviewDetailHost.dataset.active = "true";
+  refs.claimReviewDetailHost.querySelector(".claim-review-detail-empty")?.setAttribute("hidden", "");
   details.dataset.claimReviewInputMethod = inputMethod;
+  refs.claimBoard.querySelectorAll('[aria-current="true"]').forEach((node) => node.removeAttribute("aria-current"));
+  card.setAttribute("aria-current", "true");
   toggle.setAttribute("aria-expanded", "true");
   toggle.setAttribute("aria-label", `${toggle.dataset.claimDetailSummary} · 근거·세부정보 열림`);
   card.dataset.claimDetailOpen = "true";
@@ -4448,8 +4951,8 @@ function openClaimReviewDetail(evaluationId, { targetStage = "", inputMethod = "
       const outcome = details.querySelector("[data-claim-review-outcome]");
       if (outcome) outcome.disabled = targetStage !== "reviewed";
     }
-    details.querySelector("[data-claim-review-reason]")?.focus();
-  } else {
+    if (focus) details.querySelector("[data-claim-review-reason]")?.focus();
+  } else if (focus) {
     details.querySelector("[data-claim-detail-close]")?.focus();
   }
   const evaluation = claimEvaluationById.get(evaluationId);
@@ -4457,15 +4960,56 @@ function openClaimReviewDetail(evaluationId, { targetStage = "", inputMethod = "
   return details;
 }
 
-refs.claimBoard.addEventListener("click", async (event) => {
+function openClaimWorkflowItem(evaluationId, { inputMethod = "청구 전 점검", focus = true } = {}) {
+  if (!claimEvaluationById.has(evaluationId)) {
+    refs.claimBoardLive.textContent = "이 항목과 연결된 보험심사팀 업무 카드를 찾지 못했습니다.";
+    return null;
+  }
+  const workflow = byId("claimWorkflowDisclosure");
+  if (workflow) workflow.open = true;
+  const open = () => {
+    const card = refs.claimBoard.querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"]`);
+    if (!card) return null;
+    card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    return openClaimReviewDetail(evaluationId, { inputMethod, focus });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(open));
+  return evaluationId;
+}
+
+claimDetailMediaQuery.addEventListener("change", () => {
+  if (!activeClaimDetailId) return;
+  const details = refs.claimReviewDetailHost.querySelector("dialog[open]");
+  if (!details) return;
+  const evaluationId = activeClaimDetailId;
+  const focusedControl = details.contains(document.activeElement) ? document.activeElement : null;
+  details.dataset.claimCloseReason = "switch";
+  details.close();
+  requestAnimationFrame(() => {
+    if (activeClaimDetailId !== evaluationId || !claimEvaluationById.has(evaluationId)) return;
+    openClaimReviewDetail(evaluationId, { inputMethod: "화면 크기 전환", focus: false });
+    focusedControl?.focus({ preventScroll: true });
+  });
+});
+
+refs.claimReviewDetailHost.addEventListener("click", async (event) => {
   const applyReview = event.target.closest?.("[data-claim-review-apply]");
   if (applyReview) {
     const evaluationId = applyReview.dataset.claimReviewApply;
     const evaluation = claimEvaluationById.get(evaluationId);
     const details = applyReview.closest("dialog");
     if (!evaluation || !details) return;
+    const reviewMessage = details.querySelector("[data-claim-review-message]");
+    for (const control of details.querySelectorAll("[data-claim-review-assignee], [data-claim-review-reviewer], [data-claim-review-reason], [data-claim-review-outcome]")) {
+      control.setCustomValidity?.("");
+    }
+    if (reviewMessage) {
+      reviewMessage.hidden = true;
+      reviewMessage.textContent = "";
+    }
     const nextStage = details.querySelector("[data-claim-review-select]")?.value;
     const metadata = {
+      assignee: details.querySelector("[data-claim-review-assignee]")?.value,
       reviewer: details.querySelector("[data-claim-review-reviewer]")?.value,
       reason: details.querySelector("[data-claim-review-reason]")?.value,
       opinion: details.querySelector("[data-claim-review-opinion]")?.value,
@@ -4478,6 +5022,22 @@ refs.claimBoard.addEventListener("click", async (event) => {
       const message = error instanceof Error ? error.message : "검토 기록을 저장하지 못했습니다.";
       refs.claimBoardLive.textContent = message;
       setStatus(message, "error");
+      if (reviewMessage) {
+        reviewMessage.textContent = message;
+        reviewMessage.hidden = false;
+      }
+      const invalidControl = message.includes("담당자를")
+        ? details.querySelector("[data-claim-review-assignee]")
+        : message.includes("기록자")
+          ? details.querySelector("[data-claim-review-reviewer]")
+          : message.includes("이유")
+            ? details.querySelector("[data-claim-review-reason]")
+            : message.includes("승인·보류·예외")
+              ? details.querySelector("[data-claim-review-outcome]")
+              : null;
+      invalidControl?.setCustomValidity?.(message);
+      invalidControl?.focus?.({ preventScroll: true });
+      invalidControl?.reportValidity?.();
       applyReview.disabled = false;
     }
     return;
@@ -4487,6 +5047,9 @@ refs.claimBoard.addEventListener("click", async (event) => {
     close.closest("dialog")?.close();
     return;
   }
+});
+
+refs.claimBoard.addEventListener("click", (event) => {
   const toggle = event.target.closest?.("[data-claim-detail-toggle]");
   if (!toggle) return;
   const evaluationId = toggle.dataset.claimDetailToggle;
@@ -4549,15 +5112,30 @@ refs.claimBoard.addEventListener("drop", async (event) => {
 
 refs.claimBoard.addEventListener("dragend", clearClaimDragState);
 
-refs.claimBoard.addEventListener("change", (event) => {
+refs.claimReviewDetailHost.addEventListener("change", (event) => {
   const select = event.target.closest?.("[data-claim-review-select]");
   if (!select) return;
   const evaluationId = select.dataset.claimReviewSelect;
   const details = select.closest("dialog");
   const outcome = details?.querySelector(`[data-claim-review-outcome="${CSS.escape(evaluationId)}"]`);
+  const assignee = details?.querySelector(`[data-claim-review-assignee="${CSS.escape(evaluationId)}"]`);
+  const reason = details?.querySelector(`[data-claim-review-reason="${CSS.escape(evaluationId)}"]`);
   if (outcome) outcome.disabled = select.value !== "reviewed";
+  if (assignee) assignee.required = select.value !== "new";
+  if (reason) reason.required = select.value !== details.dataset.claimReviewCurrentStage;
   if (details) details.dataset.claimReviewInputMethod = "단계 선택";
-  refs.claimBoardLive.textContent = `${CLAIM_REVIEW_STAGE_LABELS[select.value]} 단계를 선택했습니다. 이동 사유와 검토자를 확인한 뒤 저장하세요.`;
+  refs.claimBoardLive.textContent = `${CLAIM_REVIEW_STAGE_LABELS[select.value]} 단계를 선택했습니다. 담당·이동 사유·기록자를 확인한 뒤 저장하세요.`;
+});
+
+refs.claimReviewDetailHost.addEventListener("input", (event) => {
+  const control = event.target.closest?.("[data-claim-review-assignee], [data-claim-review-reviewer], [data-claim-review-reason], [data-claim-review-outcome]");
+  if (!control) return;
+  control.setCustomValidity?.("");
+  const message = control.closest("dialog")?.querySelector("[data-claim-review-message]");
+  if (message) {
+    message.hidden = true;
+    message.textContent = "";
+  }
 });
 
 function loadDemo() {

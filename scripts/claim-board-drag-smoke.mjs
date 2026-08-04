@@ -33,10 +33,45 @@ await runBrowserSmoke({
     stored: localStorage.getItem('vitagraph-emr-v2'),
   })`);
   assert(creation.selectedName === "급여 검토 테스트", `Claim smoke patient was not created: ${JSON.stringify(creation)}`);
+  await evaluate(`(async () => {
+    const { appendPatientEvent, confirmPatientEvent } = await import('/emr-model.js');
+    let saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const patientId = saved.selectedPatientId;
+    const baseTime = Date.parse(saved.updatedAt) + 1000;
+    const date = new Date().toISOString().slice(0, 10);
+    saved = appendPatientEvent(saved, patientId, {
+      id: 'claim-smoke-hypertension',
+      type: 'condition',
+      system: 'urn:kr:kcd',
+      code: 'I10',
+      label: '고혈압',
+      date,
+      status: 'active',
+      clinicalStatus: 'active',
+      verificationStatus: 'confirmed',
+      source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
+    }, new Date(baseTime).toISOString());
+    saved = confirmPatientEvent(saved, patientId, 'claim-smoke-hypertension', new Date(baseTime + 1000).toISOString());
+    saved = appendPatientEvent(saved, patientId, {
+      id: 'claim-smoke-blood-pressure',
+      type: 'observation',
+      system: 'http://loinc.org',
+      code: '85354-9',
+      label: '혈압',
+      value: '128/78',
+      unit: 'mmHg',
+      date,
+      status: 'final',
+      source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
+    }, new Date(baseTime + 2000).toISOString());
+    saved = confirmPatientEvent(saved, patientId, 'claim-smoke-blood-pressure', new Date(baseTime + 3000).toISOString());
+    localStorage.setItem('vitagraph-emr-v2', JSON.stringify(saved));
+  })()`);
+  await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '급여 검토 테스트'");
   await evaluate("document.getElementById('tab-claims').click(); document.getElementById('claimWorkflowDisclosure').open = true");
   await waitFor(
-    "document.querySelectorAll('[data-claim-review-lane]').length === 4 && document.querySelectorAll('[data-claim-evaluation-id]').length === 3",
-    "Claim review board did not render four workflow lanes and three rule cards.",
+    "document.querySelectorAll('[data-claim-review-lane]').length === 4 && document.querySelectorAll('[data-claim-evaluation-id]').length === 1",
+    "Claim review board did not render four workflow lanes and the applicable rule card.",
   );
 
   const initial = await evaluate(`(() => {
@@ -54,14 +89,15 @@ await runBrowserSmoke({
       viewportWidth: innerWidth,
     };
   })()`);
-  assert(initial.summaryCounts.reduce((sum, count) => sum + count, 0) === 3, "Immutable rule summary does not contain all evaluations.");
-  assert(initial.laneCounts[0] === 3 && initial.laneCounts.slice(1).every((count) => count === 0), "Fresh cards are not in the manual unclassified lane.");
+  assert(initial.summaryCounts.reduce((sum, count) => sum + count, 0) === 1, "Immutable rule summary does not contain the applicable evaluation.");
+  assert(initial.laneCounts[0] === 1 && initial.laneCounts.slice(1).every((count) => count === 0), "Fresh card is not in the manual unclassified lane.");
   assert(Math.max(...initial.laneWidths) - Math.min(...initial.laneWidths) <= 2, `Desktop review lanes are not equal width: ${initial.laneWidths.join(', ')}`);
   assert(initial.documentWidth <= initial.viewportWidth, `Desktop claim board overflows the viewport: ${initial.documentWidth}/${initial.viewportWidth}`);
   const disclosure = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
     const toggle = card.querySelector('[data-claim-detail-toggle]');
-    const details = card.querySelector('.claim-card__details');
+    const details = document.getElementById(toggle.getAttribute('aria-controls'));
+    const host = document.getElementById('claimReviewDetailHost');
     const before = {
       expanded: toggle.getAttribute('aria-expanded'),
       open: details.open,
@@ -76,8 +112,13 @@ await runBrowserSmoke({
       regionRole: details.getAttribute('role'),
       ariaModal: details.getAttribute('aria-modal'),
       labelledBy: details.getAttribute('aria-labelledby'),
+      calculationHeading: details.querySelector('[data-claim-detail-section="timeline"] h6')?.textContent,
       calculation: details.querySelector('.claim-auto-calculation')?.textContent,
+      evidenceHeading: details.querySelector('[data-claim-detail-section="evidence"] h6')?.textContent,
       evidence: details.querySelector('.claim-evidence')?.textContent,
+      inPersistentHost: details.parentElement === host,
+      hostActive: host.dataset.active,
+      hostPosition: getComputedStyle(host).position,
       live: document.getElementById('claimBoardLive')?.textContent,
     };
     toggle.click();
@@ -92,12 +133,16 @@ await runBrowserSmoke({
   assert(disclosure.after.expanded === "true"
     && disclosure.after.open === true
     && disclosure.after.regionRole === "dialog"
-    && disclosure.after.ariaModal === "true"
+    && disclosure.after.ariaModal === "false"
     && Boolean(disclosure.after.labelledBy)
-    && /EMR 기간·횟수 자동 계산/.test(disclosure.after.calculation ?? "")
+    && disclosure.after.calculationHeading === "시간·횟수 계산"
     && /시행 횟수|기간·횟수 미집계/.test(disclosure.after.calculation ?? "")
-    && /연결 차트 근거/.test(disclosure.after.evidence ?? "")
-    && /세부정보를 열었습니다/.test(disclosure.after.live ?? ""),
+    && disclosure.after.evidenceHeading === "EMR에서 확인한 사실"
+    && /확정 차트 근거|확인되지 않은 후보/.test(disclosure.after.evidence ?? "")
+    && disclosure.after.inPersistentHost === true
+    && disclosure.after.hostActive === "true"
+    && disclosure.after.hostPosition === "sticky"
+    && /자동 판정 근거.*담당자 검토 기록을 열었습니다/.test(disclosure.after.live ?? ""),
   `Claim evidence disclosure was not accessible or complete: ${JSON.stringify(disclosure)}`);
   await evaluate("document.getElementById('claimBoardTitle').scrollIntoView({ block: 'start' })");
   const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -114,8 +159,49 @@ await runBrowserSmoke({
     card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: transfer }));
   })()`);
   await waitFor(
+    `(() => {
+      const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+      const details = document.getElementById(card?.querySelector('[data-claim-detail-toggle]')?.getAttribute('aria-controls'));
+      return card?.closest('[data-claim-review-lane]')?.dataset.claimReviewLane === 'new'
+        && details?.open === true
+        && details?.querySelector('[data-claim-review-select]')?.value === 'evidence';
+    })()`,
+    "Drag-and-drop did not stage evidence reconciliation in the persistent detail panel.",
+  );
+
+  const stagedDrag = await evaluate(`(() => {
+    const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+    const details = document.getElementById(card.querySelector('[data-claim-detail-toggle]').getAttribute('aria-controls'));
+    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
+    return {
+      computedStatus: card.dataset.status,
+      renderedLane: card.closest('[data-claim-review-lane]')?.dataset.claimReviewLane,
+      selectedStage: details.querySelector('[data-claim-review-select]').value,
+      detailInHost: details.parentElement?.id === 'claimReviewDetailHost',
+      hostActive: document.getElementById('claimReviewDetailHost')?.dataset.active,
+      live: document.getElementById('claimBoardLive').textContent,
+      summaryCounts: [...document.querySelectorAll('.claim-result-chip b')].map((node) => Number(node.textContent)),
+      durableStage: review?.stage,
+    };
+  })()`);
+  assert(stagedDrag.computedStatus === initial.computedStatus, "Staging a drag changed the calculated reimbursement result.");
+  assert(stagedDrag.renderedLane === "new" && stagedDrag.selectedStage === "evidence", "Drag did not remain in the current lane while staging its target in the detail panel.");
+  assert(stagedDrag.detailInHost === true && stagedDrag.hostActive === "true", "Drag did not open the right persistent detail panel.");
+  assert(JSON.stringify(stagedDrag.summaryCounts) === JSON.stringify(initial.summaryCounts), "Staging a drag changed the immutable rule summary.");
+  assert(stagedDrag.durableStage === undefined, "Drag persisted a review stage before the required human fields were saved.");
+
+  await evaluate(`(() => {
+    const details = document.querySelector('#claimReviewDetailHost dialog[open]');
+    details.querySelector('[data-claim-review-assignee="${initial.cardId}"]').value = '김심사';
+    details.querySelector('[data-claim-review-reviewer="${initial.cardId}"]').value = '이검토';
+    details.querySelector('[data-claim-review-reason="${initial.cardId}"]').value = '외부 검사 결과와 기간 기준 확인';
+    details.querySelector('[data-claim-review-opinion="${initial.cardId}"]').value = '자료 확인 단계로 배정';
+    details.querySelector('[data-claim-review-apply="${initial.cardId}"]').click();
+  })()`);
+  await waitFor(
     `document.querySelector('[data-claim-review-lane="evidence"] [data-claim-evaluation-id="${initial.cardId}"]') !== null`,
-    "Drag-and-drop did not move the review card to evidence reconciliation.",
+    "Saving the staged drag did not move the review card to evidence reconciliation.",
   );
 
   const afterDrag = await evaluate(`(() => {
@@ -125,25 +211,27 @@ await runBrowserSmoke({
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       computedStatus: card.dataset.status,
-      selectedStage: card.querySelector('[data-claim-review-select]').value,
+      renderedLane: card.closest('[data-claim-review-lane]')?.dataset.claimReviewLane,
       live: document.getElementById('claimBoardLive').textContent,
       summaryCounts: [...document.querySelectorAll('.claim-result-chip b')].map((node) => Number(node.textContent)),
       auditAction: audit.action,
       auditDetail: audit.detail,
       auditEntityId: audit.entityId,
       durableStage: review?.stage,
+      durableAssignee: review?.assignee,
+      durableReviewer: review?.reviewer,
       durableCalculatedStatus: review?.calculatedStatus,
       durableAsOf: review?.calculatedAsOf,
       fingerprintLength: review?.fingerprint?.length ?? 0,
     };
   })()`);
-  assert(afterDrag.computedStatus === initial.computedStatus, "Dragging changed the calculated reimbursement result.");
-  assert(afterDrag.selectedStage === "evidence", "Dragged card control does not reflect its review stage.");
-  assert(JSON.stringify(afterDrag.summaryCounts) === JSON.stringify(initial.summaryCounts), "Dragging changed the immutable rule summary.");
-  assert(afterDrag.auditAction === "claim-review.stage.evidence" && afterDrag.auditEntityId === initial.cardId, "Review drag was not audited against the evaluation.");
+  assert(afterDrag.computedStatus === initial.computedStatus, "Saving the drag review changed the calculated reimbursement result.");
+  assert(afterDrag.renderedLane === "evidence", "Saved drag review does not render in evidence reconciliation.");
+  assert(JSON.stringify(afterDrag.summaryCounts) === JSON.stringify(initial.summaryCounts), "Saving the drag review changed the immutable rule summary.");
+  assert(afterDrag.auditAction === "claim-review.stage.evidence" && afterDrag.auditEntityId === initial.cardId, "Saved drag review was not audited against the evaluation.");
   assert(/규칙 판정 .* 유지/.test(afterDrag.auditDetail), "Review audit does not state that the calculated result was preserved.");
   assert(/자동 규칙 판정 .*변경되지 않았습니다/.test(afterDrag.live), "Assistive live status does not explain the safe move semantics.");
-  assert(afterDrag.durableStage === "evidence", "Review drag was not persisted independently of the audit log.");
+  assert(afterDrag.durableStage === "evidence" && afterDrag.durableAssignee === "김심사" && afterDrag.durableReviewer === "이검토", "Saved drag review did not persist the stage, assignee, and reviewer together.");
   assert(afterDrag.durableCalculatedStatus === initial.computedStatus && afterDrag.fingerprintLength > 0, "Durable review state did not bind the stage to its calculated result fingerprint.");
 
   const auditRollover = await evaluate(`(async () => {
@@ -176,6 +264,21 @@ await runBrowserSmoke({
     `document.querySelector('[data-claim-review-lane="evidence"] [data-claim-evaluation-id="${initial.cardId}"]') !== null`,
     "Review stage did not persist through a reload.",
   );
+  const reloadedAssignment = await evaluate(`(() => {
+    const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+    const details = document.getElementById(card.querySelector('[data-claim-detail-toggle]').getAttribute('aria-controls'));
+    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
+    return {
+      owner: card.querySelector('.claim-card__owner')?.textContent,
+      assigneeInput: details.querySelector('[data-claim-review-assignee]')?.value,
+      durableAssignee: review?.assignee,
+    };
+  })()`);
+  assert(reloadedAssignment.durableAssignee === "김심사"
+    && reloadedAssignment.assigneeInput === "김심사"
+    && /김심사/.test(reloadedAssignment.owner ?? ""),
+  `Assignee did not persist into the reloaded card and detail panel: ${JSON.stringify(reloadedAssignment)}`);
 
   const selectSelector = `[data-claim-review-select="${initial.cardId}"]`;
   await evaluate(`document.querySelector('[data-claim-detail-toggle="${initial.cardId}"]').click()`);
@@ -185,9 +288,32 @@ await runBrowserSmoke({
     select.value = 'reviewing';
     select.dispatchEvent(new Event('change', { bubbles: true }));
   })()`);
+  const stagedKeyboard = await evaluate(`(() => {
+    const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
+    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
+    return {
+      renderedLane: card.closest('[data-claim-review-lane]')?.dataset.claimReviewLane,
+      selectedStage: document.querySelector(${JSON.stringify(selectSelector)})?.value,
+      durableStage: review?.stage,
+      live: document.getElementById('claimBoardLive')?.textContent,
+    };
+  })()`);
+  assert(stagedKeyboard.renderedLane === "evidence"
+    && stagedKeyboard.selectedStage === "reviewing"
+    && stagedKeyboard.durableStage === "evidence",
+  `Keyboard stage selection persisted before save: ${JSON.stringify(stagedKeyboard)}`);
+  assert(/담당.*이동 사유.*기록자.*저장/.test(stagedKeyboard.live ?? ""), "Keyboard stage selection did not announce the required human fields and save step.");
+  await evaluate(`(() => {
+    const details = document.querySelector('#claimReviewDetailHost dialog[open]');
+    details.querySelector('[data-claim-review-assignee="${initial.cardId}"]').value = '김심사';
+    details.querySelector('[data-claim-review-reviewer="${initial.cardId}"]').value = '이검토';
+    details.querySelector('[data-claim-review-reason="${initial.cardId}"]').value = '자료 확인 완료 후 담당자 검토';
+    details.querySelector('[data-claim-review-apply="${initial.cardId}"]').click();
+  })()`);
   await waitFor(
     `document.querySelector('[data-claim-review-lane="reviewing"] [data-claim-evaluation-id="${initial.cardId}"]') !== null`,
-    "Keyboard-compatible stage control did not move the card.",
+    "Saving the keyboard-selected stage did not move the card.",
   );
 
   const beforeStale = await evaluate(`(() => {
@@ -195,11 +321,12 @@ await runBrowserSmoke({
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       durableStage: review?.stage,
+      durableAssignee: review?.assignee,
       calculatedStatus: review?.calculatedStatus,
       invalidationCount: saved.audit.filter((item) => item.action === 'claim-review.invalidated' && item.entityId === '${initial.cardId}').length,
     };
   })()`);
-  assert(beforeStale.durableStage === "reviewing" && beforeStale.calculatedStatus === initial.computedStatus, "Keyboard move did not update the durable review record safely.");
+  assert(beforeStale.durableStage === "reviewing" && beforeStale.durableAssignee === "김심사" && beforeStale.calculatedStatus === initial.computedStatus, "Keyboard save did not update the durable review and assignee safely.");
 
   const changedComputation = await evaluate(`(async () => {
     const { appendPatientEvent, confirmPatientEvent } = await import('/emr-model.js');
@@ -256,7 +383,7 @@ await runBrowserSmoke({
       computedStatus: card?.dataset.status,
       stale: card?.dataset.claimReviewStale,
       warning: card?.querySelector('.claim-review-stale')?.textContent,
-      renderedStage: card?.querySelector('[data-claim-review-select]')?.value,
+      renderedStage: document.querySelector('[data-claim-review-select="${initial.cardId}"]')?.value,
       storedStage: review?.stage,
       auditLength: saved.audit.length,
       invalidationCount: saved.audit.filter((item) => item.action === 'claim-review.invalidated' && item.entityId === '${initial.cardId}').length,
@@ -267,13 +394,19 @@ await runBrowserSmoke({
   assert(staleView.storedStage === "reviewing" && staleView.invalidationCount === beforeStale.invalidationCount, "Pure board rendering mutated or audited the durable stale review.");
 
   await evaluate(`(() => {
+    document.querySelector('[data-claim-detail-toggle="${initial.cardId}"]').click();
     const select = document.querySelector('[data-claim-review-select="${initial.cardId}"]');
     select.value = 'evidence';
     select.dispatchEvent(new Event('change', { bubbles: true }));
+    const details = select.closest('dialog');
+    details.querySelector('[data-claim-review-assignee="${initial.cardId}"]').value = '김심사';
+    details.querySelector('[data-claim-review-reviewer="${initial.cardId}"]').value = '이검토';
+    details.querySelector('[data-claim-review-reason="${initial.cardId}"]').value = '변경된 임상 근거 재확인';
+    details.querySelector('[data-claim-review-apply="${initial.cardId}"]').click();
   })()`);
   await waitFor(
     `document.querySelector('[data-claim-review-lane="evidence"] [data-claim-evaluation-id="${initial.cardId}"][data-claim-review-stale="false"]') !== null`,
-    "Explicit re-review did not persist a fresh evidence-reconciliation stage.",
+    "Saving explicit re-review did not persist a fresh evidence-reconciliation stage.",
   );
 
   const staleRecovery = await evaluate(`(() => {
@@ -284,6 +417,7 @@ await runBrowserSmoke({
     return {
       computedStatus: card?.dataset.status,
       durableStage: review?.stage,
+      durableAssignee: review?.assignee,
       invalidatedAt: review?.invalidatedAt,
       invalidatedFrom: review?.invalidatedFrom,
       invalidationCount: relevantAudit.filter((item) => item.action === 'claim-review.invalidated').length,
@@ -292,15 +426,15 @@ await runBrowserSmoke({
     };
   })()`);
   assert(staleRecovery.computedStatus === staleView.computedStatus, "Manual stale-review recovery changed the calculated reimbursement result.");
-  assert(staleRecovery.durableStage === "evidence" && !staleRecovery.invalidatedAt && !staleRecovery.invalidatedFrom, "Fresh review stage did not replace the invalidated durable record cleanly.");
+  assert(staleRecovery.durableStage === "evidence" && staleRecovery.durableAssignee === "김심사" && !staleRecovery.invalidatedAt && !staleRecovery.invalidatedFrom, "Fresh review stage and assignee did not replace the invalidated durable record cleanly.");
   assert(staleRecovery.invalidationCount === beforeStale.invalidationCount + 1, "Stale review invalidation was not audited exactly once.");
   assert(JSON.stringify(staleRecovery.lastActions) === JSON.stringify(["claim-review.invalidated", "claim-review.stage.evidence"]), "Stale recovery audit ordering is unclear.");
   assert(/이전 검토.*무효화/.test(staleRecovery.live ?? ""), "Assistive live status does not explain stale review invalidation.");
 
   const responsive = [];
   for (const viewport of [
-    { width: 768, height: 1024, mobile: false, columns: 2 },
-    { width: 1600, height: 900, mobile: false, columns: 4 },
+    { width: 768, height: 1024, mobile: false, columns: 1 },
+    { width: 1600, height: 900, mobile: false, columns: 2 },
   ]) {
     await setViewport(viewport);
     const geometry = await evaluate(`(() => ({
@@ -318,19 +452,25 @@ await runBrowserSmoke({
     const lanes = [...document.querySelectorAll('[data-claim-review-lane]')];
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
     const toggle = card.querySelector('[data-claim-detail-toggle]');
-    if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
-    const select = card.querySelector('[data-claim-review-select]');
+    const details = document.getElementById(toggle.getAttribute('aria-controls'));
+    if (details.open) details.close();
+    toggle.click();
+    const select = details.querySelector('[data-claim-review-select]');
     const handle = document.querySelector('.claim-drag-handle');
     return {
       laneCount: lanes.length,
       laneColumns: getComputedStyle(document.getElementById('claimBoard')).gridTemplateColumns.split(' ').length,
       selectHeight: select.getBoundingClientRect().height,
+      detailOpen: details.open,
+      detailAriaModal: details.getAttribute('aria-modal'),
+      detailInHost: details.parentElement?.id === 'claimReviewDetailHost',
       handleDisplay: getComputedStyle(handle).display,
       documentWidth: document.documentElement.scrollWidth,
       viewportWidth: innerWidth,
     };
   })()`);
   assert(mobile.laneCount === 4 && mobile.laneColumns === 1, "Mobile review board is not a single-column four-stage flow.");
+  assert(mobile.detailOpen === true && mobile.detailAriaModal === "true" && mobile.detailInHost === true, "Mobile did not reopen the shared right-panel detail as a modal drawer.");
   assert(mobile.selectHeight >= 44 && mobile.handleDisplay === "none", "Mobile does not expose the 44px stage fallback while suppressing the drag cue.");
   assert(mobile.documentWidth <= mobile.viewportWidth, `Mobile claim board overflows the viewport: ${mobile.documentWidth}/${mobile.viewportWidth}`);
 
@@ -340,8 +480,10 @@ await runBrowserSmoke({
     automaticResultPreserved: true,
     dragAndDrop: true,
     keyboardAndMobileStageControl: true,
+    stagedBeforeHumanSave: { drag: stagedDrag, keyboard: stagedKeyboard },
     localPersistence: true,
     auditTrail: true,
+    reloadedAssignment,
     durableAcrossAuditRollover: auditRollover,
     staleInvalidation: { beforeStale, changedComputation, staleView, staleRecovery },
     screenshot: screenshotPath,

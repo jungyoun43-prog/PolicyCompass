@@ -310,6 +310,28 @@ test("프로필 청구 line은 상태 규칙에 없더라도 안전한 식별자
     () => setClaimReviewStage(reloaded, malformedQuantity, "reviewing", "검토", "2026-08-04T04:01:30.000Z", { reviewer: "김배정" }),
     /청구 수량이 유효하지 않습니다/,
   );
+
+  const dottedClaimItem = structuredClone(evaluation);
+  dottedClaimItem.claimContext.claimItemId = "claim.line.with.dots";
+  dottedClaimItem.sourceId = `copd.${dottedClaimItem.claimContext.claimItemId}`;
+  dottedClaimItem.ruleId = `profile:${dottedClaimItem.sourceId}`;
+  dottedClaimItem.rule.id = dottedClaimItem.ruleId;
+  dottedClaimItem.rule.ruleSetId = dottedClaimItem.ruleId;
+  dottedClaimItem.id = `${patient.id}:profile:${dottedClaimItem.sourceId}`;
+  assert.doesNotThrow(() => claimEvaluationFingerprint(dottedClaimItem, patient));
+
+  const ambiguousAssessment = structuredClone(evaluation);
+  ambiguousAssessment.claimContext.assessmentId = "copd.v2";
+  ambiguousAssessment.sourceId = `copd.v2.${ambiguousAssessment.claimContext.claimItemId}`;
+  ambiguousAssessment.ruleId = `profile:${ambiguousAssessment.sourceId}`;
+  ambiguousAssessment.rule.id = ambiguousAssessment.ruleId;
+  ambiguousAssessment.rule.ruleSetId = ambiguousAssessment.ruleId;
+  ambiguousAssessment.id = `${patient.id}:profile:${ambiguousAssessment.sourceId}`;
+  assert.throws(
+    () => claimEvaluationFingerprint(ambiguousAssessment, patient),
+    /질환 평가 식별자가 유효하지 않습니다/,
+  );
+
   const reconciled = reconcileClaimReviews(reloaded, [changedDecision], "2026-08-04T04:02:00.000Z");
   assert.equal(reconciled.claimReviews[0].stage, "new");
   assert.equal(reconciled.claimReviews[0].history.at(-1).assignee, "이심사");

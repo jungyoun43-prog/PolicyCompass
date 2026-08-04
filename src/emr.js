@@ -1672,7 +1672,6 @@ function appendClaimAttentionEntry(container, entry) {
   itemSummary.append(
     icon,
     identity,
-    element("span", "claim-attention-item__reason", presentation.reason),
     element("span", "claim-attention-item__status", presentation.label),
   );
   const content = element("div", "claim-attention-item__content");
@@ -2230,32 +2229,6 @@ function renderClaimBoard(patient) {
         summary.append(stale);
       }
       if (boardScope === "all") summary.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
-      if (evaluation.missingEvidence.length) {
-        summary.append(element("span", "claim-missing", "보완 확인 · " + evaluation.missingEvidence.join(", ")));
-      }
-      const facts = element("span", "claim-facts");
-      if (!evaluation.calculationAvailable) {
-        facts.append(
-          element("span", "", "EMR 자동 집계 · 기간·횟수 미집계"),
-          element("span", "", `판정 제외 · ${evaluation.explanation}`),
-        );
-      } else {
-        facts.append(
-          element("span", "", `EMR 자동 집계 · 최근 ${evaluation.rule.windowDays}일 · 차트 시행 ${evaluation.usedCount}/${evaluation.rule.maxCount}회`),
-          element(
-            "span",
-            "",
-            evaluation.nextEligibleDate
-              ? `다음 기준일 ${evaluation.nextEligibleDate}`
-              : evaluation.usedCount > 0
-                ? `구간 내 마지막 시행 ${evaluation.lastServiceDate} · ${evaluation.daysSinceLastService}일 전`
-                : evaluation.lastServiceDate
-                  ? `구간 밖 마지막 시행 ${evaluation.lastServiceDate} · 현재 구간 0/${evaluation.rule.maxCount}회`
-                  : `차트 시행 기록 없음 · 남은 기준 ${evaluation.remainingCount}회`,
-          ),
-        );
-      }
-      summary.append(facts);
       const disclosure = element("span", "claim-card__disclosure");
       disclosure.dataset.claimDetailLabel = "";
       disclosure.textContent = "근거·세부정보 보기";
@@ -2324,6 +2297,13 @@ function renderClaimBoard(patient) {
             : "규칙 적용 조건이 충족된 경우에만 기간과 횟수를 계산합니다.",
         ),
       );
+      if (evaluation.missingEvidence.length) {
+        autoCalculation.append(element(
+          "p",
+          "claim-auto-calculation__missing",
+          `보완 확인 · ${evaluation.missingEvidence.join(", ")}`,
+        ));
+      }
       const evidence = element("section", "claim-evidence");
       evidence.append(element("b", "", "연결 차트 근거"));
       if (evidenceEvents.length) {

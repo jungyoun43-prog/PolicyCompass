@@ -98,10 +98,16 @@ test("반응형 평가 패널은 좁은 화면에서 1열이며 새 모듈을 �
 });
 
 test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 읽힌다", () => {
+  const claimsWorkbenchCss = css.slice(css.indexOf("/* Claims workbench:"));
   assert.match(css, /EMR review hierarchy/);
   assert.match(css, /\.claim-attention-summary__content > strong\s*\{[\s\S]*?font-size:\s*1\.05rem/);
   assert.match(css, /\.quality-program-score b\s*\{[\s\S]*?font-size:\s*1\.35rem/);
   assert.match(css, /\.quality-diagnostic-panel__label b\s*\{[\s\S]*?font-size:\s*0\.9rem/);
   assert.match(css, /\.claim-workflow-disclosure > summary b\s*\{[\s\S]*?font-size:\s*0\.95rem/);
-  assert.match(css, /@media \(max-width: 520px\)[\s\S]*?\.claim-attention-item__reason\s*\{[\s\S]*?grid-row:\s*2/);
+  assert.match(html, /항목과 현재 판정만 먼저 보고/);
+  assert.doesNotMatch(js, /claim-attention-item__reason/);
+  assert.doesNotMatch(claimsWorkbenchCss, /border-left:\s*3px|box-shadow:\s*inset 3px/);
+  assert.match(claimsWorkbenchCss, /\.claim-attention-list > li,[\s\S]*?background:\s*linear-gradient/);
+  assert.match(claimsWorkbenchCss, /\.claim-attention-item__content\s*\{[\s\S]*?background:\s*linear-gradient/);
+  assert.match(claimsWorkbenchCss, /\.quality-program-metric__detail\s*\{[\s\S]*?background:\s*linear-gradient/);
 });

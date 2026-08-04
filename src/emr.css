@@ -3382,8 +3382,10 @@ body.emr-page {
 .quality-evidence-list li {
   display: grid;
   gap: 3px;
-  border-left: 3px solid color-mix(in srgb, var(--data-cyan) 36%, var(--line));
-  padding-left: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  border-radius: 8px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 6%, var(--surface)), var(--surface) 78%);
+  padding: var(--space-2);
 }
 
 .quality-detail-list b,
@@ -4091,6 +4093,7 @@ body.emr-page {
   grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
   gap: var(--space-4);
   overflow: auto;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
   padding: var(--space-5);
 }
 
@@ -4154,6 +4157,15 @@ body.emr-page {
   color: var(--ink);
 }
 
+.claim-auto-calculation > .claim-auto-calculation__missing {
+  border: 1px solid color-mix(in srgb, var(--data-amber) 24%, var(--line));
+  border-radius: 8px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-amber) 9%, var(--surface)), var(--surface) 85%);
+  padding: var(--space-2) var(--space-3);
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
+  font-weight: 720;
+}
+
 .claim-evidence {
   display: grid;
   gap: var(--space-2);
@@ -4184,13 +4196,15 @@ body.emr-page {
 
 .claim-evidence span {
   display: block;
-  border-left: 2px solid color-mix(in srgb, var(--data-cyan) 42%, var(--line));
-  padding-left: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  border-radius: 7px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 6%, var(--surface)), var(--surface) 82%);
+  padding: var(--space-2);
   overflow-wrap: anywhere;
 }
 
 .claim-evidence .claim-evidence__empty {
-  border-left-color: var(--line-strong);
+  border-color: var(--line-strong);
   color: var(--muted);
 }
 
@@ -4198,22 +4212,6 @@ body.emr-page {
   border-radius: 8px;
   background: color-mix(in srgb, var(--data-amber) 8%, var(--surface-soft));
   padding: var(--space-2);
-}
-
-.claim-facts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-
-.claim-facts span {
-  border-radius: 8px;
-  background: var(--surface-soft);
-  padding: var(--space-1) var(--space-2);
-  color: var(--muted);
-  font-size: 0.61rem;
-  line-height: 1.45;
 }
 
 .claim-source {
@@ -4591,7 +4589,6 @@ body.emr-page {
   .claim-evidence,
   .claim-rule-version,
   .claim-manual-note,
-  .claim-facts span,
   .claim-source,
   .claim-empty,
   .rule-composer summary small,
@@ -4654,10 +4651,10 @@ body.emr-page {
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-2);
   align-items: start;
-  border-left: 3px solid color-mix(in srgb, var(--data-amber) 70%, var(--line));
-  border-radius: 0;
-  background: transparent;
-  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--data-amber) 24%, var(--line));
+  border-radius: 9px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-amber) 9%, var(--surface)), var(--surface) 82%);
+  padding: var(--space-3) var(--space-4);
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.55;
@@ -4788,7 +4785,7 @@ body.emr-page {
 .claim-attention-column-head,
 .claim-attention-item__disclosure > summary {
   display: grid;
-  grid-template-columns: 28px minmax(112px, 0.72fr) minmax(150px, 1fr) auto 18px;
+  grid-template-columns: 28px minmax(0, 1fr) auto 18px;
   gap: var(--space-3);
   align-items: center;
 }
@@ -4802,7 +4799,7 @@ body.emr-page {
   letter-spacing: 0.04em;
 }
 
-.claim-attention-column-head span:nth-child(4) {
+.claim-attention-column-head span:nth-child(3) {
   text-align: right;
 }
 
@@ -4819,9 +4816,14 @@ body.emr-page {
   border: 0;
   border-bottom: 1px solid var(--claim-row-divider);
   border-radius: 0;
-  background: var(--surface);
+  background: linear-gradient(
+    112deg,
+    color-mix(in srgb, var(--claim-attention-tone) 10%, var(--surface)) 0%,
+    color-mix(in srgb, var(--claim-attention-tone) 5%, var(--surface)) 52%,
+    var(--surface) 100%
+  );
   padding: 0;
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--claim-attention-tone) 72%, var(--line));
+  box-shadow: none;
 }
 
 .claim-attention-list > li:last-child {
@@ -4834,7 +4836,11 @@ body.emr-page {
 }
 
 .claim-attention-item__disclosure > summary:hover {
-  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  background: linear-gradient(112deg, color-mix(in srgb, var(--claim-attention-tone) 14%, var(--surface)), color-mix(in srgb, var(--claim-attention-tone) 6%, var(--surface)) 68%, var(--surface));
+}
+
+.claim-attention-item__disclosure[open] > summary {
+  background: linear-gradient(112deg, color-mix(in srgb, var(--claim-attention-tone) 14%, var(--surface)), color-mix(in srgb, var(--claim-attention-tone) 7%, var(--surface)) 68%, var(--surface));
 }
 
 .claim-attention-item__mark {
@@ -4867,19 +4873,6 @@ body.emr-page {
   font-size: 0.61rem;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.claim-attention-item__reason {
-  display: -webkit-box;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.71rem;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-  word-break: keep-all;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .claim-attention-item__status {
@@ -4919,9 +4912,9 @@ body.emr-page {
 
 .claim-attention-item__content {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
-  border-top: 1px solid var(--claim-row-divider);
-  background: var(--surface-soft);
+  gap: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--claim-attention-tone) 28%, var(--claim-row-divider));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ink) 7%, var(--surface)) 0%, color-mix(in srgb, var(--claim-attention-tone) 10%, var(--surface)) 100%);
   padding: var(--space-4) var(--space-5) var(--space-4) calc(28px + var(--space-6));
 }
 
@@ -4930,11 +4923,14 @@ body.emr-page {
   min-width: 0;
   align-content: start;
   gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 18%, var(--line));
+  border-radius: 8px;
+  background: var(--surface);
+  padding: var(--space-3);
 }
 
 .claim-attention-item__detail--boundary {
-  border-left: 1px solid var(--claim-row-divider);
-  padding-left: var(--space-5);
+  padding: var(--space-3);
 }
 
 .claim-attention-item__detail b {
@@ -5082,10 +5078,9 @@ body.emr-page {
 }
 
 .quality-program-summary {
-  border-color: var(--claim-row-divider);
-  border-left: 3px solid color-mix(in srgb, var(--data-cyan) 68%, var(--line));
+  border-color: color-mix(in srgb, var(--data-cyan) 24%, var(--claim-row-divider));
   border-radius: var(--claim-row-radius);
-  background: var(--surface);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 10%, var(--surface)), color-mix(in srgb, var(--data-cyan) 4%, var(--surface)) 58%, var(--surface));
   padding: var(--space-4);
 }
 
@@ -5156,7 +5151,7 @@ body.emr-page {
   border: 0;
   border-bottom: 1px solid var(--claim-row-divider);
   border-radius: 0;
-  background: var(--surface);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--quality-tone) 9%, var(--surface)), color-mix(in srgb, var(--quality-tone) 3%, var(--surface)) 72%, var(--surface));
 }
 
 .quality-program-metrics > .quality-program-metric:last-child {
@@ -5169,7 +5164,11 @@ body.emr-page {
 }
 
 .quality-program-metric__summary:hover {
-  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  background: color-mix(in srgb, var(--quality-tone) 10%, var(--surface));
+}
+
+.quality-program-metric[open] > .quality-program-metric__summary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--quality-tone) 14%, var(--surface)), color-mix(in srgb, var(--quality-tone) 7%, var(--surface)) 80%);
 }
 
 .quality-program-metric__mark {
@@ -5186,13 +5185,17 @@ body.emr-page {
 }
 
 .quality-program-metric__detail {
-  border-top-color: var(--claim-row-divider);
-  background: var(--surface-soft);
+  border-top-color: color-mix(in srgb, var(--quality-tone) 30%, var(--claim-row-divider));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--quality-tone) 10%, var(--surface)));
 }
 
 .claim-overview-disclosure__body {
-  border-top-color: var(--claim-row-divider);
-  background: var(--surface-soft);
+  border-top-color: color-mix(in srgb, var(--data-cyan) 24%, var(--claim-row-divider));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--data-cyan) 8%, var(--surface)));
+}
+
+.claim-overview-disclosure[open] > summary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 10%, var(--surface)), color-mix(in srgb, var(--data-cyan) 4%, var(--surface)) 78%);
 }
 
 .quality-diagnostic-panel {
@@ -5209,8 +5212,12 @@ body.emr-page {
 }
 
 .quality-diagnostic-panel__body {
-  border-top-color: var(--claim-row-divider);
-  background: var(--surface-soft);
+  border-top-color: color-mix(in srgb, var(--data-violet) 26%, var(--claim-row-divider));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--data-violet) 9%, var(--surface)));
+}
+
+.quality-diagnostic-panel[open] > summary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-violet) 11%, var(--surface)), color-mix(in srgb, var(--data-violet) 4%, var(--surface)) 78%);
 }
 
 .quality-diagnostic-summary,
@@ -5240,10 +5247,9 @@ body.emr-page {
 }
 
 .claim-result-chip {
-  border: 0;
-  border-left: 3px solid color-mix(in srgb, var(--claim-status-tone) 66%, var(--line));
-  border-radius: 4px;
-  background: var(--surface-soft);
+  border: 1px solid color-mix(in srgb, var(--claim-status-tone) 24%, var(--claim-row-divider));
+  border-radius: 7px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 9%, var(--surface)), color-mix(in srgb, var(--claim-status-tone) 3%, var(--surface)) 70%, var(--surface));
 }
 
 .claim-board {
@@ -5266,14 +5272,13 @@ body.emr-page {
 }
 
 .claim-card {
-  border-color: var(--claim-row-divider);
-  border-left: 3px solid color-mix(in srgb, var(--claim-status-tone) 68%, var(--line));
+  border-color: color-mix(in srgb, var(--claim-status-tone) 24%, var(--claim-row-divider));
   border-radius: 7px;
-  background: var(--surface);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 10%, var(--surface)), color-mix(in srgb, var(--claim-status-tone) 4%, var(--surface)) 68%, var(--surface));
 }
 
 .claim-card__summary:hover {
-  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  background: color-mix(in srgb, var(--claim-status-tone) 8%, transparent);
 }
 
 .claim-card b {
@@ -5749,9 +5754,8 @@ body.emr-page {
     grid-row: auto;
     grid-template-columns: 1fr;
     margin-top: var(--space-2);
-    border-top: 2px solid color-mix(in srgb, var(--data-amber) 65%, var(--line));
-    border-left: 0;
-    padding: var(--space-3) 0 0;
+    border: 1px solid color-mix(in srgb, var(--data-amber) 24%, var(--line));
+    padding: var(--space-3);
   }
 
   .claim-overview-card {
@@ -5785,10 +5789,7 @@ body.emr-page {
   }
 
   .claim-attention-item__detail--boundary {
-    border-top: 1px solid var(--claim-row-divider);
-    border-left: 0;
-    padding-top: var(--space-3);
-    padding-left: 0;
+    padding: var(--space-3);
   }
 
   .claim-board {
@@ -5814,17 +5815,12 @@ body.emr-page {
 
   .claim-attention-item__mark {
     grid-column: 1;
-    grid-row: 1 / span 2;
+    grid-row: 1;
   }
 
   .claim-attention-item__identity {
     grid-column: 2;
     grid-row: 1;
-  }
-
-  .claim-attention-item__reason {
-    grid-column: 2 / span 2;
-    grid-row: 2;
   }
 
   .claim-attention-item__status {
@@ -5835,7 +5831,7 @@ body.emr-page {
 
   .claim-attention-item__disclosure > summary::after {
     grid-column: 4;
-    grid-row: 1 / span 2;
+    grid-row: 1;
   }
 
   .claim-attention-counts {

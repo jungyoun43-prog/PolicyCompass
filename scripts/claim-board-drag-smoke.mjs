@@ -66,7 +66,8 @@ await runBrowserSmoke({
       expanded: toggle.getAttribute('aria-expanded'),
       open: details.open,
       summaryStatus: card.querySelector('.claim-computed-status')?.textContent,
-      summaryFacts: card.querySelector('.claim-facts')?.textContent,
+      summaryText: toggle.textContent,
+      summaryHasVerboseFacts: Boolean(card.querySelector('.claim-facts')),
     };
     toggle.click();
     const after = {
@@ -75,6 +76,7 @@ await runBrowserSmoke({
       regionRole: details.getAttribute('role'),
       ariaModal: details.getAttribute('aria-modal'),
       labelledBy: details.getAttribute('aria-labelledby'),
+      calculation: details.querySelector('.claim-auto-calculation')?.textContent,
       evidence: details.querySelector('.claim-evidence')?.textContent,
       live: document.getElementById('claimBoardLive')?.textContent,
     };
@@ -84,13 +86,16 @@ await runBrowserSmoke({
   assert(disclosure.before.expanded === "false"
     && disclosure.before.open === false
     && /자동 판정/.test(disclosure.before.summaryStatus ?? "")
-    && /차트 시행|기간·횟수 미집계[\s\S]*판정 제외|판정 제외[\s\S]*기간·횟수 미집계/.test(disclosure.before.summaryFacts ?? ""),
-  `Collapsed claim card did not retain its decision-critical summary: ${JSON.stringify(disclosure)}`);
+    && disclosure.before.summaryHasVerboseFacts === false
+    && !/기간·횟수|판정 제외|적용 조건/.test(disclosure.before.summaryText ?? ""),
+  `Collapsed claim card exposed verbose detail text: ${JSON.stringify(disclosure)}`);
   assert(disclosure.after.expanded === "true"
     && disclosure.after.open === true
     && disclosure.after.regionRole === "dialog"
     && disclosure.after.ariaModal === "true"
     && Boolean(disclosure.after.labelledBy)
+    && /EMR 기간·횟수 자동 계산/.test(disclosure.after.calculation ?? "")
+    && /시행 횟수|기간·횟수 미집계/.test(disclosure.after.calculation ?? "")
     && /연결 차트 근거/.test(disclosure.after.evidence ?? "")
     && /세부정보를 열었습니다/.test(disclosure.after.live ?? ""),
   `Claim evidence disclosure was not accessible or complete: ${JSON.stringify(disclosure)}`);

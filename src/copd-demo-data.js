@@ -288,7 +288,7 @@ const MISSING_EVIDENCE_PROFILE = {
     {
       id: "park-claim-oral-2026-05",
       code: "DEMO-ORAL-COPD",
-      label: "COPD 경구약 청구",
+      label: "COPD 상병·경구약 급여조건 확인",
       serviceDate: "2026-05-20",
       workflowStatus: "CLAIMED",
       preflight: {
@@ -302,7 +302,7 @@ const MISSING_EVIDENCE_PROFILE = {
     {
       id: "park-claim-pft-unavailable",
       code: "F6002",
-      label: "폐기능검사 자료 상태",
+      label: "COPD 폐기능검사 자료 연결 확인",
       serviceDate: "",
       workflowStatus: "DRAFT",
       preflight: {
@@ -325,7 +325,7 @@ const MISSING_EVIDENCE_PROFILE = {
     {
       id: "park-claim-oral-2026-10",
       code: "DEMO-ORAL-COPD",
-      label: "COPD 추적 처방",
+      label: "COPD 추적 처방의 진단 근거 확인",
       serviceDate: "2026-10-20",
       workflowStatus: "CLAIMED",
       preflight: {
@@ -348,7 +348,7 @@ const MISSING_EVIDENCE_PROFILE = {
       sourceId: "synthetic-payer-decision-park-2026-06",
       decidedAt: "2026-06-22T09:00:00.000Z",
       reasonCode: "SYNTHETIC_DOCUMENTATION_PARTIAL_REDUCTION",
-      reasonLabel: "심사 결과 예시 · 기록 근거 일부 미인정",
+      reasonLabel: "기록 근거 일부 미인정",
       originalAmount: 12000,
       allowedAmount: 8000,
       reductionAmount: 4000,

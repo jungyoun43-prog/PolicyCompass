@@ -405,7 +405,6 @@ const MISSING_SEVERITY_PROFILE = {
   claimItems: [
     claimItem({ id: "jung-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
     claimItem({ id: "jung-pna-claim-cultures", code: "DEMO-PNA-CULTURES", label: "폐렴 배양검사", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_SPECIMEN_TIMING_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "jung-pna-claim-severity-data", code: "DEMO-PNA-SEVERITY-REVIEW", label: "폐렴 중증도 기록 확인", serviceDate: "2027-03-08", workflowStatus: "DRAFT", status: "GRAY", reasonCodes: ["DEMO_REQUIRED_DATA_MISSING"], disclaimer: "자료 부족 · 적정성 평가 확인 항목이며 삭감 확정이 아님" }),
   ],
   adjudications: [],
 };

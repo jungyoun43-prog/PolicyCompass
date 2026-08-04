@@ -29,8 +29,11 @@ const [html, css, js] = await Promise.all([
 test("급여 칸반은 자동 판정과 담당자 검토 단계를 명확히 분리한다", () => {
   assert.match(html, /id="claimResultSummary"[^>]+자동 규칙 판정 요약/);
   assert.match(html, /규칙 판정과 담당자 검토 단계를 분리합니다/);
-  assert.match(html, /수동 검토 단계만 이동합니다/);
+  assert.match(html, /담당자·이동 사유·의견을 남긴 뒤 수동 검토 단계를 적용합니다/);
   assert.match(js, /CLAIM_REVIEW_STAGE_ORDER = \["new", "evidence", "reviewing", "reviewed"\]/);
+  assert.match(js, /new: "검토 대기"/);
+  assert.match(js, /evidence: "자료 확인"/);
+  assert.match(js, /reviewed: "최종 판정"/);
   assert.match(js, /`자동 판정 · \$\{CLAIM_LANE_LABELS\[evaluation\.status\]\}`/);
   assert.match(js, /규칙 판정 \$\{computedLabel\} 유지/);
 });
@@ -43,9 +46,12 @@ test("급여 칸반은 드래그·키보드 대체·라이브 안내·감사 이
   assert.match(js, /addEventListener\("drop"/);
   assert.match(js, /data\.claimReviewSelect|dataset\.claimReviewSelect/);
   assert.match(js, /setClaimReviewStage\(/);
+  assert.match(js, /data\.claimReviewReason|dataset\.claimReviewReason/);
+  assert.match(js, /data\.claimReviewReviewer|dataset\.claimReviewReviewer/);
+  assert.match(js, /data\.claimReviewOutcome|dataset\.claimReviewOutcome/);
   assert.match(js, /reconcileClaimReviews\(/);
   assert.match(js, /"claim-review\.invalidated"/);
-  assert.match(js, /자동 규칙 판정 .*변경되지 않았습니다/);
+  assert.match(js, /자동 규칙 판정 .*보험자 심사결과는 변경되지 않았습니다/);
 });
 
 test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 규칙 세부정보를 접근 가능하게 펼친다", () => {
@@ -57,8 +63,8 @@ test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 
     renderClaimBoardSource.indexOf('const summary = element("button", "claim-card__summary")'),
     renderClaimBoardSource.indexOf('const details = document.createElement("dialog")'),
   );
-  assert.match(html, /카드에는 자동 판정만 먼저 표시합니다/);
-  assert.match(html, /기간·횟수·제외 사유·보완 항목.*펼쳐집니다/);
+  assert.match(html, /카드에는 자동 판정과 빠른 판단 정보만 표시합니다/);
+  assert.match(html, /적용 규칙·EMR 근거·시간 흐름을 확인하고/);
   assert.match(renderClaimBoardSource, /summary\.dataset\.claimDetailToggle = evaluation\.id/);
   assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-expanded", "false"\)/);
   assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-controls", detailsId\)/);
@@ -72,14 +78,19 @@ test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 
   assert.doesNotMatch(collapsedCardSource, /claim-missing|claim-facts|evaluation\.explanation|기간·횟수|판정 제외/);
   assert.match(renderClaimBoardSource, /기간·횟수 미집계/);
   assert.match(renderClaimBoardSource, /집계 구간 내" : "집계 구간 밖/);
-  assert.match(renderClaimBoardSource, /EMR 기간·횟수 자동 계산/);
+  assert.match(renderClaimBoardSource, /시간·횟수 계산/);
   assert.match(renderClaimBoardSource, /evaluation\.windowStart.*evaluation\.windowEnd/s);
   assert.doesNotMatch(renderClaimBoardSource, /claim-card__explanation/);
-  assert.match(renderClaimBoardSource, /claim-auto-calculation__result", evaluation\.explanation/);
+  assert.match(renderClaimBoardSource, /element\("p", "", evaluation\.explanation\)/);
   assert.match(renderClaimBoardSource, /claim-auto-calculation__missing/);
-  assert.match(renderClaimBoardSource, /detailContent\.append\(autoCalculation, evidence, detailAside, detailBoundary\)/);
+  assert.match(renderClaimBoardSource, /detailContent\.append\(judgment, ruleDetail, evidence, autoCalculation, reviewPanel, historyPanel, detailBoundary\)/);
   assert.match(renderClaimBoardSource, /직접 연결된 확정 차트 근거가 없습니다/);
-  assert.match(js, /addEventListener\("click", \(event\) => \{[\s\S]*?data-claim-detail-toggle[\s\S]*?details\.showModal\(\)/);
+  assert.match(js, /function openClaimReviewDetail[\s\S]*?details\.showModal\(\)/);
+  assert.match(renderClaimBoardSource, /판정 요약/);
+  assert.match(renderClaimBoardSource, /적용 규칙/);
+  assert.match(renderClaimBoardSource, /EMR에서 확인한 사실/);
+  assert.match(renderClaimBoardSource, /담당자 의견·결론/);
+  assert.match(renderClaimBoardSource, /검토 이력/);
   assert.match(css, /\.claim-card__details::backdrop\s*\{/);
   assert.match(css, /\.claim-card__details-content\s*\{[\s\S]*?grid-template-columns:/);
   assert.match(css, /\.claim-auto-calculation__metrics\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
@@ -249,7 +260,7 @@ test("자동 판정 근거가 바뀌면 순수 조회에서 이전 검토를 무
   assert.equal(reconciled.claimReviews[0].stage, "new");
   assert.equal(reconciled.claimReviews[0].invalidatedFrom, "reviewed");
   assert.equal(reconciled.audit.at(-1).action, "claim-review.invalidated");
-  assert.match(reconciled.audit.at(-1).detail, /확인 완료 → 미분류/);
+  assert.match(reconciled.audit.at(-1).detail, /최종 판정 → 검토 대기/);
   assert.equal(evaluateClaimRule(reconciled.patients[0], fixture.rule, "2026-07-22").status, "waiting");
 
   const resumed = setClaimReviewStage(

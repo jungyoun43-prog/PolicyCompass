@@ -4818,6 +4818,9 @@ body.emr-page {
 
 .claim-attention-count[data-claim-state="reduced"] { --claim-count-tone: var(--urgent); }
 .claim-attention-count[data-claim-state="risk"] { --claim-count-tone: var(--data-amber); }
+.claim-attention-count[data-claim-state="high-risk"] { --claim-count-tone: var(--claim-high-risk, var(--urgent)); }
+.claim-attention-count[data-claim-state="needs-review"] { --claim-count-tone: var(--claim-review, var(--data-amber)); }
+.claim-attention-count[data-claim-state="insufficient"] { --claim-count-tone: var(--claim-insufficient, var(--data-violet)); }
 .claim-attention-count[data-claim-state="verified"] { --claim-count-tone: var(--data-lime); }
 
 .claim-attention-count b {
@@ -5973,6 +5976,990 @@ body.emr-page {
 
   .disease-assessment-tab small {
     justify-self: start;
+  }
+}
+
+/* Claims decision architecture: preflight, adjudication and quality stay visibly separate. */
+#panel-claims {
+  --claim-high-risk: #b84545;
+  --claim-adjudicated: #7f2834;
+  --claim-review: #b87819;
+  --claim-insufficient: #71658f;
+  --claim-verified: #4e7a47;
+  --claim-quality: #247b83;
+}
+
+.claim-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 16%, var(--line));
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 92% -20%, color-mix(in srgb, var(--data-cyan) 13%, transparent), transparent 21rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 4%, var(--surface)), var(--surface) 62%);
+  padding: var(--space-6);
+}
+
+.claim-intro .card-heading h3 {
+  font-size: clamp(1.6rem, calc(1.3rem + 0.8vw), 2rem);
+}
+
+.claim-intro > p {
+  max-width: 68ch;
+  color: color-mix(in srgb, var(--muted) 88%, var(--ink));
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.claim-board-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.claim-board-kpi {
+  --claim-kpi-tone: var(--claim-quality);
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px var(--space-3);
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--claim-kpi-tone) 22%, var(--line));
+  border-radius: 13px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-kpi-tone) 10%, var(--surface)), color-mix(in srgb, var(--claim-kpi-tone) 3%, var(--surface)) 68%, var(--surface));
+  padding: var(--space-4);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.claim-board-kpi[data-claim-kpi="high-risk"] { --claim-kpi-tone: var(--claim-high-risk); }
+.claim-board-kpi[data-claim-kpi="needs-review"] { --claim-kpi-tone: var(--claim-review); }
+.claim-board-kpi[data-claim-kpi="insufficient"] { --claim-kpi-tone: var(--claim-insufficient); }
+.claim-board-kpi[data-claim-kpi="quality"] { --claim-kpi-tone: var(--claim-quality); }
+
+.claim-board-kpi > span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 760;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.claim-board-kpi > strong {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: color-mix(in srgb, var(--claim-kpi-tone) 80%, var(--ink));
+  font-family: var(--font-mono);
+  font-size: clamp(1.45rem, calc(1.25rem + 0.45vw), 1.8rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+.claim-board-kpi > small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.claim-rule-trust {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(320px, 1.25fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  border-radius: 13px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--data-cyan) 8%, var(--surface)), color-mix(in srgb, var(--data-violet) 4%, var(--surface)) 62%, var(--surface));
+  padding: var(--space-3) var(--space-4);
+}
+
+.claim-rule-trust > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.claim-rule-trust__label {
+  color: var(--claim-quality);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.claim-rule-trust > b {
+  color: var(--claim-quality);
+  font-size: 0.875rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.claim-rule-trust > span {
+  grid-column: 2 / -1;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.claim-rule-trust strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.claim-rule-trust small,
+.claim-rule-trust p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.claim-rule-trust p b {
+  color: var(--ink);
+}
+
+.claim-rule-trust__link {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--claim-quality) 30%, var(--line));
+  border-radius: 9px;
+  background: var(--surface);
+  padding: var(--space-2) var(--space-3);
+  color: color-mix(in srgb, var(--claim-quality) 82%, var(--ink));
+  font-size: 0.8125rem;
+  font-weight: 780;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.claim-rule-trust__link:hover {
+  background: color-mix(in srgb, var(--claim-quality) 7%, var(--surface));
+}
+
+.claim-overview-grid {
+  grid-template-columns: minmax(0, 1.16fr) minmax(370px, 0.84fr);
+  gap: var(--space-4);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.claim-overview-card {
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: var(--space-6);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.claim-attention-card {
+  background:
+    radial-gradient(circle at 8% 0, color-mix(in srgb, var(--claim-review) 8%, transparent), transparent 22rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--claim-review) 3%, var(--surface)), var(--surface) 48%);
+}
+
+.disease-assessment-card {
+  border: 1px solid color-mix(in srgb, var(--claim-quality) 18%, var(--line));
+  background:
+    radial-gradient(circle at 92% 0, color-mix(in srgb, var(--claim-quality) 10%, transparent), transparent 21rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--claim-quality) 4%, var(--surface)), var(--surface) 52%);
+}
+
+.claim-overview-card .card-heading h3 {
+  font-size: clamp(1.35rem, calc(1.15rem + 0.5vw), 1.65rem);
+}
+
+.claim-overview-card__intro {
+  max-width: 66ch;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.quality-claim-boundary {
+  display: grid;
+  gap: 3px;
+  border: 1px solid color-mix(in srgb, var(--claim-quality) 25%, var(--line));
+  border-radius: 11px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-quality) 11%, var(--surface)), color-mix(in srgb, var(--claim-quality) 4%, var(--surface)) 72%, var(--surface));
+  padding: var(--space-3) var(--space-4);
+}
+
+.quality-claim-boundary b {
+  color: color-mix(in srgb, var(--claim-quality) 82%, var(--ink));
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.quality-claim-boundary span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.claim-attention-summary,
+.quality-program-summary,
+.quality-diagnostic-summary {
+  border-radius: 11px;
+}
+
+.claim-attention-summary {
+  border-color: color-mix(in srgb, var(--claim-review) 22%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-review) 9%, var(--surface)), color-mix(in srgb, var(--claim-review) 3%, var(--surface)) 74%, var(--surface));
+}
+
+.claim-attention-list {
+  border-radius: 11px;
+}
+
+.claim-attention-list > li,
+.claim-attention-list > .claim-attention-item,
+.claim-card {
+  background: linear-gradient(125deg, color-mix(in srgb, var(--claim-attention-tone, var(--claim-status-tone, var(--muted))) 10%, var(--surface)), color-mix(in srgb, var(--claim-attention-tone, var(--claim-status-tone, var(--muted))) 3%, var(--surface)) 68%, var(--surface));
+}
+
+.claim-attention-item[data-claim-state="high-risk"],
+.claim-attention-item[data-claim-state="risk"] { --claim-attention-tone: var(--claim-high-risk); }
+.claim-attention-item[data-claim-state="needs-review"] { --claim-attention-tone: var(--claim-review); }
+.claim-attention-item[data-claim-state="insufficient"] { --claim-attention-tone: var(--claim-insufficient); }
+.claim-attention-item[data-claim-state="verified"] { --claim-attention-tone: var(--claim-verified); }
+.claim-attention-item[data-claim-state="reduced"] { --claim-attention-tone: var(--claim-adjudicated); }
+
+.claim-attention-item__identity strong {
+  font-size: 0.9375rem;
+}
+
+.claim-attention-item__identity small,
+.claim-attention-item__status,
+.claim-attention-item__detail b,
+.claim-attention-item__content p,
+.claim-attention-item__content small,
+.claim-attention-item__missing {
+  font-size: 0.8125rem;
+}
+
+.claim-attention-item__status {
+  padding: 6px 10px;
+  font-weight: 780;
+}
+
+.claim-attention-item__content {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-attention-tone) 12%, var(--surface-soft)), color-mix(in srgb, var(--ink) 4%, var(--surface)) 78%);
+}
+
+.claim-attention-item__detail {
+  background: color-mix(in srgb, var(--surface) 95%, var(--claim-attention-tone));
+}
+
+.claim-attention-item__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 18%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 95%, var(--claim-attention-tone));
+  padding: var(--space-3);
+}
+
+.claim-attention-item__facts dt,
+.claim-attention-item__facts dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.claim-attention-item__facts dt {
+  color: var(--muted);
+}
+
+.claim-attention-item__facts dd {
+  color: var(--ink);
+  font-weight: 720;
+  text-align: right;
+}
+
+.claim-adjudication {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--claim-adjudicated) 24%, var(--line));
+  border-radius: 13px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--claim-adjudicated) 8%, var(--surface)), color-mix(in srgb, var(--claim-adjudicated) 2%, var(--surface)) 58%, var(--surface));
+  padding: var(--space-4);
+}
+
+.claim-adjudication__heading {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.claim-adjudication__heading h3 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+}
+
+.claim-adjudication__badge {
+  border-color: color-mix(in srgb, var(--claim-adjudicated) 28%, var(--line)) !important;
+  background: color-mix(in srgb, var(--claim-adjudicated) 8%, var(--surface)) !important;
+  color: color-mix(in srgb, var(--claim-adjudicated) 82%, var(--ink)) !important;
+}
+
+.claim-adjudication-summary {
+  border: 1px solid color-mix(in srgb, var(--claim-adjudicated) 20%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--claim-adjudicated) 6%, var(--surface));
+  padding: var(--space-3);
+}
+
+.claim-adjudication-summary > strong {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.claim-adjudication-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.claim-adjudication-list > li {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--claim-adjudicated) 22%, var(--line));
+  border-radius: 10px;
+  background: linear-gradient(125deg, color-mix(in srgb, var(--claim-adjudicated) 10%, var(--surface)), color-mix(in srgb, var(--claim-adjudicated) 3%, var(--surface)) 70%, var(--surface));
+  padding: var(--space-3);
+}
+
+.claim-adjudication-item,
+.claim-adjudication-item__summary,
+.claim-adjudication-item__facts,
+.claim-adjudication-item__amounts {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.claim-adjudication-item {
+  --claim-adjudication-tone: var(--claim-adjudicated);
+  background: linear-gradient(125deg, color-mix(in srgb, var(--claim-adjudication-tone) 10%, var(--surface)), color-mix(in srgb, var(--claim-adjudication-tone) 3%, var(--surface)) 70%, var(--surface)) !important;
+}
+
+.claim-adjudication-item[data-adjudication-state="recognized"] { --claim-adjudication-tone: var(--claim-verified); }
+.claim-adjudication-item[data-adjudication-state="final"] { --claim-adjudication-tone: var(--claim-insufficient); }
+
+.claim-adjudication-item__heading {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.claim-adjudication-item__heading > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.claim-adjudication-item__heading strong {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.claim-adjudication-item__heading small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.claim-adjudication-item__status {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--claim-adjudication-tone) 10%, var(--surface));
+  padding: 5px 9px;
+  color: color-mix(in srgb, var(--claim-adjudication-tone) 82%, var(--ink));
+  font-size: 0.8125rem;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.claim-adjudication-item__facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.claim-adjudication-item__amounts {
+  grid-template-columns: repeat(3, auto minmax(0, 1fr));
+  align-items: center;
+  margin: 0;
+}
+
+.claim-adjudication-item__amounts dt,
+.claim-adjudication-item__amounts dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.claim-adjudication-item__amounts dt {
+  color: var(--muted);
+}
+
+.claim-adjudication-item__amounts dd {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+}
+
+.claim-adjudication-item__facts > span,
+.claim-adjudication-item__amounts > span {
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--claim-adjudicated));
+  padding: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.claim-adjudication-item__facts b,
+.claim-adjudication-item__amounts b {
+  color: var(--ink);
+}
+
+.claim-adjudication-item > p,
+.claim-adjudication-item__meta,
+.claim-adjudication-item__boundary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.claim-adjudication-item__boundary {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--claim-adjudication-tone) 7%, var(--surface));
+  padding: var(--space-2);
+}
+
+.claim-status-legend__item {
+  min-width: min(230px, 100%);
+}
+
+.claim-status-legend__item b,
+.claim-status-legend__item small {
+  font-size: 0.8125rem;
+}
+
+/* Whole-card tonal fills communicate state without decorative side stripes. */
+.claim-result-chip,
+.claim-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 11%, var(--surface)), color-mix(in srgb, var(--claim-status-tone) 4%, var(--surface)) 70%, var(--surface));
+}
+
+.claim-card__summary {
+  padding: var(--space-4);
+}
+
+.claim-card b {
+  font-size: 0.875rem;
+}
+
+.claim-card p,
+.claim-patient,
+.claim-missing,
+.claim-computed-status,
+.claim-card__disclosure,
+.claim-review-stale,
+.claim-card code {
+  font-size: 0.8125rem;
+}
+
+.claim-card__quick-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.claim-card__quick-facts > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--claim-status-tone) 6%, var(--surface));
+  padding: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.claim-card__quick-facts b {
+  color: var(--ink);
+  font-size: 0.8125rem;
+}
+
+/* XAI review drawer: rationale first, human decision last. */
+.claim-card__details {
+  inset: 0 0 0 auto;
+  width: min(760px, calc(100vw - var(--space-8)));
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 22px 0 0 22px;
+  box-shadow: -28px 0 90px color-mix(in srgb, var(--ink) 26%, transparent);
+}
+
+.claim-card__details[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  animation: claim-drawer-enter 180ms ease-out both;
+}
+
+@keyframes claim-drawer-enter {
+  from { opacity: 0.65; transform: translateX(32px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.claim-card__details::backdrop {
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.claim-card__details-header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: var(--space-5) var(--space-6);
+}
+
+.claim-card__details-header h5 {
+  font-size: clamp(1.45rem, calc(1.25rem + 0.55vw), 1.8rem);
+}
+
+.claim-card__details-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-5) var(--space-6) var(--space-7);
+}
+
+.claim-card__details-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.claim-auto-calculation,
+.claim-evidence,
+.claim-xai-section,
+.claim-detail-section,
+[data-claim-detail-section],
+#claimDetailJudgment,
+#claimDetailRule,
+#claimDetailEvidence,
+#claimDetailTimeline {
+  display: grid;
+  grid-column: 1;
+  gap: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 18%, var(--line));
+  border-radius: 13px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--data-cyan) 7%, var(--surface)), color-mix(in srgb, var(--ink) 2%, var(--surface)) 72%, var(--surface));
+  padding: var(--space-4);
+}
+
+.claim-xai-section,
+[data-claim-detail-section] {
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+}
+
+.claim-xai-section > :not(.claim-xai-section__step, h6),
+[data-claim-detail-section] > :not(.claim-xai-section__step, h6) {
+  grid-column: 1 / -1;
+}
+
+.claim-xai-section__step {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--claim-quality) 11%, var(--surface));
+  color: color-mix(in srgb, var(--claim-quality) 82%, var(--ink));
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 850;
+}
+
+.claim-xai-section--judgment {
+  border-color: color-mix(in srgb, var(--claim-review) 24%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-review) 10%, var(--surface)), var(--surface) 76%);
+}
+
+.claim-xai-section--judgment .claim-xai-section__step {
+  background: color-mix(in srgb, var(--claim-review) 12%, var(--surface));
+  color: color-mix(in srgb, var(--claim-review) 82%, var(--ink));
+}
+
+.claim-xai-section--rule {
+  border-color: color-mix(in srgb, var(--claim-insufficient) 22%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-insufficient) 8%, var(--surface)), var(--surface) 76%);
+}
+
+.claim-xai-section--rule .claim-xai-section__step {
+  background: color-mix(in srgb, var(--claim-insufficient) 11%, var(--surface));
+  color: color-mix(in srgb, var(--claim-insufficient) 82%, var(--ink));
+}
+
+.claim-xai-section--review {
+  border-color: color-mix(in srgb, var(--claim-verified) 24%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-verified) 9%, var(--surface)), var(--surface) 76%);
+}
+
+.claim-xai-section--review .claim-xai-section__step {
+  background: color-mix(in srgb, var(--claim-verified) 11%, var(--surface));
+  color: color-mix(in srgb, var(--claim-verified) 82%, var(--ink));
+}
+
+.claim-xai-section--history {
+  border-color: color-mix(in srgb, var(--ink) 11%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 4%, var(--surface)), var(--surface) 78%);
+}
+
+.claim-xai-section--history .claim-xai-section__step {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+#claimDetailJudgment {
+  border-color: color-mix(in srgb, var(--claim-review) 22%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-review) 9%, var(--surface)), var(--surface) 76%);
+}
+
+#claimDetailRule {
+  border-color: color-mix(in srgb, var(--claim-insufficient) 20%, var(--line));
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-insufficient) 8%, var(--surface)), var(--surface) 76%);
+}
+
+#claimDetailTimeline {
+  border-color: color-mix(in srgb, var(--claim-quality) 22%, var(--line));
+}
+
+.claim-xai-section > h6,
+.claim-detail-section > h6,
+[data-claim-detail-section] > h6,
+#claimDetailJudgment > h6,
+#claimDetailRule > h6,
+#claimDetailEvidence > h6,
+#claimDetailTimeline > h6,
+.claim-review-form > h6,
+.claim-review-history > h6 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+}
+
+.claim-xai-section p,
+.claim-xai-section li,
+.claim-detail-section p,
+.claim-detail-section li,
+[data-claim-detail-section] p,
+[data-claim-detail-section] li,
+#claimDetailJudgment p,
+#claimDetailRule p,
+#claimDetailEvidence p,
+#claimDetailTimeline p,
+#claimDetailTimeline li {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.claim-xai-section > strong,
+.claim-xai-section--rule > strong {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.claim-xai-boundary {
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--claim-review) 7%, var(--surface));
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.claim-evidence > .claim-xai-section__step {
+  display: grid;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--claim-quality) 11%, var(--surface));
+  padding: 0;
+  color: color-mix(in srgb, var(--claim-quality) 82%, var(--ink));
+}
+
+.claim-auto-calculation__metric small,
+.claim-auto-calculation__metric strong,
+.claim-auto-calculation > p,
+.claim-evidence,
+.claim-rule-version,
+.claim-manual-note,
+.claim-detail-boundary,
+.claim-source {
+  font-size: 0.8125rem;
+}
+
+.claim-review-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--claim-verified) 22%, var(--line));
+  border-radius: 13px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--claim-verified) 8%, var(--surface)), var(--surface) 76%);
+  padding: var(--space-4);
+}
+
+.claim-review-form > h6,
+.claim-review-form > p,
+.claim-review-form__wide,
+.claim-review-control--wide,
+.claim-review-form__actions,
+[data-claim-review-opinion],
+[data-claim-review-apply],
+#claimReviewOpinion,
+#claimReviewApply {
+  grid-column: 1 / -1;
+}
+
+.claim-review-field,
+.claim-review-control {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.claim-review-field > span,
+.claim-review-control > span {
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 760;
+}
+
+.claim-review-field input,
+.claim-review-field textarea,
+.claim-review-field select,
+.claim-review-control select,
+[data-claim-review-reviewer],
+[data-claim-review-reason],
+[data-claim-review-opinion],
+[data-claim-review-outcome],
+#claimReviewReviewer,
+#claimReviewReason,
+#claimReviewOpinion,
+#claimReviewOutcome {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: 10px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.claim-review-field textarea,
+[data-claim-review-opinion],
+#claimReviewOpinion {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.claim-review-form__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  border-top: 1px solid color-mix(in srgb, var(--claim-verified) 20%, var(--line));
+  padding-top: var(--space-3);
+}
+
+[data-claim-review-apply],
+#claimReviewApply {
+  min-height: 46px;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--claim-quality) 86%, var(--ink));
+  padding: var(--space-2) var(--space-4);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+[data-claim-review-apply]:hover,
+#claimReviewApply:hover {
+  filter: brightness(1.06);
+}
+
+.claim-review-history,
+[data-claim-review-history],
+#claimReviewHistory {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  padding: var(--space-4);
+}
+
+.claim-review-history ol,
+[data-claim-review-history] ol,
+#claimReviewHistory ol {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.claim-review-history li,
+[data-claim-review-history] li,
+#claimReviewHistory li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px var(--space-3);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  padding: var(--space-3);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.claim-review-history time,
+[data-claim-review-history] time,
+#claimReviewHistory time {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.claim-review-history li > span,
+[data-claim-review-history] li > span,
+#claimReviewHistory li > span {
+  grid-column: 2;
+}
+
+@media (max-width: 1180px) {
+  .claim-board-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .claim-rule-trust {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .claim-rule-trust > p {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .claim-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .disease-assessment-card {
+    border: 1px solid color-mix(in srgb, var(--claim-quality) 18%, var(--line));
+  }
+}
+
+@media (max-width: 620px) {
+  .claim-board-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-board-kpi {
+    min-height: 82px;
+  }
+
+  .claim-rule-trust {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .claim-rule-trust > p,
+  .claim-rule-trust__link {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .claim-overview-card,
+  .claim-intro {
+    padding: var(--space-4);
+  }
+
+  .claim-adjudication-item__facts,
+  .claim-review-form {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-adjudication-item__amounts {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .claim-review-form > h6,
+  .claim-review-form > p,
+  .claim-review-form__wide,
+  .claim-review-control--wide,
+  .claim-review-form__actions,
+  [data-claim-review-opinion],
+  [data-claim-review-apply],
+  #claimReviewOpinion,
+  #claimReviewApply {
+    grid-column: 1;
+  }
+
+  .claim-card__details {
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .claim-card__details-header,
+  .claim-card__details-content {
+    padding: var(--space-4);
+  }
+
+  .claim-auto-calculation__metrics,
+  .claim-card__quick-facts {
+    grid-template-columns: 1fr;
   }
 }
 

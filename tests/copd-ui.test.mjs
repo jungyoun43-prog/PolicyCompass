@@ -11,10 +11,14 @@ const [html, css, js, build] = await Promise.all([
 
 test("급여 주의와 질환별 적정성·진단 근거는 독립된 summary-first 패널이다", () => {
   for (const id of [
+    "claimBoardKpis",
+    "claimRuleTrust",
     "claimAttentionSummary",
     "claimAttentionList",
     "claimAttentionAllDisclosure",
     "claimAttentionAllList",
+    "claimAdjudicationSummary",
+    "claimAdjudicationList",
     "diseaseAssessmentTabs",
     "diseaseAssessmentPanel",
     "diseaseQualitySummary",
@@ -28,8 +32,9 @@ test("급여 주의와 질환별 적정성·진단 근거는 독립된 summary-f
   ]) {
     assert.equal((html.match(new RegExp(`id="${id}"`, "g")) ?? []).length, 1, id);
   }
-  assert.match(html, /확정 질환을 선택하면 핵심 상태만 먼저 보여 줍니다/);
-  assert.match(html, /공식 점수 아님/);
+  assert.match(html, /질환을 선택해 평가대상 여부와 지표별 충족 예상만 먼저 보고/);
+  assert.match(html, /기관 질 지표 예상/);
+  assert.match(html, /개별 청구 조정과 별개의 기관 평가입니다/);
   assert.match(html, /공식 기관 점수·등급이나 가산금액을 계산하지 않으며/);
   assert.match(html, /<details class="claim-overview-disclosure/);
   assert.match(html, /id="diseaseQualityDisclosure"[\s\S]*?id="diseaseQualityMetrics"/);
@@ -87,18 +92,21 @@ test("COPD와 폐렴은 평가 지표와 임상 정합성을 서로 섞지 않�
 });
 
 test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 심사결과에서만 온다", () => {
-  assert.match(html, /빨강 · 삭감 확정/);
-  assert.match(html, /노랑 · 사전 위험 확인/);
-  assert.match(html, /초록 · 사전점검 통과/);
-  assert.match(html, /회색 · 확인 불충분/);
-  assert.match(js, /resolveClaimPresentation/);
-  assert.match(js, /adjudications/);
+  assert.match(html, /빨강 · 불인정 고위험/);
+  assert.match(html, /주황 · 급여기준 확인 필요/);
+  assert.match(html, /초록 · 현재 기준 충족/);
+  assert.match(html, /보라 · 자료 부족/);
+  assert.match(html, /ADJUDICATION RESULT[\s\S]*?2\. 심사 결과/);
+  assert.match(js, /resolveClaimPreflightPresentation/);
+  assert.match(js, /resolveClaimAdjudicationPresentation/);
+  assert.match(js, /latestFinalAdjudication/);
   assert.match(js, /paymentBoundary/);
   assert.match(js, /priorityClaimAttentionEntries/);
   assert.match(js, /evaluation\.status === "not-applicable"/);
-  assert.match(js, /즉시 위험은 없지만 확인 대기/);
-  assert.match(css, /data-claim-state="reduced"/);
-  assert.match(css, /data-claim-state="risk"/);
+  assert.match(js, /판정 자료를 보완할 항목/);
+  assert.match(css, /data-claim-state="high-risk"/);
+  assert.match(css, /data-claim-state="needs-review"/);
+  assert.match(css, /data-adjudication-state="recognized"/);
   assert.match(css, /data-claim-state="verified"/);
 });
 
@@ -124,9 +132,10 @@ test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 �
   assert.match(css, /EMR review hierarchy/);
   assert.match(css, /\.claim-attention-summary__content > strong\s*\{[\s\S]*?font-size:\s*1\.05rem/);
   assert.match(css, /\.quality-program-score b\s*\{[\s\S]*?font-size:\s*1\.35rem/);
-  assert.match(css, /\.quality-diagnostic-panel__label b\s*\{[\s\S]*?font-size:\s*0\.9rem/);
-  assert.match(css, /\.claim-workflow-disclosure > summary b\s*\{[\s\S]*?font-size:\s*0\.95rem/);
-  assert.match(html, /항목과 현재 판정만 먼저 보고/);
+  assert.match(css, /\.claim-intro \.card-heading h3\s*\{[\s\S]*?font-size:\s*clamp\(1\.6rem/);
+  assert.match(css, /\.claim-board-kpi > strong\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem/);
+  assert.match(css, /\.claim-card__details-header h5\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem/);
+  assert.match(html, /진료일·청구 항목별로 조치가 필요한 조건만 먼저 보여 줍니다/);
   assert.doesNotMatch(js, /claim-attention-item__reason/);
   assert.doesNotMatch(claimsWorkbenchCss, /border-left:\s*3px|box-shadow:\s*inset 3px/);
   assert.match(claimsWorkbenchCss, /\.claim-attention-list > li,[\s\S]*?background:\s*linear-gradient/);

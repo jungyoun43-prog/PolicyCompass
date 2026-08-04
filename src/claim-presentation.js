@@ -1,8 +1,14 @@
 export const CLAIM_PRESENTATION_STATES = Object.freeze({
-  reduced: Object.freeze({ tone: "red", label: "삭감 확정" }),
-  risk: Object.freeze({ tone: "yellow", label: "사전점검 주의" }),
-  verified: Object.freeze({ tone: "green", label: "사전점검 확인" }),
-  insufficient: Object.freeze({ tone: "gray", label: "판정 보류" }),
+  "high-risk": Object.freeze({ tone: "red", label: "불인정 고위험" }),
+  "needs-review": Object.freeze({ tone: "orange", label: "급여기준 확인 필요" }),
+  verified: Object.freeze({ tone: "green", label: "현재 기준 충족" }),
+  insufficient: Object.freeze({ tone: "violet", label: "자료 부족" }),
+});
+
+export const CLAIM_ADJUDICATION_STATES = Object.freeze({
+  adjusted: Object.freeze({ tone: "deep-red", label: "심사 조정" }),
+  recognized: Object.freeze({ tone: "green", label: "인정" }),
+  final: Object.freeze({ tone: "gray", label: "최종 결과 확인" }),
 });
 
 const FINAL_STATUSES = new Set(["final", "completed"]);
@@ -15,6 +21,7 @@ const REDUCTION_OUTCOMES = new Set([
   "partial_reduction",
   "full_reduction",
 ]);
+const RECOGNIZED_OUTCOMES = new Set(["approved", "paid", "allowed", "accepted", "recognized"]);
 const RISK_EVALUATION_STATUSES = new Set(["missing-evidence", "due-soon", "waiting"]);
 const INSUFFICIENT_EVALUATION_STATUSES = new Set(["unknown", "not-applicable"]);
 
@@ -28,7 +35,7 @@ function validInstant(value) {
   return Number.isNaN(parsed.valueOf()) ? "" : parsed.toISOString();
 }
 
-function validFinalAdjudication(item, claimItemId) {
+function validFinalReduction(item, claimItemId) {
   if (!item || typeof item !== "object") return false;
   const status = cleanText(item.status).toLowerCase();
   const outcome = cleanText(item.outcome).toLowerCase();
@@ -51,7 +58,15 @@ function traceableAdjudication(item, claimItemId) {
     && Boolean(cleanText(item.reasonCode));
 }
 
-export function latestFinalReduction(adjudications = [], claimItemId = "") {
+function validFinalAdjudication(item, claimItemId) {
+  if (!traceableAdjudication(item, claimItemId)) return false;
+  const status = cleanText(item.status).toLowerCase();
+  return FINAL_STATUSES.has(status)
+    && !VOID_STATUSES.has(cleanText(item.lifecycleStatus).toLowerCase())
+    && item.reversed !== true;
+}
+
+export function latestFinalAdjudication(adjudications = [], claimItemId = "") {
   if (!cleanText(claimItemId)) return null;
   const latest = (Array.isArray(adjudications) ? adjudications : [])
     .filter((item) => traceableAdjudication(item, claimItemId))
@@ -59,47 +74,65 @@ export function latestFinalReduction(adjudications = [], claimItemId = "") {
   return validFinalAdjudication(latest, claimItemId) ? latest : null;
 }
 
+export function latestFinalReduction(adjudications = [], claimItemId = "") {
+  if (!cleanText(claimItemId)) return null;
+  const latest = (Array.isArray(adjudications) ? adjudications : [])
+    .filter((item) => traceableAdjudication(item, claimItemId))
+    .sort((left, right) => validInstant(right.decidedAt).localeCompare(validInstant(left.decidedAt)))[0] ?? null;
+  return validFinalReduction(latest, claimItemId) ? latest : null;
+}
+
 function reductionLabel(adjudication) {
   const claimed = Number(adjudication?.claimedAmount ?? adjudication?.originalAmount);
   const allowed = Number(adjudication?.allowedAmount);
   if (Number.isFinite(claimed) && claimed > 0 && Number.isFinite(allowed)) {
-    return allowed <= 0 ? "전액 삭감 확정" : allowed < claimed ? "일부 삭감 확정" : "삭감 확정";
+    return allowed <= 0 ? "전액 불인정" : allowed < claimed ? "일부 조정" : "심사 조정";
   }
   return ["full-reduction", "full_reduction", "denied"].includes(cleanText(adjudication?.outcome).toLowerCase())
-    ? "전액 삭감 확정"
-    : "일부 삭감 확정";
+    ? "전액 불인정"
+    : "일부 조정";
 }
 
-export function resolveClaimPresentation({ evaluation, claimItem = {}, adjudications = [] } = {}) {
-  const claimItemId = cleanText(claimItem.claimItemId || evaluation?.id);
-  const finalReduction = latestFinalReduction(adjudications, claimItemId);
+export function resolveClaimAdjudicationPresentation(adjudication) {
+  if (!adjudication || typeof adjudication !== "object") return null;
+  const outcome = cleanText(adjudication.outcome).toLowerCase();
+  const isReduction = REDUCTION_OUTCOMES.has(outcome);
+  const state = isReduction ? "adjusted" : RECOGNIZED_OUTCOMES.has(outcome) ? "recognized" : "final";
+  const base = CLAIM_ADJUDICATION_STATES[state];
+  return {
+    state,
+    ...base,
+    label: isReduction ? reductionLabel(adjudication) : base.label,
+    reason: cleanText(adjudication.reasonText || adjudication.reasonLabel) || `심사 사유 ${cleanText(adjudication.reasonCode)}`,
+    adjudication,
+    paymentBoundary: "보험자 또는 심사기관에서 연결된 최종 결과입니다. 청구 전 자동점검과 별도로 표시합니다.",
+  };
+}
+
+export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} } = {}) {
   const missingData = Array.isArray(claimItem.missingData)
     ? claimItem.missingData.map(cleanText).filter(Boolean)
     : [];
+  const evaluationStatus = cleanText(evaluation?.status);
+  const riskEvaluable = claimItem.riskEvaluable !== false && Boolean(evaluationStatus || claimItem.riskReason);
 
-  if (finalReduction) {
+  if (claimItem.riskConfirmed === true && riskEvaluable) {
     return {
-      state: "reduced",
-      ...CLAIM_PRESENTATION_STATES.reduced,
-      label: reductionLabel(finalReduction),
-      reason: cleanText(finalReduction.reasonText || finalReduction.reasonLabel) || `심사 사유 ${cleanText(finalReduction.reasonCode)}`,
-      finalReduction,
+      state: "high-risk",
+      ...CLAIM_PRESENTATION_STATES["high-risk"],
+      reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "명확한 급여기준 미충족 가능성이 확인됐습니다.",
       missingData,
-      paymentBoundary: "최종 심사결과에서 확인된 삭감입니다.",
+      paymentBoundary: "청구 전 불인정 고위험 예상이며 실제 심사 결과가 아닙니다.",
     };
   }
 
-  const evaluationStatus = cleanText(evaluation?.status);
-  const riskConfirmed = claimItem.riskConfirmed === true || RISK_EVALUATION_STATUSES.has(evaluationStatus);
-  const riskEvaluable = claimItem.riskEvaluable !== false && Boolean(evaluationStatus || claimItem.riskReason);
-  if (riskConfirmed && riskEvaluable) {
+  if (riskEvaluable && RISK_EVALUATION_STATUSES.has(evaluationStatus)) {
     return {
-      state: "risk",
-      ...CLAIM_PRESENTATION_STATES.risk,
-      reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "기간·횟수 또는 기록 근거를 확인해야 합니다.",
-      finalReduction: null,
+      state: "needs-review",
+      ...CLAIM_PRESENTATION_STATES["needs-review"],
+      reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "기간·횟수 또는 기록 근거를 추가로 확인해야 합니다.",
       missingData,
-      paymentBoundary: "사전점검 위험이며 실제 삭감 확정을 뜻하지 않습니다.",
+      paymentBoundary: "추가 확인이 필요한 청구 전 점검이며 불인정이나 삭감 확정을 뜻하지 않습니다.",
     };
   }
 
@@ -108,10 +141,9 @@ export function resolveClaimPresentation({ evaluation, claimItem = {}, adjudicat
     return {
       state: "insufficient",
       ...CLAIM_PRESENTATION_STATES.insufficient,
-      reason: insufficientReason || (!riskEvaluable ? "위험을 판정할 자료가 부족합니다." : cleanText(evaluation?.explanation) || "평가 대상이 아니거나 아직 판정하지 않았습니다."),
-      finalReduction: null,
+      reason: insufficientReason || (!riskEvaluable ? "위험을 판정할 자료가 부족합니다." : cleanText(evaluation?.explanation) || "평가 대상 또는 연결 자료를 확인해야 합니다."),
       missingData,
-      paymentBoundary: "자료 보완 전에는 적합·위험으로 판단하지 않습니다.",
+      paymentBoundary: "자료 보완 전에는 기준 충족이나 불인정 위험으로 판단하지 않습니다.",
     };
   }
 
@@ -124,18 +156,43 @@ export function resolveClaimPresentation({ evaluation, claimItem = {}, adjudicat
       state: "verified",
       ...CLAIM_PRESENTATION_STATES.verified,
       reason: cleanText(claimItem.verifiedReason) || "현재 EMR에서 기간·횟수와 필요한 근거를 확인했습니다.",
-      finalReduction: null,
       missingData,
-      paymentBoundary: "내부 사전점검 결과이며 지급이나 급여 인정을 보장하지 않습니다.",
+      paymentBoundary: "확인된 자료 범위의 청구 전 점검 결과이며 지급이나 급여 인정을 보장하지 않습니다.",
     };
   }
 
   return {
     state: "insufficient",
     ...CLAIM_PRESENTATION_STATES.insufficient,
-    reason: "현재 자료만으로 사전점검 결과를 확정할 수 없습니다.",
-    finalReduction: null,
+    reason: "현재 자료만으로 청구 전 점검 결과를 판단할 수 없습니다.",
     missingData,
-    paymentBoundary: "자료 보완 전에는 적합·위험으로 판단하지 않습니다.",
+    paymentBoundary: "자료 보완 전에는 기준 충족이나 불인정 위험으로 판단하지 않습니다.",
+  };
+}
+
+export function resolveClaimPresentation({ evaluation, claimItem = {}, adjudications = [] } = {}) {
+  const claimItemId = cleanText(claimItem.claimItemId || evaluation?.id);
+  const finalReduction = latestFinalReduction(adjudications, claimItemId);
+  const missingData = Array.isArray(claimItem.missingData)
+    ? claimItem.missingData.map(cleanText).filter(Boolean)
+    : [];
+
+  if (finalReduction) {
+    const adjudicationPresentation = resolveClaimAdjudicationPresentation(finalReduction);
+    return {
+      state: "reduced",
+      tone: adjudicationPresentation.tone,
+      label: adjudicationPresentation.label,
+      reason: adjudicationPresentation.reason,
+      finalReduction,
+      missingData,
+      paymentBoundary: adjudicationPresentation.paymentBoundary,
+    };
+  }
+  const preflight = resolveClaimPreflightPresentation({ evaluation, claimItem });
+  return {
+    ...preflight,
+    state: preflight.state === "high-risk" || preflight.state === "needs-review" ? "risk" : preflight.state,
+    finalReduction: null,
   };
 }

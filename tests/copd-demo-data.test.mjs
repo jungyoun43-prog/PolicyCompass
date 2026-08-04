@@ -93,6 +93,14 @@ test("혼합 COPD 흐름은 반복 J44.9·결과 없는 PFT 시행 코드·경�
   assert.equal(profile.diagnoses.filter(({ code }) => code === "J44.9").length, 3);
   assert.ok(profile.medications.every(({ route }) => route === "ORAL"));
   assert.ok(profile.medications.every(({ eligibleQualityMedication }) => !eligibleQualityMedication));
+  assert.deepEqual(
+    profile.claimItems.map(({ label }) => label),
+    [
+      "COPD 상병·경구약 급여조건 확인",
+      "COPD 폐기능검사 자료 연결 확인",
+      "COPD 추적 처방의 진단 근거 확인",
+    ],
+  );
 
   const confirmedYellowRisks = profiles().flatMap(({ claimItems }) => claimItems)
     .filter(({ preflight }) => preflight.status === "YELLOW" && preflight.riskConfirmed);

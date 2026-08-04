@@ -44,11 +44,13 @@ const CANONICAL_EVENT_STATUSES = {
 const ORDER_INTENTS = new Set(["order", "original-order", "reflex-order", "filler-order", "instance-order"]);
 const CLAIM_REVIEW_STAGES = new Set(["new", "evidence", "reviewing", "reviewed"]);
 const CLAIM_REVIEW_STAGE_LABELS = {
-  new: "미분류",
-  evidence: "근거 대조",
-  reviewing: "검토 중",
-  reviewed: "확인 완료",
+  new: "검토 대기",
+  evidence: "자료 확인",
+  reviewing: "담당자 검토",
+  reviewed: "최종 판정",
 };
+const CLAIM_REVIEW_OUTCOMES = new Set(["approved", "hold", "exception"]);
+const CLAIM_REVIEW_HISTORY_LIMIT = 50;
 const CLAIM_REVIEW_ACTION_PREFIX = "claim-review.stage.";
 const SHA256_CONSTANTS = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -462,6 +464,43 @@ function audit(action, now, { patientId = "", encounterId = "", entityId = "", d
   };
 }
 
+function normalizeClaimReviewOutcome(value) {
+  return CLAIM_REVIEW_OUTCOMES.has(value) ? value : "";
+}
+
+function normalizeClaimReviewHistoryEntry(input = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const at = optionalTimestamp(input.at);
+  const from = CLAIM_REVIEW_STAGES.has(input.from) ? input.from : "";
+  const to = CLAIM_REVIEW_STAGES.has(input.to) ? input.to : "";
+  if (!at || !from || !to) return null;
+  return {
+    at,
+    from,
+    to,
+    reviewer: cleanText(input.reviewer, "", 120),
+    reason: cleanText(input.reason, "", 2_000),
+    opinion: cleanText(input.opinion, "", 8_000),
+    outcome: normalizeClaimReviewOutcome(input.outcome),
+    inputMethod: cleanText(input.inputMethod, "", 80),
+  };
+}
+
+function normalizeClaimReviewHistory(input = []) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => normalizeClaimReviewHistoryEntry(entry))
+    .filter(Boolean)
+    .slice(-CLAIM_REVIEW_HISTORY_LIMIT);
+}
+
+function appendClaimReviewHistory(history, entry) {
+  const normalized = normalizeClaimReviewHistoryEntry(entry);
+  return normalized
+    ? [...normalizeClaimReviewHistory(history), normalized].slice(-CLAIM_REVIEW_HISTORY_LIMIT)
+    : normalizeClaimReviewHistory(history);
+}
+
 function normalizeClaimReview(input = {}, now = new Date().toISOString()) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const evaluationId = cleanText(input.evaluationId, "", 400);
@@ -487,6 +526,11 @@ function normalizeClaimReview(input = {}, now = new Date().toISOString()) {
     calculatedAsOf,
     invalidatedAt: keepsInvalidation ? requestedInvalidatedAt : "",
     invalidatedFrom: keepsInvalidation ? requestedInvalidatedFrom : "",
+    reviewer: cleanText(input.reviewer, "", 120),
+    transitionReason: cleanText(input.transitionReason, "", 2_000),
+    opinion: cleanText(input.opinion, "", 8_000),
+    outcome: normalizeClaimReviewOutcome(input.outcome),
+    history: normalizeClaimReviewHistory(input.history),
     updatedAt: validTimestamp(input.updatedAt, validTimestamp(now)),
   };
 }
@@ -895,6 +939,11 @@ function resolveClaimReviewFromState(state, evaluationInput) {
       legacy: legacyStage !== "new",
       invalidatedFrom: legacyStage !== "new" ? legacyStage : "",
       invalidatedAt: "",
+      reviewer: "",
+      transitionReason: "",
+      opinion: "",
+      outcome: "",
+      history: [],
       stored: null,
     };
   }
@@ -907,6 +956,11 @@ function resolveClaimReviewFromState(state, evaluationInput) {
     legacy: false,
     invalidatedFrom: fingerprintChanged && stored.stage !== "new" ? stored.stage : stored.invalidatedFrom,
     invalidatedAt: stored.invalidatedAt,
+    reviewer: stored.reviewer,
+    transitionReason: stored.transitionReason,
+    opinion: stored.opinion,
+    outcome: stored.outcome,
+    history: stored.history,
     stored,
   };
 }
@@ -915,7 +969,8 @@ export function resolveClaimReview(stateInput, evaluationInput) {
   return resolveClaimReviewFromState(normalizeEmrState(stateInput), evaluationInput);
 }
 
-function claimReviewRecord(context, stage, now, { invalidatedAt = "", invalidatedFrom = "" } = {}) {
+function claimReviewRecord(context, stage, now, options = {}) {
+  const stored = context.stored ?? {};
   return normalizeClaimReview({
     evaluationId: context.evaluation.id,
     patientId: context.evaluation.patientId,
@@ -924,30 +979,103 @@ function claimReviewRecord(context, stage, now, { invalidatedAt = "", invalidate
     fingerprint: context.fingerprint,
     calculatedStatus: context.evaluation.status,
     calculatedAsOf: context.evaluation.asOf,
-    invalidatedAt,
-    invalidatedFrom,
+    invalidatedAt: options.invalidatedAt ?? "",
+    invalidatedFrom: options.invalidatedFrom ?? "",
+    reviewer: options.reviewer ?? stored.reviewer ?? "",
+    transitionReason: options.transitionReason ?? stored.transitionReason ?? "",
+    opinion: options.opinion ?? stored.opinion ?? "",
+    outcome: options.outcome ?? stored.outcome ?? "",
+    history: options.history ?? stored.history ?? [],
     updatedAt: now,
   }, now);
 }
 
-function claimReviewInvalidationAudit(view, now) {
-  const from = view.invalidatedFrom || view.stored?.stage || "reviewed";
+function claimReviewInvalidationReason(view) {
   const previousStatus = view.stored?.calculatedStatus || "이전 판정";
   const previousAsOf = view.stored?.calculatedAsOf || "이전 판정일";
-  return audit("claim-review.invalidated", now, {
-    patientId: view.evaluation.patientId,
-    entityId: view.evaluation.id,
-    detail: `${CLAIM_REVIEW_STAGE_LABELS[from]} → 미분류 · 자동 판정/근거/규칙/판정일 변경 · ${previousStatus}(${previousAsOf}) → ${view.evaluation.status}(${view.evaluation.asOf})`,
+  return `자동 판정·근거·규칙 또는 판정일 변경 · ${previousStatus}(${previousAsOf}) → ${view.evaluation.status}(${view.evaluation.asOf})`;
+}
+
+function claimReviewInvalidationHistory(view, now, history = view.stored?.history ?? []) {
+  const from = view.invalidatedFrom || view.stored?.stage || "reviewed";
+  return appendClaimReviewHistory(history, {
+    at: now,
+    from,
+    to: "new",
+    reviewer: "자동 규칙 엔진",
+    reason: claimReviewInvalidationReason(view),
+    opinion: "",
+    outcome: "",
+    inputMethod: "system",
   });
 }
 
-export function setClaimReviewStage(stateInput, evaluationInput, nextStage, detail = "", now = new Date().toISOString()) {
+function claimReviewInvalidationAudit(view, now) {
+  const from = view.invalidatedFrom || view.stored?.stage || "reviewed";
+  return audit("claim-review.invalidated", now, {
+    patientId: view.evaluation.patientId,
+    entityId: view.evaluation.id,
+    detail: `${CLAIM_REVIEW_STAGE_LABELS[from]} → ${CLAIM_REVIEW_STAGE_LABELS.new} · ${claimReviewInvalidationReason(view)}`,
+  });
+}
+
+export function setClaimReviewStage(
+  stateInput,
+  evaluationInput,
+  nextStage,
+  detail = "",
+  now = new Date().toISOString(),
+  metadata = {},
+) {
   const state = normalizeEmrState(stateInput);
   if (!CLAIM_REVIEW_STAGES.has(nextStage)) throw new TypeError("담당자 검토 단계가 유효하지 않습니다.");
   const view = resolveClaimReviewFromState(state, evaluationInput);
-  if (view.stage === nextStage) return state;
   const at = validTimestamp(now);
-  const next = claimReviewRecord(view, nextStage, at);
+  const input = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {};
+  const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+  const stored = view.stored ?? {};
+  const stageChanged = view.stage !== nextStage;
+  const legacyDetail = cleanText(detail, "", 2_000);
+  const reviewer = has("reviewer") ? cleanText(input.reviewer, "", 120) : stored.reviewer ?? "";
+  const transitionReason = has("reason")
+    ? cleanText(input.reason, "", 2_000)
+    : stageChanged && legacyDetail
+      ? legacyDetail
+      : stored.transitionReason ?? "";
+  const opinion = has("opinion") ? cleanText(input.opinion, "", 8_000) : stored.opinion ?? "";
+  let outcome = has("outcome") ? normalizeClaimReviewOutcome(input.outcome) : stored.outcome ?? "";
+  if (stageChanged && nextStage !== "reviewed" && !has("outcome")) outcome = "";
+  if (stageChanged && view.stale && !has("outcome")) outcome = "";
+  const metadataChanged = reviewer !== (stored.reviewer ?? "")
+    || transitionReason !== (stored.transitionReason ?? "")
+    || opinion !== (stored.opinion ?? "")
+    || outcome !== (stored.outcome ?? "");
+  if (!stageChanged && !metadataChanged) return state;
+
+  let history = stored.history ?? [];
+  if (view.stale && !view.invalidatedAt && view.invalidatedFrom) {
+    history = claimReviewInvalidationHistory(view, at, history);
+  }
+  history = appendClaimReviewHistory(history, {
+    at,
+    from: view.stage,
+    to: nextStage,
+    reviewer,
+    reason: has("reason") ? transitionReason : stageChanged ? legacyDetail || transitionReason : "",
+    opinion,
+    outcome,
+    inputMethod: has("inputMethod") ? cleanText(input.inputMethod, "", 80) : "",
+  });
+  const preservesInvalidation = !stageChanged && nextStage === "new";
+  const next = claimReviewRecord(view, nextStage, at, {
+    invalidatedAt: preservesInvalidation ? view.invalidatedAt : "",
+    invalidatedFrom: preservesInvalidation ? view.invalidatedFrom : "",
+    reviewer,
+    transitionReason,
+    opinion,
+    outcome,
+    history,
+  });
   const claimReviews = state.claimReviews.filter(({ evaluationId }) => evaluationId !== next.evaluationId);
   claimReviews.push(next);
   const auditEvents = [];
@@ -955,7 +1083,7 @@ export function setClaimReviewStage(stateInput, evaluationInput, nextStage, deta
   auditEvents.push(audit(`${CLAIM_REVIEW_ACTION_PREFIX}${nextStage}`, at, {
     patientId: view.evaluation.patientId,
     entityId: view.evaluation.id,
-    detail,
+    detail: legacyDetail || `${CLAIM_REVIEW_STAGE_LABELS[view.stage]} → ${CLAIM_REVIEW_STAGE_LABELS[nextStage]}${transitionReason ? ` · ${transitionReason}` : ""}`,
   }));
   return {
     ...state,
@@ -996,7 +1124,11 @@ export function reconcileClaimReviews(stateInput, evaluationInputs = [], now = n
       }));
       continue;
     }
-    reviews.push(claimReviewRecord(view, "new", at, { invalidatedAt: at, invalidatedFrom: stored.stage }));
+    reviews.push(claimReviewRecord(view, "new", at, {
+      invalidatedAt: at,
+      invalidatedFrom: stored.stage,
+      history: claimReviewInvalidationHistory(view, at),
+    }));
     invalidationAudits.push(claimReviewInvalidationAudit(view, at));
   }
   for (const [evaluationId, input] of inputs) {
@@ -1004,7 +1136,11 @@ export function reconcileClaimReviews(stateInput, evaluationInputs = [], now = n
     const view = resolveClaimReviewFromState(state, input);
     if (!view.legacy || !view.invalidatedFrom) continue;
     changed = true;
-    reviews.push(claimReviewRecord(view, "new", at, { invalidatedAt: at, invalidatedFrom: view.invalidatedFrom }));
+    reviews.push(claimReviewRecord(view, "new", at, {
+      invalidatedAt: at,
+      invalidatedFrom: view.invalidatedFrom,
+      history: claimReviewInvalidationHistory(view, at),
+    }));
     invalidationAudits.push(claimReviewInvalidationAudit(view, at));
   }
   if (!changed) return state;

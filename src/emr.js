@@ -65,7 +65,11 @@ import {
   CLAIM_LANE_LABELS,
   CLAIM_LANE_ORDER,
 } from "./claim-rules.js";
-import { resolveClaimPresentation } from "./claim-presentation.js";
+import {
+  latestFinalAdjudication,
+  resolveClaimAdjudicationPresentation,
+  resolveClaimPreflightPresentation,
+} from "./claim-presentation.js";
 import {
   GOLD_COPD_2026_RULESET,
   HIRA_COPD_2026_RULESET,
@@ -135,10 +139,10 @@ const AUDIT_LABELS = {
   "schema.migrated": "EMR 스키마 이관",
   "claim-rule.saved": "급여 규칙 저장",
   "claim-rule.retired": "급여 규칙 종료일 설정",
-  "claim-review.stage.new": "급여 담당자 검토 · 미분류",
-  "claim-review.stage.evidence": "급여 담당자 검토 · 근거 대조",
-  "claim-review.stage.reviewing": "급여 담당자 검토 · 검토 중",
-  "claim-review.stage.reviewed": "급여 담당자 검토 · 확인 완료",
+  "claim-review.stage.new": "급여 담당자 검토 · 검토 대기",
+  "claim-review.stage.evidence": "급여 담당자 검토 · 자료 확인",
+  "claim-review.stage.reviewing": "급여 담당자 검토 · 담당자 검토",
+  "claim-review.stage.reviewed": "급여 담당자 검토 · 최종 판정",
   "claim-review.invalidated": "급여 담당자 검토 · 재검토 필요",
   "fhir.imported": "FHIR 가져오기",
   "fhir.exported": "의료기관용 FHIR 내보내기",
@@ -169,10 +173,10 @@ const QUEUE_LABELS = {
 
 const CLAIM_REVIEW_STAGE_ORDER = ["new", "evidence", "reviewing", "reviewed"];
 const CLAIM_REVIEW_STAGE_LABELS = {
-  new: "미분류",
-  evidence: "근거 대조",
+  new: "검토 대기",
+  evidence: "자료 확인",
   reviewing: "담당자 검토",
-  reviewed: "확인 완료",
+  reviewed: "최종 판정",
 };
 const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
   none: ["visit-context"],
@@ -332,11 +336,15 @@ const refs = {
   bodyConditionList: byId("bodyConditionList"),
   bodyDetailBoundary: byId("bodyDetailBoundary"),
   claimResultSummary: byId("claimResultSummary"),
+  claimBoardKpis: byId("claimBoardKpis"),
+  claimRuleTrust: byId("claimRuleTrust"),
   claimAttentionSummary: byId("claimAttentionSummary"),
   claimAttentionList: byId("claimAttentionList"),
   claimAttentionAllDisclosure: byId("claimAttentionAllDisclosure"),
   claimAttentionAllDisclosureHint: byId("claimAttentionAllDisclosureHint"),
   claimAttentionAllList: byId("claimAttentionAllList"),
+  claimAdjudicationSummary: byId("claimAdjudicationSummary"),
+  claimAdjudicationList: byId("claimAdjudicationList"),
   diseaseAssessmentTabs: byId("diseaseAssessmentTabs"),
   diseaseAssessmentPanel: byId("diseaseAssessmentPanel"),
   diseaseProgramEyebrow: byId("diseaseProgramEyebrow"),
@@ -1278,7 +1286,7 @@ function renderNextWork(evaluations) {
     );
     refs.nextWorkList.append(card);
   }
-  if (!attention.length) refs.nextWorkList.append(createEmptyMessage("현재 예시 규칙에서 바로 확인할 작업이 없습니다."));
+  if (!attention.length) refs.nextWorkList.append(createEmptyMessage("현재 연결 규칙에서 바로 확인할 작업이 없습니다."));
 }
 
 function renderEventFilters(patient) {
@@ -1621,7 +1629,7 @@ function renderRuleVersions() {
         "span",
         "",
         rule.sample
-          ? `내부 예시 규칙 · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`
+          ? `기관 내부 규칙 · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`
           : `${rule.ruleSetId} · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`,
       ),
     );
@@ -1643,8 +1651,15 @@ function renderRuleVersions() {
   if (!rules.length) refs.ruleVersionList.append(createEmptyMessage("저장된 급여 규칙이 없습니다."));
 }
 
-const CLAIM_ATTENTION_ORDER = Object.freeze({ reduced: 0, risk: 1, insufficient: 2, verified: 3 });
-const CLAIM_ATTENTION_ICON = Object.freeze({ reduced: "×", risk: "!", insufficient: "…", verified: "✓" });
+const CLAIM_ATTENTION_ORDER = Object.freeze({ "high-risk": 0, "needs-review": 1, insufficient: 2, verified: 3 });
+const CLAIM_ATTENTION_ICON = Object.freeze({ "high-risk": "!", "needs-review": "!", insufficient: "…", verified: "✓" });
+const CLAIM_WORKFLOW_LABELS = Object.freeze({
+  DRAFT: "청구 전",
+  CLAIMED: "제출됨",
+  SUBMITTED: "제출됨",
+  ADJUDICATED: "심사 완료",
+  "EMR 자동 집계": "EMR 자동 집계",
+});
 const DEMO_CLAIM_REASON_LABELS = Object.freeze({
   DEMO_REQUIRED_EVIDENCE_VERIFIED: "필요 근거 확인",
   DEMO_TIME_COUNT_PASS: "기간·횟수 사전점검 통과",
@@ -1672,7 +1687,7 @@ function demoClaimEvaluation(item) {
     status: evaluationStatus,
     calculationAvailable: status !== "GRAY",
     missingEvidence: status === "YELLOW" ? item.preflight.reasonCodes ?? [] : [],
-    explanation: item.preflight?.disclaimer ?? "예시 사전점검 자료",
+    explanation: item.preflight?.disclaimer ?? "연결 사전점검 자료",
   };
 }
 
@@ -1682,7 +1697,7 @@ function demoClaimInput(item) {
     .join(" · ");
   return {
     claimItemId: item.id,
-    riskConfirmed: item?.preflight?.riskConfirmed === true,
+    riskConfirmed: item?.preflight?.status === "RED" && item?.preflight?.riskConfirmed === true,
     riskEvaluable: item?.preflight?.status !== "GRAY",
     riskReason: reason,
     insufficientReason: item?.preflight?.status === "GRAY" ? reason || item.preflight.disclaimer : "",
@@ -1694,19 +1709,23 @@ function demoClaimInput(item) {
 
 function claimAttentionEntries(patient, evaluations, profile) {
   const profileItems = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
-  const adjudications = Array.isArray(profile?.adjudications) ? profile.adjudications : [];
   const entries = profileItems.map((item) => {
     const evaluation = demoClaimEvaluation(item);
     return {
       id: item.id,
       title: item.label,
       code: item.code,
+      displayCode: String(item.code || "").startsWith("DEMO-") ? "" : item.code,
       date: item.serviceDate,
+      dateLabel: "진료일",
+      workflowStatus: item.workflowStatus,
+      claimUnit: item.claimUnit || null,
+      rule: null,
+      evidenceCount: item?.preflight?.evidenceIds?.length ?? 0,
       synthetic: true,
-      presentation: resolveClaimPresentation({
+      presentation: resolveClaimPreflightPresentation({
         evaluation,
         claimItem: demoClaimInput(item),
-        adjudications,
       }),
     };
   });
@@ -1718,9 +1737,15 @@ function claimAttentionEntries(patient, evaluations, profile) {
       id: evaluation.id,
       title: evaluation.title,
       code: evaluation.serviceCode,
+      displayCode: evaluation.rule?.sample === true ? "" : evaluation.serviceCode,
       date: evaluation.asOf,
+      dateLabel: "판정 기준일",
+      workflowStatus: "EMR 자동 집계",
+      claimUnit: null,
+      rule: evaluation.rule,
+      evidenceCount: evaluation.evidenceEventIds?.length ?? 0,
       synthetic: evaluation.rule?.sample === true,
-      presentation: resolveClaimPresentation({ evaluation }),
+      presentation: resolveClaimPreflightPresentation({ evaluation }),
     });
   }
   const ordered = entries.sort((left, right) => CLAIM_ATTENTION_ORDER[left.presentation.state] - CLAIM_ATTENTION_ORDER[right.presentation.state]
@@ -1729,10 +1754,8 @@ function claimAttentionEntries(patient, evaluations, profile) {
 }
 
 function priorityClaimAttentionEntries(entries) {
-  return [
-    ...entries.filter(({ presentation }) => presentation.state === "reduced"),
-    ...entries.filter(({ presentation }) => presentation.state === "risk").slice(0, 2),
-  ];
+  const actionable = entries.filter(({ presentation }) => ["high-risk", "needs-review"].includes(presentation.state));
+  return (actionable.length ? actionable : entries).slice(0, 3);
 }
 
 function appendClaimAttentionEntry(container, entry) {
@@ -1743,7 +1766,7 @@ function appendClaimAttentionEntry(container, entry) {
   const itemSummary = element("summary", "claim-attention-item__summary");
   const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
   icon.setAttribute("aria-hidden", "true");
-  const meta = [entry.synthetic ? "" : entry.code, entry.date].filter(Boolean).join(" · ");
+  const meta = [entry.displayCode, entry.date ? `${entry.dateLabel} ${entry.date}` : "진료일 미연결"].filter(Boolean).join(" · ");
   const identity = element("span", "claim-attention-item__identity");
   identity.append(element("strong", "", entry.title));
   if (meta) identity.append(element("small", "", meta));
@@ -1758,12 +1781,25 @@ function appendClaimAttentionEntry(container, entry) {
   if (presentation.missingData.length) {
     review.append(element("span", "claim-attention-item__missing", `함께 누락 · ${presentation.missingData.join(", ")}`));
   }
+  const facts = element("dl", "claim-attention-item__facts");
+  const claimUnit = entry.claimUnit && typeof entry.claimUnit === "object"
+    ? [entry.claimUnit.lineNumber ? `line ${entry.claimUnit.lineNumber}` : "", entry.claimUnit.quantity ? `${entry.claimUnit.quantity}${entry.claimUnit.unit || ""}` : ""].filter(Boolean).join(" · ")
+    : "단위 정보 미연결";
+  for (const [label, value] of [
+    [entry.dateLabel, entry.date || "연결 자료 없음"],
+    ["청구 상태", CLAIM_WORKFLOW_LABELS[entry.workflowStatus] || "명세서 상태 미연결"],
+    ["청구 단위", claimUnit],
+    ["EMR 근거", entry.evidenceCount ? `${entry.evidenceCount}건 연결` : "연결 여부 확인 필요"],
+    ["예상 영향", "기관 단가 미연결"],
+  ]) {
+    facts.append(element("dt", "", label), element("dd", "", value));
+  }
   const boundary = element("div", "claim-attention-item__detail claim-attention-item__detail--boundary");
   boundary.append(
     element("b", "", "판정 범위"),
-    element("small", "", `${entry.synthetic ? "예시 환자 자료" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
+    element("small", "", `${entry.synthetic ? "연결 프로필" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
   );
-  content.append(review, boundary);
+  content.append(review, facts, boundary);
   disclosure.append(itemSummary, content);
   row.append(disclosure);
   container.append(row);
@@ -1782,22 +1818,22 @@ function renderClaimAttention(patient, evaluations, profile) {
   for (const entry of entries) counts[entry.presentation.state] += 1;
 
   const summary = element("div", "claim-attention-summary__content");
-  const headline = counts.reduced
-    ? `최종 삭감 ${counts.reduced}건을 먼저 확인하세요.`
-    : counts.risk
-      ? `청구 전 확인할 위험 ${counts.risk}건이 있습니다.`
+  const headline = counts["high-risk"]
+    ? `불인정 고위험 ${counts["high-risk"]}건을 먼저 확인하세요.`
+    : counts["needs-review"]
+      ? `급여기준을 확인할 항목 ${counts["needs-review"]}건이 있습니다.`
       : counts.insufficient
-        ? `즉시 위험은 없지만 확인 대기 ${counts.insufficient}건이 있습니다.`
+        ? `판정 자료를 보완할 항목 ${counts.insufficient}건이 있습니다.`
         : counts.verified
-          ? "현재 연결 자료에서 즉시 확인할 위험은 없습니다."
+          ? "확인된 자료 범위에서 즉시 발견된 위험은 없습니다."
         : "현재 자료로는 청구 위험을 판정하기 어렵습니다.";
   const countList = element("div", "claim-attention-counts");
   countList.setAttribute("role", "list");
   for (const [stateName, label] of [
-    ["reduced", "삭감 확정"],
-    ["risk", "사전 위험"],
-    ["insufficient", "확인 대기"],
-    ["verified", "통과"],
+    ["high-risk", "불인정 고위험"],
+    ["needs-review", "확인 필요"],
+    ["insufficient", "자료 부족"],
+    ["verified", "기준 충족"],
   ]) {
     const count = element("span", "claim-attention-count");
     count.dataset.claimState = stateName;
@@ -1812,20 +1848,139 @@ function renderClaimAttention(patient, evaluations, profile) {
     refs.claimAttentionList.hidden = false;
     refs.claimAttentionList.append(element("li", "claim-overview-empty", "연결된 규칙 또는 심사 자료가 없습니다."));
     refs.claimAttentionAllDisclosure.hidden = true;
-    return;
+    return counts;
   }
   refs.claimAttentionList.hidden = priorityEntries.length === 0;
   for (const entry of priorityEntries) appendClaimAttentionEntry(refs.claimAttentionList, entry);
   refs.claimAttentionAllDisclosure.hidden = otherEntries.length === 0;
-  refs.claimAttentionAllDisclosureHint.textContent = `${otherEntries.length}건 · 확인 완료·자료 대기·추가 위험`;
+  refs.claimAttentionAllDisclosureHint.textContent = `${otherEntries.length}건 · 기준 충족·자료 부족·추가 확인`;
   for (const entry of otherEntries) appendClaimAttentionEntry(refs.claimAttentionAllList, entry);
+  return counts;
+}
+
+function claimAdjudicationEntries(profile) {
+  const items = Array.isArray(profile?.claimItems) ? profile.claimItems : [];
+  const adjudications = Array.isArray(profile?.adjudications) ? profile.adjudications : [];
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const claimItemIds = [...new Set(adjudications.map(({ claimItemId }) => claimItemId).filter(Boolean))];
+  return claimItemIds.map((claimItemId) => {
+    const adjudication = latestFinalAdjudication(adjudications, claimItemId);
+    if (!adjudication) return null;
+    const item = itemById.get(claimItemId);
+    return {
+      id: adjudication.id || claimItemId,
+      title: item?.label || "연결된 청구 항목",
+      code: String(item?.code || "").startsWith("DEMO-") ? "" : item?.code || "",
+      serviceDate: item?.serviceDate || "",
+      presentation: resolveClaimAdjudicationPresentation(adjudication),
+      adjudication,
+    };
+  }).filter(Boolean).sort((left, right) => String(right.adjudication.decidedAt).localeCompare(String(left.adjudication.decidedAt)));
+}
+
+function formatClaimAmount(value, currency = "KRW") {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "금액 미연결";
+  return new Intl.NumberFormat("ko-KR", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+}
+
+function renderClaimAdjudications(profile) {
+  const entries = claimAdjudicationEntries(profile);
+  if (!refs.claimAdjudicationSummary || !refs.claimAdjudicationList) return entries;
+  clear(refs.claimAdjudicationSummary);
+  clear(refs.claimAdjudicationList);
+  const adjustedCount = entries.filter(({ presentation }) => presentation.state === "adjusted").length;
+  refs.claimAdjudicationSummary.append(element(
+    "strong",
+    "",
+    entries.length
+      ? `보험자 최종 결과 ${entries.length}건 · 조정 ${adjustedCount}건`
+      : "연결된 보험자 최종 결과가 없습니다.",
+  ));
+  if (!entries.length) {
+    refs.claimAdjudicationList.append(element("li", "claim-overview-empty", "심사기관 결과가 연결되면 인정·조정·보류를 여기에 표시합니다."));
+    return entries;
+  }
+  for (const entry of entries) {
+    const { adjudication, presentation } = entry;
+    const row = element("li", "claim-adjudication-item");
+    row.dataset.adjudicationState = presentation.state;
+    const heading = element("div", "claim-adjudication-item__heading");
+    const identity = element("span", "");
+    identity.append(
+      element("strong", "", entry.title),
+      element("small", "", [entry.code, entry.serviceDate ? `진료일 ${entry.serviceDate}` : "진료일 미연결"].filter(Boolean).join(" · ")),
+    );
+    heading.append(identity, element("b", "claim-adjudication-item__status", presentation.label));
+    const amounts = element("dl", "claim-adjudication-item__amounts");
+    for (const [label, value] of [
+      ["청구", adjudication.claimedAmount ?? adjudication.originalAmount],
+      ["인정", adjudication.allowedAmount],
+      ["조정", adjudication.reductionAmount],
+    ]) amounts.append(element("dt", "", label), element("dd", "", formatClaimAmount(value, adjudication.currency || "KRW")));
+    row.append(
+      heading,
+      amounts,
+      element("p", "", presentation.reason),
+      element("small", "claim-adjudication-item__meta", `결정일 ${displayTimestamp(adjudication.decidedAt)} · 출처 ${adjudication.provenance?.sourceLabel || adjudication.sourceId} · 사유코드 ${adjudication.reasonCode}`),
+      element("small", "claim-adjudication-item__boundary", presentation.paymentBoundary),
+    );
+    refs.claimAdjudicationList.append(row);
+  }
+  return entries;
+}
+
+function renderClaimBoardKpis(counts, quality) {
+  if (!refs.claimBoardKpis) return;
+  clear(refs.claimBoardKpis);
+  const metrics = Array.isArray(quality?.metrics) ? quality.metrics : [];
+  const included = metrics.filter(({ status }) => status === "included").length;
+  const applicable = metrics.filter(({ status }) => status !== "not-applicable").length;
+  for (const [state, label, value, description] of [
+    ["high-risk", "청구 고위험", counts["high-risk"] ?? 0, "청구 전 점검"],
+    ["needs-review", "확인 필요", counts["needs-review"] ?? 0, "급여조건·기록"],
+    ["insufficient", "자료 보완", counts.insufficient ?? 0, "판정 불가 포함"],
+    ["quality", "적정성 지표", applicable ? `${included}/${applicable}` : "—", "기관 평가 예상"],
+  ]) {
+    const item = element("div", "claim-board-kpi");
+    item.dataset.claimKpi = state;
+    item.append(element("span", "", label), element("strong", "", value), element("small", "", description));
+    refs.claimBoardKpis.append(item);
+  }
+}
+
+function renderClaimRuleTrust(evaluations) {
+  if (!refs.claimRuleTrust) return;
+  clear(refs.claimRuleTrust);
+  const rules = [...new Map(evaluations.map(({ rule }) => [rule?.id, rule]).filter(([id]) => id)).values()];
+  const latest = rules[0];
+  const identity = element("div", "");
+  identity.append(
+    element("span", "claim-rule-trust__label", "판정 기준"),
+    element("strong", "", latest ? `${latest.title} · v${latest.version}` : "연결된 급여 규칙 확인 필요"),
+    element("small", "", latest
+      ? `적용 ${latest.effectiveFrom}–${latest.effectiveTo || "현재"} · 산출 ${displayDate(today())} · 출처 ${latest.sourceLabel} · ${latest.sample ? "기관 내부 규칙" : "공식 출처 연결"}`
+      : "규칙 버전·적용일·출처를 연결한 뒤 판정할 수 있습니다."),
+  );
+  const boundary = element("p", "");
+  boundary.append(
+    element("b", "", "판정 경계 "),
+    document.createTextNode("자동 규칙은 검토 대상을 제안합니다. 청구 전 예상, 실제 심사 결과, 기관 적정성 평가는 서로 대체하지 않으며 최종 적용은 담당자가 결정합니다."),
+  );
+  const link = element("a", "claim-rule-trust__link", "규칙 버전 관리");
+  link.href = "#ruleVersionManager";
+  refs.claimRuleTrust.append(
+    identity,
+    boundary,
+    link,
+  );
 }
 
 const QUALITY_METRIC_STATUS = Object.freeze({
-  included: { label: "기여 예상", icon: "✓" },
-  "not-included": { label: "미포함 예상", icon: "!" },
-  insufficient: { label: "확인 필요", icon: "…" },
-  "not-applicable": { label: "분모 제외", icon: "—" },
+  included: { label: "충족 예상", icon: "✓" },
+  "not-included": { label: "미충족 예상", icon: "!" },
+  insufficient: { label: "자료 확인 필요", icon: "…" },
+  "not-applicable": { label: "평가대상 제외 가능", icon: "—" },
 });
 
 function qualityObservedLabel(metric) {
@@ -1861,9 +2016,9 @@ function qualityTargetHeadline(quality) {
   const applicableCount = quality.metrics.filter(({ status }) => status !== "not-applicable").length;
   const excludedCount = quality.metrics.length - applicableCount;
   const countLabel = excludedCount
-    ? `평가 분모 ${applicableCount}개 중 ${includedCount}개 기여 가능 · ${excludedCount}개 분모 제외`
-    : `${quality.metrics.length}개 지표 중 ${includedCount}개 기여 가능`;
-  if (quality.target.status === "eligible") return `환자 단위 대상 예상 · ${countLabel}`;
+    ? `평가 분모 ${applicableCount}개 중 ${includedCount}개 충족 예상 · ${excludedCount}개 분모 제외`
+    : `${quality.metrics.length}개 지표 중 ${includedCount}개 충족 예상`;
+  if (quality.target.status === "eligible") return `평가대상 예상 · ${countLabel}`;
   if (quality.target.status === "insufficient") return "평가대상 여부를 판단할 자료가 부족합니다.";
   return "현재 연결 자료에서는 평가대상으로 예상되지 않습니다.";
 }
@@ -1890,7 +2045,7 @@ function renderDiseaseQuality(quality, profile, program) {
   const includedCount = quality.metrics.filter(({ status }) => status === "included").length;
   const applicableCount = quality.metrics.filter(({ status }) => status !== "not-applicable").length;
   const score = element("span", "quality-program-score");
-  score.append(element("b", "", `${includedCount}/${applicableCount}`), element("small", "", "지표 기여 가능"));
+  score.append(element("b", "", `${includedCount}/${applicableCount}`), element("small", "", "지표 충족 예상"));
   const copy = element("span", "quality-program-summary__copy");
   copy.append(element("strong", "", qualityTargetHeadline(quality)));
   const exceptions = quality.metrics.filter(({ status }) => ["not-included", "insufficient"].includes(status));
@@ -2002,7 +2157,7 @@ function renderCopdDiagnostic(diagnostic, profile) {
     repeat.append(list);
   }
   if (profile?.scenario?.kind === "NORMAL_STAGED") {
-    repeat.append(element("p", "quality-stage-note", "1차 0.640만 있을 때는 ‘기준 일치 + 반복확인 대기’였고, 별도 날짜의 2차 0.650이 연결된 뒤 ‘반복 확인’으로 바뀐 예시 흐름입니다."));
+    repeat.append(element("p", "quality-stage-note", "1차 0.640만 있을 때는 ‘기준 일치 + 반복확인 대기’였고, 별도 날짜의 2차 0.650이 연결된 뒤 ‘반복 확인’으로 바뀐 변화 흐름입니다."));
   }
 
   const context = element("section", "quality-detail-section");
@@ -2142,14 +2297,14 @@ function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
   refs.diseaseProgramEyebrow.textContent = result.program.eyebrow;
   refs.diseaseProgramTitle.textContent = result.program.label;
   refs.diseaseProgramStatus.textContent = result.quality.target.status === "eligible"
-    ? "환자 단위 대상"
-    : result.quality.target.status === "insufficient" ? "자료 확인" : "대상 아님";
+    ? "평가대상 예상"
+    : result.quality.target.status === "insufficient" ? "대상 확인 필요" : "대상 아님 예상";
   refs.diseaseProgramIntro.textContent = result.program.description;
   refs.diseaseDiagnosticEyebrow.textContent = result.program.diagnostic.eyebrow;
   refs.diseaseDiagnosticTitle.textContent = result.program.diagnostic.title;
   const includedMetricCount = result.quality.metrics.filter(({ status }) => status === "included").length;
   const attentionMetricCount = result.quality.metrics.filter(({ status }) => ["not-included", "insufficient"].includes(status)).length;
-  refs.diseaseQualityDisclosureHint.textContent = `${result.quality.metrics.length}개 지표 · 기여 ${includedMetricCount} · 확인 ${attentionMetricCount}`;
+  refs.diseaseQualityDisclosureHint.textContent = `${result.quality.metrics.length}개 지표 · 충족 예상 ${includedMetricCount} · 확인 ${attentionMetricCount}`;
   clear(refs.diseaseDiagnosticSummary);
   clear(refs.diseaseDiagnosticDetails);
   renderDiseaseQuality(result.quality, result.profile, result.program);
@@ -2168,18 +2323,23 @@ function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
   return selectedId;
 }
 
-async function moveClaimReview(evaluation, nextStage, inputMethod) {
+async function moveClaimReview(evaluation, nextStage, inputMethod, metadata = {}) {
   if (!evaluation || !CLAIM_REVIEW_STAGE_ORDER.includes(nextStage)) return false;
   const review = resolveClaimReview(state, evaluation);
   const currentStage = review.stage;
   const nextLabel = CLAIM_REVIEW_STAGE_LABELS[nextStage];
-  if (currentStage === nextStage) {
-    refs.claimBoardLive.textContent = `${evaluation.title} 카드는 이미 ${nextLabel} 단계입니다.`;
-    return false;
+  const reviewer = String(metadata.reviewer || "").trim();
+  const reason = String(metadata.reason || "").trim();
+  const opinion = String(metadata.opinion || "").trim();
+  const outcome = String(metadata.outcome || "").trim();
+  if (!reviewer) throw new Error("검토자 이름을 입력해 주세요.");
+  if (currentStage !== nextStage && !reason) throw new Error("단계를 이동한 이유를 입력해 주세요.");
+  if (nextStage === "reviewed" && !["approved", "hold", "exception"].includes(outcome)) {
+    throw new Error("최종 판정에서 승인·보류·예외 인정 중 하나를 선택해 주세요.");
   }
   const currentLabel = CLAIM_REVIEW_STAGE_LABELS[currentStage];
   const computedLabel = CLAIM_LANE_LABELS[evaluation.status] ?? CLAIM_LANE_LABELS.unknown;
-  const detail = `${currentLabel} → ${nextLabel} · 규칙 판정 ${computedLabel} 유지 · ${inputMethod}`;
+  const detail = `${currentLabel} → ${nextLabel} · ${reason || "담당자 의견 갱신"} · 규칙 판정 ${computedLabel} 유지`;
   try {
     await applyMutation(
       (current) => setClaimReviewStage(
@@ -2188,11 +2348,12 @@ async function moveClaimReview(evaluation, nextStage, inputMethod) {
         nextStage,
         detail,
         new Date().toISOString(),
+        { reviewer, reason, opinion, outcome: nextStage === "reviewed" ? outcome : "", inputMethod },
       ),
       `${evaluation.title}의 담당자 검토 단계를 '${nextLabel}' 단계로 옮겼습니다. 규칙 판정 '${computedLabel}'은 유지됩니다.`,
       { preserveDraft: false },
     );
-    refs.claimBoardLive.textContent = `${evaluation.title} 카드: '${currentLabel}'에서 '${nextLabel}' 단계로 이동했습니다.${review.stale ? " 이전 검토는 자동 판정·근거·규칙 또는 판정일 변경으로 무효화했습니다." : ""} 자동 규칙 판정 '${computedLabel}'은 변경되지 않았습니다.`;
+    refs.claimBoardLive.textContent = `${evaluation.title}: '${currentLabel}'에서 '${nextLabel}' 단계로 기록했습니다.${review.stale ? " 이전 검토는 자동 판정·근거·규칙 또는 판정일 변경으로 무효화했습니다." : ""} 자동 규칙 판정 '${computedLabel}'과 보험자 심사결과는 변경되지 않았습니다.`;
     return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : "담당자 검토 단계를 옮기지 못했습니다.";
@@ -2214,8 +2375,12 @@ function renderClaimBoard(patient) {
   claimEvaluationById = new Map(evaluations.map((evaluation) => [evaluation.id, evaluation]));
   const selectedEvaluations = evaluations.filter((evaluation) => evaluation.patientId === patient.id);
   const diseaseClaimProfile = getCombinedDiseaseClaimProfile(patient);
-  renderClaimAttention(patient, selectedEvaluations, diseaseClaimProfile);
-  renderDiseaseAssessment(patient);
+  const claimCounts = renderClaimAttention(patient, selectedEvaluations, diseaseClaimProfile);
+  renderClaimAdjudications(diseaseClaimProfile);
+  const selectedDiseaseId = renderDiseaseAssessment(patient);
+  const selectedAssessment = selectedDiseaseId ? evaluateDiseaseAssessment(patient, selectedDiseaseId) : null;
+  renderClaimBoardKpis(claimCounts, selectedAssessment?.quality);
+  renderClaimRuleTrust(selectedEvaluations);
 
   clear(refs.claimResultSummary);
   refs.claimResultSummary.setAttribute("role", "list");
@@ -2246,12 +2411,12 @@ function renderClaimBoard(patient) {
     heading.append(
       title,
       element("p", "", stage === "new"
-        ? "아직 담당 분류 없음"
+        ? "자동 판정 뒤 담당자 배정 전"
         : stage === "evidence"
-          ? "차트·청구 근거 수동 대조"
+          ? "검사·처방·외부 자료 확인"
           : stage === "reviewing"
             ? "담당자가 현재 확인 중"
-            : "검토 완료 · 급여 확정 아님"),
+            : "내부 의견 기록 · 보험자 확정 아님"),
     );
     header.append(heading, element("span", "", reviewLanes[stage].length));
     lane.append(header);
@@ -2284,9 +2449,9 @@ function renderClaimBoard(patient) {
       const title = element("b", "", evaluation.title);
       title.id = titleId;
       const isExampleRule = evaluation.rule.sample === true;
-      const serviceCode = element("code", "", isExampleRule ? "예시 규칙" : evaluation.serviceCode);
+      const serviceCode = element("code", "", isExampleRule ? "기관 규칙" : evaluation.serviceCode);
       serviceCode.title = isExampleRule
-        ? "내부 검토용 예시 규칙"
+        ? "내부 검토용 기관 규칙"
         : [evaluation.rule.serviceSystem, evaluation.serviceCode].filter(Boolean).join(" | ");
       const dragHandle = element("span", "claim-drag-handle", "⠿");
       dragHandle.setAttribute("aria-hidden", "true");
@@ -2299,11 +2464,23 @@ function renderClaimBoard(patient) {
         const stale = element("span", "claim-review-stale");
         stale.append(
           element("b", "", "재검토 필요 · "),
-          document.createTextNode(`자동 판정·근거·규칙 또는 판정일이 달라져 이전 '${CLAIM_REVIEW_STAGE_LABELS[review.invalidatedFrom] ?? "검토"}' 단계는 무효화되고 '미분류'로 돌아왔습니다.`),
+          document.createTextNode(`자동 판정·근거·규칙 또는 판정일이 달라져 이전 '${CLAIM_REVIEW_STAGE_LABELS[review.invalidatedFrom] ?? "검토"}' 단계는 무효화되고 '검토 대기'로 돌아왔습니다.`),
         );
         summary.append(stale);
       }
       if (boardScope === "all") summary.append(element("span", "claim-patient", evaluation.patientName + " · " + (evaluation.patientMrn || "등록번호 없음")));
+      const quickFacts = element("span", "claim-card__quick-facts");
+      for (const [label, value] of [
+        ["환자", evaluation.patientName],
+        ["판정 기준일", evaluation.asOf || "미연결"],
+        ["자료", `${evaluation.evidenceEventIds?.length ?? 0}건 연결${evaluation.missingEvidence?.length ? ` · ${evaluation.missingEvidence.length}건 보완` : ""}`],
+        ["예상 영향", "기관 단가 미연결"],
+      ]) {
+        const fact = element("span", "claim-card__quick-fact");
+        fact.append(element("small", "", label), element("b", "", value));
+        quickFacts.append(fact);
+      }
+      summary.append(quickFacts);
       const disclosure = element("span", "claim-card__disclosure");
       disclosure.dataset.claimDetailLabel = "";
       disclosure.textContent = "근거·세부정보 보기";
@@ -2337,8 +2514,46 @@ function renderClaimBoard(patient) {
       const evidenceEvents = evaluation.evidenceEventIds
         .map((id) => state.patients.find((item) => item.id === evaluation.patientId)?.events.find((event) => event.id === id))
         .filter(Boolean);
-      const autoCalculation = element("section", "claim-auto-calculation");
-      autoCalculation.append(element("b", "", "EMR 기간·횟수 자동 계산"));
+      const judgment = element("section", "claim-xai-section claim-xai-section--judgment");
+      judgment.dataset.claimDetailSection = "judgment";
+      judgment.append(
+        element("span", "claim-xai-section__step", "01"),
+        element("h6", "", "판정 요약"),
+        element("strong", "claim-auto-calculation__result", CLAIM_LANE_LABELS[evaluation.status]),
+        element("p", "", evaluation.explanation),
+        element("small", "claim-xai-boundary", "자동 규칙 판정은 담당자 검토를 돕는 사전점검이며 보험자 심사결과가 아닙니다."),
+      );
+
+      const ruleDetail = element("section", "claim-xai-section claim-xai-section--rule");
+      ruleDetail.dataset.claimDetailSection = "rule";
+      ruleDetail.append(
+        element("span", "claim-xai-section__step", "02"),
+        element("h6", "", "적용 규칙"),
+        element("strong", "", evaluation.rule.title),
+        element(
+          "p",
+          "claim-rule-version",
+          `${evaluation.rule.ruleSetId} · v${evaluation.rule.version} · 적용 ${evaluation.rule.effectiveFrom}–${evaluation.rule.effectiveTo || "현재"}`,
+        ),
+      );
+      const sourceUrl = safeExternalUrl(evaluation.rule.sourceUrl);
+      if (sourceUrl) {
+        const source = element("a", "claim-source", evaluation.rule.sourceLabel + " ↗");
+        source.href = sourceUrl;
+        source.target = "_blank";
+        source.rel = "noreferrer";
+        source.draggable = false;
+        ruleDetail.append(source);
+      } else {
+        ruleDetail.append(element("span", "claim-source", evaluation.rule.sourceLabel));
+      }
+
+      const autoCalculation = element("section", "claim-xai-section claim-xai-section--timeline claim-auto-calculation");
+      autoCalculation.dataset.claimDetailSection = "timeline";
+      autoCalculation.append(
+        element("span", "claim-xai-section__step", "04"),
+        element("h6", "", "시간·횟수 계산"),
+      );
       const autoMetrics = element("div", "claim-auto-calculation__metrics");
       const calculationFacts = evaluation.calculationAvailable
         ? [
@@ -2363,7 +2578,6 @@ function renderClaimBoard(patient) {
       }
       autoCalculation.append(
         autoMetrics,
-        element("p", "claim-auto-calculation__result", evaluation.explanation),
         element(
           "p",
           "",
@@ -2379,8 +2593,12 @@ function renderClaimBoard(patient) {
           `보완 확인 · ${evaluation.missingEvidence.join(", ")}`,
         ));
       }
-      const evidence = element("section", "claim-evidence");
-      evidence.append(element("b", "", "연결 차트 근거"));
+      const evidence = element("section", "claim-xai-section claim-xai-section--evidence claim-evidence");
+      evidence.dataset.claimDetailSection = "evidence";
+      evidence.append(
+        element("span", "claim-xai-section__step", "03"),
+        element("h6", "", "EMR에서 확인한 사실"),
+      );
       if (evidenceEvents.length) {
         for (const event of evidenceEvents.slice(0, 5)) {
           const coding = isExampleRule ? "" : [event.system, event.code].filter(Boolean).join(" | ");
@@ -2393,26 +2611,18 @@ function renderClaimBoard(patient) {
       } else {
         evidence.append(element("span", "claim-evidence__empty", "직접 연결된 확정 차트 근거가 없습니다."));
       }
-      const detailAside = element("div", "claim-card__details-aside");
-      detailAside.append(element(
-        "span",
-        "claim-rule-version",
-        isExampleRule
-          ? `내부 예시 규칙 · ${evaluation.rule.effectiveFrom} ~ ${evaluation.rule.effectiveTo || "현재"}`
-          : "규칙 " + evaluation.rule.ruleSetId + " · v" + evaluation.rule.version + " · " + evaluation.rule.effectiveFrom + " ~ " + (evaluation.rule.effectiveTo || "현재"),
-      ));
-      detailAside.append(element("span", "claim-manual-note", "Claim/ClaimResponse 미연결 · 청구·심사 이력 수동 대조"));
-      const sourceUrl = safeExternalUrl(evaluation.rule.sourceUrl);
-      if (sourceUrl) {
-        const source = element("a", "claim-source", evaluation.rule.sourceLabel + " ↗");
-        source.href = sourceUrl;
-        source.target = "_blank";
-        source.rel = "noreferrer";
-        source.draggable = false;
-        detailAside.append(source);
-      } else {
-        detailAside.append(element("span", "claim-source", evaluation.rule.sourceLabel));
+      if (evaluation.missingEvidence.length) {
+        evidence.append(element("span", "claim-evidence__excluded", `확인되지 않은 후보 · ${evaluation.missingEvidence.join(", ")}`));
       }
+
+      const reviewPanel = element("section", "claim-xai-section claim-xai-section--review");
+      reviewPanel.dataset.claimDetailSection = "review";
+      reviewPanel.append(
+        element("span", "claim-xai-section__step", "05"),
+        element("h6", "", "담당자 의견·결론"),
+        element("p", "", "자동 판정의 근거를 확인한 뒤 내부 업무 단계와 의견을 기록합니다. 이 결론은 보험자 심사결과를 바꾸지 않습니다."),
+      );
+      const reviewGrid = element("div", "claim-review-form");
       const control = element("label", "claim-review-control");
       const selectId = `claim-stage-${stage}-${evaluationIndex}`;
       control.htmlFor = selectId;
@@ -2429,10 +2639,82 @@ function renderClaimBoard(patient) {
         select.append(option);
       }
       control.append(select);
-      detailAside.append(control);
-      const detailBoundary = element("p", "claim-detail-boundary", "차트 근거와 규칙은 사전 점검 정보입니다. 의료적 필요를 제한하거나 급여를 확정하지 않으며 청구·심사 이력은 별도로 대조해야 합니다.");
+      const reviewerControl = element("label", "claim-review-control");
+      reviewerControl.append(element("span", "", "검토자"));
+      const reviewerInput = document.createElement("input");
+      reviewerInput.type = "text";
+      reviewerInput.maxLength = 120;
+      reviewerInput.required = true;
+      reviewerInput.value = typeof review.reviewer === "string" ? review.reviewer : review.reviewer?.display || "";
+      reviewerInput.placeholder = "이름 또는 담당 역할";
+      reviewerInput.dataset.claimReviewReviewer = evaluation.id;
+      reviewerControl.append(reviewerInput);
+
+      const reasonControl = element("label", "claim-review-control claim-review-control--wide");
+      reasonControl.append(element("span", "", "이동·판정 사유"));
+      const reasonInput = document.createElement("textarea");
+      reasonInput.maxLength = 800;
+      reasonInput.rows = 2;
+      reasonInput.placeholder = "예: 외부 검사 결과 확인 필요";
+      reasonInput.value = review.transitionReason || "";
+      reasonInput.dataset.claimReviewReason = evaluation.id;
+      reasonControl.append(reasonInput);
+
+      const opinionControl = element("label", "claim-review-control claim-review-control--wide");
+      opinionControl.append(element("span", "", "담당자 의견"));
+      const opinionInput = document.createElement("textarea");
+      opinionInput.maxLength = 2_000;
+      opinionInput.rows = 3;
+      opinionInput.placeholder = "확인한 근거와 후속 조치를 기록하세요.";
+      opinionInput.value = review.opinion || "";
+      opinionInput.dataset.claimReviewOpinion = evaluation.id;
+      opinionControl.append(opinionInput);
+
+      const outcomeControl = element("label", "claim-review-control");
+      outcomeControl.append(element("span", "", "내부 최종 의견"));
+      const outcomeSelect = document.createElement("select");
+      outcomeSelect.dataset.claimReviewOutcome = evaluation.id;
+      for (const [value, label] of [
+        ["", "최종 판정에서 선택"],
+        ["approved", "승인"],
+        ["hold", "보류"],
+        ["exception", "예외 인정"],
+      ]) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        option.selected = review.outcome === value;
+        outcomeSelect.append(option);
+      }
+      outcomeSelect.disabled = stage !== "reviewed";
+      outcomeControl.append(outcomeSelect);
+
+      const applyReview = element("button", "clinical-button clinical-button--primary claim-review-apply", "검토 기록 저장");
+      applyReview.type = "button";
+      applyReview.dataset.claimReviewApply = evaluation.id;
+      reviewGrid.append(control, reviewerControl, reasonControl, opinionControl, outcomeControl, applyReview);
+      reviewPanel.append(reviewGrid);
+
+      const historyPanel = element("section", "claim-xai-section claim-xai-section--history");
+      historyPanel.dataset.claimDetailSection = "history";
+      historyPanel.append(element("span", "claim-xai-section__step", "06"), element("h6", "", "검토 이력"));
+      const historyList = element("ol", "claim-review-history");
+      const outcomeLabels = { approved: "승인", hold: "보류", exception: "예외 인정" };
+      for (const item of [...(review.history || [])].reverse().slice(0, 10)) {
+        const historyItem = element("li", "");
+        historyItem.append(
+          element("time", "", displayTimestamp(item.at)),
+          element("b", "", `${CLAIM_REVIEW_STAGE_LABELS[item.from] || item.from || "기록"} → ${CLAIM_REVIEW_STAGE_LABELS[item.to] || item.to || stage}`),
+          element("span", "", [item.reviewer, item.reason, outcomeLabels[item.outcome]].filter(Boolean).join(" · ")),
+        );
+        historyList.append(historyItem);
+      }
+      if (!historyList.childElementCount) historyList.append(element("li", "claim-review-history__empty", "아직 담당자 이동 이력이 없습니다."));
+      historyPanel.append(historyList);
+
+      const detailBoundary = element("p", "claim-detail-boundary", "자동 규칙 판정 → 사람 검토 → 내부 최종 의견의 순서로 기록합니다. 실제 인정·조정·삭감은 보험자 또는 심사기관 결과 영역에서만 표시합니다.");
       detailBoundary.id = detailBoundaryId;
-      detailContent.append(autoCalculation, evidence, detailAside, detailBoundary);
+      detailContent.append(judgment, ruleDetail, evidence, autoCalculation, reviewPanel, historyPanel, detailBoundary);
       details.append(detailHeader, detailContent);
       details.addEventListener("close", () => {
         summary.setAttribute("aria-expanded", "false");
@@ -3064,8 +3346,12 @@ function clearPatientWorkspaceUi() {
     refs.bodyVisitList,
     refs.bodyMedicationList,
     refs.bodyConditionList,
+    refs.claimBoardKpis,
+    refs.claimRuleTrust,
     refs.claimAttentionSummary,
     refs.claimAttentionList,
+    refs.claimAdjudicationSummary,
+    refs.claimAdjudicationList,
     refs.diseaseAssessmentTabs,
     refs.diseaseQualitySummary,
     refs.diseaseQualityMetrics,
@@ -4144,7 +4430,58 @@ refs.diseaseAssessmentTabs.addEventListener("keydown", (event) => {
   selectDiseaseAssessment(next.dataset.diseaseAssessmentId, { focus: true });
 });
 
-refs.claimBoard.addEventListener("click", (event) => {
+function openClaimReviewDetail(evaluationId, { targetStage = "", inputMethod = "카드 선택" } = {}) {
+  const card = refs.claimBoard.querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"]`);
+  const toggle = card?.querySelector("[data-claim-detail-toggle]");
+  const details = toggle ? document.getElementById(toggle.getAttribute("aria-controls")) : null;
+  if (!toggle || !details || !card) return null;
+  if (!details.open) details.showModal();
+  details.dataset.claimReviewInputMethod = inputMethod;
+  toggle.setAttribute("aria-expanded", "true");
+  toggle.setAttribute("aria-label", `${toggle.dataset.claimDetailSummary} · 근거·세부정보 열림`);
+  card.dataset.claimDetailOpen = "true";
+  toggle.querySelector("[data-claim-detail-label]").textContent = "근거·세부정보 열림";
+  if (targetStage && CLAIM_REVIEW_STAGE_ORDER.includes(targetStage)) {
+    const select = details.querySelector("[data-claim-review-select]");
+    if (select) {
+      select.value = targetStage;
+      const outcome = details.querySelector("[data-claim-review-outcome]");
+      if (outcome) outcome.disabled = targetStage !== "reviewed";
+    }
+    details.querySelector("[data-claim-review-reason]")?.focus();
+  } else {
+    details.querySelector("[data-claim-detail-close]")?.focus();
+  }
+  const evaluation = claimEvaluationById.get(evaluationId);
+  refs.claimBoardLive.textContent = `${evaluation?.title ?? "급여 항목"}의 자동 판정 근거와 담당자 검토 기록을 열었습니다.`;
+  return details;
+}
+
+refs.claimBoard.addEventListener("click", async (event) => {
+  const applyReview = event.target.closest?.("[data-claim-review-apply]");
+  if (applyReview) {
+    const evaluationId = applyReview.dataset.claimReviewApply;
+    const evaluation = claimEvaluationById.get(evaluationId);
+    const details = applyReview.closest("dialog");
+    if (!evaluation || !details) return;
+    const nextStage = details.querySelector("[data-claim-review-select]")?.value;
+    const metadata = {
+      reviewer: details.querySelector("[data-claim-review-reviewer]")?.value,
+      reason: details.querySelector("[data-claim-review-reason]")?.value,
+      opinion: details.querySelector("[data-claim-review-opinion]")?.value,
+      outcome: details.querySelector("[data-claim-review-outcome]")?.value,
+    };
+    applyReview.disabled = true;
+    try {
+      await moveClaimReview(evaluation, nextStage, details.dataset.claimReviewInputMethod || "상세 패널", metadata);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "검토 기록을 저장하지 못했습니다.";
+      refs.claimBoardLive.textContent = message;
+      setStatus(message, "error");
+      applyReview.disabled = false;
+    }
+    return;
+  }
   const close = event.target.closest?.("[data-claim-detail-close]");
   if (close) {
     close.closest("dialog")?.close();
@@ -4154,20 +4491,12 @@ refs.claimBoard.addEventListener("click", (event) => {
   if (!toggle) return;
   const evaluationId = toggle.dataset.claimDetailToggle;
   const details = document.getElementById(toggle.getAttribute("aria-controls"));
-  const card = toggle.closest("[data-claim-evaluation-id]");
-  if (!evaluationId || !details || !card) return;
+  if (!evaluationId || !details) return;
   if (details.open) {
     details.close();
     return;
   }
-  details.showModal();
-  toggle.setAttribute("aria-expanded", "true");
-  toggle.setAttribute("aria-label", `${toggle.dataset.claimDetailSummary} · 근거·세부정보 열림`);
-  card.dataset.claimDetailOpen = "true";
-  toggle.querySelector("[data-claim-detail-label]").textContent = "근거·세부정보 열림";
-  details.querySelector("[data-claim-detail-close]")?.focus();
-  const evaluation = claimEvaluationById.get(evaluationId);
-  refs.claimBoardLive.textContent = `${evaluation?.title ?? "급여 항목"}의 연결 차트 근거와 규칙 세부정보를 열었습니다.`;
+  openClaimReviewDetail(evaluationId);
 });
 
 function clearClaimDragState() {
@@ -4215,21 +4544,20 @@ refs.claimBoard.addEventListener("drop", async (event) => {
   const evaluation = claimEvaluationById.get(evaluationId);
   const nextStage = lane.dataset.claimReviewLane;
   clearClaimDragState();
-  await moveClaimReview(evaluation, nextStage, "드래그 이동");
-  refs.claimBoard
-    .querySelector(`[data-claim-evaluation-id="${CSS.escape(evaluationId)}"] [data-claim-detail-toggle]`)
-    ?.focus();
+  if (evaluation) openClaimReviewDetail(evaluationId, { targetStage: nextStage, inputMethod: "드래그 이동" });
 });
 
 refs.claimBoard.addEventListener("dragend", clearClaimDragState);
 
-refs.claimBoard.addEventListener("change", async (event) => {
+refs.claimBoard.addEventListener("change", (event) => {
   const select = event.target.closest?.("[data-claim-review-select]");
   if (!select) return;
   const evaluationId = select.dataset.claimReviewSelect;
-  const evaluation = claimEvaluationById.get(evaluationId);
-  await moveClaimReview(evaluation, select.value, "단계 선택");
-  refs.claimBoard.querySelector(`[data-claim-review-select="${CSS.escape(evaluationId)}"]`)?.focus();
+  const details = select.closest("dialog");
+  const outcome = details?.querySelector(`[data-claim-review-outcome="${CSS.escape(evaluationId)}"]`);
+  if (outcome) outcome.disabled = select.value !== "reviewed";
+  if (details) details.dataset.claimReviewInputMethod = "단계 선택";
+  refs.claimBoardLive.textContent = `${CLAIM_REVIEW_STAGE_LABELS[select.value]} 단계를 선택했습니다. 이동 사유와 검토자를 확인한 뒤 저장하세요.`;
 });
 
 function loadDemo() {

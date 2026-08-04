@@ -143,13 +143,14 @@ test("정수진은 중증도 도구만 누락되고 나머지 네 초기 항목�
   assert.equal(Object.values(truth).filter(Boolean).length, 4);
   assert.equal(profile.specimenCollections[0].beforeFirstIvAntibiotic, true);
   assert.equal(profile.admission.ivAntibioticDays, 4);
+  assert.equal(profile.claimItems.some(({ id }) => id === "jung-pna-claim-severity-data"), false);
 });
 
 test("청구 예시는 지정된 초록·노랑·회색 분포만 가지며 빨강이나 심사결정이 없다", () => {
   const expected = {
     "demo-patient-kim": { GREEN: 2, YELLOW: 0, GRAY: 1 },
     "demo-patient-choi": { GREEN: 1, YELLOW: 1, GRAY: 1 },
-    "demo-patient-jung": { GREEN: 2, YELLOW: 0, GRAY: 1 },
+    "demo-patient-jung": { GREEN: 2, YELLOW: 0, GRAY: 0 },
   };
 
   for (const profile of profiles()) {

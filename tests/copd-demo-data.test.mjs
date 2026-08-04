@@ -11,7 +11,7 @@ function profiles() {
   return PROFILE_IDS.map((id) => getCopdDemoProfile(id));
 }
 
-test("기존 데모 환자 세 명에게만 의사용 합성 COPD 프로필을 연결한다", () => {
+test("기존 예시 환자 세 명에게만 의사용 합성 COPD 프로필을 연결한다", () => {
   const demoPatients = new Map(
     createDemoEmrState("2026-11-01T09:00:00.000Z").patients.map((patient) => [patient.id, patient.name]),
   );
@@ -27,8 +27,10 @@ test("기존 데모 환자 세 명에게만 의사용 합성 COPD 프로필을 �
   for (const profile of profiles()) {
     assert.equal(profile.physicianOnly, true);
     assert.equal(profile.synthetic, true);
-    assert.match(profile.syntheticNotice, /합성 의사용/);
+    assert.match(profile.syntheticNotice, /예시 환자/);
+    assert.match(profile.syntheticNotice, /실제 환자 아님/);
     assert.match(profile.syntheticNotice, /공식 심사결과 아님/);
+    assert.doesNotMatch(profile.syntheticNotice, /\bcontest\b|공모전|데모|\bDEMO\b/i);
     assert.equal(profile.evaluatedAt, EVALUATED_AT);
     assert.deepEqual(profile.evaluationPeriod, { start: "2026-01-01", end: "2026-12-31" });
     assert.ok(Object.values(profile.ruleVersions).every(Boolean));

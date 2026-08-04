@@ -18,6 +18,7 @@ test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 
     assert.equal(program.id, id);
     assert.ok(program.label);
     assert.ok(program.shortLabel);
+    assert.doesNotMatch(program.eyebrow, /\bDEMO\b|\bcontest\b|공모전/i);
     assert.match(program.description, /적정성 평가.*진단 근거/);
     assert.ok(program.quality.title);
     assert.ok(program.quality.description);
@@ -99,7 +100,9 @@ test("모든 관련 질환의 청구와 심사결과를 병합하면서 식별�
   assert.deepEqual(combined.assessmentIds, ["copd", "pneumonia"]);
   assert.equal(combined.synthetic, true);
   assert.equal(combined.physicianOnly, true);
-  assert.match(combined.syntheticNotice, /합성/);
+  assert.match(combined.syntheticNotice, /예시 환자/);
+  assert.match(combined.syntheticNotice, /실제 환자 아님/);
+  assert.doesNotMatch(combined.syntheticNotice, /\bcontest\b|공모전|데모|\bDEMO\b/i);
   assert.ok(combined.claimItems.length > 1);
   assert.equal(
     new Set(combined.claimItems.map(({ id }) => id).filter(Boolean)).size,

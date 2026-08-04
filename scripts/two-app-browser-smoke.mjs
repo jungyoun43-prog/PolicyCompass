@@ -201,7 +201,7 @@ try {
 
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
   await evaluate("document.getElementById('syncPersonalRecord').click()");
-  await waitFor("document.getElementById('personalSyncStatus').textContent.includes('샘플 환자')", "Demo Personal sync was not rejected.");
+  await waitFor("document.getElementById('personalSyncStatus').textContent.includes('예시 환자')", "Example patient Personal sync was not rejected.");
   assert(await evaluate(`localStorage.getItem('vitagraph-care-bridge-v1') === ${JSON.stringify(bridgeText)}`), "Demo workspace replaced the real patient's connected snapshot.");
 
   await navigate("/map", "Boolean(document.getElementById('healthForm'))");

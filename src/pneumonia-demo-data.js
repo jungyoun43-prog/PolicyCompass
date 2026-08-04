@@ -14,9 +14,9 @@ const RULE_VERSIONS = Object.freeze({
 const SOURCES = Object.freeze([
   Object.freeze({
     id: "hira-pneumonia-7th-demo-basis",
-    label: "폐렴 7차 적정성 평가 합성 데모 기준",
+    label: "폐렴 7차 적정성 평가 검토 기준",
     url: "",
-    purpose: "환자별 기관 지표 기여 예상 데모",
+    purpose: "환자별 기관 지표 기여 예상 검토",
   }),
 ]);
 
@@ -24,7 +24,7 @@ function verifiedProvenance(sourceId, verifiedAt, reviewerId = "demo-clinician-p
   return {
     kind: "synthetic-local-emr",
     sourceId,
-    sourceLabel: "VitaGraph 합성 의사용 폐렴 데모 기록",
+    sourceLabel: "VitaGraph 예시 환자 폐렴 기록",
     verificationStatus: "VERIFIED",
     patientMatch: "VERIFIED",
     reviewerId,
@@ -39,7 +39,7 @@ function baseProfile(patient, scenario) {
     version: 1,
     physicianOnly: true,
     synthetic: true,
-    syntheticNotice: "합성 의사용 공모전 데모 · 7차 평가기간 시뮬레이션 · 실제 환자·공식 심사결과 아님",
+    syntheticNotice: "예시 환자 · 실제 환자 아님 · 7차 평가기간 기준 · 공식 심사결과 아님",
     patient,
     scenario,
     evaluatedAt: EVALUATED_AT,
@@ -128,14 +128,14 @@ function clinicalContext({ prefix, arrivedAt, symptomOnsetAt, diagnosedAt, sympt
       diagnosedWithin48Hours: true,
       healthcareAssociatedRiskReview: {
         status: "DOCUMENTED",
-        note: "입원 전 지역사회 생활 중 증상이 시작되었고 입원 48시간 이내 진단된 합성 기록",
+        note: "입원 전 지역사회 생활 중 증상이 시작되었고 입원 48시간 이내 진단된 예시 기록",
         recordedAt: diagnosedAt,
       },
       provenance: verifiedProvenance(`${prefix}-cap-onset-review`, diagnosedAt),
     },
     alternativeCauseReview: {
       status: "DOCUMENTED",
-      note: "영상과 임상 경과를 함께 검토했으며 최종 판단은 담당 의료진이 수행한 합성 기록",
+      note: "영상과 임상 경과를 함께 검토했으며 최종 판단은 담당 의료진이 수행한 예시 기록",
       recordedAt: diagnosedAt,
       provenance: verifiedProvenance(`${prefix}-alternative-cause-review`, diagnosedAt),
     },
@@ -219,7 +219,7 @@ function medicationAdministration({ prefix, encounterId, id, label, administered
       status: "APPROPRIATE",
       reviewerId: "demo-antimicrobial-reviewer-01",
       reviewedAt: administeredAt,
-      note: "합성 초기 항생제 적합성 검토 완료 · 자동 처방 권고 아님",
+      note: "초기 항생제 적합성 검토 완료 · 자동 처방 권고 아님",
     } : null,
     provenance: verifiedProvenance(`${prefix}-${id}-administration`, administeredAt),
   };
@@ -273,7 +273,7 @@ const COMPLETE_PROFILE = {
     imaging: {
       performedAt: "2026-11-12T09:35:00.000+09:00",
       reportedAt: "2026-11-12T09:44:00.000+09:00",
-      finding: "우하엽의 새로운 폐침윤이 확인된 합성 판독",
+      finding: "우하엽의 새로운 폐침윤이 확인된 예시 판독",
     },
   }),
   observations: [oxygenObservation("kim-pna", "kim-pna-admission-2026-11", "2026-11-12T09:18:00.000+09:00", 91)],
@@ -286,17 +286,17 @@ const COMPLETE_PROFILE = {
     "2026-11-12T10:15:00.000+09:00",
   )],
   medicationAdministrations: [
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day1", label: "합성 세프트리악손 정맥 투여", administeredAt: "2026-11-12T10:15:00.000+09:00", therapyDay: 1, first: true }),
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "azithromycin-day1", label: "합성 아지스로마이신 정맥 투여", administeredAt: "2026-11-12T10:20:00.000+09:00", therapyDay: 1 }),
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day2", label: "합성 세프트리악손 정맥 투여", administeredAt: "2026-11-13T10:15:00.000+09:00", therapyDay: 2 }),
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day3", label: "합성 세프트리악손 정맥 투여", administeredAt: "2026-11-14T10:15:00.000+09:00", therapyDay: 3 }),
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day4", label: "합성 세프트리악손 정맥 투여", administeredAt: "2026-11-15T10:15:00.000+09:00", therapyDay: 4 }),
-    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day5", label: "합성 세프트리악손 정맥 투여", administeredAt: "2026-11-16T10:15:00.000+09:00", therapyDay: 5 }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day1", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-12T10:15:00.000+09:00", therapyDay: 1, first: true }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "azithromycin-day1", label: "아지스로마이신 정맥 투여", administeredAt: "2026-11-12T10:20:00.000+09:00", therapyDay: 1 }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day2", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-13T10:15:00.000+09:00", therapyDay: 2 }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day3", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-14T10:15:00.000+09:00", therapyDay: 3 }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day4", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-15T10:15:00.000+09:00", therapyDay: 4 }),
+    medicationAdministration({ prefix: "kim-pna", encounterId: "kim-pna-admission-2026-11", id: "ceftriaxone-day5", label: "세프트리악손 정맥 투여", administeredAt: "2026-11-16T10:15:00.000+09:00", therapyDay: 5 }),
   ],
   claimItems: [
-    claimItem({ id: "kim-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제 합성 항목", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "kim-pna-claim-chest-radiograph", code: "DEMO-CHEST-XRAY", label: "폐렴 흉부 단순촬영 합성 항목", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_IMAGE_REPORT_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "kim-pna-claim-discharge-review", code: "DEMO-PNA-DISCHARGE-REVIEW", label: "퇴원 후 추적 자료 상태 합성 항목", serviceDate: "2026-11-17", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
+    claimItem({ id: "kim-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "kim-pna-claim-chest-radiograph", code: "DEMO-CHEST-XRAY", label: "폐렴 흉부 단순촬영", serviceDate: "2026-11-12", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_IMAGE_REPORT_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "kim-pna-claim-discharge-review", code: "DEMO-PNA-DISCHARGE-REVIEW", label: "퇴원 후 추적 자료 상태", serviceDate: "2026-11-17", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
   ],
   adjudications: [],
 };
@@ -329,7 +329,7 @@ const BLOOD_AFTER_ANTIBIOTIC_PROFILE = {
     imaging: {
       performedAt: "2027-01-18T18:40:00.000+09:00",
       reportedAt: "2027-01-18T18:58:00.000+09:00",
-      finding: "좌하엽 폐침윤이 확인된 합성 판독",
+      finding: "좌하엽 폐침윤이 확인된 예시 판독",
     },
   }),
   observations: [oxygenObservation("choi-pna", "choi-pna-admission-2027-01", "2027-01-18T18:35:00.000+09:00", 94)],
@@ -342,15 +342,15 @@ const BLOOD_AFTER_ANTIBIOTIC_PROFILE = {
     "2027-01-18T19:40:00.000+09:00",
   )],
   medicationAdministrations: [
-    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day1", label: "합성 암피실린·설박탐 정맥 투여", administeredAt: "2027-01-18T19:40:00.000+09:00", therapyDay: 1, first: true }),
-    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day2", label: "합성 암피실린·설박탐 정맥 투여", administeredAt: "2027-01-19T19:40:00.000+09:00", therapyDay: 2 }),
-    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day3", label: "합성 암피실린·설박탐 정맥 투여", administeredAt: "2027-01-20T19:40:00.000+09:00", therapyDay: 3 }),
-    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day4", label: "합성 암피실린·설박탐 정맥 투여", administeredAt: "2027-01-21T19:40:00.000+09:00", therapyDay: 4 }),
+    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day1", label: "암피실린·설박탐 정맥 투여", administeredAt: "2027-01-18T19:40:00.000+09:00", therapyDay: 1, first: true }),
+    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day2", label: "암피실린·설박탐 정맥 투여", administeredAt: "2027-01-19T19:40:00.000+09:00", therapyDay: 2 }),
+    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day3", label: "암피실린·설박탐 정맥 투여", administeredAt: "2027-01-20T19:40:00.000+09:00", therapyDay: 3 }),
+    medicationAdministration({ prefix: "choi-pna", encounterId: "choi-pna-admission-2027-01", id: "ampicillin-sulbactam-day4", label: "암피실린·설박탐 정맥 투여", administeredAt: "2027-01-21T19:40:00.000+09:00", therapyDay: 4 }),
   ],
   claimItems: [
-    claimItem({ id: "choi-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제 합성 항목", serviceDate: "2027-01-18", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "choi-pna-claim-repeat-ct", code: "DEMO-PNA-CHEST-CT", label: "폐렴 추적 흉부 CT 합성 항목", serviceDate: "2027-01-19", workflowStatus: "CLAIMED", status: "YELLOW", reasonCodes: ["DEMO_REPEAT_IMAGE_INDICATION_NOTE_MISSING"], disclaimer: "청구 전 적응증 기록 확인 필요 · 삭감 확정 아님" }),
-    claimItem({ id: "choi-pna-claim-followup-unassessed", code: "DEMO-PNA-FOLLOWUP", label: "폐렴 추적 진료 자료 상태 합성 항목", serviceDate: "2027-01-22", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
+    claimItem({ id: "choi-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-01-18", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "choi-pna-claim-repeat-ct", code: "DEMO-PNA-CHEST-CT", label: "폐렴 추적 흉부 CT", serviceDate: "2027-01-19", workflowStatus: "CLAIMED", status: "YELLOW", reasonCodes: ["DEMO_REPEAT_IMAGE_INDICATION_NOTE_MISSING"], disclaimer: "청구 전 적응증 기록 확인 필요 · 삭감 확정 아님" }),
+    claimItem({ id: "choi-pna-claim-followup-unassessed", code: "DEMO-PNA-FOLLOWUP", label: "폐렴 추적 진료 자료 상태", serviceDate: "2027-01-22", workflowStatus: "PERFORMED", status: "GRAY", reasonCodes: ["DEMO_RULE_NOT_APPLICABLE"], disclaimer: "해당 없음 · 시행 누락 또는 삭감 확정을 의미하지 않음" }),
   ],
   adjudications: [],
 };
@@ -384,7 +384,7 @@ const MISSING_SEVERITY_PROFILE = {
     imaging: {
       performedAt: "2027-03-08T07:32:00.000+09:00",
       reportedAt: "2027-03-08T07:50:00.000+09:00",
-      finding: "우중엽 폐침윤이 확인된 합성 판독",
+      finding: "우중엽 폐침윤이 확인된 예시 판독",
     },
   }),
   observations: [oxygenObservation("jung-pna", "jung-pna-admission-2027-03", "2027-03-08T07:20:00.000+09:00", 92)],
@@ -397,15 +397,15 @@ const MISSING_SEVERITY_PROFILE = {
     "2027-03-08T08:40:00.000+09:00",
   )],
   medicationAdministrations: [
-    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day1", label: "합성 세프트리악손 정맥 투여", administeredAt: "2027-03-08T08:40:00.000+09:00", therapyDay: 1, first: true }),
-    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day2", label: "합성 세프트리악손 정맥 투여", administeredAt: "2027-03-09T08:40:00.000+09:00", therapyDay: 2 }),
-    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day3", label: "합성 세프트리악손 정맥 투여", administeredAt: "2027-03-10T08:40:00.000+09:00", therapyDay: 3 }),
-    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day4", label: "합성 세프트리악손 정맥 투여", administeredAt: "2027-03-11T08:40:00.000+09:00", therapyDay: 4 }),
+    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day1", label: "세프트리악손 정맥 투여", administeredAt: "2027-03-08T08:40:00.000+09:00", therapyDay: 1, first: true }),
+    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day2", label: "세프트리악손 정맥 투여", administeredAt: "2027-03-09T08:40:00.000+09:00", therapyDay: 2 }),
+    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day3", label: "세프트리악손 정맥 투여", administeredAt: "2027-03-10T08:40:00.000+09:00", therapyDay: 3 }),
+    medicationAdministration({ prefix: "jung-pna", encounterId: "jung-pna-admission-2027-03", id: "ceftriaxone-day4", label: "세프트리악손 정맥 투여", administeredAt: "2027-03-11T08:40:00.000+09:00", therapyDay: 4 }),
   ],
   claimItems: [
-    claimItem({ id: "jung-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제 합성 항목", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "jung-pna-claim-cultures", code: "DEMO-PNA-CULTURES", label: "폐렴 배양검사 합성 항목", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_SPECIMEN_TIMING_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
-    claimItem({ id: "jung-pna-claim-severity-data", code: "DEMO-PNA-SEVERITY-REVIEW", label: "폐렴 중증도 기록 확인 합성 항목", serviceDate: "2027-03-08", workflowStatus: "DRAFT", status: "GRAY", reasonCodes: ["DEMO_REQUIRED_DATA_MISSING"], disclaimer: "자료 부족 · 적정성 평가 확인 항목이며 삭감 확정이 아님" }),
+    claimItem({ id: "jung-pna-claim-iv-antibiotic", code: "DEMO-PNA-IV-ANTIBIOTIC", label: "폐렴 입원 정맥 항생제", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_CAP_CONTEXT_VERIFIED", "DEMO_IV_COURSE_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "jung-pna-claim-cultures", code: "DEMO-PNA-CULTURES", label: "폐렴 배양검사", serviceDate: "2027-03-08", workflowStatus: "CLAIMED", status: "GREEN", reasonCodes: ["DEMO_SPECIMEN_TIMING_VERIFIED"], disclaimer: "내부 사전점검 통과 · 지급 보장 아님" }),
+    claimItem({ id: "jung-pna-claim-severity-data", code: "DEMO-PNA-SEVERITY-REVIEW", label: "폐렴 중증도 기록 확인", serviceDate: "2027-03-08", workflowStatus: "DRAFT", status: "GRAY", reasonCodes: ["DEMO_REQUIRED_DATA_MISSING"], disclaimer: "자료 부족 · 적정성 평가 확인 항목이며 삭감 확정이 아님" }),
   ],
   adjudications: [],
 };

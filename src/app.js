@@ -147,7 +147,7 @@ function renderSummary() {
   const saveNote = elements.saveJourney.querySelector("small");
   if (state.isDemo) {
     saveLabel.textContent = "예시 데이터는 Journey에 저장되지 않아요";
-    saveNote.textContent = "데모 모드";
+    saveNote.textContent = "현재 탭에서만 유지";
   } else if (!elements.saveJourney.classList.contains("is-saved")) {
     saveLabel.textContent = "현재 지도를 Journey에 저장";
     saveNote.textContent = "브라우저 로컬 기록";

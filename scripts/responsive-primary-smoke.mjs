@@ -13,7 +13,7 @@ const routes = [
   { route: "/connections", selector: "#sceneEmpty .primary-button", text: "건강 지도에서 연결 확인" },
   { route: "/insights", selector: "#refreshClinicalSnapshot", text: "연결 기록 다시 확인" },
   { route: "/journey", selector: "#journeyEmpty .primary-button", text: "첫 지도 만들기" },
-  { route: "/emr", selector: "#loadDemo", text: "샘플 워크스페이스 열기" },
+  { route: "/emr", selector: "#loadDemo", text: "예시 환자 불러오기" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-responsive-primary-"));
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));

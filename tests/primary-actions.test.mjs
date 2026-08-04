@@ -66,8 +66,8 @@ test("건강 지도 입력은 선택 가능한 질환 뒤에 제출 동작을 �
   assert.doesNotMatch(html, /id="(?:transferCode|fhirFile|importRecordButton)"/);
 });
 
-test("빈 EMR은 하나의 명시적 샘플 워크스페이스 동작만 제공한다", async () => {
+test("빈 EMR은 하나의 명시적 예시 환자 동작만 제공한다", async () => {
   const html = await readFile(new URL("../src/emr.html", import.meta.url), "utf8");
   assert.equal((html.match(/id="loadDemo"/g) ?? []).length, 1);
-  assert.equal((html.match(/샘플 워크스페이스 열기/g) ?? []).length, 1);
+  assert.equal((html.match(/예시 환자 불러오기/g) ?? []).length, 1);
 });

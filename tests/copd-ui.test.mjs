@@ -48,7 +48,29 @@ test("질환 선택은 환자별 관련 프로그램만 렌더하고 전환해�
   assert.match(js, /ArrowLeft/);
   assert.match(js, /ArrowRight/);
   assert.match(js, /왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다/);
-  assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*42px/);
+  assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*48px/);
+});
+
+test("선택 환자 헤더는 확정 활성 질환을 별도 목록으로 렌더한다", () => {
+  assert.match(html, /id="selectedPatientConditions"[^>]*role="list"/);
+  assert.match(js, /function confirmedActiveConditions\(patient\)/);
+  assert.match(js, /event\.recordStatus === "final"/);
+  assert.match(js, /event\.status === "active"/);
+  assert.match(js, /event\.certainty === "confirmed"/);
+  assert.match(js, /function renderPatientConditions\(patient\)/);
+  assert.match(js, /clear\(refs\.selectedPatientConditions\)/);
+  assert.match(js, /renderPatientConditions\(patient\)/);
+  assert.match(js, /startsWith\("DEMO-"\)/);
+  assert.match(js, /includes\("vitagraph:demo"\)/);
+});
+
+test("공개 EMR UI는 공모전·DEMO 배지 대신 예시 환자 경계를 한 번 명시한다", () => {
+  assert.match(html, /<b>예시 환자<\/b>/);
+  assert.match(html, /실제 환자 아님 · 저장되지 않음/);
+  assert.doesNotMatch(html, />\s*DEMO\s*</i);
+  assert.doesNotMatch(html, /\bcontest\b|공모전/i);
+  assert.doesNotMatch(js, /claim-synthetic-badge/);
+  assert.doesNotMatch(js, /합성 공모전 데모|합성 데모/);
 });
 
 test("COPD와 폐렴은 평가 지표와 임상 정합성을 서로 섞지 않는다", () => {

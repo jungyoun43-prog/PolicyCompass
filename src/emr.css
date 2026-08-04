@@ -813,6 +813,12 @@ body.emr-page {
   padding: var(--space-3) var(--space-5);
 }
 
+.patient-identity {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
 .patient-identity h2 {
   margin: 0;
   font-size: 1.45rem;
@@ -824,6 +830,66 @@ body.emr-page {
   color: var(--muted);
   font-size: 0.7rem;
   word-break: keep-all;
+}
+
+.patient-condition-summary {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+  margin-top: 2px;
+}
+
+.patient-condition-summary__label {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 720;
+}
+
+.patient-condition-summary__list {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.patient-condition-chip,
+.patient-condition-summary__more,
+.patient-condition-summary__empty {
+  display: inline-flex;
+  min-height: 24px;
+  gap: 5px;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 38%, var(--line));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--data-cyan) 13%, var(--surface)), var(--surface));
+  padding: 4px 10px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.patient-condition-chip strong {
+  font-size: 0.9375rem;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
+
+.patient-condition-chip small {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.patient-condition-summary__more,
+.patient-condition-summary__empty {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
 }
 
 .safety-alerts {
@@ -2701,17 +2767,6 @@ body.emr-page {
   line-height: 1.5;
 }
 
-.claim-synthetic-badge {
-  justify-self: start;
-  margin-top: var(--space-1);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--data-violet) 10%, var(--surface));
-  padding: 3px 7px;
-  color: color-mix(in srgb, var(--data-violet) 72%, var(--ink));
-  font-size: 0.61rem;
-  font-weight: 760;
-}
-
 .claim-attention-list > .claim-attention-item {
   --claim-attention-tone: var(--muted);
   display: block;
@@ -3022,7 +3077,8 @@ body.emr-page {
 }
 
 .disease-assessment-tab b {
-  font-size: 0.82rem;
+  font-size: 0.9375rem;
+  font-weight: 800;
 }
 
 .disease-assessment-tab small {
@@ -3030,8 +3086,9 @@ body.emr-page {
   background: var(--surface);
   padding: 3px 7px;
   color: var(--muted);
-  font-size: 0.59rem;
+  font-size: 0.8125rem;
   font-weight: 760;
+  line-height: 1.25;
 }
 
 .disease-program-heading {
@@ -3045,24 +3102,25 @@ body.emr-page {
 .disease-program-heading h4 {
   margin: var(--space-1) 0 0;
   color: var(--ink);
-  font-size: 1.1rem;
+  font-size: clamp(1.3rem, calc(1.16rem + 0.35vw), 1.55rem);
   letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .disease-program-heading > span {
   flex: none;
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--data-violet) 10%, var(--surface));
-  padding: 4px 8px;
+  padding: 5px 9px;
   color: color-mix(in srgb, var(--data-violet) 74%, var(--ink));
-  font-size: 0.62rem;
+  font-size: 0.8125rem;
   font-weight: 750;
 }
 
 .disease-program-intro {
   margin: 0;
   color: var(--muted);
-  font-size: 0.67rem;
+  font-size: 0.8125rem;
   line-height: 1.55;
   word-break: keep-all;
 }
@@ -4519,7 +4577,7 @@ body.emr-page {
   width: min(calc(100% - var(--space-8)), 1600px);
 }
 
-/* Clinical labels and provenance stay readable at the 12px operational floor. */
+/* Clinical labels and provenance stay readable at the 13px operational floor. */
 .emr-page :is(
   .clinical-command > div:first-child > p:last-child,
   .command-title .page-hero__eyebrow,
@@ -4604,7 +4662,7 @@ body.emr-page {
   .data-facts dt,
   .data-facts dd
 ) {
-  font-size: var(--font-size-caption);
+  font-size: 0.8125rem;
 }
 
 /* Claims workbench: a quiet, row-based review surface with evidence on demand. */
@@ -4731,12 +4789,6 @@ body.emr-page {
   letter-spacing: -0.025em;
   line-height: 1.38;
   word-break: keep-all;
-}
-
-.claim-attention-summary__content > .claim-synthetic-badge {
-  grid-column: 1;
-  justify-self: start;
-  margin: 0;
 }
 
 .claim-attention-counts {
@@ -5036,7 +5088,7 @@ body.emr-page {
 
 .disease-assessment-tab {
   min-width: 126px;
-  min-height: 42px;
+  min-height: 48px;
   flex: 1 0 126px;
   border: 0;
   border-radius: 6px;
@@ -5051,23 +5103,25 @@ body.emr-page {
 
 .disease-assessment-tab[aria-selected="true"] {
   border-color: transparent;
-  background: var(--surface);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 12%, transparent);
+  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--data-cyan) 8%, var(--surface)));
+  box-shadow:
+    inset 0 -3px 0 color-mix(in srgb, var(--data-cyan) 72%, var(--ink)),
+    0 2px 6px color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
 .disease-assessment-tab b {
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
 }
 
 .disease-assessment-tab small {
   border: 0;
   background: transparent;
   padding: 0;
-  font-size: 0.58rem;
+  font-size: 0.8125rem;
 }
 
 .disease-program-heading h4 {
-  font-size: 1.18rem;
+  font-size: clamp(1.3rem, calc(1.16rem + 0.35vw), 1.55rem);
 }
 
 .disease-program-heading > span,
@@ -5129,11 +5183,6 @@ body.emr-page {
   margin: 0;
   font-size: 0.68rem;
   line-height: 1.45;
-}
-
-.quality-program-summary__content > .claim-synthetic-badge {
-  grid-column: 2;
-  margin: 0;
 }
 
 .quality-program-metrics {
@@ -5289,6 +5338,66 @@ body.emr-page {
 .claim-patient,
 .claim-missing {
   font-size: 0.68rem;
+}
+
+#panel-claims :is(
+  .claim-overview-card__intro,
+  .claim-attention-summary__content p,
+  .claim-attention-count small,
+  .claim-attention-column-head,
+  .claim-attention-item__identity small,
+  .claim-attention-item__status,
+  .claim-attention-item__detail b,
+  .claim-attention-item__content p,
+  .claim-attention-item__content small,
+  .claim-attention-item__missing,
+  .claim-status-guide > summary small,
+  .claim-overview-disclosure > summary small,
+  .claim-status-legend__item b,
+  .claim-status-legend__item small,
+  .disease-assessment-tab small,
+  .disease-program-intro,
+  .quality-program-score small,
+  .quality-program-summary__copy > p,
+  .quality-program-metric__status,
+  .quality-program-metric__detail small,
+  .quality-program-metric__detail p,
+  .quality-detail-list b,
+  .quality-evidence-list b,
+  .quality-detail-list span,
+  .quality-evidence-list span,
+  .quality-diagnostic-panel__label small,
+  .quality-diagnostic-panel__badge,
+  .quality-diagnostic-axis small,
+  .quality-diagnostic-axis strong,
+  .quality-diagnostic-boundary,
+  .claim-review-guide b,
+  .claim-review-guide p,
+  .claim-result-chip,
+  .claim-result-chip b,
+  .claim-lane__heading p,
+  .claim-computed-status,
+  .claim-missing,
+  .claim-review-stale,
+  .claim-card__disclosure,
+  .claim-auto-calculation__metric small,
+  .claim-auto-calculation__metric strong,
+  .claim-auto-calculation > p,
+  .claim-review-control > span,
+  .claim-review-control select
+) {
+  font-size: 0.8125rem;
+}
+
+#panel-claims :is(
+  .claim-status-guide > summary b,
+  .claim-overview-disclosure > summary b,
+  .quality-program-metric__label b,
+  .quality-detail-section h5,
+  .claim-lane h4,
+  .claim-auto-calculation > b
+) {
+  font-size: 0.875rem;
 }
 
 @media (max-width: 1180px) {
@@ -5512,6 +5621,10 @@ body.emr-page {
 
   .patient-safety-header {
     align-items: flex-start;
+  }
+
+  .patient-identity {
+    flex-basis: 100%;
   }
 
   .patient-header-actions {
@@ -5774,10 +5887,6 @@ body.emr-page {
     padding-top: var(--space-3);
   }
 
-  .claim-attention-summary__content > .claim-synthetic-badge {
-    grid-column: 1;
-  }
-
   .claim-attention-column-head {
     display: none;
   }
@@ -5842,10 +5951,6 @@ body.emr-page {
     padding-inline: var(--space-1);
   }
 
-  .claim-attention-count small {
-    font-size: 0.54rem;
-  }
-
   .quality-program-summary__content {
     grid-template-columns: 1fr;
   }
@@ -5855,10 +5960,6 @@ body.emr-page {
     align-items: baseline;
     border-right: 0;
     padding-right: 0;
-  }
-
-  .quality-program-summary__content > .claim-synthetic-badge {
-    grid-column: 1;
   }
 
   .disease-assessment-tab {

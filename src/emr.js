@@ -144,7 +144,7 @@ const AUDIT_LABELS = {
   "fhir.exported": "의료기관용 FHIR 내보내기",
   "patient.transfer.exported": "환자용 VitaGraph 전달",
   "backup.restored": "백업 복원",
-  "demo.loaded": "샘플 워크스페이스 열기",
+  "demo.loaded": "예시 환자 불러오기",
 };
 
 const INSURANCE_LABELS = {
@@ -228,6 +228,7 @@ const refs = {
   workspaceContent: byId("workspaceContent"),
   selectedPatientName: byId("selectedPatientName"),
   selectedPatientMeta: byId("selectedPatientMeta"),
+  selectedPatientConditions: byId("selectedPatientConditions"),
   safetyAlerts: byId("safetyAlerts"),
   lastSavedAt: byId("lastSavedAt"),
   patientMetrics: byId("patientMetrics"),
@@ -844,7 +845,7 @@ async function applyMutation(mutator, message, { preserveDraft = true, announce 
     }
     briefCache.clear();
     render();
-    if (announce) setStatus(message + (wasDemo ? " · 데모 변경은 저장되지 않습니다." : ""), "success");
+    if (announce) setStatus(message + (wasDemo ? " · 예시 환자 변경은 저장되지 않습니다." : ""), "success");
   });
 }
 
@@ -920,6 +921,68 @@ function renderPatients() {
   requestAnimationFrame(() => updateHorizontalScrollPosition(refs.patientList));
 }
 
+function isInternalExampleCoding(event = {}) {
+  return String(event.code ?? "").toUpperCase().startsWith("DEMO-")
+    || String(event.system ?? "").toLowerCase().includes("vitagraph:demo");
+}
+
+function displayCoding(event = {}) {
+  return isInternalExampleCoding(event)
+    ? ""
+    : [event.system, event.code].filter(Boolean).join(" | ");
+}
+
+function confirmedActiveConditions(patient) {
+  const chart = finalizedPatient(patient);
+  const seen = new Set();
+  return (chart?.events ?? [])
+    .filter((event) => (
+      event.type === "condition"
+      && event.recordStatus === "final"
+      && event.status === "active"
+      && event.certainty === "confirmed"
+      && (!event.verificationStatus || event.verificationStatus === "confirmed")
+      && !isInternalExampleCoding(event)
+    ))
+    .sort((left, right) => String(right.date).localeCompare(String(left.date))
+      || Number(right.diagnosisRole === "primary") - Number(left.diagnosisRole === "primary"))
+    .filter((event) => {
+      const key = [event.system, event.code, event.label].filter(Boolean).join("|").toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function renderPatientConditions(patient) {
+  const conditions = confirmedActiveConditions(patient);
+  clear(refs.selectedPatientConditions);
+  refs.selectedPatientConditions.setAttribute(
+    "aria-label",
+    conditions.length
+      ? `확정 활성 질환: ${conditions.map(({ label }) => label).join(", ")}`
+      : "확정 활성 질환 없음",
+  );
+  if (!conditions.length) {
+    const empty = element("span", "patient-condition-summary__empty", "확정 활성 질환 없음");
+    empty.setAttribute("role", "listitem");
+    refs.selectedPatientConditions.append(empty);
+    return;
+  }
+  for (const condition of conditions.slice(0, 2)) {
+    const item = element("span", "patient-condition-chip");
+    item.setAttribute("role", "listitem");
+    item.append(element("strong", "", condition.label));
+    if (condition.code) item.append(element("small", "", condition.code));
+    refs.selectedPatientConditions.append(item);
+  }
+  if (conditions.length > 2) {
+    const more = element("span", "patient-condition-summary__more", `외 ${conditions.length - 2}개`);
+    more.setAttribute("role", "listitem");
+    refs.selectedPatientConditions.append(more);
+  }
+}
+
 function renderSafety(patient) {
   const chart = finalizedPatient(patient);
   clear(refs.safetyAlerts);
@@ -944,7 +1007,7 @@ function addMetric(label, value, detail, warning = false) {
 function renderMetrics(patient, evaluations) {
   const chart = finalizedPatient(patient);
   clear(refs.patientMetrics);
-  const conditions = chart.events.filter((event) => event.type === "condition" && !["inactive", "resolved", "remission"].includes(event.status));
+  const conditions = confirmedActiveConditions(patient);
   const medications = chart.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
   const latestObservation = chart.events.find((event) => event.type === "observation");
   const attention = evaluations.filter((item) => ["missing-evidence", "due-soon", "unknown"].includes(item.status));
@@ -956,6 +1019,7 @@ function renderMetrics(patient, evaluations) {
 
 function renderSummary(patient) {
   const chart = finalizedPatient(patient);
+  const activeConditionIds = new Set(confirmedActiveConditions(patient).map(({ id }) => id));
   clear(refs.clinicalSummary);
   const groups = [
     ["활성 문제", ["condition", "symptom"]],
@@ -966,7 +1030,10 @@ function renderSummary(patient) {
   for (const [title, types] of groups) {
     const section = element("section", "summary-group");
     section.append(element("h4", "", title));
-    const events = chart.events.filter((event) => types.includes(event.type)).slice(0, 4);
+    const events = chart.events.filter((event) => (
+      types.includes(event.type)
+      && (event.type !== "condition" || activeConditionIds.has(event.id))
+    )).slice(0, 4);
     if (!events.length) {
       section.append(createEmptyMessage("해당 구조화 기록이 없습니다."));
     } else {
@@ -977,7 +1044,7 @@ function renderSummary(patient) {
         item.append(
           element("b", "", event.label),
           element("small", "", displayDate(event.date)),
-          element("span", "", [value, event.code, event.note].filter(Boolean).join(" · ") || EVENT_LABELS[event.type]),
+          element("span", "", [value, displayCoding(event), event.note].filter(Boolean).join(" · ") || EVENT_LABELS[event.type]),
         );
         list.append(item);
       }
@@ -1211,7 +1278,7 @@ function renderNextWork(evaluations) {
     );
     refs.nextWorkList.append(card);
   }
-  if (!attention.length) refs.nextWorkList.append(createEmptyMessage("현재 샘플 규칙에서 바로 확인할 작업이 없습니다."));
+  if (!attention.length) refs.nextWorkList.append(createEmptyMessage("현재 예시 규칙에서 바로 확인할 작업이 없습니다."));
 }
 
 function renderEventFilters(patient) {
@@ -1245,7 +1312,7 @@ function renderTimeline(patient) {
     );
     body.append(header);
     const value = event.value === "" ? "" : String(event.value) + (event.unit ? " " + event.unit : "");
-    const codedValue = event.code ? [event.system, event.code].filter(Boolean).join(" | ") : "";
+    const codedValue = displayCoding(event);
     const detail = [value, codedValue, event.note].filter(Boolean).join(" · ");
     if (detail) body.append(element("p", "", detail));
     body.append(element("span", "event-source", "",));
@@ -1550,7 +1617,13 @@ function renderRuleVersions() {
     const summary = element("div", "rule-version-summary");
     summary.append(
       element("b", "", `${rule.title} · v${rule.version}`),
-      element("span", "", `${rule.ruleSetId} · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}${rule.sample ? " · 샘플" : ""}`),
+      element(
+        "span",
+        "",
+        rule.sample
+          ? `내부 예시 규칙 · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`
+          : `${rule.ruleSetId} · ${rule.effectiveFrom} ~ ${rule.effectiveTo || "현재"} · ${rule.sourceLabel}`,
+      ),
     );
     const actions = element("div", "rule-version-actions");
     const label = element("label", "", "종료일");
@@ -1580,6 +1653,11 @@ const DEMO_CLAIM_REASON_LABELS = Object.freeze({
   DEMO_RECORD_CONTEXT_MISSING: "증상·노출력 기록 확인 필요",
   DEMO_REQUIRED_DATA_MISSING: "필수 자료 부족",
   DEMO_EXTERNAL_PROVENANCE_UNVERIFIED: "타기관 자료 출처·환자 일치 미검증",
+  DEMO_CAP_CONTEXT_VERIFIED: "폐렴 진료 맥락 확인",
+  DEMO_IV_COURSE_VERIFIED: "정맥 항생제 투여 기간 확인",
+  DEMO_IMAGE_REPORT_VERIFIED: "흉부 영상 판독 확인",
+  DEMO_REPEAT_IMAGE_INDICATION_NOTE_MISSING: "추적 영상 적응증 기록 확인 필요",
+  DEMO_SPECIMEN_TIMING_VERIFIED: "검체 채취 시점 확인",
 });
 
 function demoClaimEvaluation(item) {
@@ -1594,7 +1672,7 @@ function demoClaimEvaluation(item) {
     status: evaluationStatus,
     calculationAvailable: status !== "GRAY",
     missingEvidence: status === "YELLOW" ? item.preflight.reasonCodes ?? [] : [],
-    explanation: item.preflight?.disclaimer ?? "합성 사전점검 자료",
+    explanation: item.preflight?.disclaimer ?? "예시 사전점검 자료",
   };
 }
 
@@ -1665,7 +1743,7 @@ function appendClaimAttentionEntry(container, entry) {
   const itemSummary = element("summary", "claim-attention-item__summary");
   const icon = element("span", "claim-attention-item__mark", CLAIM_ATTENTION_ICON[presentation.state]);
   icon.setAttribute("aria-hidden", "true");
-  const meta = [entry.code, entry.date].filter(Boolean).join(" · ");
+  const meta = [entry.synthetic ? "" : entry.code, entry.date].filter(Boolean).join(" · ");
   const identity = element("span", "claim-attention-item__identity");
   identity.append(element("strong", "", entry.title));
   if (meta) identity.append(element("small", "", meta));
@@ -1683,7 +1761,7 @@ function appendClaimAttentionEntry(container, entry) {
   const boundary = element("div", "claim-attention-item__detail claim-attention-item__detail--boundary");
   boundary.append(
     element("b", "", "판정 범위"),
-    element("small", "", `${entry.synthetic ? "합성 자료" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
+    element("small", "", `${entry.synthetic ? "예시 환자 자료" : "EMR 자동 집계"} · ${presentation.paymentBoundary}`),
   );
   content.append(review, boundary);
   disclosure.append(itemSummary, content);
@@ -1728,7 +1806,6 @@ function renderClaimAttention(patient, evaluations, profile) {
     countList.append(count);
   }
   summary.append(element("strong", "", headline), countList);
-  if (profile?.synthetic) summary.append(element("span", "claim-synthetic-badge", "합성 공모전 데모"));
   refs.claimAttentionSummary.append(summary);
 
   if (!entries.length) {
@@ -1821,11 +1898,6 @@ function renderDiseaseQuality(quality, profile, program) {
     copy.append(element("p", "quality-program-summary__exceptions", `확인할 지표 · ${exceptions.map(({ label }) => label).join(" · ")}`));
   }
   summary.append(score, copy);
-  if (profile?.synthetic) {
-    const synthetic = element("span", "claim-synthetic-badge", "합성 데모");
-    synthetic.title = profile.syntheticNotice;
-    summary.append(synthetic);
-  }
   refs.diseaseQualitySummary.append(summary);
 
   for (const metric of quality.metrics) {
@@ -1930,7 +2002,7 @@ function renderCopdDiagnostic(diagnostic, profile) {
     repeat.append(list);
   }
   if (profile?.scenario?.kind === "NORMAL_STAGED") {
-    repeat.append(element("p", "quality-stage-note", "1차 0.640만 있을 때는 ‘기준 일치 + 반복확인 대기’였고, 별도 날짜의 2차 0.650이 연결된 뒤 ‘반복 확인’으로 바뀐 합성 흐름입니다."));
+    repeat.append(element("p", "quality-stage-note", "1차 0.640만 있을 때는 ‘기준 일치 + 반복확인 대기’였고, 별도 날짜의 2차 0.650이 연결된 뒤 ‘반복 확인’으로 바뀐 예시 흐름입니다."));
   }
 
   const context = element("section", "quality-detail-section");
@@ -2088,7 +2160,7 @@ function renderDiseaseAssessment(patient, requestedDiseaseId = "") {
   const qualityRule = selectedId === "copd" ? HIRA_COPD_2026_RULESET : HIRA_PNEUMONIA_2026_RULESET;
   const diagnosticRule = selectedId === "copd" ? GOLD_COPD_2026_RULESET : KDCA_PNEUMONIA_2026_GUIDELINE;
   refs.diseaseAssessmentMeta.append(document.createTextNode(
-    `${qualityRule.version} · ${diagnosticRule.version} · 데모 계산 ${displayTimestamp(result.evaluatedAt)} · `,
+    `${qualityRule.version} · ${diagnosticRule.version} · 평가 기준 시점 ${displayTimestamp(result.evaluatedAt)} · `,
   ));
   appendSourceLink(refs.diseaseAssessmentMeta, qualityRule);
   refs.diseaseAssessmentMeta.append(document.createTextNode(" · "));
@@ -2211,8 +2283,11 @@ function renderClaimBoard(patient) {
       const top = element("span", "claim-card__top");
       const title = element("b", "", evaluation.title);
       title.id = titleId;
-      const serviceCode = element("code", "", evaluation.serviceCode);
-      serviceCode.title = [evaluation.rule.serviceSystem, evaluation.serviceCode].filter(Boolean).join(" | ");
+      const isExampleRule = evaluation.rule.sample === true;
+      const serviceCode = element("code", "", isExampleRule ? "예시 규칙" : evaluation.serviceCode);
+      serviceCode.title = isExampleRule
+        ? "내부 검토용 예시 규칙"
+        : [evaluation.rule.serviceSystem, evaluation.serviceCode].filter(Boolean).join(" | ");
       const dragHandle = element("span", "claim-drag-handle", "⠿");
       dragHandle.setAttribute("aria-hidden", "true");
       top.append(title, serviceCode, dragHandle);
@@ -2308,10 +2383,11 @@ function renderClaimBoard(patient) {
       evidence.append(element("b", "", "연결 차트 근거"));
       if (evidenceEvents.length) {
         for (const event of evidenceEvents.slice(0, 5)) {
+          const coding = isExampleRule ? "" : [event.system, event.code].filter(Boolean).join(" | ");
           evidence.append(element(
             "span",
             "",
-            [event.label, event.date, [event.system, event.code].filter(Boolean).join(" | "), event.source?.label, event.source?.resourceId].filter(Boolean).join(" · "),
+            [event.label, event.date, coding, event.source?.label, event.source?.resourceId].filter(Boolean).join(" · "),
           ));
         }
       } else {
@@ -2321,7 +2397,9 @@ function renderClaimBoard(patient) {
       detailAside.append(element(
         "span",
         "claim-rule-version",
-        "규칙 " + evaluation.rule.ruleSetId + " · v" + evaluation.rule.version + " · " + evaluation.rule.effectiveFrom + " ~ " + (evaluation.rule.effectiveTo || "현재"),
+        isExampleRule
+          ? `내부 예시 규칙 · ${evaluation.rule.effectiveFrom} ~ ${evaluation.rule.effectiveTo || "현재"}`
+          : "규칙 " + evaluation.rule.ruleSetId + " · v" + evaluation.rule.version + " · " + evaluation.rule.effectiveFrom + " ~ " + (evaluation.rule.effectiveTo || "현재"),
       ));
       detailAside.append(element("span", "claim-manual-note", "Claim/ClaimResponse 미연결 · 청구·심사 이력 수동 대조"));
       const sourceUrl = safeExternalUrl(evaluation.rule.sourceUrl);
@@ -2433,7 +2511,7 @@ function renderAudit() {
 function renderDataFacts() {
   clear(refs.dataFacts);
   const facts = [
-    ["저장 위치", state.demo ? "메모리 전용 데모" : "브라우저 localStorage"],
+    ["저장 위치", state.demo ? "메모리 전용 예시 환자" : "브라우저 localStorage"],
     ["환자 수", state.patients.length + "명"],
     ["진료 회차", state.patients.reduce((sum, patient) => sum + patient.events.filter((event) => event.type === "encounter").length, 0) + "건"],
     ["임상 이벤트", state.patients.reduce((sum, patient) => sum + patient.events.length, 0) + "건"],
@@ -2780,8 +2858,14 @@ function renderEncounterSignReview(patient, encounter, records, completed) {
     ([part, value]) => `${part} · ${String(value ?? "").trim() || "미입력"}`,
     "SOAP 없음",
   ));
-  addGroup("KCD 진단", reviewValues(review.diagnoses, (item) => `${item.diagnosisRole === "primary" ? "주" : "부"} · ${item.system || "시스템 없음"} · ${item.code || "코드 없음"} ${item.label}`, "진단 없음"));
-  addGroup("오더", reviewValues(review.orders, (item) => `${item.order?.kind || "오더"} · ${item.system || "시스템 없음"} · ${item.code || "코드 없음"} ${item.label}`, "오더 없음"));
+  addGroup("KCD 진단", reviewValues(review.diagnoses, (item) => {
+    const coding = displayCoding(item);
+    return [item.diagnosisRole === "primary" ? "주" : "부", coding, item.label].filter(Boolean).join(" · ");
+  }, "진단 없음"));
+  addGroup("오더", reviewValues(review.orders, (item) => {
+    const coding = displayCoding(item);
+    return [item.order?.kind || "오더", coding, item.label].filter(Boolean).join(" · ");
+  }, "오더 없음"));
   refs.encounterSignReviewContent.append(grid);
 }
 
@@ -2858,9 +2942,10 @@ function renderEncounter(patient, evaluations) {
   if (!refs.vitalList.childElementCount) refs.vitalList.append(element("li", "encounter-entry-empty", editable ? "이번 진료의 활력징후·검사 결과를 추가하세요." : "이번 진료 측정 없음"));
 
   for (const diagnosis of records.filter((event) => event.type === "condition")) {
+    const coding = displayCoding(diagnosis);
     appendEncounterEntry(refs.diagnosisList, {
       title: diagnosis.label,
-      meta: [diagnosis.diagnosisRole === "primary" ? "주상병" : "부상병", diagnosis.system, diagnosis.code].filter(Boolean).join(" · "),
+      meta: [diagnosis.diagnosisRole === "primary" ? "주상병" : "부상병", coding].filter(Boolean).join(" · "),
       detail: diagnosis.note,
       badge: diagnosis.certainty === "provisional" ? "의증" : "확정",
       entityId: diagnosis.id,
@@ -2871,9 +2956,10 @@ function renderEncounter(patient, evaluations) {
 
   for (const medication of records.filter((event) => event.type === "medication")) {
     const rx = medication.prescription ?? {};
+    const coding = displayCoding(medication);
     appendEncounterEntry(refs.prescriptionList, {
       title: medication.label,
-      meta: [medication.system, medication.code].filter(Boolean).join(" · ") || "코드 없음",
+      meta: coding || "예시 처방 항목",
       detail: [`1회 ${rx.dose ?? "—"}${rx.doseUnit || ""}`, rx.route, rx.frequency, `${rx.durationDays ?? "—"}일`, `총 ${rx.quantity ?? "—"}`, rx.instructions].filter(Boolean).join(" · "),
       badge: medication.recordStatus === "final" ? "확정 처방" : "처방 초안",
       entityId: medication.id,
@@ -2887,9 +2973,10 @@ function renderEncounter(patient, evaluations) {
       .filter((item) => item.rule?.serviceCode === order.code && (!item.rule.serviceSystem || item.rule.serviceSystem === order.system))
       .sort((left, right) => Number(left.status === "not-applicable") - Number(right.status === "not-applicable")
         || String(right.rule?.effectiveFrom).localeCompare(String(left.rule?.effectiveFrom)))[0] ?? null;
+    const coding = displayCoding(order);
     appendEncounterEntry(refs.orderList, {
       title: order.label,
-      meta: [order.order?.kind, order.system, order.code, order.order?.priority].filter(Boolean).join(" · "),
+      meta: [order.order?.kind, coding, order.order?.priority].filter(Boolean).join(" · "),
       detail: order.order?.instructions,
       badge: evaluation ? `예비 · ${CLAIM_LANE_LABELS[evaluation.status]}` : "예비 · 기준 확인",
       entityId: order.id,
@@ -2934,6 +3021,7 @@ function clearPatientWorkspaceUi() {
   refs.patientBirthDate.max = today();
   refs.selectedPatientName.textContent = "";
   refs.selectedPatientMeta.textContent = "";
+  clear(refs.selectedPatientConditions);
   refs.lastSavedAt.textContent = "";
   refs.encounterTitle.textContent = "오늘 외래 진료";
   refs.encounterStatus.dataset.status = "none";
@@ -3018,7 +3106,8 @@ function renderWorkspace() {
     patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "혈액형 미상",
     INSURANCE_LABELS[patient.insuranceType],
   ].filter(Boolean).join(" · ");
-  refs.lastSavedAt.textContent = state.demo ? "데모 · 저장 안 됨" : "저장 " + displayTimestamp(state.updatedAt);
+  renderPatientConditions(patient);
+  refs.lastSavedAt.textContent = state.demo ? "예시 환자 · 저장 안 됨" : "저장 " + displayTimestamp(state.updatedAt);
   renderSafety(patient);
   renderEncounter(patient, preflightEvaluations);
   renderMetrics(patient, evaluations);
@@ -3184,7 +3273,7 @@ function syncSelectedClinicalSnapshot({ announce = false, force = false } = {}) 
     if (announce) {
       setPersonalSyncStatus(
         state.demo
-          ? "샘플 환자는 Personal에 연결하지 않습니다."
+          ? "예시 환자는 Personal에 연결하지 않습니다."
           : "자동 연결할 로컬 환자를 먼저 선택하세요.",
         state.demo ? "" : "error",
       );
@@ -3806,8 +3895,8 @@ refs.eventForm.addEventListener("submit", async (event) => {
       value: refs.eventValue.value,
       unit: refs.eventUnit.value,
       note: refs.eventNote.value,
-      source: state.demo ? { kind: "demo", label: "데모 입력" } : { kind: "manual", label: "직접 입력 · 검토 대기" },
-    }), state.demo ? "데모 차트에 기록을 추가했습니다." : "검토 대기 기록을 추가했습니다. 확정 진료 사실·AI·급여 근거에는 포함되지 않습니다.");
+      source: state.demo ? { kind: "demo", label: "예시 입력" } : { kind: "manual", label: "직접 입력 · 검토 대기" },
+    }), state.demo ? "예시 차트에 기록을 추가했습니다." : "검토 대기 기록을 추가했습니다. 확정 진료 사실·AI·급여 근거에는 포함되지 않습니다.");
     refs.eventForm.reset();
     refs.eventDate.value = today();
     refs.eventSystem.value = "urn:kr:kcd";
@@ -4152,7 +4241,7 @@ function loadDemo() {
   briefCache.clear();
   patientBriefCache.clear();
   render();
-  setStatus("가상 환자 2명을 열었습니다. 데모 변경은 저장되지 않습니다.", "success");
+  setStatus(`예시 환자 ${state.patients.length}명을 불러왔습니다. 변경 내용은 저장되지 않습니다.`, "success");
 }
 
 refs.loadDemo.addEventListener("click", loadDemo);
@@ -4268,7 +4357,7 @@ function exportBackup() {
     return;
   }
   downloadJson(exportEmrBackup(exportState), "vitagraph-emr-backup-" + today() + ".json");
-  setStatus(state.demo ? "데모가 아닌 기존 로컬 기록을 백업했습니다." : "전체 로컬 기록을 JSON으로 내보냈습니다.", "success");
+  setStatus(state.demo ? "기존 로컬 기록을 백업했습니다." : "전체 로컬 기록을 JSON으로 내보냈습니다.", "success");
 }
 
 refs.exportEmr.addEventListener("click", exportBackup);
@@ -4322,7 +4411,7 @@ refs.exportFhir.addEventListener("click", async () => {
       );
     }
     downloadJson(bundle, `vitagraph-fhir-${today()}.json`);
-    setStatus(`선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.${state.demo ? " · 합성 데모 파일" : ""}`, "success");
+    setStatus(`선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.${state.demo ? " · 예시 환자 파일" : ""}`, "success");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "FHIR 내보내기에 실패했습니다.", "error");
   }

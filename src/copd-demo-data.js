@@ -17,13 +17,13 @@ const SOURCES = Object.freeze([
     id: "gold-2026-v1.3",
     label: "GOLD 2026 Report v1.3",
     url: "https://goldcopd.org/wp-content/uploads/2026/01/GOLD-REPORT-2026-v1.3-8Dec2025_WMV2.pdf",
-    purpose: "COPD 진단 근거 정합성 데모",
+    purpose: "COPD 진단 근거 정합성 검토",
   }),
   Object.freeze({
     id: "hira-copd-12th-2026",
     label: "심평원 2026년(12차) COPD 적정성 평가 세부계획",
     url: "https://www.hira.or.kr/bbs/157/2025/10/BZ202510302440715.pdf",
-    purpose: "환자별 기관 지표 기여 예상 데모",
+    purpose: "환자별 기관 지표 기여 예상 검토",
   }),
 ]);
 
@@ -31,7 +31,7 @@ function verifiedProvenance(sourceId, verifiedAt, reviewerId = "demo-clinician-0
   return {
     kind: "synthetic-local-emr",
     sourceId,
-    sourceLabel: "VitaGraph 합성 의사용 데모 기록",
+    sourceLabel: "VitaGraph 예시 환자 기록",
     verificationStatus: "VERIFIED",
     patientMatch: "VERIFIED",
     reviewerId,
@@ -44,7 +44,7 @@ function externalUnverifiedProvenance(sourceId) {
   return {
     kind: "synthetic-external-document",
     sourceId,
-    sourceLabel: "합성 타기관 PFT 문서",
+    sourceLabel: "예시 타기관 PFT 문서",
     verificationStatus: "UNVERIFIED",
     patientMatch: "UNCONFIRMED",
     reviewerId: "",
@@ -61,7 +61,7 @@ function baseProfile(patient, scenario) {
     preferred: true,
     physicianOnly: true,
     synthetic: true,
-    syntheticNotice: "합성 의사용 공모전 데모 · 실제 환자·공식 심사결과 아님",
+    syntheticNotice: "예시 환자 · 실제 환자 아님 · 공식 심사결과 아님",
     patient,
     scenario,
     evaluatedAt: EVALUATED_AT,
@@ -100,7 +100,7 @@ const NORMAL_STAGED_PROFILE = {
     ],
     alternativeCauseReview: {
       status: "DOCUMENTED",
-      note: "천식·기관지확장증 등 대체 원인을 의료진이 함께 검토한 합성 기록",
+      note: "천식·기관지확장증 등 대체 원인을 의료진이 함께 검토한 예시 기록",
       recordedAt: "2026-02-20T09:00:00.000Z",
     },
   },
@@ -156,7 +156,7 @@ const NORMAL_STAGED_PROFILE = {
       procedureCode: "F6002",
       procedureSystem: "urn:hira:fee-code",
       eligibleQualityProcedure: true,
-      quality: { status: "ACCEPTABLE", standard: "ATS/ERS-compatible synthetic demo" },
+      quality: { status: "ACCEPTABLE", standard: "ATS/ERS-compatible reference" },
       preBronchodilator: { fev1Fvc: 0.62, unit: "ratio" },
       postBronchodilator: { fev1Fvc: 0.64, unit: "ratio" },
       separateOccasion: true,
@@ -169,7 +169,7 @@ const NORMAL_STAGED_PROFILE = {
       procedureCode: "F6002",
       procedureSystem: "urn:hira:fee-code",
       eligibleQualityProcedure: true,
-      quality: { status: "ACCEPTABLE", standard: "ATS/ERS-compatible synthetic demo" },
+      quality: { status: "ACCEPTABLE", standard: "ATS/ERS-compatible reference" },
       preBronchodilator: { fev1Fvc: 0.63, unit: "ratio" },
       postBronchodilator: { fev1Fvc: 0.65, unit: "ratio" },
       separateOccasion: true,
@@ -181,7 +181,7 @@ const NORMAL_STAGED_PROFILE = {
       id: "lee-lama-2026-01",
       code: "DEMO-LAMA",
       system: "urn:vitagraph:demo:drug",
-      label: "합성 LAMA 흡입제",
+      label: "LAMA 흡입제",
       class: "LAMA",
       route: "INHALED",
       prescribedAt: "2026-01-15",
@@ -194,7 +194,7 @@ const NORMAL_STAGED_PROFILE = {
       id: "lee-lama-2026-05",
       code: "DEMO-LAMA",
       system: "urn:vitagraph:demo:drug",
-      label: "합성 LAMA 흡입제 유지",
+      label: "LAMA 흡입제 유지",
       class: "LAMA",
       route: "INHALED",
       prescribedAt: "2026-05-12",
@@ -222,7 +222,7 @@ const NORMAL_STAGED_PROFILE = {
     {
       id: "lee-claim-followup-unassessed",
       code: "DEMO-COPD-FOLLOWUP",
-      label: "COPD 추적 진료 합성 항목",
+      label: "COPD 추적 진료",
       serviceDate: "2026-10-07",
       workflowStatus: "PERFORMED",
       preflight: {
@@ -275,20 +275,20 @@ const MISSING_EVIDENCE_PROFILE = {
       procedureCode: "F6002",
       procedureSystem: "urn:hira:fee-code",
       eligibleQualityProcedure: true,
-      quality: { status: "ACCEPTABLE", standard: "synthetic procedure record only" },
+      quality: { status: "ACCEPTABLE", standard: "procedure record only" },
       provenance: verifiedProvenance("park-pft-procedure-record-2026-02", "2026-02-04T09:00:00.000Z"),
     },
   ],
   medications: [
-    { id: "park-oral-med-2026-01", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-01-20", visitId: "park-copd-visit-2026-01", qualifiesTargetMedication: true, eligibleQualityMedication: false },
-    { id: "park-oral-med-2026-05", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-05-20", visitId: "park-copd-visit-2026-05", qualifiesTargetMedication: true, eligibleQualityMedication: false },
-    { id: "park-oral-med-2026-10", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-10-20", visitId: "park-copd-visit-2026-10", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "park-oral-med-2026-01", code: "DEMO-ORAL-COPD", label: "COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-01-20", visitId: "park-copd-visit-2026-01", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "park-oral-med-2026-05", code: "DEMO-ORAL-COPD", label: "COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-05-20", visitId: "park-copd-visit-2026-05", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "park-oral-med-2026-10", code: "DEMO-ORAL-COPD", label: "COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-10-20", visitId: "park-copd-visit-2026-10", qualifiesTargetMedication: true, eligibleQualityMedication: false },
   ],
   claimItems: [
     {
       id: "park-claim-oral-2026-05",
       code: "DEMO-ORAL-COPD",
-      label: "COPD 경구약 합성 청구 항목",
+      label: "COPD 경구약 청구",
       serviceDate: "2026-05-20",
       workflowStatus: "CLAIMED",
       preflight: {
@@ -302,7 +302,7 @@ const MISSING_EVIDENCE_PROFILE = {
     {
       id: "park-claim-pft-unavailable",
       code: "F6002",
-      label: "폐기능검사 자료 상태 합성 항목",
+      label: "폐기능검사 자료 상태",
       serviceDate: "",
       workflowStatus: "DRAFT",
       preflight: {
@@ -314,7 +314,7 @@ const MISSING_EVIDENCE_PROFILE = {
       provenance: {
         kind: "synthetic-local-emr",
         sourceId: "park-pft-data-gap",
-        sourceLabel: "VitaGraph 합성 의사용 데모 기록",
+        sourceLabel: "VitaGraph 예시 환자 기록",
         verificationStatus: "UNVERIFIED",
         patientMatch: "UNCONFIRMED",
         reviewerId: "",
@@ -325,7 +325,7 @@ const MISSING_EVIDENCE_PROFILE = {
     {
       id: "park-claim-oral-2026-10",
       code: "DEMO-ORAL-COPD",
-      label: "COPD 추적 처방 합성 청구 항목",
+      label: "COPD 추적 처방",
       serviceDate: "2026-10-20",
       workflowStatus: "CLAIMED",
       preflight: {
@@ -348,7 +348,7 @@ const MISSING_EVIDENCE_PROFILE = {
       sourceId: "synthetic-payer-decision-park-2026-06",
       decidedAt: "2026-06-22T09:00:00.000Z",
       reasonCode: "SYNTHETIC_DOCUMENTATION_PARTIAL_REDUCTION",
-      reasonLabel: "합성 심사 결과 · 기록 근거 일부 미인정",
+      reasonLabel: "심사 결과 예시 · 기록 근거 일부 미인정",
       originalAmount: 12000,
       allowedAmount: 8000,
       reductionAmount: 4000,
@@ -420,15 +420,15 @@ const EXTERNAL_UNVERIFIED_PROFILE = {
     },
   ],
   medications: [
-    { id: "jung-oral-med-2026-03", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-03-18", visitId: "jung-copd-visit-2026-03", qualifiesTargetMedication: true, eligibleQualityMedication: false },
-    { id: "jung-oral-med-2026-09", code: "DEMO-ORAL-COPD", label: "합성 COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: false },
-    { id: "jung-lama-2026-09", code: "DEMO-LAMA", label: "합성 LAMA 흡입제", class: "LAMA", route: "INHALED", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: true, provenance: verifiedProvenance("jung-lama-prescription-2026-09", "2026-09-09T10:00:00.000Z") },
+    { id: "jung-oral-med-2026-03", code: "DEMO-ORAL-COPD", label: "COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-03-18", visitId: "jung-copd-visit-2026-03", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "jung-oral-med-2026-09", code: "DEMO-ORAL-COPD", label: "COPD 경구약", class: "OTHER", route: "ORAL", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: false },
+    { id: "jung-lama-2026-09", code: "DEMO-LAMA", label: "LAMA 흡입제", class: "LAMA", route: "INHALED", prescribedAt: "2026-09-09", visitId: "jung-copd-visit-2026-09", qualifiesTargetMedication: true, eligibleQualityMedication: true, provenance: verifiedProvenance("jung-lama-prescription-2026-09", "2026-09-09T10:00:00.000Z") },
   ],
   claimItems: [
     {
       id: "jung-claim-external-pft-review",
       code: "F6002",
-      label: "타기관 폐기능검사 확인 합성 항목",
+      label: "타기관 폐기능검사 확인",
       serviceDate: "2026-02-11",
       workflowStatus: "CLAIMED",
       preflight: {
@@ -442,7 +442,7 @@ const EXTERNAL_UNVERIFIED_PROFILE = {
     {
       id: "jung-claim-lama-2026-09",
       code: "DEMO-LAMA",
-      label: "LAMA 흡입제 합성 청구 항목",
+      label: "LAMA 흡입제 청구",
       serviceDate: "2026-09-09",
       workflowStatus: "CLAIMED",
       preflight: {

@@ -1037,7 +1037,7 @@ function dateBefore(asOf, days) {
 }
 
 function demoEvent(id, type, code, label, date, extras = {}) {
-  return normalizePatientEvent({ id, type, code, label, date, source: { kind: "demo", label: "VitaGraph 임상 샘플" }, ...extras });
+  return normalizePatientEvent({ id, type, code, label, date, source: { kind: "demo", label: "VitaGraph 예시 환자 기록" }, ...extras });
 }
 
 export function createDemoEmrState(now = new Date().toISOString()) {
@@ -1052,11 +1052,11 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     birthDate: "1974-04-12",
     sex: "female",
     phone: "010-0000-1001",
-    address: "서울시 샘플구",
+    address: "서울시 한빛구",
     bloodType: "A+",
     insuranceType: "national-health",
     emergencyContact: { name: "김보호", relation: "가족", phone: "010-0000-9001" },
-    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
       demoEvent("kim-visit-today", "encounter", "AMB", "내분비내과 외래", asOf, {
         recordStatus: "draft",
@@ -1114,7 +1114,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         department: "호흡기내과",
         clinician: "한가람",
         chiefComplaint: "발열·기침·호흡곤란을 동반한 지역사회획득 폐렴 입원",
-        note: "7차 폐렴 적정성 평가 흐름을 설명하기 위한 합성 과거 입원",
+        note: "7차 폐렴 적정성 평가 흐름을 설명하기 위한 예시 과거 입원",
         soap: {
           subjective: "발열, 객담을 동반한 기침과 운동 시 호흡곤란을 호소함.",
           objective: "산소포화도·흉부 영상·초기 미생물검사와 중증도 기록을 확인함.",
@@ -1141,7 +1141,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     sex: "male",
     bloodType: "unknown",
     insuranceType: "national-health",
-    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
       demoEvent("park-visit-today", "encounter", "AMB", "신경과 외래", asOf, {
         recordStatus: "draft",
@@ -1163,7 +1163,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         department: "호흡기내과",
         clinician: "한가람",
         chiefComplaint: "반복 COPD 상병과 처방 근거 재확인",
-        note: "진단 근거 보완이 필요한 합성 COPD 사례",
+        note: "진단 근거 보완이 필요한 COPD 예시 사례",
         soap: {
           subjective: "반복된 COPD 상병과 경구약 처방 기록을 함께 검토하기 위해 내원함.",
           objective: "F6002 시행 코드는 있으나 구조화된 post-BD 결과와 노출력 기록은 확인되지 않음.",
@@ -1184,7 +1184,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         encounterId: "park-copd-encounter",
         system: "urn:hira:fee-code",
         status: "completed",
-        note: "시행 코드는 확인되지만 post-BD 구조화 결과는 없는 합성 기록",
+        note: "시행 코드는 확인되지만 post-BD 구조화 결과는 없는 예시 기록",
       }),
     ],
   }, timestamp);
@@ -1196,7 +1196,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     sex: "male",
     bloodType: "B+",
     insuranceType: "national-health",
-    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
       demoEvent("lee-visit-today", "encounter", "AMB", "순환기내과 외래", asOf, {
         recordStatus: "draft",
@@ -1231,7 +1231,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         clinician: "한가람",
         room: "8진료실",
         chiefComplaint: "만성 운동 시 호흡곤란·기침·객담 추적",
-        note: "COPD 합성 예시의 이전 확정 진료",
+        note: "COPD 예시의 이전 확정 진료",
       }),
       demoEvent("lee-copd", "condition", "J44.9", "만성폐쇄성폐질환", dateBefore(asOf, 92), {
         encounterId: "lee-copd-encounter",
@@ -1243,19 +1243,19 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       }),
       demoEvent("lee-copd-symptom", "symptom", "SYM-COPD-CONTEXT", "만성 운동 시 호흡곤란·기침·객담", dateBefore(asOf, 92), {
         encounterId: "lee-copd-encounter",
-        note: "40갑년 흡연력과 함께 기록된 합성 임상 맥락",
+        note: "40갑년 흡연력과 함께 기록된 예시 임상 맥락",
       }),
       demoEvent("lee-copd-pft", "procedure", "F6002", "기관지확장제 전후 폐활량검사", dateBefore(asOf, 90), {
         encounterId: "lee-copd-encounter",
         system: "urn:hira:fee-code",
         status: "completed",
-        note: "post-BD FEV₁/FVC 0.64 · 구조화 상세는 COPD 평가 데모 패널 참조",
+        note: "post-BD FEV₁/FVC 0.64 · 구조화 상세는 COPD 평가 상세 참조",
       }),
-      demoEvent("lee-copd-lama", "medication", "DEMO-LAMA", "합성 LAMA 흡입제", dateBefore(asOf, 89), {
+      demoEvent("lee-copd-lama", "medication", "DEMO-LAMA", "LAMA 흡입제", dateBefore(asOf, 89), {
         encounterId: "lee-copd-encounter",
         system: "urn:vitagraph:demo:drug",
         status: "active",
-        note: "흡입기 사용법과 증상 변화를 추적한 합성 기록",
+        note: "흡입기 사용법과 증상 변화를 추적한 예시 기록",
       }),
     ],
   }, timestamp);
@@ -1267,7 +1267,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     sex: "female",
     bloodType: "O+",
     insuranceType: "national-health",
-    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
       demoEvent("choi-visit-today", "encounter", "AMB", "소화기내과 외래", asOf, {
         recordStatus: "draft",
@@ -1300,7 +1300,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         department: "호흡기내과",
         clinician: "한가람",
         chiefComplaint: "발열·기침을 동반한 지역사회획득 폐렴 입원",
-        note: "혈액배양 채혈 순서를 확인하는 합성 혼합 사례",
+        note: "혈액배양 채혈 순서를 확인하는 예시 혼합 사례",
         soap: {
           subjective: "발열과 누런 객담을 동반한 기침이 지속되어 내원함.",
           objective: "흉부 영상의 폐침윤과 산소포화도, 초기 항생제·배양검사 시각을 확인함.",
@@ -1327,7 +1327,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     sex: "female",
     bloodType: "AB+",
     insuranceType: "national-health",
-    memo: "샘플 환자 · 실제 인물이 아닙니다.",
+    memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
       demoEvent("jung-visit-today", "encounter", "AMB", "재활의학과 외래", asOf, {
         recordStatus: "draft",
@@ -1376,7 +1376,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         verificationStatus: "confirmed",
         diagnosisRole: "primary",
       }),
-      demoEvent("jung-copd-lama", "medication", "DEMO-LAMA", "합성 LAMA 흡입제", dateBefore(asOf, 53), {
+      demoEvent("jung-copd-lama", "medication", "DEMO-LAMA", "LAMA 흡입제", dateBefore(asOf, 53), {
         encounterId: "jung-copd-encounter",
         system: "urn:vitagraph:demo:drug",
         status: "active",
@@ -1397,7 +1397,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         department: "호흡기내과",
         clinician: "한가람",
         chiefComplaint: "지역사회획득 폐렴 입원 치료",
-        note: "중증도 판정도구 기록 보완이 필요한 합성 사례",
+        note: "중증도 판정도구 기록 보완이 필요한 예시 사례",
         soap: {
           subjective: "발열과 객담성 기침, 호흡 불편을 호소하여 내원함.",
           objective: "흉부 영상과 산소포화도, 배양검사 및 초기 항생제 기록을 확인함.",

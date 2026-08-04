@@ -20,7 +20,7 @@ const COPD_PROGRAM = deepFreeze({
   order: 10,
   label: "만성폐쇄성폐질환",
   shortLabel: "COPD",
-  eyebrow: "COPD 2026 · DEMO",
+  eyebrow: "COPD 2026 · REVIEW",
   description: "확정 기록에 연결된 COPD의 환자별 적정성 평가 기여 예상과 진단 근거 정합성을 분리해 확인합니다.",
   quality: {
     eyebrow: "HIRA COPD 2026 · CONTRIBUTION PREVIEW",
@@ -43,7 +43,7 @@ const PNEUMONIA_PROGRAM = deepFreeze({
   order: 20,
   label: "폐렴",
   shortLabel: "CAP",
-  eyebrow: "PNEUMONIA 2026 · DEMO",
+  eyebrow: "PNEUMONIA 2026 · REVIEW",
   description: "확정 기록에 연결된 폐렴의 환자별 적정성 평가 기여 예상과 진단 근거 정합성을 분리해 확인합니다.",
   quality: {
     eyebrow: "HIRA PNEUMONIA 2026 · CONTRIBUTION PREVIEW",

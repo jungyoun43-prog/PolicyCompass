@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [shell, gateway, landing, insights, insightsCss, insightsScript, mapHtml, connections, journey, captureScript] = await Promise.all([
+const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, connections, journey, captureScript] = await Promise.all([
   readFile("src/shell.css", "utf8"),
+  readFile("src/controls.css", "utf8"),
   readFile("src/gateway.css", "utf8"),
   readFile("src/landing.css", "utf8"),
   readFile("src/insights.html", "utf8"),
@@ -52,6 +53,17 @@ test("모바일 건강 지도는 핵심 업데이트와 3D 본문을 위로 당�
   assert.match(mapHtml, /<details class="department-disclosure context-disclosure context-disclosure--compact">/);
   assert.match(mapHtml, /<\/form>\s*<section class="safety-banner safety-banner--input"/);
   assert.match(mapHtml, /aria-describedby="inputHint formError"/);
+});
+
+test("건강 지도 hero는 카드 경계와 충분한 안쪽 여백을 두고 태블릿에서 한 열로 전환한다", () => {
+  assert.match(
+    controls,
+    /\.map-page \.map-hero\s*\{[^}]*gap: clamp\(var\(--space-6\), 4vw, var\(--space-12\)\)[^}]*margin: 0 0 var\(--space-5\)[^}]*padding: clamp\(var\(--space-6\), 3\.2vw, var\(--space-10\)\)/,
+  );
+  assert.match(
+    controls,
+    /@media \(max-width: 800px\)\s*\{[\s\S]*?\.map-page \.map-hero,[\s\S]*?grid-template-columns: 1fr/,
+  );
 });
 
 test("태블릿 역할 선택은 두 카드를 비교하고 모바일에서만 한 열로 전환한다", () => {

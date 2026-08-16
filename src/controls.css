@@ -509,9 +509,9 @@ textarea:focus {
 
 .map-page .map-hero {
   grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
-  gap: var(--space-12);
-  margin: 0;
-  padding: 0 0 var(--hero-bottom);
+  gap: clamp(var(--space-6), 4vw, var(--space-12));
+  margin: 0 0 var(--space-5);
+  padding: clamp(var(--space-6), 3.2vw, var(--space-10));
 }
 
 .map-page .dashboard {
@@ -528,7 +528,7 @@ textarea:focus {
   .map-page .dashboard { grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr); }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 800px) {
   .map-page .map-shell { width: min(100% - var(--page-gutter), var(--page-width)); }
   .map-page .map-hero,
   .map-page .dashboard { grid-template-columns: 1fr; }

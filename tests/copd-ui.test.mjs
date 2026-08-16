@@ -70,8 +70,8 @@ test("선택 환자 헤더는 확정 활성 질환을 별도 목록으로 렌더
 });
 
 test("공개 EMR UI는 공모전·DEMO 배지 대신 예시 환자 경계를 한 번 명시한다", () => {
-  assert.match(html, /<b>예시 환자<\/b>/);
-  assert.match(html, /실제 환자 아님 · 저장되지 않음/);
+  assert.match(html, /<b>예시<\/b>/);
+  assert.match(html, /실제 환자 아님 · 미저장/);
   assert.doesNotMatch(html, />\s*DEMO\s*</i);
   assert.doesNotMatch(html, /\bcontest\b|공모전/i);
   assert.doesNotMatch(js, /claim-synthetic-badge/);

@@ -64,12 +64,34 @@ test("disclosure 기본값은 진료 단계에 맞고 사용자 선택은 메모
 
   assert.match(script, /none:\s*\["visit-context"\]/);
   assert.match(script, /waiting:\s*\["visit-context"\]/);
-  assert.match(script, /"in-progress":\s*\["visit-context", "soap"\]/);
+  assert.match(script, /"in-progress":\s*\["soap"\]/);
   assert.match(script, /completed:\s*\[\]/);
   assert.match(script, /const workflowDisclosureSessionState = new Map\(\)/);
   assert.match(script, /querySelectorAll\("details\[data-workflow-disclosure\]"\)[\s\S]*?disclosure\.addEventListener\("toggle"/);
   assert.match(script, /workflowDisclosureSessionState\.set\(/);
   assert.match(script, /renderWorkflowDisclosureSummaries\(encounter, status, records\)/);
+});
+
+test("EMR 첫 화면은 핵심 안전 상태만 짧게 유지하고 반복 영문 표제를 숨긴다", async () => {
+  const [html, css] = await Promise.all([
+    readFile("src/emr.html", "utf8"),
+    readFile("src/emr.css", "utf8"),
+  ]);
+
+  assert.match(html, /<b>로컬 저장<\/b>\s*<span>이 브라우저만<\/span>/);
+  assert.match(html, /실제 환자 아님 · 미저장/);
+  assert.match(html, /평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음/);
+  assert.match(css, /\.emr-page \.rail-eyebrow:not\(#diseaseProgramEyebrow\):not\(#diseaseDiagnosticEyebrow\)\s*\{\s*display: none;/);
+  assert.match(html, /class="rail-eyebrow" id="diseaseProgramEyebrow"/);
+  assert.match(html, /class="rail-eyebrow" id="diseaseDiagnosticEyebrow"/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.trust-strip\s*\{[^}]*display: grid[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test("진료 시작과 재개는 열린 SOAP 입력으로 초점을 옮긴다", async () => {
+  const script = await readFile("src/emr.js", "utf8");
+
+  assert.match(script, /startEncounter\(current, patient\.id, encounter\.id\)[\s\S]*?refs\.soapSubjective\.focus\(\)/);
+  assert.match(script, /reopenEncounter\(current, patient\.id, encounter\.id\)[\s\S]*?restoreWorkflowFocus\(refs\.soapSubjective, refs\.saveEncounterDraft\)/);
 });
 
 test("EMR 헤더는 모든 뷰포트에서 60px 이하이다", async () => {

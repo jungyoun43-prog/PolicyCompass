@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, connections, journey, captureScript] = await Promise.all([
+const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, mapCss, hierarchyCss, connections, journey, captureScript] = await Promise.all([
   readFile("src/shell.css", "utf8"),
   readFile("src/controls.css", "utf8"),
   readFile("src/gateway.css", "utf8"),
@@ -11,6 +11,8 @@ const [shell, controls, gateway, landing, insights, insightsCss, insightsScript,
   readFile("src/insights.css", "utf8"),
   readFile("src/insights.js", "utf8"),
   readFile("src/index.html", "utf8"),
+  readFile("src/body-map.css", "utf8"),
+  readFile("src/clinician-hierarchy.css", "utf8"),
   readFile("src/connections.html", "utf8"),
   readFile("src/journey.html", "utf8"),
   readFile("scripts/visual-layout-capture.mjs", "utf8"),
@@ -64,6 +66,21 @@ test("건강 지도 hero는 카드 경계와 충분한 안쪽 여백을 두고 �
     controls,
     /@media \(max-width: 800px\)\s*\{[\s\S]*?\.map-page \.map-hero,[\s\S]*?grid-template-columns: 1fr/,
   );
+});
+
+test("지도 사용법 제목과 보조 순서는 한 줄 요약 뒤에 내용이 이어진다", () => {
+  assert.match(mapCss, /\.map-first-use\s*\{[^}]*grid-template-columns: 1fr[^}]*gap: var\(--space-3\)/);
+  assert.match(mapCss, /\.map-first-use > summary\s*\{[^}]*width: 100%/);
+  assert.match(mapCss, /\.map-first-use > summary small\s*\{[^}]*white-space: nowrap/);
+});
+
+test("Insights 보조 레일은 외곽 카드가 아니라 내부 카드의 면과 그림자로 구분한다", () => {
+  const borderedGroups = hierarchyCss.match(/\.clinician-hierarchy__groups :where\([^)]*\)\s*\{\s*border:/)?.[0] ?? "";
+  assert.ok(borderedGroups);
+  assert.doesNotMatch(borderedGroups, /\.brief-rail/);
+  assert.match(insightsCss, /\.question-panel,\s*\.snapshot-card,\s*\.signal-card,\s*\.method-card\s*\{[^}]*background: var\(--surface-raised\)[^}]*box-shadow: var\(--shadow-panel\)/);
+  assert.match(insightsCss, /@media \(max-width: 800px\)[\s\S]*?\.brief-rail > \.snapshot-card\s*\{[^}]*grid-column: 1 \/ -1/);
+  assert.match(insightsCss, /@media \(max-width: 620px\)[\s\S]*?\.brief-rail > \.snapshot-card\s*\{[^}]*grid-column: auto/);
 });
 
 test("태블릿 역할 선택은 두 카드를 비교하고 모바일에서만 한 열로 전환한다", () => {

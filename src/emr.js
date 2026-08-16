@@ -179,7 +179,7 @@ const CLAIM_REVIEW_STAGE_LABELS = {
 const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
   none: ["visit-context"],
   waiting: ["visit-context"],
-  "in-progress": ["visit-context", "soap"],
+  "in-progress": ["soap"],
   completed: [],
   signed: [],
   legacy: [],
@@ -3675,7 +3675,7 @@ function renderWorkspace() {
     INSURANCE_LABELS[patient.insuranceType],
   ].filter(Boolean).join(" · ");
   renderPatientConditions(patient);
-  refs.lastSavedAt.textContent = state.demo ? "예시 환자 · 저장 안 됨" : "저장 " + displayTimestamp(state.updatedAt);
+  refs.lastSavedAt.textContent = state.demo ? "예시 · 미저장" : "저장 " + displayTimestamp(state.updatedAt);
   renderSafety(patient);
   renderEncounter(patient, preflightEvaluations);
   renderMetrics(patient, evaluations);
@@ -3920,15 +3920,15 @@ async function checkAiStatus() {
     if (aiCapability.configured) {
       refs.aiStatusDot.classList.add("is-ready");
       refs.aiStatusLabel.textContent = "로컬 AI 연결";
-      refs.aiStatusDetail.textContent = aiCapability.model + " · 질문 초안만 생성 · 외부 전송 없음";
+      refs.aiStatusDetail.textContent = aiCapability.model + " · 질문 초안 · 외부 전송 없음";
     } else {
       refs.aiStatusLabel.textContent = "규칙 기반 모드";
-      refs.aiStatusDetail.textContent = "Ollama 모델 미설정 · 기능 정상";
+      refs.aiStatusDetail.textContent = "모델 미연결 · 규칙 기능 사용";
     }
   } catch {
     aiCapability = { checked: true, configured: false, model: "" };
     refs.aiStatusLabel.textContent = "규칙 기반 모드";
-    refs.aiStatusDetail.textContent = "공개 빌드 · 환자 데이터 전송 안 함";
+    refs.aiStatusDetail.textContent = "환자 데이터 전송 안 함";
   }
 }
 
@@ -4162,7 +4162,7 @@ refs.startEncounter.addEventListener("click", async () => {
   if (!patient || !encounter) return;
   try {
     await applyMutation((current) => startEncounter(current, patient.id, encounter.id), "진료를 시작했습니다.");
-    refs.chiefComplaint.focus();
+    refs.soapSubjective.focus();
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 시작하지 못했습니다.";
   }
@@ -4281,7 +4281,7 @@ refs.reopenEncounter.addEventListener("click", async () => {
   if (!patient || !encounter) return;
   try {
     await applyMutation((current) => reopenEncounter(current, patient.id, encounter.id), "서명 전 진료를 다시 열었습니다.");
-    restoreWorkflowFocus(refs.chiefComplaint, refs.saveEncounterDraft);
+    restoreWorkflowFocus(refs.soapSubjective, refs.saveEncounterDraft);
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료를 다시 열지 못했습니다.";
   }

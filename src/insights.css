@@ -887,6 +887,10 @@
     align-items: start;
   }
 
+  .brief-rail > .snapshot-card {
+    grid-column: 1 / -1;
+  }
+
   .insight-status {
     grid-template-columns: 1fr auto;
   }
@@ -934,6 +938,10 @@
 
   .brief-rail {
     grid-template-columns: 1fr;
+  }
+
+  .brief-rail > .snapshot-card {
+    grid-column: auto;
   }
 
   .insight-status {

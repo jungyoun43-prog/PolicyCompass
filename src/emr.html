@@ -43,10 +43,10 @@
                 <circle class="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
               </svg>
             </span>
-            <span class="page-hero__eyebrow signal-kicker__label">TODAY · LOCAL CLINICAL WORKSPACE</span>
+            <span class="page-hero__eyebrow signal-kicker__label">CLINICAL WORKSPACE</span>
           </div>
           <h1 id="emrTitle">오늘 진료</h1>
-          <p>환자 선택 → 진료 기록 → 서명 순서로 진행합니다.</p>
+          <p>환자 선택 → 기록 → 서명</p>
         </div>
         <div class="command-actions" aria-label="로컬 데이터 작업">
           <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
@@ -83,20 +83,20 @@
       <section class="trust-strip" aria-label="임상 안전 상태">
         <div>
           <span class="trust-dot trust-dot--local" aria-hidden="true"></span>
-          <b>LOCAL ONLY</b>
-          <span>환자 기록은 이 브라우저에만 저장</span>
+          <b>로컬 저장</b>
+          <span>이 브라우저만</span>
         </div>
         <div>
           <span class="trust-dot" id="aiStatusDot" aria-hidden="true"></span>
           <b id="aiStatusLabel">규칙 기반 모드</b>
-          <span id="aiStatusDetail">로컬 AI 연결 확인 중</span>
+          <span id="aiStatusDetail">연결 확인 중</span>
         </div>
         <div class="demo-banner" id="demoBanner" hidden>
           <span class="trust-dot trust-dot--demo" aria-hidden="true"></span>
-          <b>예시 환자</b>
-          <span>실제 환자 아님 · 저장되지 않음</span>
+          <b>예시</b>
+          <span>실제 환자 아님 · 미저장</span>
         </div>
-        <p data-route-context>평가용 샌드박스 · 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않음</p>
+        <p data-route-context>평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음</p>
       </section>
 
       <p class="workspace-status" id="workspaceStatus" role="status" aria-live="polite"></p>
@@ -171,7 +171,7 @@
 
           <div class="rail-empty" id="patientListEmpty">
             <b>등록된 환자 없음</b>
-            <p>새 환자를 등록하거나, 예시 환자·FHIR·백업을 불러오세요.</p>
+            <p>새 환자를 등록하거나 예시 환자를 불러오세요.</p>
             <button class="clinical-button clinical-button--demo" id="loadDemo" type="button">예시 환자 불러오기</button>
           </div>
         </aside>
@@ -186,9 +186,8 @@
               alt=""
               aria-hidden="true"
             />
-            <p class="rail-eyebrow">NO PATIENT SELECTED</p>
-            <h2>환자 한 명을 선택하면 임상 흐름이 열립니다.</h2>
-            <p>차트, 신체·진료과 지도, 코파일럿 초안, 급여 적합성 칸반, Journey를 같은 근거에서 확인합니다.</p>
+            <h2>환자를 선택하면 진료 화면이 열립니다.</h2>
+            <p>차트·신체 지도·급여 보드를 한 화면에서 확인합니다.</p>
           </div>
 
           <div id="workspaceContent" hidden>
@@ -928,7 +927,7 @@
     </main>
 
     <footer class="app-footer clinical-footer">
-      <span>VitaGraph Clinical · local evaluation build</span>
+      <span>VitaGraph Clinical</span>
       <span>확정 기록과 보조 초안을 분리합니다.</span>
     </footer>
   </body>

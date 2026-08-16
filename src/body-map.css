@@ -14,13 +14,14 @@
 
 .map-first-use {
   display: grid;
-  grid-template-columns: minmax(132px, 0.28fr) minmax(0, 1fr);
-  gap: var(--space-4);
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
   align-items: center;
   margin-bottom: var(--space-3);
 }
 
 .map-first-use > summary {
+  width: 100%;
   color: var(--ink);
   font-size: 0.875rem;
 }
@@ -29,6 +30,7 @@
   color: var(--muted);
   font-size: 0.6875rem;
   font-weight: 620;
+  white-space: nowrap;
 }
 
 .map-first-use .context-disclosure__body {
@@ -420,7 +422,6 @@
 }
 
 @media (max-width: 780px) {
-  .map-first-use,
   .map-legend {
     grid-template-columns: 1fr;
     gap: var(--space-3);

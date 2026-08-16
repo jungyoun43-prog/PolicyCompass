@@ -510,7 +510,15 @@ try {
   assert(await evaluate("document.activeElement === document.getElementById('startEncounter')"), "Check-in did not move focus to the next valid clinical action.");
   await evaluate("document.getElementById('startEncounter').click()");
   await waitFor("document.getElementById('encounterStatusText').textContent === '진료 중'", "Encounter did not start.");
-  assert(await evaluate("document.activeElement === document.getElementById('chiefComplaint')"), "Encounter start did not move focus into documentation.");
+  const encounterStartFocus = await evaluate(`(() => ({
+    activeId: document.activeElement?.id ?? '',
+    soapOpen: document.querySelector('[data-workflow-disclosure="soap"]')?.open === true,
+    visitContextOpen: document.querySelector('[data-workflow-disclosure="visit-context"]')?.open === true,
+  }))()`);
+  assert(encounterStartFocus.activeId === "soapSubjective"
+    && encounterStartFocus.soapOpen
+    && !encounterStartFocus.visitContextOpen,
+  `Encounter start did not focus the open SOAP disclosure or preserve the concise default state: ${JSON.stringify(encounterStartFocus)}`);
   await evaluate([
     "document.getElementById('encounterDepartment').value = '내과'",
     "document.getElementById('encounterClinician').value = '스모크 의사'",

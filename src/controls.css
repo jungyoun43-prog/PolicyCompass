@@ -50,6 +50,15 @@
   box-shadow: 0 0 0 2px var(--surface);
 }
 
+.role-card--clinical :is(.role-action, .role-card__details > summary):focus-visible {
+  outline-color: var(--on-inverse);
+  outline-offset: -4px;
+}
+
+.role-card--clinical .role-action:focus-visible {
+  outline-color: var(--ink);
+}
+
 :is(
   .landing-button,
   .role-action,
@@ -200,6 +209,8 @@
   color: color-mix(in srgb, var(--data-amber) 65%, var(--ink));
   font-size: .75rem;
   font-weight: 700;
+  text-wrap: pretty;
+  word-break: keep-all;
 }
 
 .import-box { margin: var(--space-6) 0 0; overflow: hidden; border-radius: 16px; background: color-mix(in srgb, var(--data-cyan) 8%, var(--surface)); }
@@ -218,7 +229,7 @@
 .import-box input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .import-box input:focus-visible + .import-button { outline: 3px solid var(--focus-ring); outline-offset: 3px; box-shadow: 0 0 0 2px var(--surface); }
 .import-box .transfer-code-field { display: grid; gap: var(--space-2); margin-top: var(--space-3); color: var(--ink); font-size: .75rem; font-weight: 700; }
-.import-box .transfer-code-field input { position: static; width: 100%; min-height: 44px; overflow: visible; clip: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0 var(--space-3); color: var(--ink); font: inherit; }
+.import-box .transfer-code-field input { position: static; width: 100%; min-height: 44px; overflow: visible; clip: auto; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); padding: 0 var(--space-3); color: var(--ink); font: inherit; }
 .import-box .transfer-code-field input[aria-invalid="true"] { border-color: var(--urgent); }
 .import-box .transfer-code-field input:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .import-file-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
@@ -479,11 +490,14 @@ textarea:focus {
 }
 
 .mini-condition-list span {
-  border-radius: var(--radius-pill);
-  background: var(--surface);
+  border-left: 2px solid var(--accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
   padding: var(--space-1) var(--space-2);
+  color: var(--muted);
   font-size: 0.75rem;
   font-weight: 620;
+  pointer-events: none;
 }
 
 
@@ -598,12 +612,13 @@ textarea:focus {
 }
 
 .action-note {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
+  display: block;
+  min-height: 0;
+  margin: 0;
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 650;
+  line-height: 1.5;
 }
 
 .journey-save {

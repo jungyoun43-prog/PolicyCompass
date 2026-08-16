@@ -13,7 +13,7 @@ test("개인 홈은 핵심 제목을 두 의미 단위로 고정하고 첫 화�
   assert.match(title, /<span>내 건강 기록을<\/span>/);
   assert.match(title, /<span><em>내가 이어 보는<\/em> 공간\.<\/span>/);
   assert.match(css, /\.landing-hero h1 > span\s*\{[\s\S]*?display:\s*block/);
-  assert.match(css, /min-height:\s*clamp\(480px,\s*35vw,\s*520px\)/);
+  assert.match(css, /min-height:\s*clamp\(440px,\s*32vw,\s*480px\)/);
   assert.match(css, /\.landing-page \.landing-shell\s*\{[\s\S]*?padding-top:\s*var\(--space-6\)/);
   assert.doesNotMatch(css, /min-height:\s*650px/);
   assert.doesNotMatch(css, /padding:\s*112px 0/);
@@ -74,11 +74,14 @@ test("개인 홈의 아래 섹션은 동작 줄이기를 존중하는 스크롤 
 
 test("역할 선택 카드는 데스크톱에서 같은 열 너비와 같은 세로 리듬을 사용한다", async () => {
   const css = await readFile("src/gateway.css", "utf8");
+  const tabletBlock = css.slice(css.indexOf("@media (max-width: 800px)"), css.indexOf("@media (max-width: 620px)"));
+  const mobileBlock = css.slice(css.indexOf("@media (max-width: 620px)"));
 
   assert.match(css, /\.role-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.role-grid\s*\{[\s\S]*?align-items:\s*stretch/);
   assert.match(css, /\.role-card\s*\{[\s\S]*?gap:\s*var\(--space-5\)/);
-  assert.match(css, /@media \(max-width: 800px\)[\s\S]*?\.role-grid[\s\S]*?grid-template-columns:\s*1fr/);
+  assert.doesNotMatch(tabletBlock, /\.role-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
+  assert.match(mobileBlock, /\.role-grid\s*\{[\s\S]*?grid-template-columns:\s*1fr/);
 });
 
 test("Journey 첫 기록 안내는 핵심 행동을 먼저 두고 사용법·데이터 도구를 접어 둔다", async () => {

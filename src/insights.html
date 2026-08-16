@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="내가 확인해 가져온 정제 기록과 최근 변화를 규칙 기반 질문으로 정리하고, 필요할 때만 동의한 외부 모델을 선택합니다." />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#fbfaf7" />
+    <meta name="theme-color" content="#e8f5e9" />
     <title>진료 준비 브리프 | VitaGraph Personal</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23e8f5e9%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%231b5e20%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%231b5e20%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%2366bb6a%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23a5d6a7%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/insights.css" />
@@ -51,18 +51,18 @@
             <span class="page-hero__eyebrow signal-kicker__label">VISIT PREP · REFINED RECORD</span>
           </div>
           <h1 id="insightTitle">진료실에서 바로 꺼내 보는 질문 브리프</h1>
-        </div>
-        <div class="page-hero__aside">
           <p class="page-hero__lead">
             가져온 정제 기록을 진료 질문 다섯 개 이내로 정리합니다.
           </p>
+        </div>
+        <div class="page-hero__aside">
           <div class="page-hero__actions">
             <button class="brief-action brief-action--primary" id="printBrief" type="button" disabled>
               브리프 인쇄
             </button>
-            <span class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다</span>
             <a class="brief-action brief-action--secondary" href="/map">건강 지도 편집</a>
           </div>
+          <p class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다</p>
         </div>
       </section>
 
@@ -93,6 +93,8 @@
             </div>
             <p id="printDate" class="print-date"></p>
           </header>
+
+          <p class="question-safety-boundary">진료 준비용 질문 · 진단·처방·응급 판단 아님</p>
 
           <p class="question-selection-status" id="questionSelectionStatus" role="status" aria-live="polite" hidden>
             진료에서 먼저 확인할 질문을 하나 선택하세요.
@@ -204,11 +206,15 @@
             <p class="snapshot-card__note">이름·등록번호·연락처·EMR 원문은 모델 입력에서 제외합니다.</p>
           </section>
 
-          <section class="signal-card" aria-labelledby="signalTitle">
-            <p class="eyebrow">INPUT BASIS</p>
-            <h2 id="signalTitle">브리프가 참고한 신호</h2>
-            <div class="signal-list" id="signals"></div>
-          </section>
+          <details class="signal-card context-disclosure" aria-labelledby="signalTitle">
+            <summary id="signalTitle">
+              <span class="eyebrow">INPUT BASIS</span>
+              <strong>브리프가 참고한 신호 보기</strong>
+            </summary>
+            <div class="context-disclosure__body">
+              <div class="signal-list" id="signals"></div>
+            </div>
+          </details>
 
           <details class="method-card context-disclosure" aria-labelledby="methodTitle">
             <summary id="methodTitle">브리프 작성 방식과 한계</summary>

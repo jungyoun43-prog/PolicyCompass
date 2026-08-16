@@ -35,7 +35,7 @@ export const CANONICAL_STEPS = Object.freeze([
   Object.freeze({
     id: "patient-map",
     route: "/map",
-    selectors: [".map-hero", ".input-panel", ".body-panel", ".detail-panel", ".connection-portal", ".safety-banner"],
+    selectors: [".map-hero", ".input-panel", ".body-panel", ".connection-portal"],
   }),
   Object.freeze({
     id: "patient-connections",

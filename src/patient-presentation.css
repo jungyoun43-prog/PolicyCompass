@@ -11,7 +11,7 @@
   max-width: 100%;
   border: var(--border-subtle);
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--surface-raised) 86%, var(--data-cyan));
+  background: color-mix(in srgb, var(--surface-raised) 54%, var(--accent-wash));
   padding: var(--space-1) var(--space-3);
   color: var(--accent);
   line-height: 1.35;
@@ -20,7 +20,7 @@
 
 .patient-presentation__panel {
   border: var(--border-subtle);
-  background: color-mix(in srgb, var(--surface-raised) 94%, var(--data-cyan));
+  background: color-mix(in srgb, var(--surface-raised) 58%, var(--accent-wash));
   box-shadow: var(--shadow-panel);
 }
 
@@ -36,7 +36,7 @@
 
 .patient-presentation__assurance::before {
   flex: 0 0 auto;
-  color: var(--data-lime);
+  color: var(--status-success-text);
   content: "✓";
   font-weight: 800;
 }

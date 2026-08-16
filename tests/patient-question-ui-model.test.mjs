@@ -376,7 +376,7 @@ test("진료 준비 화면은 명시적으로 가져온 기록·모델 동의·�
   assert.doesNotMatch(html, /서명 처방.*모델 서비스로 전송/);
   assert.match(html, /id="sharePatientBrief"[^>]*disabled/);
   assert.match(html, /선택 질문 복사/);
-  assert.match(html, /<span class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다<\/span>/);
+  assert.match(html, /<p class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다<\/p>/);
   assert.doesNotMatch(html, /<button[^>]*id="exportClinicalSnapshot"/);
   assert.match(html, /Personal은 별도의 정제 JSON을 만들지 않습니다/);
 

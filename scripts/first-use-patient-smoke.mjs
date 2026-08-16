@@ -62,8 +62,8 @@ await runBrowserSmoke({
         emrLinks: [...document.querySelectorAll('a[href]')].filter((link) => new URL(link.href).pathname === '/emr').length,
       };
     })()`);
-    assert(result.steps === 4, `${viewport.width}x${viewport.height}: first-use path does not have four steps`);
-    assert(/개인용 앱/.test(result.localText) && /식별정보·원문 메모 제외/.test(result.localText) && /진단·처방 아님/.test(result.localText), `${viewport.width}x${viewport.height}: patient data boundary is unclear`);
+    assert(result.steps === 3, `${viewport.width}x${viewport.height}: first-use path does not have three steps`);
+    assert(/개인용/.test(result.localText) && /이 브라우저에 저장/.test(result.localText) && /진단이나 처방 아님/.test(result.localText), `${viewport.width}x${viewport.height}: patient data boundary is unclear`);
     assert(result.sampleVisible && result.connectedPresent, `${viewport.width}x${viewport.height}: safe sample/import-record entry is missing`);
     assert(result.firstUseWidth > 0 && result.documentWidth <= result.viewportWidth, `${viewport.width}x${viewport.height}: first-use layout overflows`);
     assert(
@@ -140,7 +140,8 @@ await runBrowserSmoke({
         comparison: visible('#journeyComparison'),
         comparisonDetailHidden: document.getElementById('journeyComparisonDetail')?.hidden === true,
         questions: visible('#questions'),
-        signals: visible('#signals'),
+        signalsPresent: Boolean(document.getElementById('signals')),
+        signalsDisclosure: visible('.signal-card > summary'),
         visitStoryPresent: Boolean(document.querySelector('.visit-story')),
         firstUse: visible('[data-first-use]'),
       };
@@ -151,7 +152,7 @@ await runBrowserSmoke({
     if (name === "map" || name === "connections") {
       assert(result.legend && result.instructions && result.relationshipMeaning && result.selectionState && result.nextAction, `${route}: graph discovery affordances are incomplete`);
     } else if (name === "insights") {
-      assert(result.questions && result.signals && !result.visitStoryPresent, `${route}: focused question brief is incomplete`);
+      assert(result.questions && result.signalsPresent && result.signalsDisclosure && !result.visitStoryPresent, `${route}: focused question brief is incomplete`);
     } else {
       assert(
         result.comparison

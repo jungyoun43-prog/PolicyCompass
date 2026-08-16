@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e8f5e9" />
     <meta
       name="description"
       content="서명·확정 기록을 환자용 파일로 내보내고 규칙 기반 진료 질문을 준비하는 의료진 EMR과 개인 VitaGraph 중 사용할 공간을 선택합니다."
     />
     <title>VitaGraph | 사용할 공간 선택</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23e8f5e9%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%231b5e20%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%231b5e20%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%2366bb6a%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23a5d6a7%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/shell.css" />
@@ -45,10 +46,10 @@
             <span class="signal-kicker__label">VITAGRAPH · 역할 선택</span>
           </p>
           <h1 id="gatewayTitle">사용할 공간을 선택하세요.</h1>
+          <p class="gateway-intro__lead">
+            의료진용 진료 공간과 개인용 기록 공간 중 하나를 선택하세요.
+          </p>
         </div>
-        <p class="gateway-intro__lead">
-          의료진용 진료 공간과 개인용 기록 공간 중 하나를 선택하세요.
-        </p>
       </section>
 
       <section class="role-grid" aria-label="VitaGraph 역할 선택">
@@ -68,6 +69,7 @@
             의료진 EMR 열기
             <span aria-hidden="true">→</span>
           </a>
+          <p class="role-card__caution">로컬 평가용 샌드박스 · 인증된 운영 EMR 아님</p>
           <details class="role-card__details context-disclosure">
             <summary>주요 기능 보기</summary>
             <div class="context-disclosure__body">
@@ -78,7 +80,6 @@
               </ul>
             </div>
           </details>
-          <p class="role-card__caution">로컬 평가용 샌드박스 · 인증된 운영 EMR 아님</p>
         </article>
 
         <article class="role-card role-card--patient patient-presentation__panel">
@@ -97,6 +98,7 @@
             개인 VitaGraph 열기
             <span aria-hidden="true">→</span>
           </a>
+          <p class="role-card__caution patient-presentation__assurance">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
           <details class="role-card__details context-disclosure">
             <summary>주요 기능 보기</summary>
             <div class="context-disclosure__body">
@@ -107,7 +109,6 @@
               </ul>
             </div>
           </details>
-          <p class="role-card__caution patient-presentation__assurance">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
         </article>
       </section>
 

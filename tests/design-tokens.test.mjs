@@ -38,11 +38,19 @@ function mixHex(left, right, leftWeight) {
   )).join("");
 }
 
-test("공통 임상 토큰은 따뜻한 표면과 짙은 청록 계층을 제공한다", () => {
-  assert.match(root, /--surface: #fbfaf7;/);
-  assert.match(root, /--surface-soft: #f3f1eb;/);
-  assert.match(root, /--ink: #123c3b;/);
-  assert.match(root, /--accent: #0b6663;/);
+test("공통 임상 토큰은 밝은 녹색 표면과 짙은 숲색 계층을 제공한다", () => {
+  assert.match(root, /--surface: #f8fcf8;/);
+  assert.match(root, /--surface-soft: #e8f5e9;/);
+  assert.match(root, /--surface-inverse: #1b5e20;/);
+  assert.match(root, /--on-inverse: #f8fcf8;/);
+  assert.match(root, /--ink: #173b1b;/);
+  assert.match(root, /--accent: #1b5e20;/);
+  assert.match(root, /--accent-mid: #66bb6a;/);
+  assert.match(root, /--accent-soft: #a5d6a7;/);
+  assert.match(root, /--accent-wash: #e8f5e9;/);
+  assert.match(root, /--data-lime: #477a43;/);
+  assert.match(root, /--status-success-text: #2f6b34;/);
+  assert.match(root, /--status-success-on-dark: #a5d6a7;/);
   assert.match(root, /--data-amber: #b66b12;/);
   assert.match(root, /--urgent: #b4232d;/);
 });
@@ -73,13 +81,19 @@ test("타입·간격·반경·테두리·고도·밀도 토큰은 선언되고 �
 });
 
 test("컨트롤 경계·포커스·어두운 표면 경고 토큰은 비텍스트 및 소형 텍스트 대비를 충족한다", () => {
-  assert.match(root, /--line-strong: #758882;/);
+  assert.match(root, /--line-strong: #548858;/);
   assert.match(root, /--focus-ring: var\(--accent\);/);
-  assert.match(root, /--status-amber-on-dark: #e5a857;/);
-  assert.ok(contrast("758882", "fbfaf7") >= 3);
-  assert.ok(contrast("758882", "f3f1eb") >= 3);
-  assert.ok(contrast("0b6663", "fbfaf7") >= 3);
-  assert.ok(contrast("e5a857", "123c3b") >= 4.5);
+  assert.match(root, /--status-amber-on-dark: #f2c66d;/);
+  assert.ok(contrast("548858", "f8fcf8") >= 3);
+  assert.ok(contrast("548858", "e8f5e9") >= 3);
+  assert.ok(contrast("1b5e20", "f8fcf8") >= 3);
+  assert.ok(contrast("2f6b34", "f8fcf8") >= 4.5);
+  assert.ok(contrast("2f6b34", "e8f5e9") >= 4.5);
+  assert.ok(contrast("477a43", "f8fcf8") >= 4.5);
+  assert.ok(contrast("477a43", "e8f5e9") >= 4.5);
+  assert.ok(contrast("a5d6a7", "173b1b") >= 3);
+  assert.ok(contrast("66bb6a", "173b1b") >= 3);
+  assert.ok(contrast("f2c66d", "1b5e20") >= 4.5);
   assert.match(applicationCss, /outline: 3px solid var\(--focus-ring\)/);
   assert.match(applicationCss, /border: 1px solid var\(--line-strong\)/);
 });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey, landing, gateway, gatewayCss, shellCss, emr, emrCss] = await Promise.all([
+const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey, journeyCss, landing, gateway, gatewayCss, shellCss, emr, emrCss] = await Promise.all([
   readFile("src/controls.css", "utf8"),
   readFile("src/index.html", "utf8"),
   readFile("src/app.js", "utf8"),
@@ -10,6 +10,7 @@ const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey
   readFile("src/insights.html", "utf8"),
   readFile("src/insights.css", "utf8"),
   readFile("src/journey.html", "utf8"),
+  readFile("src/journey.css", "utf8"),
   readFile("src/landing.html", "utf8"),
   readFile("src/gateway.html", "utf8"),
   readFile("src/gateway.css", "utf8"),
@@ -26,7 +27,8 @@ test("공통 액션 언어는 주요·보조·텍스트 동작과 상태 표시�
   assert.match(controls, /:is\(\.text-action, \.status-refresh\)[\s\S]*?text-decoration: underline/);
   assert.match(controls, /\.danger-button\s*\{[\s\S]*?color: var\(--urgent\)/);
   assert.match(controls, /\.action-note\s*\{[\s\S]*?color: var\(--muted\)/);
-  assert.match(insights, /<span class="action-note" id="exportClinicalSnapshot">/);
+  assert.match(controls, /\.mini-condition-list span\s*\{[\s\S]*?border-radius: 6px[\s\S]*?pointer-events: none/);
+  assert.match(insights, /<p class="action-note" id="exportClinicalSnapshot">/);
   assert.doesNotMatch(insights, /<button[^>]*id="exportClinicalSnapshot"/);
   assert.match(journey, /class="secondary-button danger-button journey-clear" id="clearJourney"/);
   assert.ok(controls.indexOf(".danger-button {") > controls.indexOf("background: var(--surface-raised)"));
@@ -64,7 +66,8 @@ test("환자 기록 가져오기는 기본 화면에서 접히고 직접 진입�
   assert.match(mapScript, /window\.addEventListener\("hashchange", revealImportFromHash\)/);
   assert.doesNotMatch(shellCss, /\.import-box__body > p\s*\{\s*display:\s*none/);
   assert.doesNotMatch(gatewayCss, /\.role-card__features\s*\{\s*display:\s*none/);
-  assert.match(gatewayCss, /\.role-card--clinical :is\(\.role-action, \.role-card__details > summary\):focus-visible\s*\{[\s\S]*?outline-color: var\(--surface\)/);
+  assert.match(controls, /\.role-card--clinical :is\(\.role-action, \.role-card__details > summary\):focus-visible\s*\{[\s\S]*?outline-color: var\(--on-inverse\)/);
+  assert.match(controls, /\.role-card--clinical \.role-action:focus-visible\s*\{[\s\S]*?outline-color: var\(--ink\)/);
 });
 
 test("작은 임상 보조 동작도 최소 44px 목표 크기와 키보드 포커스를 유지한다", () => {
@@ -72,6 +75,7 @@ test("작은 임상 보조 동작도 최소 44px 목표 크기와 키보드 포�
   assert.match(emrCss, /\.claim-search__field button\s*\{[\s\S]*?min-height: 44px/);
   assert.match(emrCss, /\.rule-version-actions input\s*\{[\s\S]*?min-height: 44px/);
   assert.match(emrCss, /\.claim-rule-trust__link\s*\{[\s\S]*?min-height: 44px/);
+  assert.match(journeyCss, /\.journey-first-action\s*\{[\s\S]*?border: 1px solid var\(--line-strong\)/);
   assert.match(controls, /\.context-disclosure > summary\s*\{[\s\S]*?min-height: 44px/);
   assert.match(controls, /\.context-disclosure > summary:focus-visible[\s\S]*?outline: 3px solid/);
   assert.match(insightsCss, /\.method-card\.context-disclosure > summary\s*\{[\s\S]*?color: var\(--surface\)/);

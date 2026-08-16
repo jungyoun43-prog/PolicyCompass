@@ -10,7 +10,7 @@
 
 .tone-lime {
   --node-tone: var(--data-lime);
-  color: var(--data-lime);
+  color: var(--status-success-text);
 }
 
 .tone-violet {
@@ -29,6 +29,28 @@
   gap: 0 var(--space-5);
   margin-top: var(--space-5);
   border-top: 1px solid var(--line);
+}
+
+.department-disclosure {
+  margin-top: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.department-disclosure > summary small {
+  margin-left: var(--space-1);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 620;
+}
+
+.department-disclosure .context-disclosure__body {
+  padding-inline: var(--space-4);
+}
+
+.department-disclosure .department-index {
+  margin-top: 0;
 }
 
 .body-caption {

@@ -5,7 +5,7 @@
 .landing-hero {
   position: relative;
   display: grid;
-  min-height: clamp(480px, 35vw, 520px);
+  min-height: clamp(440px, 32vw, 480px);
   align-items: center;
   margin-bottom: var(--space-6);
   overflow: hidden;
@@ -34,7 +34,7 @@
 .landing-hero h1 {
   max-width: none;
   margin: var(--space-3) 0 var(--space-4);
-  font-size: clamp(3.1rem, 4.6vw, 4.75rem);
+  font-size: clamp(2.85rem, 4.1vw, 4.25rem);
   font-weight: 780;
   letter-spacing: -0.075em;
   line-height: 1.06;
@@ -150,7 +150,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background:
-    radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 16rem),
+    radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--accent-mid) 16%, transparent), transparent 16rem),
     var(--surface-raised);
   padding: clamp(var(--space-5), 3vw, var(--space-8));
   box-shadow: var(--shadow-panel);
@@ -275,14 +275,14 @@
 .outcome,
 .workflow,
 .closing {
-  padding: clamp(52px, 5vw, 72px) 0;
+  padding: clamp(40px, 4vw, 56px) 0;
 }
 
 .outcome {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(var(--space-8), 7vw, 96px);
-  align-items: center;
+  gap: clamp(var(--space-8), 5vw, 72px);
+  align-items: start;
 }
 
 .section-intro h2,
@@ -476,7 +476,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
   background:
-    radial-gradient(circle at 50% 0, color-mix(in srgb, var(--data-cyan) 9%, transparent), transparent 22rem),
+    radial-gradient(circle at 50% 0, color-mix(in srgb, var(--accent-mid) 16%, transparent), transparent 22rem),
     var(--surface-raised);
   padding: clamp(48px, 5vw, 72px) clamp(var(--space-5), 5vw, var(--space-10));
   text-align: center;

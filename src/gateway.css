@@ -1,6 +1,6 @@
 .gateway-page {
   background:
-    radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 31rem),
+    radial-gradient(circle at 88% 4%, color-mix(in srgb, var(--accent-mid) 16%, transparent), transparent 31rem),
     radial-gradient(circle at 4% 96%, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 32rem),
     var(--surface);
 }
@@ -38,15 +38,22 @@
 }
 
 .gateway-shell {
-  padding-block: clamp(var(--space-10), 7vw, 88px) var(--space-12);
+  padding-block: clamp(var(--space-8), 5vw, 64px) var(--space-12);
 }
 
 .gateway-intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
-  gap: clamp(var(--space-8), 7vw, 88px);
-  align-items: end;
-  margin-bottom: clamp(var(--space-8), 5vw, 56px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-8);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius-panel) + var(--space-1));
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-mid) 20%, transparent), transparent 19rem),
+    linear-gradient(128deg, var(--accent-wash), color-mix(in srgb, var(--surface-raised) 76%, var(--accent-soft)));
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
 }
 
 .gateway-eyebrow,
@@ -60,19 +67,19 @@
 }
 
 .gateway-intro h1 {
-  max-width: 12ch;
+  max-width: 13ch;
   margin: var(--space-3) 0 0;
-  font-size: clamp(3rem, 6vw, 5.9rem);
+  font-size: clamp(2.75rem, 4.6vw, 4.5rem);
   font-weight: 790;
-  letter-spacing: -0.07em;
-  line-height: 1.04;
+  letter-spacing: -0.055em;
+  line-height: 1.06;
   text-wrap: balance;
   word-break: keep-all;
 }
 
 .gateway-intro__lead {
   max-width: 37rem;
-  margin: 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: 1.0625rem;
   line-height: 1.75;
@@ -114,21 +121,16 @@
   border-color: color-mix(in srgb, var(--surface) 42%, transparent);
 }
 
-.role-card--clinical :is(.role-action, .role-card__details > summary):focus-visible {
-  outline-color: var(--surface);
-  outline-offset: -4px;
-}
-
 .role-card--clinical {
   background:
-    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 16rem),
-    #1b1a20;
-  color: var(--surface);
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent-mid) 22%, transparent), transparent 16rem),
+    var(--surface-inverse);
+  color: var(--on-inverse);
 }
 
 .role-card--patient {
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 94%, var(--data-cyan));
+  background: color-mix(in srgb, var(--surface-raised) 56%, var(--accent-wash));
 }
 
 .role-card__topline {
@@ -177,7 +179,7 @@
 }
 
 .role-card--clinical .role-card__kicker {
-  color: color-mix(in srgb, var(--accent) 70%, var(--surface));
+  color: color-mix(in srgb, var(--surface-raised) 88%, var(--accent-mid));
 }
 
 .role-card h2 {
@@ -224,7 +226,7 @@
 }
 
 .role-card--clinical .role-card__features li::before {
-  background: var(--accent);
+  background: var(--accent-mid);
 }
 
 .role-action {
@@ -249,8 +251,15 @@
 
 .role-action--secondary {
   border: 1px solid var(--ink);
-  background: var(--surface);
+  background: var(--surface-raised);
   color: var(--ink);
+}
+
+.gateway-page .role-card--clinical .role-action--primary {
+  border-color: var(--surface-raised);
+  background: var(--surface-raised);
+  color: var(--accent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--ink) 24%, transparent);
 }
 
 .app-brand:focus-visible {
@@ -368,18 +377,17 @@
 
 @media (max-width: 800px) {
   .gateway-intro,
-  .role-grid,
   .handoff-panel {
     grid-template-columns: 1fr;
   }
 
   .gateway-intro {
-    gap: var(--space-5);
+    gap: var(--space-4);
   }
 
   .gateway-intro h1 {
     max-width: 14ch;
-    font-size: clamp(2.7rem, 10vw, 4.5rem);
+    font-size: clamp(2.5rem, 7vw, 3.5rem);
   }
 
   .role-card {
@@ -402,6 +410,7 @@
   .gateway-intro {
     gap: var(--space-3);
     margin-bottom: var(--space-4);
+    padding: var(--space-4);
   }
 
   .gateway-eyebrow,
@@ -412,8 +421,8 @@
   .gateway-intro h1 {
     max-width: none;
     margin-top: var(--space-2);
-    font-size: clamp(2.15rem, 11vw, 3rem);
-    line-height: 1;
+    font-size: clamp(2rem, 9vw, 2.35rem);
+    line-height: 1.05;
   }
 
   .gateway-intro__lead {
@@ -422,6 +431,7 @@
   }
 
   .role-grid {
+    grid-template-columns: 1fr;
     gap: var(--space-3);
   }
 

@@ -365,6 +365,11 @@ function renderQuestions(questions, initialSelectionId, fingerprint) {
       createTextElement("dt", "", "브리프 근거"),
       createTextElement("dd", "", item.basis),
     );
+    const detailDisclosure = document.createElement("details");
+    detailDisclosure.className = "question-detail-disclosure context-disclosure context-disclosure--compact";
+    const detailSummary = createTextElement("summary", "", "질문 근거 보기");
+    detailSummary.setAttribute("aria-label", `${item.question} · 질문 근거 보기`);
+    detailDisclosure.append(detailSummary, details);
     const selectControl = document.createElement("label");
     selectControl.className = "question-select";
     const radio = document.createElement("input");
@@ -381,7 +386,7 @@ function renderQuestions(questions, initialSelectionId, fingerprint) {
       updateSelection(item.id);
     });
     selectControl.append(radio, selectLabel);
-    copy.append(details, selectControl);
+    copy.append(detailDisclosure, selectControl);
     entry.append(number, copy);
     return entry;
   });

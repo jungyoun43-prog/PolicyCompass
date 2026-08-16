@@ -4,7 +4,7 @@ import test from "node:test";
 
 const routes = new Map([
   ["/", ["gateway.html", /데이터 입력 없음/]],
-  ["/patient", ["landing.html", /개인용 · 이 브라우저에 저장 · 진단이나 처방 아님/]],
+  ["/patient", ["landing.html", /개인용 · 이 브라우저에 저장 · 서버 자동 전송 없음 · 진단이나 처방 아님/]],
   ["/map", ["index.html", /진단 결과가 아닌 대화 준비용 지도/]],
   ["/connections", ["connections.html", /0개 질환/]],
   ["/insights", ["insights.html", /현재 브리프/]],

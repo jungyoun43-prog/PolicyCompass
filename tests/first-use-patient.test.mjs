@@ -8,7 +8,7 @@ test("개인 앱 진입 화면은 직접 가져오기와 선택적 외부 모델
 
   assert.match(entry, /data-entry-experience="patient"/);
   assert.match(entry, /환자용 기록을 직접 가져와 건강 지도와 다음 진료 질문으로 정리합니다/);
-  assert.match(entry, /개인용 · 이 브라우저에 저장 · 진단이나 처방 아님/);
+  assert.match(entry, /개인용 · 이 브라우저에 저장 · 서버 자동 전송 없음 · 진단이나 처방 아님/);
   assert.match(html, /식별정보와 원문 메모를 제외/);
   assert.match(html, /외부 모델은 전송 범위를 확인하고 해당 실행에 동의한 경우에만/);
   assert.match(html, /Journey는 선택한 기록만 현재 브라우저에 저장/);

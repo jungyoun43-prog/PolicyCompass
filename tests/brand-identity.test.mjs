@@ -20,6 +20,9 @@ test("all product routes share the connected-life-signals identity", async () =>
     assert.match(html, /class="app-brand__mark"/, `${page} must expose the shared product mark`);
     assert.match(html, /class="[^"]*signal-kicker/, `${page} must use the motif in a meaningful heading`);
     assert.match(html, /M12 40 31 19 52 37/, `${page} must use the shared connected-node favicon`);
+    assert.match(html, /name="theme-color" content="#e8f5e9"/, `${page} must expose the green browser theme`);
+    assert.match(html, /%23e8f5e9[\s\S]*%231b5e20[\s\S]*%2366bb6a[\s\S]*%23a5d6a7/, `${page} favicon must use the brand palette`);
+    assert.doesNotMatch(html, /%23fbfaf7|%230b6663/, `${page} must not retain the retired favicon colors`);
   }
 });
 

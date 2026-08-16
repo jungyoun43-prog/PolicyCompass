@@ -93,13 +93,13 @@ const binaryAssets = [
     type: "image/webp",
   },
   {
-    route: "/assets/body-atlas-v4.webp",
-    file: "src/assets/body-atlas-v4.webp",
+    route: "/assets/body-atlas-v5.webp",
+    file: "src/assets/body-atlas-v5.webp",
     type: "image/webp",
   },
   {
-    route: "/assets/body-atlas-3d-v3.glb",
-    file: "src/assets/body-atlas-3d-v3.glb",
+    route: "/assets/body-atlas-3d-v4.glb",
+    file: "src/assets/body-atlas-3d-v4.glb",
     type: "model/gltf-binary",
   },
 ];
@@ -294,7 +294,7 @@ export default {
       headers["content-security-policy"] = headers["content-security-policy"]
         .replace("script-src 'self'", "script-src 'self' 'wasm-unsafe-eval'");
     }
-    if (["/assets/body-atlas-3d-v3.glb", "/vendor/model-viewer-4.3.1.min.js"].includes(route)) {
+    if (["/assets/body-atlas-3d-v4.glb", "/vendor/model-viewer-4.3.1.min.js"].includes(route)) {
       headers["cache-control"] = "public, max-age=31536000, immutable";
     }
     return new Response(body, {

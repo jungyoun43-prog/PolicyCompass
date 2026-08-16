@@ -50,7 +50,7 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
   const html = await readFile("src/index.html", "utf8");
 
   assert.match(html, /class="human-figure__image"/);
-  assert.match(html, /src="\/assets\/body-atlas-v4\.webp"/);
+  assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
   assert.doesNotMatch(html, /class="human-figure__svg"/);
   assert.equal((html.match(/<button class="body-hotspot /g) ?? []).length, 12);
   assert.match(html, /신경과/);
@@ -61,7 +61,7 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
   assert.match(html, /기록과 연결됨/);
   assert.match(html, /현재 기록에 없음/);
   assert.match(html, /data-body-context="patient"/);
-  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v3\.glb"/);
+  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v4\.glb"/);
 });
 
 test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 분리되고 반응형 폭을 넘지 않는다", async () => {
@@ -89,11 +89,11 @@ test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 �
   }
 
   assert.match(bodyMapCss, /\.body-stage\s*\{[^}]*display:\s*grid[^}]*min-width:\s*0[^}]*overflow:\s*hidden/s);
-  assert.match(bodyMapCss, /\.human-figure\s*\{[^}]*position:\s*relative[^}]*width:\s*64%[^}]*height:\s*532px/s);
+  assert.match(bodyMapCss, /\.human-figure\s*\{[^}]*position:\s*relative[^}]*width:\s*min\(78%, 360px\)[^}]*height:\s*auto[^}]*aspect-ratio:\s*2 \/ 3/s);
   assert.match(bodyMapCss, /\.body-panel > \.detail-panel\s*\{[^}]*max-width:\s*100%[^}]*min-width:\s*0[^}]*border:[^}]*box-shadow:\s*none[^}]*overflow:\s*hidden/s);
   assert.match(bodyMapCss, /\.body-panel > \.detail-panel :where\(h2, h3, p, li\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
-  assert.match(bodyMapCss, /@media \(max-width: 780px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*68%[^}]*height:\s*472px/s);
-  assert.match(bodyMapCss, /@media \(max-width: 520px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*74%[^}]*height:\s*468px/s);
+  assert.match(bodyMapCss, /@media \(max-width: 780px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*min\(84%, 340px\)[^}]*height:\s*auto/s);
+  assert.match(bodyMapCss, /@media \(max-width: 520px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*min\(92%, 308px\)[^}]*height:\s*auto/s);
   assert.match(controlsCss, /\.map-page \.body-stage\s*\{\s*flex:\s*0 0 auto;\s*min-height:\s*0;\s*\}/);
   assert.match(responsiveCss, /@media \(max-width: 780px\)[\s\S]*?\.detail-panel\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });

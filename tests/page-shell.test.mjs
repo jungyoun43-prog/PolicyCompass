@@ -30,7 +30,7 @@ test("임상 앱은 /emr을 독립 워크스페이스 홈으로 제공한다", a
   assert.equal(response.status, 200);
   assert.match(html, /class="app-brand" href="\/emr"/);
   assert.match(html, /id="clinicalBodyTitle"/);
-  assert.match(html, /src="\/assets\/body-atlas-v4\.webp"/);
+  assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
 });
 
 test("Health Map은 빈 세 번째 컬럼 없이 두 영역을 균형 있게 배치한다", async () => {

@@ -176,9 +176,10 @@ Desktop uses a 12-column grid within 1480px. The data input takes 3 columns, bod
 - Accessibility: graph groups are keyboard selectable, visible focus is mandatory, and every selection is mirrored in text.
 
 ### Body atlas
-- Structure: a generated, transparent WebP medical mannequin with fixed dimensions, twelve native-button specialty markers, and a readable department index. The image is a visual base only; every patient-specific state remains a semantic HTML/CSS overlay.
+- Structure: a self-hosted GLB clinical mannequin with twelve native-button specialty markers and a readable department index. A generated transparent WebP is retained only as the safe fallback when WebGL or the model cannot load; every patient-specific state remains a semantic HTML/CSS overlay.
 - Coverage: neurology, psychiatry, ophthalmology/ENT, cardiology, pulmonology, gastroenterology, endocrinology, nephrology, gynecology/urology, orthopedics/rehabilitation, rheumatology, and dermatology/allergy are always visible even when no current record maps to them.
-- Image direction: centered front-facing androgynous adult, pearl-white translucent material, no organs or embedded labels, and no diagnosis-like marks baked into the asset.
+- Presentation: automatically show one large, centered, rotatable 3D androgynous adult with a matte translucent shell and muted internal organs. Every organ mesh stays inside the closed body shell, every marker anchor and normal comes from the body surface, and no labels or diagnosis-like marks are baked into the asset.
+- Interaction: drag the body to inspect it. There are no 2D/3D, organ visibility, or front-view controls; organs remain naturally visible and 2D appears only as a load/error fallback.
 - States: an active marker is solid and paired with a named condition caption; an inactive marker remains hollow and explicitly says that the current record has no connection there.
 - Accessibility: inactive regions are disabled, active regions have descriptive labels, and the selected area is reflected with `aria-pressed` and in the detail panel.
 

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 
 const foundation = await readFile("src/foundation.css", "utf8");
+const insights = await readFile("src/insights.css", "utf8");
 const root = foundation.match(/:root\s*\{(?<tokens>[\s\S]*?)\}/)?.groups?.tokens ?? "";
 const cssPaths = [];
 for await (const path of glob("src/*.css")) cssPaths.push(path);
@@ -18,6 +19,23 @@ function relativeLuminance(hex) {
 function contrast(left, right) {
   const values = [relativeLuminance(left), relativeLuminance(right)].sort((a, b) => b - a);
   return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+function tokenHex(name) {
+  const value = root.match(new RegExp(`--${name}:\\s*#([\\da-f]{6});`, "i"))?.[1];
+  assert.ok(value, `${name} 색상 토큰`);
+  return value;
+}
+
+function mixHex(left, right, leftWeight) {
+  const channels = [left, right].map((hex) => (
+    hex.match(/[\da-f]{2}/gi).map((value) => Number.parseInt(value, 16))
+  ));
+  return channels[0].map((value, index) => (
+    Math.round(value * leftWeight + channels[1][index] * (1 - leftWeight))
+      .toString(16)
+      .padStart(2, "0")
+  )).join("");
 }
 
 test("공통 임상 토큰은 따뜻한 표면과 짙은 청록 계층을 제공한다", () => {
@@ -64,4 +82,20 @@ test("컨트롤 경계·포커스·어두운 표면 경고 토큰은 비텍스�
   assert.ok(contrast("e5a857", "123c3b") >= 4.5);
   assert.match(applicationCss, /outline: 3px solid var\(--focus-ring\)/);
   assert.match(applicationCss, /border: 1px solid var\(--line-strong\)/);
+});
+
+test("질문 브리프의 대기 배지와 빈 상태 번호는 렌더링 대비 기준을 충족한다", () => {
+  assert.match(
+    insights,
+    /\.insight-status \.connection-badge\s*\{[\s\S]*?color: color-mix\(in srgb, var\(--muted\) 82%, var\(--ink\)\);/,
+  );
+  assert.match(
+    insights,
+    /\.brief-empty__index\s*\{[\s\S]*?color: var\(--line-strong\);/,
+  );
+
+  const badgeForeground = mixHex(tokenHex("muted"), tokenHex("ink"), 0.82);
+  const badgeBackground = mixHex(tokenHex("line"), tokenHex("surface"), 0.58);
+  assert.ok(contrast(badgeForeground, badgeBackground) >= 4.5);
+  assert.ok(contrast(tokenHex("line-strong"), tokenHex("surface-raised")) >= 3);
 });

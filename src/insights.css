@@ -92,6 +92,7 @@
 
 .insight-status .connection-badge {
   background: color-mix(in srgb, var(--line) 58%, var(--surface));
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
   font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 760;
@@ -509,7 +510,7 @@
 }
 
 .brief-empty__index {
-  color: var(--line);
+  color: var(--line-strong);
   font-family: var(--font-mono);
   font-size: 2rem;
   font-weight: 700;

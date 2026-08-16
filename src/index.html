@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#fbfaf7" />
     <title>건강 지도 | VitaGraph Personal</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
-    <link rel="preload" as="image" href="/assets/body-atlas-v4.webp" type="image/webp" />
+    <link rel="preload" as="image" href="/assets/body-atlas-v5.webp" type="image/webp" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/brand-signals.css" />
     <link rel="stylesheet" href="/controls.css" />
@@ -204,7 +204,7 @@
             </div>
             <ol id="mapInstructions">
               <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 연결된 정제 기록을 확인합니다.</span></li>
-              <li><b>2</b><span>3D로 돌려 보거나 2D로 전환한 뒤, 색 있는 신체 표식을 선택합니다.</span></li>
+              <li><b>2</b><span>3D 신체 모형을 드래그해 돌려 보고, 색 있는 신체 표식을 선택합니다.</span></li>
               <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
             </ol>
           </section>
@@ -233,16 +233,15 @@
           <div class="body-stage"
             aria-describedby="mapInstructions mapRelationshipMeaning bodyKeyText"
             data-body-3d
-            data-body-model="/assets/body-atlas-3d-v3.glb"
+            data-body-model="/assets/body-atlas-3d-v4.glb"
             data-body-viewer-module="/vendor/model-viewer-4.3.1.min.js"
             data-body-context="patient"
-            data-body-initial="auto"
             data-body-alt="회색 신체 외피와 내부 장기를 함께 확인하는 회전 가능한 3D 건강 지도"
           >
             <div class="human-figure" aria-label="신체 부위별 건강 신호">
               <img
                 class="human-figure__image"
-                src="/assets/body-atlas-v4.webp"
+                src="/assets/body-atlas-v5.webp"
                 width="1024"
                 height="1536"
                 alt=""

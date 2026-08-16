@@ -1,18 +1,17 @@
 const BODY_STAGE_SELECTOR = ".body-stage[data-body-3d]";
 const MODEL_VIEWER_TAG = "model-viewer";
 const STYLE_ID = "vitagraph-body-3d-styles";
-const VIEW_PREFERENCE_KEY = "vitagraph-body-view";
 const controllers = new WeakMap();
 
 export const CLINICAL_BODY_PALETTE = Object.freeze({
-  body: "#aeb7b8",
-  brain: "#9685a5",
-  lung: "#b97982",
-  heart: "#a64f58",
-  liver: "#94634f",
-  stomach: "#b77e64",
-  kidney: "#855e70",
-  intestines: "#b28a5d",
+  body: "#98a6a2",
+  brain: "#9b89aa",
+  lung: "#b66f79",
+  heart: "#994954",
+  liver: "#8e5b47",
+  stomach: "#b47761",
+  kidney: "#7f596c",
+  intestines: "#ad8155",
 });
 
 export const CLINICAL_ORGAN_NODES = Object.freeze([
@@ -102,28 +101,28 @@ export function collectClinicalMaterialRoles(gltf = {}) {
  * with data-body-hotspots JSON or data-position/data-normal on each button.
  */
 export const DEFAULT_BODY_HOTSPOTS = Object.freeze({
-  neuro: Object.freeze({ position: "0m 1.68m 0.1m", normal: "0m 0m 1m" }),
-  mental: Object.freeze({ position: "-0.15m 1.57m 0.09m", normal: "-0.15m 0m 1m" }),
-  sensory: Object.freeze({ position: "0.14m 1.6m 0.12m", normal: "0.12m 0m 1m" }),
-  cardio: Object.freeze({ position: "-0.14m 1.27m 0.17m", normal: "-0.08m 0m 1m" }),
-  respiratory: Object.freeze({ position: "0.16m 1.31m 0.15m", normal: "0.08m 0m 1m" }),
-  digestive: Object.freeze({ position: "-0.13m 1.03m 0.16m", normal: "-0.08m 0m 1m" }),
-  endocrine: Object.freeze({ position: "0.13m 1.1m 0.18m", normal: "0.08m 0m 1m" }),
-  renal: Object.freeze({ position: "-0.18m 0.9m 0.09m", normal: "-0.12m 0m 1m" }),
-  pelvic: Object.freeze({ position: "0.12m 0.77m 0.15m", normal: "0.08m 0m 1m" }),
-  musculoskeletal: Object.freeze({ position: "-0.18m 0.53m 0.06m", normal: "-0.15m 0m 1m" }),
-  rheumatology: Object.freeze({ position: "0.18m 0.48m 0.06m", normal: "0.15m 0m 1m" }),
-  dermatology: Object.freeze({ position: "0.22m 1.42m 0.05m", normal: "0.16m 0m 1m" }),
+  neuro: Object.freeze({ position: "0m 1.700471m 0.127357m", normal: "0m -0.031234m 0.999512m" }),
+  mental: Object.freeze({ position: "-0.045881m 1.612608m 0.106694m", normal: "-0.672362m -0.207114m 0.710657m" }),
+  sensory: Object.freeze({ position: "0.045364m 1.602123m 0.103617m", normal: "0.74119m -0.258962m 0.619336m" }),
+  cardio: Object.freeze({ position: "0.040251m 1.267674m 0.114577m", normal: "0.032159m 0.142488m 0.989274m" }),
+  respiratory: Object.freeze({ position: "-0.075211m 1.341651m 0.102501m", normal: "-0.014847m 0.229358m 0.973229m" }),
+  digestive: Object.freeze({ position: "0.033391m 1.069086m 0.109779m", normal: "0.16129m 0.017887m 0.986745m" }),
+  endocrine: Object.freeze({ position: "0m 1.457834m 0.055641m", normal: "0m 0.571657m 0.820493m" }),
+  renal: Object.freeze({ position: "-0.090459m 1.036107m 0.090562m", normal: "-0.380413m -0.04878m 0.923529m" }),
+  pelvic: Object.freeze({ position: "0.097345m 0.788257m 0.075701m", normal: "-0.217139m -0.098761m 0.971132m" }),
+  musculoskeletal: Object.freeze({ position: "-0.123453m 1.358282m 0.088196m", normal: "-0.698065m 0.214793m 0.683059m" }),
+  rheumatology: Object.freeze({ position: "0.148136m 0.498407m 0.054939m", normal: "-0.292484m -0.107901m 0.950163m" }),
+  dermatology: Object.freeze({ position: "0.445189m 1.165366m 0.157094m", normal: "-0.431618m 0.509806m 0.74418m" }),
 });
 
 const BODY_3D_CSS = `
   .body-stage[data-body-3d].is-body-3d {
     background:
-      radial-gradient(ellipse at 50% 35%, rgb(255 255 255 / 96%) 0 18%, rgb(247 249 248 / 86%) 43%, transparent 69%),
-      linear-gradient(180deg, #f6f8f7 0%, #edf2f0 68%, #e5ebe8 100%);
+      radial-gradient(ellipse at 50% 37%, rgb(255 255 255 / 98%) 0 17%, rgb(241 246 244 / 88%) 44%, transparent 70%),
+      linear-gradient(180deg, #f2f6f4 0%, #e6eeea 68%, #dce7e2 100%);
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--line, #d5dde6) 72%, transparent),
-      inset 0 -56px 92px rgb(41 71 70 / 5%);
+      inset 0 -64px 104px rgb(33 66 63 / 8%);
   }
 
   .body-stage[data-body-3d].is-body-3d::before {
@@ -134,7 +133,7 @@ const BODY_3D_CSS = `
     border: 0;
     border-radius: 50%;
     background:
-      radial-gradient(ellipse at 50% 42%, rgb(255 255 255 / 74%) 0 24%, rgb(213 226 222 / 20%) 57%, transparent 74%);
+      radial-gradient(ellipse at 50% 42%, rgb(255 255 255 / 68%) 0 24%, rgb(188 211 203 / 26%) 58%, transparent 74%);
     opacity: 1;
   }
 
@@ -145,95 +144,12 @@ const BODY_3D_CSS = `
     height: 11%;
     border: 0;
     border-radius: 50%;
-    background: radial-gradient(ellipse, rgb(30 57 56 / 16%) 0%, rgb(41 74 72 / 6%) 46%, transparent 72%);
+    background: radial-gradient(ellipse, rgb(24 54 51 / 22%) 0%, rgb(36 72 68 / 8%) 46%, transparent 72%);
     filter: blur(10px);
     opacity: 0.78;
     transform: none;
   }
 
-  .body-stage[data-body-3d] .body-3d-controls {
-    position: absolute;
-    z-index: 9;
-    top: 12px;
-    right: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 4px;
-    border: 1px solid color-mix(in srgb, var(--line, #d5dde6) 88%, #fff);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--surface, #fff) 95%, transparent);
-    box-shadow:
-      0 10px 26px rgb(18 35 53 / 10%),
-      0 1px 2px rgb(18 35 53 / 8%);
-    backdrop-filter: blur(16px) saturate(115%);
-  }
-
-  .body-stage[data-body-3d] .body-3d-control {
-    min-width: 46px;
-    min-height: 44px;
-    margin: 0;
-    padding: 0 13px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    background: transparent;
-    color: color-mix(in srgb, var(--ink, #172431) 70%, var(--muted, #596979));
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    line-height: 1;
-    cursor: pointer;
-    transition: border-color 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out;
-  }
-
-  .body-stage[data-body-3d] .body-3d-control:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--data-cyan, #258aa3) 20%, var(--line, #d5dde6));
-    background: color-mix(in srgb, var(--data-cyan, #258aa3) 8%, var(--surface, #fff));
-    color: var(--ink, #172431);
-  }
-
-  .body-stage[data-body-3d] .body-3d-control:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--data-cyan, #258aa3) 36%, transparent);
-    outline-offset: 2px;
-  }
-
-  .body-stage[data-body-3d] .body-3d-control[aria-pressed="true"] {
-    border-color: color-mix(in srgb, var(--data-cyan, #258aa3) 68%, var(--ink, #172431));
-    background: color-mix(in srgb, var(--data-cyan, #258aa3) 52%, var(--ink, #172431));
-    color: var(--surface, #fff);
-    box-shadow: 0 3px 10px color-mix(in srgb, var(--data-cyan, #258aa3) 22%, transparent);
-  }
-
-  .body-stage[data-body-3d] .body-3d-organs {
-    position: relative;
-    margin-left: 7px;
-  }
-
-  .body-stage[data-body-3d] .body-3d-organs::before {
-    position: absolute;
-    top: 8px;
-    bottom: 8px;
-    left: -6px;
-    width: 1px;
-    background: color-mix(in srgb, var(--line, #d5dde6) 86%, transparent);
-    content: "";
-  }
-
-  .body-stage[data-body-3d] .body-3d-organs[aria-pressed="true"] {
-    border-color: color-mix(in srgb, #a64f58 38%, var(--line, #d5dde6));
-    background: color-mix(in srgb, #a64f58 10%, var(--surface, #fff));
-    color: color-mix(in srgb, #7b3039 82%, var(--ink, #172431));
-    box-shadow: none;
-  }
-
-  .body-stage[data-body-3d] .body-3d-control:disabled {
-    opacity: 0.46;
-    cursor: not-allowed;
-  }
-
-  .body-stage[data-body-3d] .body-3d-reset[hidden],
-  .body-stage[data-body-3d] .body-3d-organs[hidden],
   .body-stage[data-body-3d] model-viewer[hidden] {
     display: none !important;
   }
@@ -275,14 +191,14 @@ const BODY_3D_CSS = `
   }
 
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot::before {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-color: color-mix(in srgb, currentColor 26%, transparent);
-    background: radial-gradient(circle, color-mix(in srgb, currentColor 20%, transparent), transparent 67%);
+    background: radial-gradient(circle, color-mix(in srgb, currentColor 16%, transparent), transparent 67%);
   }
 
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot.is-current::before {
-    transform: scale(1.08);
+    transform: scale(1.02);
   }
 
   .body-stage[data-body-3d].is-body-3d model-viewer .body-hotspot:not([data-visible]) {
@@ -303,17 +219,6 @@ const BODY_3D_CSS = `
   }
 
   @media (max-width: 640px) {
-    .body-stage[data-body-3d] .body-3d-controls {
-      top: 8px;
-      right: 8px;
-    }
-
-    .body-stage[data-body-3d] .body-3d-control {
-      min-height: 44px;
-      min-width: 44px;
-      padding-inline: 10px;
-    }
-
     .body-stage[data-body-3d].is-body-3d::before {
       inset-inline: 7%;
     }
@@ -324,7 +229,6 @@ const BODY_3D_CSS = `
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .body-stage[data-body-3d] .body-3d-control,
     .body-stage[data-body-3d] model-viewer .body-hotspot {
       transition: none !important;
     }
@@ -337,11 +241,6 @@ function injectStyles(ownerDocument) {
   style.id = STYLE_ID;
   style.textContent = BODY_3D_CSS;
   ownerDocument.head.append(style);
-}
-
-function normalizeInitialMode(value) {
-  const mode = String(value || "auto").toLowerCase();
-  return ["2d", "3d", "auto"].includes(mode) ? mode : "auto";
 }
 
 function resolveModelSource(stage, options) {
@@ -380,29 +279,8 @@ function hasWebGl(ownerDocument) {
   }
 }
 
-function readViewPreference(ownerWindow) {
-  try {
-    const value = ownerWindow?.localStorage?.getItem(VIEW_PREFERENCE_KEY);
-    return value === "2d" || value === "3d" ? value : "";
-  } catch {
-    return "";
-  }
-}
-
-function writeViewPreference(ownerWindow, value) {
-  try {
-    ownerWindow?.localStorage?.setItem(VIEW_PREFERENCE_KEY, value);
-  } catch {
-    // A blocked storage API must not prevent the body map from working.
-  }
-}
-
 function prefersReducedMotion(ownerWindow) {
   return Boolean(ownerWindow?.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-}
-
-function prefersReducedData(ownerWindow) {
-  return Boolean(ownerWindow?.navigator?.connection?.saveData);
 }
 
 function parseHotspotMap(stage, options) {
@@ -445,15 +323,6 @@ function hotspotArea(button) {
 function restoreAttribute(element, name, value) {
   if (value === null) element.removeAttribute(name);
   else element.setAttribute(name, value);
-}
-
-function createButton(ownerDocument, className, text, label) {
-  const button = ownerDocument.createElement("button");
-  button.className = `body-3d-control ${className}`;
-  button.type = "button";
-  button.textContent = text;
-  button.setAttribute("aria-label", label);
-  return button;
 }
 
 function dispatchStageEvent(stage, name, detail) {
@@ -509,31 +378,26 @@ export class Body3DController {
       || this.ownerDocument.documentElement.dataset.bodyViewerModule
       || "";
     this.context = options.context || stage.dataset.bodyContext || "shared";
-    this.initialMode = normalizeInitialMode(options.initialMode || stage.dataset.bodyInitial);
-    this.frontOrbit = options.frontOrbit || stage.dataset.bodyCameraOrbit || "0deg 82deg auto";
-    this.initialOrbit = options.initialOrbit || stage.dataset.bodyInitialCameraOrbit || "8deg 80deg auto";
-    this.frontTarget = options.frontTarget || stage.dataset.bodyCameraTarget || "auto auto auto";
-    this.frontFieldOfView = options.frontFieldOfView || stage.dataset.bodyFieldOfView || "26deg";
+    this.initialOrbit = options.initialOrbit || stage.dataset.bodyInitialCameraOrbit || "0deg 87deg 4.45m";
+    this.frontTarget = options.frontTarget || stage.dataset.bodyCameraTarget || "0m 0.91m 0m";
+    this.frontFieldOfView = options.frontFieldOfView || stage.dataset.bodyFieldOfView || "24deg";
     this.toneMapping = toneMappingValue(options.toneMapping || stage.dataset.bodyToneMapping);
-    this.exposure = numberString(options.exposure || stage.dataset.bodyExposure, 1.06, 0.5, 2);
+    this.exposure = numberString(options.exposure || stage.dataset.bodyExposure, 0.9, 0.5, 2);
     this.shadowIntensity = numberString(
       options.shadowIntensity || stage.dataset.bodyShadowIntensity,
-      0.92,
+      1.12,
       0,
       2,
     );
     this.shadowSoftness = numberString(
       options.shadowSoftness || stage.dataset.bodyShadowSoftness,
-      0.84,
+      0.68,
       0,
       1,
     );
     this.materialTreatment = String(
       options.materialTreatment || stage.dataset.bodyMaterialTreatment || "clinical-neutral",
     ).toLowerCase();
-    this.organsVisible = options.organsVisible !== undefined
-      ? Boolean(options.organsVisible)
-      : stage.dataset.bodyOrgans !== "hidden";
     this.bodyMaterials = [];
     this.organMaterials = [];
     this.clinicalMaterialStates = new Map();
@@ -557,7 +421,7 @@ export class Body3DController {
 
     injectStyles(this.ownerDocument);
     this.createPlaceholders();
-    this.createControls();
+    this.createStatus();
     this.observeHotspotAttributes();
     this.set2D({ announce: false, reason: "initial" });
     this.scheduleInitialActivation();
@@ -578,25 +442,7 @@ export class Body3DController {
     }
   }
 
-  createControls() {
-    const controls = this.ownerDocument.createElement("div");
-    controls.className = "body-3d-controls";
-    controls.setAttribute("role", "group");
-    controls.setAttribute("aria-label", "신체 지도 보기 방식");
-
-    this.twoDButton = createButton(this.ownerDocument, "body-3d-mode-2d", "2D", "2D 신체 지도 보기");
-    this.threeDButton = createButton(this.ownerDocument, "body-3d-mode-3d", "3D", "회전 가능한 3D 신체 지도 보기");
-    this.organsButton = createButton(this.ownerDocument, "body-3d-organs", "장기", "내부 장기 숨기기");
-    this.organsButton.setAttribute("aria-pressed", String(this.organsVisible));
-    this.organsButton.hidden = true;
-    this.organsButton.disabled = true;
-    this.resetButton = createButton(this.ownerDocument, "body-3d-reset", "정면", "3D 신체 지도를 정면으로 되돌리기");
-    this.resetButton.hidden = true;
-
-    controls.append(this.twoDButton, this.threeDButton, this.organsButton, this.resetButton);
-    this.stage.append(controls);
-    this.controls = controls;
-
+  createStatus() {
     const status = this.ownerDocument.createElement("p");
     status.className = "body-3d-status";
     status.setAttribute("role", "status");
@@ -604,13 +450,6 @@ export class Body3DController {
     this.stage.append(status);
     this.status = status;
 
-    const signal = this.abortController.signal;
-    this.twoDButton.addEventListener("click", () => this.set2D({ reason: "user" }), { signal });
-    this.threeDButton.addEventListener("click", () => this.activate3D({ reason: "user" }), { signal });
-    this.organsButton.addEventListener("click", () => {
-      this.setOrgansVisible(!this.organsVisible, { reason: "user" });
-    }, { signal });
-    this.resetButton.addEventListener("click", () => this.resetFrontView(), { signal });
   }
 
   scheduleInitialActivation() {
@@ -623,10 +462,6 @@ export class Body3DController {
       return;
     }
 
-    const savedMode = this.initialMode === "auto" ? readViewPreference(this.ownerWindow) : "";
-    const wants3D = this.initialMode === "3d"
-      || (this.initialMode === "auto" && savedMode !== "2d" && !prefersReducedData(this.ownerWindow));
-    if (!wants3D) return;
     this.requestedMode = "3d";
 
     if (!("IntersectionObserver" in this.ownerWindow)) {
@@ -671,7 +506,6 @@ export class Body3DController {
     if (this.mode === "3d" && this.viewer) return true;
     if (this.activationPromise) return this.activationPromise;
 
-    this.threeDButton.disabled = true;
     this.figure.setAttribute("aria-busy", "true");
     this.status.textContent = "3D 신체 지도를 준비하고 있습니다.";
 
@@ -689,7 +523,6 @@ export class Body3DController {
         this.image.hidden = true;
         this.viewer.hidden = false;
         this.moveHotspotsToViewer();
-        this.updateControls();
         this.status.textContent = this.ready
           ? "3D 신체 지도를 표시했습니다."
           : "3D 신체 지도를 불러오고 있습니다.";
@@ -699,17 +532,13 @@ export class Body3DController {
           mode: "3d",
           reason,
         });
-        if (reason === "user") writeViewPreference(this.ownerWindow, "3d");
         return true;
       } catch (error) {
         this.handleError(error, reason);
         return false;
       } finally {
         this.activationPromise = null;
-        if (!this.destroyed) {
-          this.threeDButton.disabled = false;
-          restoreAttribute(this.figure, "aria-busy", this.originalFigureBusy);
-        }
+        if (!this.destroyed) restoreAttribute(this.figure, "aria-busy", this.originalFigureBusy);
       }
     })();
 
@@ -725,7 +554,7 @@ export class Body3DController {
     viewer.setAttribute("alt", this.options.alt || this.stage.dataset.bodyAlt || this.figure.getAttribute("aria-label") || "3D 신체 건강 지도");
     viewer.setAttribute("camera-controls", "");
     viewer.setAttribute("disable-pan", "");
-    viewer.setAttribute("loading", "lazy");
+    viewer.setAttribute("loading", "eager");
     viewer.setAttribute("reveal", "auto");
     viewer.setAttribute("interaction-prompt", "none");
     viewer.setAttribute("touch-action", "pan-y");
@@ -818,7 +647,6 @@ export class Body3DController {
     this.stage.dataset.body3dState = "2d";
     this.stage.classList.remove("is-body-3d");
     this.stage.classList.add("is-body-2d");
-    this.updateControls();
     if (announce) this.status.textContent = "2D 신체 지도를 표시했습니다.";
     if (changed || reason === "user") {
       dispatchStageEvent(this.stage, "body-3d:modechange", {
@@ -828,37 +656,6 @@ export class Body3DController {
         reason,
       });
     }
-    if (reason === "user") writeViewPreference(this.ownerWindow, "2d");
-  }
-
-  updateControls() {
-    const is3D = this.mode === "3d";
-    const hasOrgans = this.organMaterials.length > 0;
-    this.twoDButton.setAttribute("aria-pressed", String(!is3D));
-    this.threeDButton.setAttribute("aria-pressed", String(is3D));
-    this.organsButton.hidden = !is3D || !hasOrgans;
-    this.organsButton.disabled = !is3D || !hasOrgans;
-    this.organsButton.setAttribute("aria-pressed", String(this.organsVisible));
-    this.organsButton.setAttribute(
-      "aria-label",
-      this.organsVisible ? "내부 장기 숨기기" : "내부 장기 표시하기",
-    );
-    this.resetButton.hidden = !is3D;
-  }
-
-  resetFrontView() {
-    if (!this.viewer || this.mode !== "3d") return;
-    this.viewer.setAttribute("camera-orbit", this.frontOrbit);
-    this.viewer.setAttribute("camera-target", this.frontTarget);
-    this.viewer.setAttribute("field-of-view", this.frontFieldOfView);
-    if (this.reducedMotion && typeof this.viewer.jumpCameraToGoal === "function") {
-      this.viewer.jumpCameraToGoal();
-    }
-    this.status.textContent = "3D 신체 지도를 정면으로 되돌렸습니다.";
-    dispatchStageEvent(this.stage, "body-3d:reset", {
-      controller: this,
-      context: this.context,
-    });
   }
 
   async discoverClinicalMaterials() {
@@ -939,33 +736,31 @@ export class Body3DController {
       this.options.bodyOpacity ?? this.stage.dataset.bodySurfaceOpacity,
     );
     const bodyOpacity = hasOrgans
-      ? (Number.isFinite(configuredBodyOpacity) ? Math.min(0.5, Math.max(0.12, configuredBodyOpacity)) : 0.26)
+      ? (Number.isFinite(configuredBodyOpacity) ? Math.min(0.64, Math.max(0.34, configuredBodyOpacity)) : 0.54)
       : 1;
     let changed = 0;
 
     if (this.materialTreatment !== "original") {
       for (const state of this.bodyMaterials) {
-        if (this.setMaterialAppearance(state, bodyColor, bodyOpacity, 0.72)) changed += 1;
+        if (this.setMaterialAppearance(state, bodyColor, bodyOpacity, 0.78)) changed += 1;
       }
       for (const state of this.organMaterials) {
         const color = CLINICAL_BODY_PALETTE[state.role];
         if (this.setMaterialAppearance(
           state,
           color,
-          this.organsVisible ? 1 : 0,
-          0.62,
-          { discard: !this.organsVisible },
+          1,
+          0.7,
         )) changed += 1;
       }
     } else {
       for (const state of this.organMaterials) {
-        const alpha = this.organsVisible ? (state.originalColor[3] ?? 1) : 0;
+        const alpha = state.originalColor[3] ?? 1;
         if (this.setMaterialAppearance(
           state,
           state.originalColor,
           alpha,
           state.material.pbrMetallicRoughness.roughnessFactor,
-          { discard: !this.organsVisible },
         )) {
           changed += 1;
         }
@@ -973,81 +768,10 @@ export class Body3DController {
     }
 
     this.viewer.dataset.bodyMaterialTreatment = hasOrgans ? "clinical-layered" : "clinical-neutral";
-    const organsState = hasOrgans
-      ? (this.organsVisible ? "visible" : "hidden")
-      : "unsupported";
+    const organsState = hasOrgans ? "visible" : "unsupported";
     this.stage.dataset.body3dOrgans = organsState;
     this.viewer.dataset.bodyOrgans = organsState;
-    this.updateControls();
     return changed;
-  }
-
-  setOrgansVisible(visible, { announce = true, reason = "api" } = {}) {
-    this.organsVisible = Boolean(visible);
-    if (!this.organMaterials.length) {
-      this.stage.dataset.body3dOrgans = "unsupported";
-      this.updateControls();
-      return false;
-    }
-
-    let changed = 0;
-    const bodyColor = this.options.bodyColor
-      || this.stage.dataset.bodySurfaceColor
-      || CLINICAL_BODY_PALETTE.body;
-    const configuredBodyOpacity = Number(
-      this.options.bodyOpacity ?? this.stage.dataset.bodySurfaceOpacity,
-    );
-    const visibleBodyOpacity = Number.isFinite(configuredBodyOpacity)
-      ? Math.min(0.5, Math.max(0.12, configuredBodyOpacity))
-      : 0.26;
-    for (const state of this.bodyMaterials) {
-      if (this.setMaterialAppearance(
-        state,
-        bodyColor,
-        this.organsVisible ? visibleBodyOpacity : 1,
-        0.72,
-      )) {
-        changed += 1;
-      }
-    }
-    for (const state of this.organMaterials) {
-      const color = this.materialTreatment === "original"
-        ? state.originalColor
-        : CLINICAL_BODY_PALETTE[state.role];
-      const visibleAlpha = this.materialTreatment === "original"
-        ? (state.originalColor[3] ?? 1)
-        : 1;
-      const roughness = this.materialTreatment === "original"
-        ? state.material.pbrMetallicRoughness.roughnessFactor
-        : 0.62;
-      if (this.setMaterialAppearance(
-        state,
-        color,
-        this.organsVisible ? visibleAlpha : 0,
-        roughness,
-        { discard: !this.organsVisible },
-      )) {
-        changed += 1;
-      }
-    }
-
-    const state = this.organsVisible ? "visible" : "hidden";
-    this.stage.dataset.body3dOrgans = state;
-    this.viewer.dataset.bodyOrgans = state;
-    this.updateControls();
-    if (announce) {
-      this.status.textContent = this.organsVisible
-        ? "3D 신체 지도에 내부 장기를 표시했습니다."
-        : "3D 신체 지도에서 내부 장기를 숨겼습니다.";
-    }
-    dispatchStageEvent(this.stage, "body-3d:organschange", {
-      controller: this,
-      context: this.context,
-      visible: this.organsVisible,
-      changedMaterials: changed,
-      reason,
-    });
-    return changed > 0;
   }
 
   async handleLoad() {
@@ -1071,7 +795,6 @@ export class Body3DController {
       viewer: this.viewer,
       adjustedMaterials,
       organMaterials: this.organMaterials.length,
-      organsVisible: this.organsVisible,
     });
   }
 
@@ -1092,8 +815,6 @@ export class Body3DController {
 
   markUnavailable(message) {
     this.requestedMode = "2d";
-    this.threeDButton.disabled = true;
-    this.threeDButton.title = message;
     this.stage.dataset.body3dState = "unavailable";
     this.status.textContent = message;
     dispatchStageEvent(this.stage, "body-3d:unavailable", {
@@ -1121,7 +842,6 @@ export class Body3DController {
     this.attributeObserver?.disconnect();
     this.abortController.abort();
     this.viewer?.remove();
-    this.controls?.remove();
     this.status?.remove();
     for (const marker of this.placeholders.values()) marker.remove();
     this.stage.classList.remove("is-body-2d", "is-body-3d", "has-body-3d-error");

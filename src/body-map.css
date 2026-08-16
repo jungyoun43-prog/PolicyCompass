@@ -167,12 +167,11 @@
   isolation: isolate;
   border-radius: calc(var(--radius-panel) - var(--space-2));
   background:
-    linear-gradient(color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px),
-    radial-gradient(circle at 50% 43%, var(--surface) 0 18%, transparent 52%),
-    var(--surface-soft);
-  background-size: var(--space-8) var(--space-8), var(--space-8) var(--space-8), auto, auto;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 68%, transparent);
+    radial-gradient(ellipse at 50% 43%, color-mix(in srgb, var(--surface) 98%, white) 0 24%, transparent 69%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 78%, white) 0%, color-mix(in srgb, var(--surface-soft) 92%, var(--data-cyan)) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--line) 72%, transparent),
+    inset 0 -40px 78px color-mix(in srgb, var(--data-cyan) 4%, transparent);
 }
 
 .body-stage::before,
@@ -188,21 +187,22 @@
   bottom: 5%;
   left: 50%;
   width: 1px;
-  background: linear-gradient(transparent, color-mix(in srgb, var(--data-cyan) 14%, var(--line)) 18% 82%, transparent);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--data-cyan) 10%, var(--line)) 18% 82%, transparent);
 }
 
 .body-stage::after {
-  inset: 14% 19%;
-  border: 1px solid color-mix(in srgb, var(--data-cyan) 16%, var(--line));
+  inset: 10% 15%;
+  border: 1px solid color-mix(in srgb, var(--data-cyan) 12%, var(--line));
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--data-cyan) 6%, transparent), transparent 66%);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--data-cyan) 4%, transparent), transparent 68%);
 }
 
 .human-figure {
   position: relative;
   z-index: 1;
-  width: 64%;
-  height: 532px;
+  width: min(78%, 360px);
+  height: auto;
+  aspect-ratio: 2 / 3;
   margin: var(--space-3) auto var(--space-4);
   min-width: 0;
   min-height: 0;
@@ -236,8 +236,8 @@
   max-height: 100%;
   object-fit: contain;
   filter:
-    drop-shadow(0 18px 24px color-mix(in srgb, var(--data-violet) 12%, transparent))
-    drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 10%, transparent));
+    drop-shadow(0 20px 24px color-mix(in srgb, var(--ink) 12%, transparent))
+    drop-shadow(0 3px 7px color-mix(in srgb, var(--data-cyan) 9%, transparent));
   user-select: none;
 }
 
@@ -274,8 +274,8 @@
 .body-hotspot::before {
   position: absolute;
   z-index: 1;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
   border-radius: 50%;
   background: radial-gradient(circle, color-mix(in srgb, currentColor 28%, transparent), color-mix(in srgb, currentColor 8%, transparent) 46%, transparent 70%);
@@ -345,63 +345,63 @@
 }
 
 .hotspot-neuro {
-  top: 8.5%;
+  top: 7.8%;
   left: 50%;
 }
 
 .hotspot-mental {
-  top: 14%;
-  left: 56%;
+  top: 12.2%;
+  left: 44%;
 }
 
 .hotspot-sensory {
-  top: 13%;
-  left: 43%;
+  top: 12.2%;
+  left: 57%;
 }
 
 .hotspot-cardio {
-  top: 29%;
-  left: 46%;
+  top: 31.5%;
+  left: 55%;
 }
 
 .hotspot-respiratory {
   top: 29%;
-  left: 55%;
+  left: 43.5%;
 }
 
 .hotspot-digestive {
-  top: 40%;
-  left: 50%;
+  top: 41.5%;
+  left: 52%;
 }
 
 .hotspot-endocrine {
-  top: 45%;
-  left: 55%;
+  top: 17.2%;
+  left: 50%;
 }
 
 .hotspot-renal {
-  top: 44%;
-  left: 44%;
+  top: 44.5%;
+  left: 43%;
 }
 
 .hotspot-pelvic {
-  top: 53%;
+  top: 52.5%;
   left: 50%;
 }
 
 .hotspot-musculoskeletal {
-  top: 68%;
-  left: 42%;
+  top: 28.5%;
+  left: 68%;
 }
 
 .hotspot-rheumatology {
-  top: 68%;
-  left: 58%;
+  top: 68.5%;
+  left: 57%;
 }
 
 .hotspot-dermatology {
-  top: 35%;
-  left: 64%;
+  top: 39%;
+  left: 73%;
 }
 
 @media (max-width: 780px) {
@@ -412,8 +412,8 @@
   }
 
   .human-figure {
-    width: 68%;
-    height: 472px;
+    width: min(84%, 340px);
+    height: auto;
   }
 }
 
@@ -444,8 +444,8 @@
   }
 
   .human-figure {
-    width: 74%;
-    height: 468px;
+    width: min(92%, 308px);
+    height: auto;
     margin-block: var(--space-4);
   }
 
@@ -455,11 +455,9 @@
 
   .human-figure__image {
     filter:
-      brightness(0.84)
-      contrast(1.08)
-      saturate(1.16)
-      drop-shadow(0 12px 20px color-mix(in srgb, var(--data-violet) 15%, transparent))
-      drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 13%, transparent));
+      contrast(1.03)
+      drop-shadow(0 14px 20px color-mix(in srgb, var(--ink) 13%, transparent))
+      drop-shadow(0 2px 5px color-mix(in srgb, var(--data-cyan) 10%, transparent));
   }
 
   .body-hotspot__core {

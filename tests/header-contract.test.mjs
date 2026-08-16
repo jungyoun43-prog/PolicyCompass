@@ -26,7 +26,7 @@ test("모든 화면은 같은 VitaGraph 앱 헤더 계약을 사용한다", asyn
     assert.match(header, /class="app-header__inner"/, file);
     assert.match(header, /class="app-brand" href="\/patient"/, file);
     assert.match(header, /class="app-nav"/, file);
-    assert.match(header, /class="app-header__action" href="\/map#connected-record">연결 기록 확인<\/a>/, file);
+    assert.match(header, /class="app-header__action" href="\/map#import-record">환자용 기록 가져오기<\/a>/, file);
 
     for (const [route, label] of navigation) {
       assert.match(header, new RegExp('<a href="' + route + '"[^>]*>' + label + '<\\/a>'), file);
@@ -46,11 +46,11 @@ test("게이트웨이는 의료진 EMR과 개인 VitaGraph 진입점을 분리�
   assert.match(html, /class="app-brand" href="\/"/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
   assert.match(html, /href="\/patient"[^>]*>\s*개인 VitaGraph 열기/s);
-  assert.match(html, /SIGNED CARE BRIDGE/);
-  assert.match(html, /의료진이 진료를 서명하면 허용된 확정 항목만 환자용으로 정제되어 자동 연결됩니다/);
-  assert.match(html, /환자는 질문 초안을 검토한 뒤 선택한 내용만 의료진에게 공유/);
-  assert.match(html, /JSON은 연결 수단이 아니라 환자가 원할 때 내려받는 소유 사본/);
-  assert.doesNotMatch(html, /두 앱은 환자용 파일로만 연결|확인 코드/);
+  assert.match(html, /EXPLICIT RECORD HANDOFF/);
+  assert.match(html, /선택 환자와 일회성 확인 코드를 대조한 뒤 허용된 확정 항목만 환자용 파일로 내보냅니다/);
+  assert.match(html, /파일과 별도 경로로 받은 코드를 확인해 직접 가져오고/);
+  assert.match(html, /진료에서 직접 전달할 내용만 선택/);
+  assert.doesNotMatch(html, /자동 연결/);
 });
 
 test("EMR 헤더는 환자 화면 탭과 환자 추가 전역 작업을 중복하지 않는다", async () => {

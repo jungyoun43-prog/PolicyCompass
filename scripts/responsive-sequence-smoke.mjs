@@ -107,8 +107,8 @@ async function prepareRoute(api, route) {
       "document.getElementById('conditionCount')?.textContent !== '0개'",
     );
     await api.waitFor(
-      "Boolean(sessionStorage.getItem('vitagraph-scene'))",
-      "The patient sample scene was not initialized.",
+      "sessionStorage.getItem('vitagraph-scene') === null",
+      "The patient sample scene crossed into real session storage.",
     );
     if (route !== "/map") {
       const ready = route === "/connections"
@@ -116,7 +116,7 @@ async function prepareRoute(api, route) {
         : route === "/insights"
           ? "document.querySelectorAll('#questions [data-question-id]').length > 0"
           : "Boolean(document.querySelector('[data-story-section=\"changed\"]'))";
-      await api.navigate(route, ready);
+      await api.navigate(`${route}?sample=1`, ready);
     }
   }
 }
@@ -195,24 +195,29 @@ export async function observeResponsiveRoute(api, {
       product['recorded-fact-connection-distinguished'] = /기록|근거/.test(relationshipText)
         && /추론|가능/.test(relationshipText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
-        && Boolean(sessionStorage.getItem('vitagraph-scene'));
+        && new URLSearchParams(location.search).get('sample') === '1'
+        && sessionStorage.getItem('vitagraph-scene') === null;
     } else if (route === '/connections') {
       product['connection-evidence-understood'] = /문헌|근거|기록/.test(relationshipText)
         && /추론|사실 아님/.test(relationshipText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
-        && Boolean(sessionStorage.getItem('vitagraph-scene'));
+        && new URLSearchParams(location.search).get('sample') === '1'
+        && sessionStorage.getItem('vitagraph-scene') === null;
     } else if (route === '/insights') {
       const detailText = [...document.querySelectorAll('.question-detail')].map((item) => item.textContent).join(' ');
       product['insight-source-understood'] = document.querySelectorAll('#questions [data-question-id]').length > 0
         && /근거/.test(detailText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
-        && Boolean(sessionStorage.getItem('vitagraph-scene'));
+        && new URLSearchParams(location.search).get('sample') === '1'
+        && sessionStorage.getItem('vitagraph-scene') === null;
     } else if (route === '/journey') {
       product['journey-change-understood'] = Boolean(document.querySelector('[data-story-section="changed"]'))
         && Boolean(document.querySelector('[data-story-section="context"]'))
         && /추론|인과/.test(document.querySelector('[data-story-section="context"]')?.textContent ?? '');
       product['journey-data-preserved'] = marker === ${JSON.stringify(profileId)}
-        && Boolean(document.querySelector('#journeyStorageNote'));
+        && new URLSearchParams(location.search).get('sample') === '1'
+        && Boolean(document.querySelector('#journeyStorageNote'))
+        && localStorage.getItem('vitagraph-journey') === null;
     } else if (route === '/emr') {
       const patientName = document.getElementById('selectedPatientName')?.textContent.trim() ?? '';
       const patientMeta = document.getElementById('selectedPatientMeta')?.textContent ?? '';

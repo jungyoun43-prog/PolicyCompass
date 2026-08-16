@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="EMR에서 자동 연결된 정제 기록과 직접 남긴 신호를 몸·질환·관리 항목으로 탐색하는 개인 건강 관계 지도"
+      content="의료진에게 받은 환자용 파일과 확인 코드를 직접 가져와 몸·질환·관리 항목으로 탐색하는 개인 건강 관계 지도"
     />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#fbfaf7" />
@@ -40,7 +40,7 @@
           <a href="/insights">진료 준비</a>
           <a href="/journey">기록</a>
         </nav>
-        <a class="app-header__action" href="/map#connected-record">연결 기록 확인</a>
+        <a class="app-header__action" href="/map#import-record">환자용 기록 가져오기</a>
       </div>
     </header>
 
@@ -63,7 +63,7 @@
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            EMR에서 연결된 정제 기록과 내가 적은 증상·검사 수치를 신체 부위,
+            내가 확인해 가져온 정제 기록과 직접 적은 증상·검사 수치를 신체 부위,
             관련 질환, 확인할 관리 항목으로 이어 봅니다.
           </p>
           <p class="page-hero__note" data-route-context>
@@ -93,7 +93,7 @@
           <form id="healthForm" novalidate>
             <label class="field-label" for="healthNote">증상과 검사 수치</label>
             <p class="demo-mode" id="demoMode" role="status" hidden>
-              예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey 미저장
+              예시 데이터만 보는 중 · 가져온 실제 기록은 표시·내보내기·Journey 저장 안 됨
             </p>
             <textarea
               id="healthNote"
@@ -135,47 +135,57 @@
             </div>
           </form>
 
-          <section class="import-box care-link-box" id="connected-record" aria-labelledby="careLinkTitle">
+          <section class="import-box" id="import-record" aria-labelledby="fhirImportTitle">
             <div class="import-heading">
               <div>
-                <span class="import-tag">SIGNED · VERIFIED EMR RECORD</span>
-                <h3 id="careLinkTitle">EMR 정제 기록</h3>
-              </div>
-              <span class="care-link-indicator" aria-hidden="true"></span>
-            </div>
-            <p>
-              의료진이 진료를 서명하면 최종·확정 사실과 처방이 식별정보 없이
-              이 브라우저에 자동 연결됩니다. 파일과 확인 코드는 필요하지 않습니다.
-            </p>
-            <p class="field-hint">
-              COPD는 입력한 증상만으로 추가하지 않습니다. 서명 완료 진료나 의료진이 최종 확정한
-              KCD 진단만 연결하며, 이 표시는 새 진단이나 중증도 판정이 아닙니다.
-            </p>
-            <p class="care-link-status" id="careLinkStatus" role="status" aria-live="polite">
-              연결된 서명·확정 기록을 확인하는 중입니다.
-            </p>
-            <div class="care-link-summary" id="careLinkSummary" hidden></div>
-            <div class="care-link-details" id="careLinkDetails" aria-label="연결된 EMR 정제 항목" hidden>
-              <div class="care-link-group" role="group" aria-labelledby="careConditionsTitle">
-                <h4 id="careConditionsTitle">확정 건강 항목</h4>
-                <ul id="careConditionList"></ul>
-              </div>
-              <div class="care-link-group" role="group" aria-labelledby="careMeasurementsTitle">
-                <h4 id="careMeasurementsTitle">최종 측정값</h4>
-                <ul id="careMeasurementList"></ul>
-              </div>
-              <div class="care-link-group" role="group" aria-labelledby="careMedicationsTitle">
-                <h4 id="careMedicationsTitle">서명 처방</h4>
-                <ul id="careMedicationList"></ul>
+                <span class="import-tag">PATIENT TRANSFER · FILE + CODE</span>
+                <h3 id="fhirImportTitle">환자용 기록 가져오기</h3>
               </div>
             </div>
-            <div class="care-link-actions">
-              <button class="import-button" id="refreshCareLink" type="button">연결 기록 다시 확인</button>
-              <button class="secondary-button" id="downloadClinicalJson" type="button" disabled>내 정제 JSON 내보내기</button>
-            </div>
-            <p class="import-warning">
-              원본 EMR·이름·등록번호·연락처·원문 메모는 연결하거나 내보내지 않습니다.
+            <label class="transfer-code-field" for="transferCode">
+              <span>1. 파일과 다른 경로로 받은 확인 코드</span>
+              <input
+                id="transferCode"
+                name="transferCode"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="33"
+                pattern="VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}"
+                placeholder="VG-…"
+                aria-invalid="false"
+                aria-errormessage="fhirResult"
+                aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
+              />
+            </label>
+            <p id="recordImportHelp">
+              의료진이 내 이름과 선택 환자를 대조한 뒤 내보낸 파일만 사용하세요. 코드를 먼저 입력하고 파일을 고른 뒤 마지막 확인을 눌러야 지도가 바뀝니다.
             </p>
+            <input
+              id="fhirFile"
+              type="file"
+              accept="application/json,.json"
+              tabindex="-1"
+              aria-label="VitaGraph 환자 전달 JSON 파일"
+              aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
+            />
+            <div class="import-file-actions">
+              <button class="import-button" id="selectRecordFile" type="button" aria-controls="fhirFile">
+                2. 기록 파일 선택
+              </button>
+              <button class="primary-button" id="importRecordButton" type="button" disabled>
+                3. 본인 기록 확인 후 교체
+              </button>
+            </div>
+            <p class="record-file-status" id="recordFileStatus" role="status" aria-live="polite">
+              확인 코드를 먼저 입력한 뒤 환자용 기록 파일을 선택하세요.
+            </p>
+            <p class="import-warning" id="recordImportWarning">
+              <strong>가져오기 전 확인:</strong> 현재 지도에서 아직 Journey에 저장하지 않은 기록은 가져온 내용으로 교체됩니다. 기존 Journey는 바뀌지 않습니다. 파일에는 이름·등록번호가 없으므로 전달받은 대상과 코드를 직접 대조하세요.
+            </p>
+            <div class="import-result" id="fhirResult" role="status" aria-live="polite" hidden></div>
           </section>
 
           <div class="detected-summary" aria-live="polite">
@@ -203,7 +213,7 @@
               <h3 id="mapInstructionsTitle">처음이라면 이렇게 보세요</h3>
             </div>
             <ol id="mapInstructions">
-              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 연결된 정제 기록을 확인합니다.</span></li>
+              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 환자용 파일과 확인 코드로 기록을 가져옵니다.</span></li>
               <li><b>2</b><span>3D 신체 모형을 드래그해 돌려 보고, 색 있는 신체 표식을 선택합니다.</span></li>
               <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
             </ol>
@@ -217,7 +227,7 @@
             <ul class="map-legend__items">
               <li>
                 <i class="map-legend__symbol map-legend__symbol--recorded" aria-hidden="true"></i>
-                <span><strong>기록 신호</strong><small>직접 입력하거나 EMR에서 연결된 정제 건강 항목</small></span>
+                <span><strong>기록 신호</strong><small>직접 입력하거나 확인 후 가져온 정제 건강 항목</small></span>
               </li>
               <li id="mapRelationshipMeaning" data-relationship-meaning>
                 <i class="map-legend__symbol map-legend__symbol--inferred" aria-hidden="true"></i>
@@ -385,30 +395,31 @@
             </div>
           </div>
 
-          <div class="connection-preview" aria-hidden="true">
-            <svg viewBox="0 0 520 290" preserveAspectRatio="xMidYMid meet">
+          <div class="connection-preview">
+            <p class="connection-preview__notice">표기 예시 · 실제 환자 기록 아님</p>
+            <svg viewBox="0 0 520 290" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               <path class="preview-connection preview-connection--inferred" d="M92 198 C138 123 180 151 227 92 S342 82 417 137" />
               <path class="preview-connection preview-connection--inferred" d="M227 92 C247 148 286 184 353 218" />
               <path class="preview-connection preview-connection--inferred" d="M92 198 C177 231 270 232 353 218" />
               <g class="preview-node preview-node--recorded tone-one">
                 <circle cx="92" cy="198" r="18" />
-                <text class="preview-node__label" x="92" y="232">고혈압</text>
-                <text class="preview-node__type" x="92" y="251">기록 사실 · 심혈관</text>
+                <text class="preview-node__label" x="92" y="232">가져온 항목 A</text>
+                <text class="preview-node__type" x="92" y="251">파일 표시 · 출처 미검증</text>
               </g>
               <g class="preview-node preview-node--recorded tone-two">
                 <circle cx="227" cy="92" r="18" />
-                <text class="preview-node__label" x="227" y="126">당뇨병</text>
-                <text class="preview-node__type" x="227" y="145">기록 사실 · 대사</text>
+                <text class="preview-node__label" x="227" y="126">본인 선택 B</text>
+                <text class="preview-node__type" x="227" y="145">의료진 확인 안 됨</text>
               </g>
               <g class="preview-node preview-node--inferred tone-three">
                 <circle cx="353" cy="218" r="18" />
-                <text class="preview-node__label" x="353" y="252">편두통</text>
-                <text class="preview-node__type" x="353" y="271">추론 후보 · 신경</text>
+                <text class="preview-node__label" x="353" y="252">관련 항목 C</text>
+                <text class="preview-node__type" x="353" y="271">문헌 관계 · 기록 아님</text>
               </g>
               <g class="preview-node preview-node--inferred tone-four">
                 <circle cx="417" cy="137" r="18" />
-                <text class="preview-node__label" x="417" y="171">이상지질혈증</text>
-                <text class="preview-node__type" x="417" y="190">추론 후보 · 심혈관</text>
+                <text class="preview-node__label" x="417" y="171">관련 항목 D</text>
+                <text class="preview-node__type" x="417" y="190">문헌 관계 · 기록 아님</text>
               </g>
             </svg>
           </div>

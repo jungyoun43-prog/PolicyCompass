@@ -23,6 +23,7 @@ function sendJson(response, status, value) {
   response.writeHead(status, {
     "cache-control": "no-store",
     "content-type": "application/json; charset=utf-8",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-content-type-options": "nosniff",
   });
   response.end(JSON.stringify(value));

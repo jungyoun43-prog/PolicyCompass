@@ -22,7 +22,8 @@ test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 
     assert.ok(program.label);
     assert.ok(program.shortLabel);
     assert.doesNotMatch(program.eyebrow, /\bDEMO\b|\bcontest\b|공모전/i);
-    assert.match(program.description, /적정성 평가.*진단 근거/);
+    assert.match(program.description, /현재 차트와 별도.*고정 합성.*진단 근거/);
+    assert.match(program.boundary, /현재 차트 근거와 연결되지 않은 고정 합성 예시/);
     assert.ok(program.quality.title);
     assert.ok(program.quality.description);
     assert.match(program.quality.emptyMessage, /프로필이 없습니다/);
@@ -34,6 +35,7 @@ test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 
     assert.equal(Object.isFrozen(program.quality), true);
     assert.equal(Object.isFrozen(program.diagnostic), true);
   }
+  assert.doesNotMatch(diseaseAssessmentSource, /확정 기록에 연결된/);
 });
 
 test("프로필이 있는 환자에게만 관련 질환 옵션을 만들고 profile 선호도를 우선한다", () => {

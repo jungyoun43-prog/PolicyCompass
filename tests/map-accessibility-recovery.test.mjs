@@ -16,24 +16,23 @@ test("/map exposes an invalid state and returns focus for empty-submit recovery"
   assert.match(script, /function clearFormError\(\)[\s\S]*?aria-invalid", "false"[\s\S]*?formError\.hidden = true/);
 });
 
-test("/map은 자동 연결 상태를 알리고 환자 소유 내보내기만 명시적으로 활성화한다", () => {
-  const connectedRecord = html.match(/<section class="import-box care-link-box"[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(connectedRecord, /id="connected-record"/);
-  assert.match(connectedRecord, /id="careLinkStatus" role="status" aria-live="polite"/);
-  assert.match(connectedRecord, /id="careLinkSummary" hidden/);
-  assert.match(connectedRecord, /id="refreshCareLink"/);
-  assert.match(connectedRecord, /id="downloadClinicalJson"[^>]*disabled/);
-  assert.match(connectedRecord, /파일과 확인 코드는 필요하지 않습니다/);
-  assert.match(connectedRecord, /원본 EMR·이름·등록번호·연락처·원문 메모는 연결하거나 내보내지 않습니다/);
-  assert.doesNotMatch(html, /id="(?:transferCode|fhirFile|importRecordButton|selectRecordFile)"/);
+test("/map은 파일·별도 코드·본인 확인의 복구 가능한 가져오기 흐름을 노출한다", () => {
+  assert.match(html, /id="transferCode"[^>]*aria-invalid="false"/);
+  assert.match(html, /aria-errormessage="fhirResult"/);
+  assert.match(html, /id="fhirFile"[^>]*aria-describedby="recordImportHelp recordFileStatus recordImportWarning"/);
+  assert.match(html, /id="selectRecordFile"[^>]*aria-controls="fhirFile"/);
+  assert.match(html, /id="importRecordButton"[^>]*disabled/);
+  assert.match(html, /id="recordFileStatus" role="status" aria-live="polite"/);
+  assert.match(html, /id="fhirResult" role="status" aria-live="polite" hidden/);
+  assert.match(html, /현재 지도에서 아직 Journey에 저장하지 않은 기록은 가져온 내용으로 교체/);
 
-  assert.match(script, /readCareBridge/);
-  assert.match(script, /subscribeCareBridge\(\(bridge\) => applyCareBridge\(bridge\)\)/);
-  assert.match(script, /elements\.downloadClinicalJson\.disabled = !snapshot/);
-  assert.match(script, /createPatientOwnedJson\(state\.clinicalSnapshot, exportedAt\)/);
-  assert.match(script, /patientOwnedJsonFilename\(exportedAt\)/);
-  assert.match(script, /elements\.careLinkStatus\.textContent = "정제 기록 JSON을 내보냈습니다\.[^"]*환자 본인이 선택해 보관하는 사본입니다\."/);
-  assert.doesNotMatch(script, /pendingTransferFile|PatientTransferCodeError|parsePatientTransferPackage/);
+  assert.match(script, /function showTransferCodeError\(message\)/);
+  assert.match(script, /transferCode\.setAttribute\("aria-invalid", "true"\)/);
+  assert.match(script, /elements\.transferCode\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(script, /PatientTransferCodeError/);
+  assert.match(script, /pendingTransferFile/);
+  assert.match(script, /parsePatientTransferPackage/);
+  assert.doesNotMatch(script, /readCareBridge|subscribeCareBridge|createPatientOwnedJson/);
 });
 
 test("the normative audit records deterministic evidence and its human-testing limit", () => {

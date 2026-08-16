@@ -25,12 +25,12 @@ export function createBodyModel(visibleIds, activeId) {
   const activeAreaCount = Object.keys(areas).length;
   return {
     areas,
-    statusText: visibleIds.length === 0 ? "분석 대기" : `${activeAreaCount}개 진료과 · ${visibleIds.length}개 신호`,
+    statusText: visibleIds.length === 0 ? "항목 선택 대기" : `${activeAreaCount}개 진료과 · ${visibleIds.length}개 선택·가져오기 항목`,
     ready: visibleIds.length > 0,
     keyTone: active?.tone ?? "",
     keyText: active
-      ? `선택 중: ${active.system} · ${active.label}`
-      : "입력된 기록에서 연결된 영역이 색 있는 표식으로 표시됩니다.",
+      ? `선택·가져오기 항목: ${active.system} · ${active.label}`
+      : "직접 선택하거나 명시적으로 가져온 항목의 진료과 연결을 표시합니다. 병변 위치나 진단을 뜻하지 않습니다.",
   };
 }
 
@@ -40,9 +40,9 @@ export function createDetailModel(activeId) {
     return {
       tone: "",
       system: "연결 지도",
-      title: "질환 노드를 선택하세요",
-      summary: "입력한 신호에서 질환 노드를 선택하면 다음 진료에서 확인할 항목을 보여 줍니다.",
-      relation: "그래프의 질환 노드를 누르면 관계 설명이 표시됩니다.",
+      title: "선택·가져오기 항목을 선택하세요",
+      summary: "직접 선택하거나 명시적으로 가져온 항목에서 다음 진료에 확인할 내용을 보여 줍니다.",
+      relation: "그래프 항목을 누르면 일반적인 관계 설명이 표시됩니다. 개인의 인과관계나 진단은 아닙니다.",
       checks: ["증상 발생 시점", "검사실 결과", "복용 중인 약"],
       nutrition: ["개인 식사 패턴 기록", "의료진과 영양 목표 상의", "검증되지 않은 보충제 피하기"],
       care: ["의료진과 우선순위 정하기", "생활 변화의 안전성 확인", "추적 시점 기록하기"],

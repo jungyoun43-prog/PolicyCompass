@@ -4778,7 +4778,7 @@ body.emr-page {
 
 .claim-attention-summary__content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2) var(--space-4);
   align-items: center;
   padding: var(--space-4);
@@ -4793,11 +4793,12 @@ body.emr-page {
 
 .claim-attention-counts {
   display: grid;
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-column: 1;
+  grid-row: auto;
   grid-template-columns: repeat(4, minmax(48px, 1fr));
   align-self: stretch;
-  border-left: 1px solid var(--claim-row-divider);
+  border-top: 1px solid var(--claim-row-divider);
+  padding-top: var(--space-3);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4834,7 +4835,9 @@ body.emr-page {
   color: var(--muted);
   font-size: 0.58rem;
   font-weight: 720;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .claim-attention-column-head,

@@ -21,11 +21,11 @@ const COPD_PROGRAM = deepFreeze({
   label: "만성폐쇄성폐질환",
   shortLabel: "COPD",
   eyebrow: "COPD 2026 · REVIEW",
-  description: "확정 기록에 연결된 COPD의 환자별 적정성 평가 기여 예상과 진단 근거 정합성을 분리해 확인합니다.",
+  description: "현재 차트와 별도인 고정 합성 COPD 예시로, 환자별 기여 후보와 진단 근거 정합성 표시 방식을 분리해 확인합니다.",
   quality: {
     eyebrow: "HIRA COPD 2026 · CONTRIBUTION PREVIEW",
     title: "COPD 환자별 기여 예상",
-    description: "폐기능검사·지속방문·흡입기관지확장제 근거를 환자 단위로 확인합니다.",
+    description: "고정 합성 예시의 폐기능검사·지속방문·흡입기관지확장제 기록 표시를 확인합니다.",
     emptyMessage: "연결된 COPD 적정성 평가 프로필이 없습니다.",
   },
   diagnostic: {
@@ -34,7 +34,7 @@ const COPD_PROGRAM = deepFreeze({
     description: "임상 맥락과 기관지확장제 투여 후 폐활량측정 근거를 함께 확인합니다.",
     emptyMessage: "연결된 COPD 진단 근거 프로필이 없습니다.",
   },
-  boundary: "환자별 기여 예상과 진단 근거 확인이며 공식 기관 점수·자동 진단·자동 처방이 아닙니다.",
+  boundary: "현재 차트 근거와 연결되지 않은 고정 합성 예시입니다. 공식 평가대상·기관 점수·진단·처방 판정이 아닙니다.",
   emptyMessage: "이 환자에게 연결된 COPD 평가 프로필이 없습니다.",
 });
 
@@ -44,11 +44,11 @@ const PNEUMONIA_PROGRAM = deepFreeze({
   label: "폐렴",
   shortLabel: "CAP",
   eyebrow: "PNEUMONIA 2026 · REVIEW",
-  description: "확정 기록에 연결된 폐렴의 환자별 적정성 평가 기여 예상과 진단 근거 정합성을 분리해 확인합니다.",
+  description: "현재 차트와 별도인 고정 합성 폐렴 예시로, 환자별 기여 후보와 진단 근거 정합성 표시 방식을 분리해 확인합니다.",
   quality: {
     eyebrow: "HIRA PNEUMONIA 2026 · CONTRIBUTION PREVIEW",
     title: "폐렴 환자별 기여 예상",
-    description: "평가대상 입원과 산소포화도·중증도·배양검사·초기 항생제 근거를 환자 단위로 확인합니다.",
+    description: "고정 합성 예시의 입원·산소포화도·중증도·배양검사·초기 항생제 기록 표시를 확인합니다.",
     emptyMessage: "연결된 폐렴 적정성 평가 프로필이 없습니다.",
   },
   diagnostic: {
@@ -57,7 +57,7 @@ const PNEUMONIA_PROGRAM = deepFreeze({
     description: "영상 소견·감염 근거·지역사회 발생 맥락과 의료진 진단 기록을 함께 확인합니다.",
     emptyMessage: "연결된 폐렴 진단 근거 프로필이 없습니다.",
   },
-  boundary: "환자별 기여 예상과 진단 근거 확인이며 공식 기관 점수·자동 진단·자동 항생제 선택이 아닙니다.",
+  boundary: "현재 차트 근거와 연결되지 않은 고정 합성 예시입니다. 공식 평가대상·기관 점수·진단·항생제 선택 판정이 아닙니다.",
   emptyMessage: "이 환자에게 연결된 폐렴 평가 프로필이 없습니다.",
 });
 

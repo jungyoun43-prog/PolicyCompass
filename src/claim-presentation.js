@@ -1,7 +1,7 @@
 export const CLAIM_PRESENTATION_STATES = Object.freeze({
-  "high-risk": Object.freeze({ tone: "red", label: "불인정 고위험" }),
-  "needs-review": Object.freeze({ tone: "orange", label: "급여기준 확인 필요" }),
-  verified: Object.freeze({ tone: "green", label: "현재 기준 충족" }),
+  "high-risk": Object.freeze({ tone: "red", label: "내부 규칙상 근거 누락" }),
+  "needs-review": Object.freeze({ tone: "orange", label: "등록 규칙 확인 필요" }),
+  verified: Object.freeze({ tone: "green", label: "등록 규칙 조건 일치" }),
   insufficient: Object.freeze({ tone: "violet", label: "자료 부족" }),
 });
 
@@ -120,9 +120,9 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
     return {
       state: "high-risk",
       ...CLAIM_PRESENTATION_STATES["high-risk"],
-      reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "명확한 급여기준 미충족 가능성이 확인됐습니다.",
+      reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "현재 등록된 내부 규칙에서 필요한 근거가 확인되지 않았습니다.",
       missingData,
-      paymentBoundary: "청구 전 불인정 고위험 예상이며 실제 심사 결과가 아닙니다.",
+      paymentBoundary: "기관이 등록한 내부 규칙의 사전점검이며 급여 여부나 실제 심사 결과가 아닙니다.",
     };
   }
 
@@ -132,7 +132,7 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
       ...CLAIM_PRESENTATION_STATES["needs-review"],
       reason: cleanText(claimItem.riskReason) || cleanText(evaluation?.explanation) || "기간·횟수 또는 기록 근거를 추가로 확인해야 합니다.",
       missingData,
-      paymentBoundary: "추가 확인이 필요한 청구 전 점검이며 불인정이나 삭감 확정을 뜻하지 않습니다.",
+      paymentBoundary: "추가 확인이 필요한 내부 규칙 점검이며 불인정이나 삭감 확정을 뜻하지 않습니다.",
     };
   }
 
@@ -143,7 +143,7 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
       ...CLAIM_PRESENTATION_STATES.insufficient,
       reason: insufficientReason || (!riskEvaluable ? "위험을 판정할 자료가 부족합니다." : cleanText(evaluation?.explanation) || "평가 대상 또는 연결 자료를 확인해야 합니다."),
       missingData,
-      paymentBoundary: "자료 보완 전에는 기준 충족이나 불인정 위험으로 판단하지 않습니다.",
+      paymentBoundary: "자료 보완 전에는 등록 규칙 일치 여부나 심사 결과를 판단하지 않습니다.",
     };
   }
 
@@ -157,7 +157,7 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
       ...CLAIM_PRESENTATION_STATES.verified,
       reason: cleanText(claimItem.verifiedReason) || "현재 EMR에서 기간·횟수와 필요한 근거를 확인했습니다.",
       missingData,
-      paymentBoundary: "확인된 자료 범위의 청구 전 점검 결과이며 지급이나 급여 인정을 보장하지 않습니다.",
+      paymentBoundary: "확인된 자료가 현재 등록된 내부 규칙과 일치한다는 뜻이며 지급·급여 인정·심사 결과를 보장하지 않습니다.",
     };
   }
 
@@ -166,7 +166,7 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
     ...CLAIM_PRESENTATION_STATES.insufficient,
     reason: "현재 자료만으로 청구 전 점검 결과를 판단할 수 없습니다.",
     missingData,
-    paymentBoundary: "자료 보완 전에는 기준 충족이나 불인정 위험으로 판단하지 않습니다.",
+    paymentBoundary: "자료 보완 전에는 등록 규칙 일치 여부나 심사 결과를 판단하지 않습니다.",
   };
 }
 

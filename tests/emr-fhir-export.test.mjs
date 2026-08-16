@@ -352,6 +352,34 @@ test("진료 외 확정 Observation·Procedure는 같은 환자 자원으로 내
   assert.equal(resources(bundle, "Procedure")[0].encounter, undefined);
 });
 
+test("지원 LOINC 숫자 측정은 표시 단위와 UCUM system·code를 함께 내보낸다", () => {
+  const patient = {
+    id: "patient-ucum",
+    name: "단위 환자",
+    events: [{
+      id: "hba1c-ucum",
+      type: "observation",
+      recordStatus: "final",
+      source: { kind: "manual", label: "의료진 확정" },
+      status: "final",
+      system: "http://loinc.org",
+      code: "4548-4",
+      label: "당화혈색소",
+      date: "2026-07-18",
+      value: 6.7,
+      unit: "%",
+    }],
+  };
+
+  const observation = resources(exportPatientFhirBundle(patient, "2026-07-19T10:00:00Z"), "Observation")[0];
+  assert.deepEqual(observation.valueQuantity, {
+    value: 6.7,
+    unit: "%",
+    system: "http://unitsofmeasure.org",
+    code: "%",
+  });
+});
+
 test("SOAP 텍스트가 없어도 구조화 entry가 있으면 Composition emptyReason을 만들지 않는다", () => {
   const input = fullPatient();
   input.events[0].soap.objective = "";

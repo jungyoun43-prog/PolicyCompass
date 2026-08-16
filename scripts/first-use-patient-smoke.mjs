@@ -19,6 +19,7 @@ const viewportResults = [];
 const routeResults = [];
 let keyboardPrimaryActionVerified = false;
 let journeyDataPersistenceVerified = false;
+let patternSignalPresentationVerified = false;
 await runBrowserSmoke({
   appUrl,
   debugPort,
@@ -32,7 +33,7 @@ await runBrowserSmoke({
       const firstUse = document.querySelector('[data-first-use="patient"]');
       const localContext = document.querySelector('[data-route-context]');
       const sample = firstUse?.querySelector('a[href="/map?sample=1"]');
-      const connected = firstUse?.querySelector('a[href="/map#connected-record"]');
+      const connected = firstUse?.querySelector('a[href="/map#import-record"]');
       const heroPrimary = document.querySelector('[data-primary-action]');
       const heroSample = document.querySelector('.landing-actions a[href="/map?sample=1"]');
       const rect = firstUse?.getBoundingClientRect();
@@ -63,7 +64,7 @@ await runBrowserSmoke({
     })()`);
     assert(result.steps === 4, `${viewport.width}x${viewport.height}: first-use path does not have four steps`);
     assert(/개인용 앱/.test(result.localText) && /식별정보·원문 메모 제외/.test(result.localText) && /진단·처방 아님/.test(result.localText), `${viewport.width}x${viewport.height}: patient data boundary is unclear`);
-    assert(result.sampleVisible && result.connectedPresent, `${viewport.width}x${viewport.height}: safe sample/connected-record entry is missing`);
+    assert(result.sampleVisible && result.connectedPresent, `${viewport.width}x${viewport.height}: safe sample/import-record entry is missing`);
     assert(result.firstUseWidth > 0 && result.documentWidth <= result.viewportWidth, `${viewport.width}x${viewport.height}: first-use layout overflows`);
     assert(
       result.actionBounds.every((action) => action
@@ -73,8 +74,8 @@ await runBrowserSmoke({
         && action.bottom <= result.viewportHeight),
       `${viewport.width}x${viewport.height}: hero start actions are not both reachable in the first viewport (${JSON.stringify(result.actionBounds)})`,
     );
-    assert(result.actionBounds[0].text === "연결 기록으로 시작" && result.actionBounds[0].path === "/map#connected-record",
-      `${viewport.width}x${viewport.height}: connected-record action is incorrect`);
+    assert(result.actionBounds[0].text === "환자용 기록 가져오기" && result.actionBounds[0].path === "/map#import-record",
+      `${viewport.width}x${viewport.height}: import-record action is incorrect`);
     assert(result.actionBounds[1].text === "예시로 보기" && result.actionBounds[1].path === "/map?sample=1",
       `${viewport.width}x${viewport.height}: sample action is incorrect`);
     assert(result.emrLinks === 0, `${viewport.width}x${viewport.height}: patient start exposes /emr`);
@@ -95,15 +96,23 @@ await runBrowserSmoke({
 
   await setViewport(viewports[2]);
   await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
-  await waitFor("Boolean(sessionStorage.getItem('vitagraph-scene'))", "Sample map did not persist in the patient session.");
-  const initialScene = await evaluate("JSON.parse(sessionStorage.getItem('vitagraph-scene'))");
-  assert(initialScene.isDemo === true && initialScene.visibleIds.length > 0, "Safe sample state is not marked as demo.");
+  const sampleState = await evaluate(`(() => ({
+    count: Number.parseInt(document.getElementById('conditionCount')?.textContent ?? '0', 10),
+    scenePersisted: Boolean(sessionStorage.getItem('vitagraph-scene')),
+    importDisabled: document.getElementById('transferCode')?.disabled === true
+      && document.getElementById('selectRecordFile')?.disabled === true
+      && document.getElementById('importRecordButton')?.disabled === true,
+    journeyDisabled: document.getElementById('saveJourney')?.disabled === true,
+  }))()`);
+  assert(sampleState.count > 0, "Safe sample state did not render its explicit fixture.");
+  assert(!sampleState.scenePersisted, "Sample state leaked into the real patient session.");
+  assert(sampleState.importDisabled && sampleState.journeyDisabled, "Sample state did not block real-record actions.");
 
   const routeExpectations = [
-    ["/map", "[data-graph-discovery=\"map\"]", "map"],
-    ["/connections", "[data-graph-discovery=\"connections\"]", "connections"],
-    ["/insights", "#questionCount", "insights"],
-    ["/journey", "#journeyComparison", "journey"],
+    ["/map?sample=1", "[data-graph-discovery=\"map\"]", "map"],
+    ["/connections?sample=1", "[data-graph-discovery=\"connections\"]", "connections"],
+    ["/insights?sample=1", "#questionCount", "insights"],
+    ["/journey?sample=1", "#journeyComparison", "journey"],
   ];
   for (const [route, readySelector, name] of routeExpectations) {
     await navigate(route, `Boolean(document.querySelector(${JSON.stringify(readySelector)}))`);
@@ -117,7 +126,7 @@ await runBrowserSmoke({
       };
       return {
         emrLinks: [...document.querySelectorAll('a[href]')].filter((link) => new URL(link.href).pathname === '/emr').length,
-        sessionConditions: JSON.parse(sessionStorage.getItem('vitagraph-scene') || '{}').visibleIds?.length ?? 0,
+        sampleScenePersisted: Boolean(sessionStorage.getItem('vitagraph-scene')),
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: innerWidth,
         legend: visible('[data-graph-legend]'),
@@ -137,7 +146,7 @@ await runBrowserSmoke({
       };
     })()`);
     assert(result.emrLinks === 0, `${route}: patient route exposes /emr`);
-    assert(result.sessionConditions === initialScene.visibleIds.length, `${route}: patient scene did not persist`);
+    assert(!result.sampleScenePersisted, `${route}: sample state leaked into the real patient session`);
     assert(result.documentWidth <= result.viewportWidth, `${route}: horizontal overflow`);
     if (name === "map" || name === "connections") {
       assert(result.legend && result.instructions && result.relationshipMeaning && result.selectionState && result.nextAction, `${route}: graph discovery affordances are incomplete`);
@@ -164,7 +173,20 @@ await runBrowserSmoke({
     note.dispatchEvent(new Event('input', { bubbles: true }));
     document.getElementById('analyzeButton').click();
   })()`);
-  await waitFor("document.getElementById('miniConditionList').children.length > 0", "Real patient map did not update before Journey save.");
+  await waitFor(
+    "document.getElementById('formError').hidden && document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님')",
+    "Text-only measurement did not render as a non-diagnostic pattern signal.",
+  );
+  const patternSignal = await evaluate(`(() => ({
+    summary: document.getElementById('miniConditionList').textContent.replace(/\\s+/g, ' ').trim(),
+    selectedConditions: document.querySelectorAll('[data-condition][aria-pressed="true"]').length,
+    graphConditions: document.getElementById('graphPreviewCount').textContent,
+    saveDisabled: document.getElementById('saveJourney').disabled,
+  }))()`);
+  assert(/혈압 측정 입력 · 패턴 신호 · 진단 아님/.test(patternSignal.summary), "Pattern signal safety label is missing.");
+  assert(patternSignal.selectedConditions === 0 && patternSignal.graphConditions === "0개", "Pattern signal was promoted to a condition.");
+  assert(!patternSignal.saveDisabled, "Pattern signal could not be saved to Journey.");
+  patternSignalPresentationVerified = true;
   await waitFor("!document.getElementById('saveJourney').disabled", "Journey save did not become available.");
   await evaluate("document.getElementById('saveJourney').click()");
   await waitFor("JSON.parse(localStorage.getItem('vitagraph-journey') || '[]').length === 1", "Journey save did not persist one record.");
@@ -191,12 +213,13 @@ await runBrowserSmoke({
       patientClinicianBoundary: patientClinicianBoundaryVerified,
       keyboardPrimaryAction: keyboardPrimaryActionVerified,
       journeyDataPersistence: journeyDataPersistenceVerified,
+      patternSignalPresentation: patternSignalPresentationVerified,
     },
     viewports: viewportResults,
     routeFlow: routeResults,
-    routeSequence: ["/patient", "/map", "/connections", "/insights", "/journey"],
+    routeSequence: ["/patient", "/map?sample=1", "/connections?sample=1", "/insights?sample=1", "/journey?sample=1", "/map", "/journey"],
     sampleIsIsolated: true,
-    sessionPersistence: true,
+    sampleSessionPersistence: false,
     patientClinicianBoundary: true,
     humanValidationProtocol: "USABILITY.md",
   });

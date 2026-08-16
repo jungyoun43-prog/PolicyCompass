@@ -57,13 +57,11 @@ try {
       assert(boundary.clinicianLinks === 0, "Patient flow crossed into clinician navigation.");
     });
 
-    await step("patient-map-persistence", async () => {
+    await step("patient-sample-boundary", async () => {
       await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
-      await waitFor("Boolean(sessionStorage.getItem('vitagraph-scene'))", "Patient sample scene was not stored.");
-      const scene = await evaluate("JSON.parse(sessionStorage.getItem('vitagraph-scene'))");
-      assert(scene.isDemo === true && scene.visibleIds.length > 0, "Patient sample was not isolated as demo state.");
-      await navigate("/journey", "Boolean(document.querySelector('[data-story-section=\"changed\"]'))");
-      assert(await evaluate("JSON.parse(sessionStorage.getItem('vitagraph-scene')).visibleIds.length > 0"), "Patient context was lost in the shared sequence.");
+      assert(await evaluate("sessionStorage.getItem('vitagraph-scene') === null"), "Patient sample wrote a real Personal scene.");
+      await navigate("/journey?sample=1", "Boolean(document.querySelector('[data-story-section=\"changed\"]'))");
+      assert(await evaluate("new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('journeyTimeline').hidden && sessionStorage.getItem('vitagraph-scene') === null"), "Patient sample crossed into real Journey or persisted a scene.");
     });
 
     await writeSmokeReport(reportPath, {
@@ -77,7 +75,7 @@ try {
         clinicianPatientContext: true,
         roleBoundary: true,
         patientLocalStorageExplanation: true,
-        patientScenePersistence: true,
+        patientSampleIsolation: true,
       },
     });
 

@@ -38,14 +38,17 @@ test("Health Map은 기록, 추론, 선택 상태와 다음 행동을 한 흐름
   assert.match(appJs, /선택됨 ·/);
 });
 
-test("Health Map 관계 미리보기는 기록 사실과 추론 Connection을 색상 외 형태와 문구로 구분한다", async () => {
+test("Health Map 관계 미리보기는 합성 표기 예시와 provenance 경계를 분명히 구분한다", async () => {
   const portalCss = await readFile("src/portal.css", "utf8");
 
   assert.match(mapHtml, /preview-node preview-node--recorded/);
   assert.match(mapHtml, /preview-node preview-node--inferred/);
+  assert.match(mapHtml, /표기 예시 · 실제 환자 기록 아님/);
+  assert.doesNotMatch(mapHtml.match(/<div class="connection-preview">[\s\S]*?<\/div>/)?.[0] ?? "", /고혈압|당뇨병|편두통|이상지질혈증/);
   assert.match(mapHtml, /preview-connection preview-connection--inferred/);
-  assert.match(mapHtml, /기록 사실 ·/);
-  assert.match(mapHtml, /추론 후보 ·/);
+  assert.match(mapHtml, /파일 표시 · 출처 미검증/);
+  assert.match(mapHtml, /의료진 확인 안 됨/);
+  assert.match(mapHtml, /문헌 관계 · 기록 아님/);
   assert.match(portalCss, /\.preview-node--recorded > circle[\s\S]*?fill:\s*var\(--preview-tone\)/);
   assert.match(portalCss, /\.preview-node--inferred > circle[\s\S]*?fill:\s*var\(--surface\)[\s\S]*?stroke-dasharray/);
   assert.match(portalCss, /\.preview-connection--inferred[\s\S]*?stroke-dasharray/);
@@ -78,25 +81,28 @@ test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내
 });
 
 test("Connections는 개인 기록 근거와 문헌 기반 추론 관계를 시각·텍스트로 구분한다", () => {
-  assert.match(connectionsHtml, /EMR 서명·확정 기록 · 환자 직접 선택 항목/);
-  assert.match(connectionsHtml, /입력 신호에서 찾은 후보/);
+  assert.match(connectionsHtml, /파일에 의료진 확정으로 표시 · 발행기관·변조 미검증/);
+  assert.match(connectionsHtml, /본인이 알고 있다고 선택 · 의료진 확인 안 됨/);
+  assert.match(explorerCss, /\.legend-dot\.declared-dot/);
+  assert.doesNotMatch(connectionsHtml, /입력 신호에서 찾은 후보/);
   assert.match(connectionsHtml, /문헌 기반 추론 관계 · 환자 기록 사실 아님/);
   assert.match(connectionsJs, /function conditionProvenance\(id\)/);
   assert.match(connectionsJs, /state\.clinicalConditionIds\.includes\(id\)/);
-  assert.match(connectionsJs, /source: "clinical"/);
-  assert.match(connectionsJs, /EMR 확정 기록 · 의료진이 서명·확정한 뒤 환자용으로 정제된 질환 항목/);
+  assert.match(connectionsJs, /source: "clinical-import"/);
+  assert.match(connectionsJs, /파일에 의료진 확정으로 표시 · 발행기관·변조 미검증/);
   assert.match(connectionsJs, /source: "patient"/);
   assert.match(connectionsJs, /환자 직접 확인 · 건강 지도에서 직접 선택한 항목 · 의료진 확정 진단 아님/);
-  assert.match(connectionsJs, /source: "inferred"/);
+  assert.match(connectionsJs, /if \(state\.isDemo\)/);
+  assert.match(connectionsJs, /source: "sample"/);
+  assert.match(connectionsJs, /합성 예시 · 실제 기록 아님/);
   assert.match(connectionsJs, /data-evidence-kind/);
   assert.match(connectionsJs, /"data-evidence-kind": provenance\.kind/);
   assert.match(connectionsJs, /"data-evidence-source": provenance\.source/);
   assert.match(connectionsJs, /elements\.evidenceKind\.dataset\.provenance = provenance\.source/);
-  assert.match(connectionsJs, /진단으로 기록된 사실이 아님/);
   const clinicalProvenance = connectionsJs.match(
     /if \(state\.clinicalConditionIds\.includes\(id\)\) \{[\s\S]*?\n  \}/,
   )?.[0] ?? "";
-  assert.match(clinicalProvenance, /EMR 확정 기록/);
+  assert.match(clinicalProvenance, /파일에 의료진 확정으로 표시/);
   assert.doesNotMatch(clinicalProvenance, /진단(?:으로 기록된 사실이| 사실) 아님|확정 진단 아님/);
   assert.match(connectionsJs, /node-selection-ring/);
   assert.match(connectionsJs, /✓ 선택됨/);

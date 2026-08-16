@@ -20,12 +20,12 @@ await runBrowserSmoke({
   initialViewport: viewports[0],
 }, async ({ evaluate, navigate, setViewport, waitFor }) => {
   await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
-  await waitFor("Boolean(sessionStorage.getItem('vitagraph-scene'))", "Demo graph state was not created.");
+  assert(await evaluate("sessionStorage.getItem('vitagraph-scene') === null"), "Sample map persisted a real Personal scene.");
 
   for (const viewport of viewports) {
     for (const [route, kind] of [["/map", "map"], ["/connections", "connections"]]) {
       await setViewport(viewport);
-      await navigate(route, `Boolean(document.querySelector('[data-graph-discovery="${kind}"]'))`);
+      await navigate(`${route}?sample=1`, `Boolean(document.querySelector('[data-graph-discovery="${kind}"]'))`);
       const state = await evaluate(`(() => {
         const visible = (selector) => {
           const element = document.querySelector(selector);
@@ -67,6 +67,7 @@ await runBrowserSmoke({
       assert(/선택|보고|현재/.test(state.selection.text), `${route}: selected state has no non-color text`);
       assert(state.selectionSemantic.length > 0, `${route}: selected state has no status semantics`);
       assert(state.documentWidth <= state.viewportWidth && state.wrapperRight <= state.viewportWidth + 1, `${route} ${viewport.width}x${viewport.height}: discovery UI clips horizontally`);
+      assert(await evaluate("new URLSearchParams(location.search).get('sample') === '1' && sessionStorage.getItem('vitagraph-scene') === null"), `${route}: sample boundary was dropped or persisted a real scene`);
       results.push({ route, viewport: `${viewport.width}x${viewport.height}`, ...state });
     }
   }

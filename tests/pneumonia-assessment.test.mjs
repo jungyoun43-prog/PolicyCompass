@@ -47,6 +47,11 @@ function completeCase(overrides = {}) {
       administeredAt: "2026-10-01T10:32:00+09:00",
       appropriateForCap: true,
     }],
+    qualityScope: {
+      institutionCapAdmissions: 12,
+      officialExclusionsReviewed: true,
+      officialExclusionApplies: false,
+    },
     evaluatedAt: "2026-08-03T12:00:00Z",
   };
   return {
@@ -194,6 +199,14 @@ test("missing target fields stay insufficient instead of being treated as zero o
   assert.equal(result.status, "insufficient");
   assert.equal(result.target.eligible, false);
   assert.match(result.target.reason, /확인 필요/);
+  assert.ok(result.metrics.every(({ status }) => status === "insufficient"));
+});
+
+test("기관 10건 이상·세부 제외조건이 미확인이면 폐렴 평가대상을 eligible로 확정하지 않는다", () => {
+  const result = evaluateHiraPneumonia2026Contribution(completeCase({ qualityScope: {} }));
+  assert.equal(result.status, "insufficient");
+  assert.equal(result.target.eligible, false);
+  assert.match(result.target.reason, /10건 이상.*제외조건/);
   assert.ok(result.metrics.every(({ status }) => status === "insufficient"));
 });
 

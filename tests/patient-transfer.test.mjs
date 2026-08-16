@@ -672,6 +672,14 @@ test("파서는 schema·version·scope·trust와 모든 중첩 키를 exact-key�
   for (const payload of variants) assertRejected(payload);
 });
 
+test("파서는 미래 내보내기 시각을 신뢰하지 않는다", () => {
+  const base = createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE);
+  assert.throws(
+    () => parsePatientTransferPackage({ ...clone(base), exportedAt: "2099-01-01T00:00:00.000Z" }),
+    /내보내기 시각이 미래/,
+  );
+});
+
 test("파서는 미지원 code/key, 잘못된 basis·날짜·값을 fail-closed 처리한다", () => {
   const base = createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE);
   const condition = clone(base.healthMap.conditions[0]);

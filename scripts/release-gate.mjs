@@ -30,6 +30,7 @@ import {
 } from "./responsive-sequence-smoke.mjs";
 
 const viewportByName = new Map(RESPONSIVE_VIEWPORTS.map((viewport) => [viewport.name, viewport]));
+const attemptsPerProfileType = MATRIX_ROUTES.length * MATRIX_VIEWPORTS.length * MATRIX_REPETITIONS.length;
 
 function positiveInteger(value, fallback, maximum = Number.MAX_SAFE_INTEGER) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
@@ -57,7 +58,7 @@ export function calculateReleaseSchedule({
   );
   const stepTimeoutMs = Math.min(configuredStepTimeoutMs, adjustedCellCapMs);
   const hardKillMs = Math.ceil((
-    Math.ceil(168 / shardCount) * adjustedCellCapMs
+    (attemptsPerProfileType + Math.ceil(attemptsPerProfileType / shardCount)) * adjustedCellCapMs
     + p95StartupArtifactMs
   ) * 1.2);
   return Object.freeze({
@@ -66,7 +67,7 @@ export function calculateReleaseSchedule({
     adjustedCellCapMs,
     stepTimeoutMs,
     hardKillMs,
-    hardKillFormula: "ceil((ceil(168 / S) * adjustedCellCapMs + p95StartupArtifactMs) * 1.2)",
+    hardKillFormula: "ceil(((84 + ceil(84 / S)) * adjustedCellCapMs + p95StartupArtifactMs) * 1.2)",
     p95StartupArtifactMs,
   });
 }
@@ -512,10 +513,11 @@ export async function runReleaseGate({
     });
     const { adjustedCellCapMs, stepTimeoutMs, hardKillMs } = scheduler;
 
-    const tasks = [];
+    const sharedTasks = [];
+    const freshTasks = [];
     for (const repetition of MATRIX_REPETITIONS) {
       const profileId = `${runId}-shared-profile-${repetition}`;
-      tasks.push({
+      sharedTasks.push({
         id: `shared-repetition-${repetition}`,
         diagnosticRoot: join(runRoot, "matrix-session-failures", profileId),
         run: () => runSharedRepetition({
@@ -534,7 +536,7 @@ export async function runReleaseGate({
       for (const viewport of MATRIX_VIEWPORTS) {
         for (const repetition of MATRIX_REPETITIONS) {
           const profileId = attemptRunId(runId, "fresh-profile", repetition, route, viewport);
-          tasks.push({
+          freshTasks.push({
             id: `fresh-${repetition}-${routeSlug(route)}-${viewport}`,
             diagnosticRoot: join(runRoot, "matrix-session-failures", profileId),
             run: () => runFreshAttempt({
@@ -557,7 +559,10 @@ export async function runReleaseGate({
     }
 
     const taskResults = await withTimeout(
-      runTaskPool(tasks, shardCount, releaseController.signal),
+      (async () => [
+        ...await runTaskPool(sharedTasks, 1, releaseController.signal),
+        ...await runTaskPool(freshTasks, shardCount, releaseController.signal),
+      ])(),
       hardKillMs,
       "Release matrix hard kill",
       (error) => {

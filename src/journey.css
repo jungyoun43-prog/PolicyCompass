@@ -9,6 +9,19 @@
 .journey-data-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 .journey-data-actions .secondary-button { min-height: 44px; }
 .journey-data-actions .journey-clear { color: var(--urgent); }
+.journey-data-tools {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.32fr) minmax(0, 0.68fr);
+  gap: var(--space-4) var(--space-6);
+  align-items: start;
+  margin-top: var(--space-8);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-6);
+}
+.journey-data-tools .panel-index { margin: 0 0 var(--space-1); }
+.journey-data-tools h3 { margin: 0; font-size: 1rem; line-height: 1.4; }
+.journey-data-tools .journey-storage-note,
+.journey-data-tools .journey-transfer-status { grid-column: 1 / -1; }
 .journey-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .journey-storage-note {
   max-width: 70rem;
@@ -333,7 +346,7 @@
   .journey-first-actions { grid-row: auto; }
 }
 
-@media (max-width: 800px) { .journey-shell { width: min(100% - var(--space-8), 1320px); } .journey-intro, .journey-comparison { grid-template-columns: 1fr; gap: var(--space-6); } .journey-intro h1 { font-size: clamp(3rem, 15vw, 5rem); } .journey-heading { flex-direction: column; } .journey-data-actions { width: 100%; justify-content: flex-start; } .change-columns { grid-template-columns: 1fr; } .privacy-state { display: none; } }
+@media (max-width: 800px) { .journey-shell { width: min(100% - var(--space-8), 1320px); } .journey-intro, .journey-comparison { grid-template-columns: 1fr; gap: var(--space-6); } .journey-intro h1 { font-size: clamp(3rem, 15vw, 5rem); } .journey-heading { flex-direction: column; } .journey-data-tools { grid-template-columns: 1fr; } .journey-data-tools .journey-storage-note, .journey-data-tools .journey-transfer-status { grid-column: 1; } .journey-data-actions { width: 100%; justify-content: flex-start; } .change-columns { grid-template-columns: 1fr; } .privacy-state { display: none; } }
 @media (max-width: 520px) {
   .journey-workspace,
   .journey-comparison { padding: var(--space-5); }

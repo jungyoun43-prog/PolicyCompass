@@ -388,6 +388,15 @@ function targetAssessment(input, arrival, administrations) {
   const inpatient = setting === "INPATIENT" || setting === "입원";
   const institutionEligible = HOSPITAL_TYPES.has(type);
   const nursingHospital = NURSING_HOSPITAL_TYPES.has(type);
+  const qualityScope = input?.qualityScope && typeof input.qualityScope === "object" && !Array.isArray(input.qualityScope)
+    ? input.qualityScope
+    : {};
+  const institutionCapAdmissions = Number.isInteger(qualityScope.institutionCapAdmissions)
+    ? qualityScope.institutionCapAdmissions
+    : null;
+  const exclusionsReviewed = qualityScope.officialExclusionsReviewed === true
+    && typeof qualityScope.officialExclusionApplies === "boolean";
+  const exclusionApplies = qualityScope.officialExclusionApplies === true;
   const reasons = [];
   const missing = [];
 
@@ -408,10 +417,14 @@ function targetAssessment(input, arrival, administrations) {
   else if (!acquisition.communityAcquired) reasons.push("지역사회획득 폐렴 범위 아님");
   if (ivDays === null) missing.push("정맥 항생제 투여 일수");
   else if (ivDays < HIRA_PNEUMONIA_2026_RULESET.patientScope.minimumIntravenousAntibioticDays) reasons.push("정맥 항생제 3일 미만");
+  if (institutionCapAdmissions === null) missing.push("기관 평가기간 CAP 입원 10건 이상 여부");
+  else if (institutionCapAdmissions < HIRA_PNEUMONIA_2026_RULESET.institutionScope.minimumCapAdmissions) reasons.push("기관 평가기간 CAP 입원 10건 미만");
+  if (!exclusionsReviewed) missing.push("공식 세부 제외조건 검토 여부");
+  else if (exclusionApplies) reasons.push("공식 세부 제외조건 해당");
 
   const blockingReason = reasons.length > 0;
   const status = blockingReason ? "not-eligible" : missing.length ? "insufficient" : "eligible";
-  if (status === "eligible") reasons.push("만 18세 이상 CAP 입원·정맥 항생제 3일 이상 대상 사례");
+  if (status === "eligible") reasons.push("기관 10건 이상·제외조건 검토·만 18세 이상 CAP 입원·정맥 항생제 3일 이상 확인");
   return {
     status,
     eligible: status === "eligible",
@@ -422,6 +435,11 @@ function targetAssessment(input, arrival, administrations) {
     diagnosisRole: diagnosisRole(eligibleDiagnosis),
     communityAcquisition: acquisition,
     ivAntibioticDays: ivDays,
+    qualityScope: {
+      institutionCapAdmissions,
+      officialExclusionsReviewed: exclusionsReviewed,
+      officialExclusionApplies: exclusionsReviewed ? exclusionApplies : null,
+    },
     missing,
     reason: [...reasons, ...missing.map((item) => `${item} 확인 필요`)].join(" · "),
   };
@@ -442,7 +460,7 @@ export function evaluateHiraPneumonia2026Contribution(input = {}, options = {}) 
       period,
       evaluatedAt: validInstant(options.evaluatedAt ?? input?.evaluatedAt),
       rule: HIRA_PNEUMONIA_2026_RULESET,
-      disclaimer: "환자 사례의 지표 기여 예상이며 공식 기관 점수·등급 또는 개별 진료비 삭감 판정이 아닙니다. 검사·처방을 자동 결정하지 않습니다.",
+      disclaimer: "현재 연결 데이터에서 확인된 항목입니다. 기관 10건 이상·세부 제외조건이 확인되지 않으면 평가대상을 확정하지 않으며, 공식 기관 점수·등급·진료비 삭감 판정이 아닙니다.",
     };
   }
 
@@ -562,7 +580,7 @@ export function evaluateHiraPneumonia2026Contribution(input = {}, options = {}) 
     period,
     evaluatedAt: validInstant(options.evaluatedAt ?? input?.evaluatedAt),
     rule: HIRA_PNEUMONIA_2026_RULESET,
-    disclaimer: "환자 사례의 지표 기여 예상이며 공식 기관 점수·등급 또는 개별 진료비 삭감 판정이 아닙니다. 검사·처방을 자동 결정하지 않습니다.",
+    disclaimer: "현재 연결 데이터에서 확인된 항목입니다. 기관 10건 이상·세부 제외조건이 확인되지 않으면 평가대상을 확정하지 않으며, 공식 기관 점수·등급·진료비 삭감 판정이 아닙니다.",
   };
 }
 

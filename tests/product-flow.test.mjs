@@ -1,146 +1,124 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("자동 진료 연결과 Journey 화면 자산을 배포 Worker가 제공한다", async () => {
+async function deployedText(route) {
   const { default: worker } = await import("../dist/server/index.js");
-  const routes = [
+  const response = await worker.fetch(new Request(`https://example.com${route}`));
+  assert.equal(response.status, 200, route);
+  return response.text();
+}
+
+test("배포 Worker가 Journey와 명시적 환자 전달 자산을 제공한다", async () => {
+  for (const route of [
     "/journey",
     "/journey.css",
     "/journey.js",
     "/journey-model.js",
+    "/patient-transfer.js",
     "/care-bridge.js",
+    "/sample-navigation.js",
     "/patient-question-assistant.js",
-  ];
-
-  for (const route of routes) {
-    const response = await worker.fetch(new Request(`https://example.com${route}`));
-    assert.equal(response.status, 200, route);
+  ]) {
+    await deployedText(route);
   }
-
-  const html = await (await worker.fetch(new Request("https://example.com/journey"))).text();
+  const html = await deployedText("/journey");
   assert.match(html, /나의 건강 지도 기록/);
   assert.match(html, /이 기기에만 저장/);
 });
 
-test("Health Map은 서명 EMR 정제 기록을 자동 연결하고 JSON은 환자 소유 내보내기로만 제공한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const html = await (await worker.fetch(new Request("https://example.com/map"))).text();
-  const landing = await (await worker.fetch(new Request("https://example.com/patient"))).text();
-
-  assert.match(html, /id="connected-record"/);
-  assert.match(html, /SIGNED · VERIFIED EMR RECORD/);
-  assert.match(html, /진료를 서명하면 최종·확정 사실과 처방이 식별정보 없이[\s\S]*?자동 연결/);
-  assert.match(html, /파일과 확인 코드는 필요하지 않습니다/);
-  assert.match(html, /id="refreshCareLink"/);
-  assert.match(html, /id="downloadClinicalJson"[^>]*disabled/);
-  assert.match(html, /내 정제 JSON 내보내기/);
-  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="connected-record"'));
-  assert.match(html, /id="saveJourney"/);
-  assert.match(landing, /의료진이 서명한 기록은 환자에게 필요한 항목만 정제되어 자동으로 이어집니다/);
-  assert.doesNotMatch(landing, /MY HEALTH COPY|정제 JSON은 환자가 직접 선택해 보관하는 사본/);
-  assert.doesNotMatch(html, /id="(?:fhirFile|transferCode|selectRecordFile|importRecordButton)"/);
-  assert.doesNotMatch(landing, /href="\/map#import-record"|VitaGraph 환자 전달 v1/);
+test("Health Map은 파일과 별도 코드의 3단계 가져오기만 제공한다", async () => {
+  const html = await deployedText("/map");
+  assert.match(html, /id="transferCode"/);
+  assert.match(html, /id="fhirFile"/);
+  assert.match(html, /id="selectRecordFile"/);
+  assert.match(html, /id="importRecordButton"[^>]*disabled/);
+  assert.match(html, /id="recordFileStatus"[^>]*role="status"/);
+  assert.match(html, /id="fhirResult"[^>]*role="status"/);
+  assert.match(html, /파일과 다른 경로로 받은 확인 코드/);
+  assert.match(html, /본인 기록 확인 후 교체/);
+  assert.match(html, /기존 Journey는 바뀌지 않습니다/);
+  assert.doesNotMatch(html, /careLinkStatus|refreshCareLink|downloadClinicalJson|자동 연결/);
 });
 
-test("자동 연결 완료 상태에서 환자는 정제 항목 수와 건강 지도를 함께 확인한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const html = await (await worker.fetch(new Request("https://example.com/map"))).text();
-  const app = await (await worker.fetch(new Request("https://example.com/app.js"))).text();
-
-  assert.match(html, /id="health-map"[^>]*aria-labelledby="bodyTitle"[^>]*tabindex="-1"/);
-  assert.match(html, /id="careLinkStatus" role="status" aria-live="polite"/);
-  assert.match(html, /id="careLinkSummary" hidden/);
-  assert.match(html, /id="careLinkDetails"[^>]*hidden/);
-  assert.match(html, /id="careConditionList"/);
-  assert.match(html, /id="careMeasurementList"/);
-  assert.match(html, /id="careMedicationList"/);
-  assert.match(app, /function renderCareLink\(\)/);
-  assert.match(app, /EMR에서 \$\{count\}개 정제 항목을 연결했습니다/);
-  assert.match(app, /\["확정 질환", snapshot\.healthMap\.conditions\.length\]/);
-  assert.match(app, /\["최종 측정", snapshot\.healthMap\.measurements\.length\]/);
-  assert.match(app, /\["서명 처방", snapshot\.medications\.length\]/);
-  assert.match(app, /replaceLinkedItems\(\s*elements\.careConditionList/);
-  assert.match(app, /replaceLinkedItems\(\s*elements\.careMeasurementList/);
-  assert.match(app, /replaceLinkedItems\(\s*elements\.careMedicationList/);
-  assert.match(app, /\(\{ label, dose, doseUnit, frequency, prescribedOn \}\)/);
-  assert.match(app, /`\$\{dose\}\$\{doseUnit\} · \$\{frequency\} · \$\{prescribedOn\}`/);
-  assert.match(app, /state\.patientVisibleIds = inferConditionIds\([\s\S]*?state\.declaredIds/);
-  assert.match(app, /state\.visibleIds = \[\.\.\.new Set\(\[\.\.\.state\.patientVisibleIds, \.\.\.state\.clinicalConditionIds\]\)\]/);
+test("Health Map 가져오기는 코드 검증·환자 확인 뒤 replace-only로 커밋한다", async () => {
+  const app = await deployedText("/app.js");
+  assert.match(app, /parsePatientTransferPackage/);
+  assert.match(app, /verifyPatientTransferCode/);
+  assert.match(app, /PatientTransferCodeError/);
+  assert.match(app, /if \(!pendingTransferFile\)/);
+  assert.match(app, /if \(!window\.confirm\([\s\S]*?내 기록이 맞는지 확인/);
+  assert.match(app, /기존 저장 전 지도와 자동 병합하지 않습니다/);
+  assert.match(app, /Journey 저장소를 확인할 수 없어 가져오기를 중단했습니다/);
+  assert.doesNotMatch(app, /catch\s*\{\s*journeyCount = 0;/);
+  assert.match(app, /function replaceMapWithImportedTransfer\(imported\)/);
+  assert.match(app, /state\.declaredIds = \[\];[\s\S]*?state\.clinicalConditionIds = clinicalConditions\.map/);
+  assert.match(app, /state\.signals = \[\];[\s\S]*?elements\.note\.value = ""/);
+  assert.match(app, /Journey는 자동 변경되지 않습니다/);
+  assert.doesNotMatch(app, /readCareBridge|subscribeCareBridge|publishClinicalSnapshot|createPatientOwnedJson/);
 });
 
-test("Health Map은 진료 연결을 구독하고 정제 데이터와 환자 입력의 저장 경계를 분리한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const app = await (await worker.fetch(new Request("https://example.com/app.js"))).text();
-
-  assert.match(app, /readCareBridge/);
-  assert.match(app, /subscribeCareBridge\(\(bridge\) => applyCareBridge\(bridge\)\)/);
-  assert.match(app, /const snapshot = connectedClinicalSnapshot\(bridge\?\.clinical\?\.snapshot\)/);
-  assert.match(app, /state\.clinicalConditionIds = \(snapshot\?\.healthMap\?\.conditions \?\? \[\]\)/);
-  assert.match(app, /state\.clinicalMeasurements = snapshot\?\.healthMap\?\.measurements \?\? \[\]/);
-  assert.match(app, /state\.clinicalMedications = snapshot\?\.medications \?\? \[\]/);
-  assert.match(app, /patientVisibleIds: state\.patientVisibleIds,[\s\S]*?clinicalConditionIds: state\.clinicalConditionIds,[\s\S]*?visibleIds: state\.visibleIds/);
-  assert.match(app, /const clinicalConditionIds = Array\.isArray\(stored\.clinicalConditionIds\)/);
-  assert.match(app, /const patientVisibleIds = Array\.isArray\(stored\.patientVisibleIds\)/);
-  assert.match(app, /const visibleIds = \[\.\.\.new Set\(\[\.\.\.patientVisibleIds, \.\.\.clinicalConditionIds\]\)\]/);
-  assert.match(app, /state\.visibleIds = \[\.\.\.new Set\(\[\.\.\.state\.patientVisibleIds, \.\.\.state\.clinicalConditionIds\]\)\]/);
-  assert.match(app, /source: state\.source,[\s\S]*?isDemo: state\.isDemo,[\s\S]*?note: elements\.note\.value/);
-  assert.match(app, /measurements: state\.isDemo \? state\.measurements : \[\]/);
-  assert.doesNotMatch(app, /pendingTransferFile|parsePatientTransferPackage|verifyPatientTransferCode|PatientTransferCodeError/);
+test("세션 복원은 explicit transfer marker와 v1 canonical 규칙을 다시 검증한다", async () => {
+  const app = await deployedText("/app.js");
+  assert.match(app, /function restoredImportedTransfer\(stored\)/);
+  assert.match(app, /hasExactKeys\(value, \["schema", "version", "exportedAt", "trust"\]\)/);
+  assert.match(app, /parsePatientTransferPackage\(\{/);
+  assert.match(app, /provenanceKind !== "clinician-confirmed-unsigned-import"/);
+  assert.match(app, /provenanceKind !== "clinician-final-unsigned-import"/);
+  assert.match(app, /const patientVisibleIds = \[\.\.\.declaredIds\]/);
+  assert.doesNotMatch(app, /conditionIds\(stored\.patientVisibleIds\)|inferConditionIds/);
+  assert.match(app, /signals: extractInputSignals\(note\)/);
 });
 
-test("Connections와 Insights는 끊긴 임상 ID를 버리고 환자 선택·입력 추론은 보존한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
+test("Connections와 Insights는 전역 bridge를 읽지 않고 검증된 explicit import만 소비한다", async () => {
   const [connections, insights] = await Promise.all([
-    worker.fetch(new Request("https://example.com/connections.js")).then((response) => response.text()),
-    worker.fetch(new Request("https://example.com/insights.js")).then((response) => response.text()),
+    deployedText("/connections.js"),
+    deployedText("/insights.js"),
   ]);
-
-  assert.match(connections, /import \{ readCareBridge, subscribeCareBridge \} from "\/care-bridge\.js"/);
-  assert.match(connections, /const storedClinicalIds = conditionIds\(stored\?\.clinicalConditionIds\)/);
-  assert.match(connections, /const patientVisibleIds = Array\.isArray\(stored\?\.patientVisibleIds\)/);
-  assert.match(connections, /: storedVisibleIds\.filter\(\(id\) => !storedClinicalIds\.includes\(id\) \|\| declaredIds\.includes\(id\)\)/);
-  assert.match(connections, /const clinicalConditionIds = isDemo \? \[\] : clinicalIdsFromBridge\(bridge\)/);
-  assert.match(connections, /visibleIds = isDemo[\s\S]*?\[\.\.\.new Set\(\[\.\.\.patientVisibleIds, \.\.\.clinicalConditionIds\]\)\]/);
-  assert.match(connections, /subscribeCareBridge\(\(bridge\) => refreshFromBridge\(bridge\)\)/);
-
-  assert.match(insights, /const patientVisibleIds = Array\.isArray\(stored\?\.patientVisibleIds\)/);
-  assert.match(insights, /clinicalConditionIds: Array\.isArray\(stored\?\.clinicalConditionIds\)/);
-  assert.match(insights, /const clinicalConditionIds = clinicalSnapshot[\s\S]*?: \[\]/);
-  assert.match(insights, /const visibleIds = session\.isDemo[\s\S]*?\[\.\.\.new Set\(\[\.\.\.session\.patientVisibleIds, \.\.\.clinicalConditionIds\]\)\]/);
-  assert.doesNotMatch(insights, /clinicalSnapshot\s*\?[\s\S]{0,240}:\s*session\.visibleIds/);
+  for (const source of [connections, insights]) {
+    assert.match(source, /parsePatientTransferPackage/);
+    assert.match(source, /clinician-confirmed-unsigned-import/);
+    assert.match(source, /clinician-final-unsigned-import/);
+    assert.match(source, /const patientVisibleIds = \[\.\.\.declaredIds\]/);
+    assert.doesNotMatch(source, /readCareBridge|subscribeCareBridge|publishPatientBrief|publishClinicalSnapshot|BroadcastChannel/);
+    assert.doesNotMatch(source, /stored\??\.patientVisibleIds\s*\?/);
+  }
+  assert.match(connections, /파일에 의료진 확정으로 표시 · 발행기관·변조 미검증/);
+  assert.match(insights, /source: "unsigned-local-export"/);
+  assert.doesNotMatch(insights, /clinicalSnapshot:[\s\S]{0,500}medications/);
 });
 
-test("Health Map은 실데이터와 예시 데이터를 명확히 분리한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const html = await (await worker.fetch(new Request("https://example.com/map"))).text();
-  const app = await (await worker.fetch(new Request("https://example.com/app.js"))).text();
-
-  const textarea = html.match(/<textarea[^>]+id="healthNote"[^>]*>([\s\S]*?)<\/textarea>/);
-  assert.ok(textarea, "health note textarea should exist");
-  assert.equal(textarea[1].trim(), "", "the map must not preload a sample as user data");
-  assert.match(html, /id="loadDemo"/);
-  assert.match(html, /예시 데이터 보는 중 · 현재 탭에서만 유지 · Journey 미저장/);
-  assert.match(html, /확인 필요 신호 · 진단 아님/);
-  assert.match(app, /sessionStorage\.setItem\(sessionKey, JSON\.stringify\(\{[\s\S]*?isDemo: state\.isDemo/);
-  assert.match(app, /elements\.resetButton\.addEventListener\("click",[\s\S]*?state\.visibleIds = \[\.\.\.state\.clinicalConditionIds\]/);
-  assert.match(app, /elements\.resetButton\.addEventListener\("click",[\s\S]*?state\.measurements = state\.clinicalMeasurements/);
-  assert.match(app, /elements\.resetButton\.addEventListener\("click",[\s\S]*?persistScene\(\)/);
-  assert.match(app, /if \(state\.isDemo\) \{\s*elements\.formError\.hidden = false;\s*elements\.formError\.textContent = "예시 데이터는 Journey에 저장되지 않습니다\."/);
-  assert.match(app, /elements\.loadDemo\.addEventListener\("click",[\s\S]*?state\.isDemo = true[\s\S]*?analyze\(\)/);
-  assert.match(app, /applyCareBridge\(\);[\s\S]*?subscribeCareBridge/);
+test("sample=1은 저장·가져오기·Journey·모델·내보내기에서 실제 세션과 격리된다", async () => {
+  const [app, connections, insights, journey, sampleNavigation] = await Promise.all([
+    deployedText("/app.js"),
+    deployedText("/connections.js"),
+    deployedText("/insights.js"),
+    deployedText("/journey.js"),
+    deployedText("/sample-navigation.js"),
+  ]);
+  assert.match(app, /if \(forcedSampleMode\) return null/);
+  assert.match(app, /if \(state\.isDemo \|\| forcedSampleMode\) return/);
+  assert.match(app, /state\.isDemo \|\| forcedSampleMode[\s\S]*?실제 환자 전달 파일을 가져올 수 없습니다/);
+  assert.match(app, /state\.isDemo \|\| forcedSampleMode[\s\S]*?Journey에 저장되지 않습니다/);
+  assert.match(connections, /if \(forcedSampleMode\)[\s\S]*?demoConditionIds/);
+  assert.match(connections, /if \(state\.isDemo \|\| forcedSampleMode\) return/);
+  assert.match(insights, /if \(forcedSampleMode\)[\s\S]*?demoConditionIds/);
+  assert.match(insights, /if \(session\.isDemo\)[\s\S]*?데이터를 전송하지 않습니다/);
+  assert.match(insights, /exportSnapshot\.disabled = true/);
+  assert.match(connections, /preserveSampleNavigation\(forcedSampleMode\)/);
+  assert.match(insights, /preserveSampleNavigation\(forcedSampleMode\)/);
+  assert.match(journey, /preserveSampleNavigation\(sampleMode\)/);
+  assert.match(sampleNavigation, /PERSONAL_SAMPLE_PATHS = new Set\(\["\/map", "\/connections", "\/insights", "\/journey"\]\)/);
+  assert.match(sampleNavigation, /url\.searchParams\.set\("sample", "1"\)/);
 });
 
-test("화면 이동은 환자 세션 전체 shape와 데모 표시를 보존한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const app = await (await worker.fetch(new Request("https://example.com/app.js"))).text();
-  const connections = await (await worker.fetch(new Request("https://example.com/connections.js"))).text();
-  const connectionsHtml = await (await worker.fetch(new Request("https://example.com/connections"))).text();
-  const insightsHtml = await (await worker.fetch(new Request("https://example.com/insights"))).text();
-
-  assert.match(app, /const restoredScene = readScene\(\)/);
-  assert.match(app, /Object\.assign\(state, restoredScene\)/);
-  assert.match(connections, /\.\.\.preserved,[\s\S]*?patientVisibleIds: state\.patientVisibleIds,[\s\S]*?clinicalConditionIds: state\.clinicalConditionIds,[\s\S]*?visibleIds: state\.visibleIds,[\s\S]*?activeId: state\.activeId/);
-  assert.match(connections, /stored\?\.isDemo === true/);
-  assert.match(connectionsHtml, /id="personalDemoMode"/);
-  assert.match(insightsHtml, /id="personalDemoMode"/);
+test("텍스트 패턴은 Condition이 아니라 signal로 저장되고 imported provenance가 유지된다", async () => {
+  const app = await deployedText("/app.js");
+  assert.match(app, /state\.patientVisibleIds = state\.isDemo[\s\S]*?: \[\.\.\.state\.declaredIds\]/);
+  assert.match(app, /state\.signals = state\.isDemo \? \[\] : extractInputSignals\(note\)/);
+  assert.match(app, /const hasDetectedInput = state\.visibleIds\.length > 0 \|\| state\.signals\.length > 0/);
+  assert.match(app, /선택·가져오기 질환 항목 \$\{conditions\.length\}개 · 입력 확인 신호 \$\{state\.signals\.length\}개/);
+  assert.match(app, /hasJourneyData = conditions\.length > 0 \|\| state\.measurements\.length > 0 \|\| state\.signals\.length > 0/);
+  assert.match(app, /clinician-confirmed-unsigned-import/);
+  assert.match(app, /clinician-final-unsigned-import/);
+  assert.match(app, /: "patient-entered"/);
 });

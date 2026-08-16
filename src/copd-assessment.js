@@ -398,8 +398,15 @@ export function evaluateHiraCopd2026Contribution(input = {}, options = {}) {
   const ageEligible = Number.isInteger(normalized.ageYears) ? normalized.ageYears >= 40 : null;
   const medicationVisitPath = targetMedicationDates.size >= 2;
   const inpatientPath = inpatientSteroid && targetMedicationDates.size >= 1;
-  const targetEligible = ageEligible === true && Boolean(eligibleDiagnosis) && (medicationVisitPath || inpatientPath);
-  let targetStatus = targetEligible ? "eligible" : "not-eligible";
+  const qualityScope = input?.qualityScope && typeof input.qualityScope === "object" && !Array.isArray(input.qualityScope)
+    ? input.qualityScope
+    : {};
+  const denominatorVerified = qualityScope.officialDenominatorVerified === true;
+  const exclusionsReviewed = qualityScope.officialExclusionsReviewed === true
+    && typeof qualityScope.officialExclusionApplies === "boolean";
+  const exclusionApplies = qualityScope.officialExclusionApplies === true;
+  const targetCriteriaMatch = ageEligible === true && Boolean(eligibleDiagnosis) && (medicationVisitPath || inpatientPath);
+  let targetStatus = targetCriteriaMatch ? "eligible" : "not-eligible";
   const targetReasons = [];
   if (ageEligible === null) {
     targetStatus = "insufficient";
@@ -407,7 +414,15 @@ export function evaluateHiraCopd2026Contribution(input = {}, options = {}) {
   } else if (!ageEligible) targetReasons.push("만 40세 미만");
   if (!eligibleDiagnosis) targetReasons.push(excludedDiagnosis ? "J43.0 제외 상병만 확인됨" : "J43~J44 대상 상병 확인 안 됨");
   if (!medicationVisitPath && !inpatientPath) targetReasons.push("COPD 약제 외래 사용 2회 또는 입원 스테로이드+외래 약제 경로 미충족");
-  if (targetEligible) targetReasons.push(medicationVisitPath ? "COPD 약제 사용 외래 2회 이상" : "전신 스테로이드 입원과 COPD 약제 외래 확인");
+  if (exclusionApplies) {
+    targetStatus = "not-eligible";
+    targetReasons.push("공식 제외조건 해당이 검토됨");
+  } else if (targetCriteriaMatch && (!denominatorVerified || !exclusionsReviewed)) {
+    targetStatus = "insufficient";
+    if (!denominatorVerified) targetReasons.push("공식 분모 포함 여부 확인 필요");
+    if (!exclusionsReviewed) targetReasons.push("공식 제외조건 검토 여부 확인 필요");
+  }
+  if (targetStatus === "eligible") targetReasons.push(medicationVisitPath ? "COPD 약제 사용 외래 2회 이상" : "전신 스테로이드 입원과 COPD 약제 외래 확인");
 
   const pftEvidence = normalized.pftSessions.map(qualityPftVerification)
     .filter(({ date, eligibleCode }) => inPeriod(date, period) && eligibleCode);
@@ -419,9 +434,15 @@ export function evaluateHiraCopd2026Contribution(input = {}, options = {}) {
     sameInstitutionVisits.set(institution, new Set([...(sameInstitutionVisits.get(institution) ?? []), visit.date]));
   }
   const maximumVisitCount = Math.max(0, ...[...sameInstitutionVisits.values()].map((dates) => dates.size));
-  const inhalers = normalized.medications.filter((medication) => inPeriod(medication.prescribedAt ?? medication.date, period)
-    && (medication.eligibleQualityMedication === true
-      || HIRA_COPD_2026_RULESET.inhalerClasses.includes(cleanText(medication.class).toUpperCase())));
+  const inhalers = normalized.medications.filter((medication) => {
+    const date = validDate(medication.prescribedAt ?? medication.date);
+    const linkedVisit = visitById.get(cleanText(medication.visitId ?? medication.encounterId));
+    const matchingVisit = linkedVisit || eligibleVisits.find((visit) => visit.date === date);
+    return inPeriod(date, period)
+      && Boolean(matchingVisit)
+      && (medication.eligibleQualityMedication === true
+        || HIRA_COPD_2026_RULESET.inhalerClasses.includes(cleanText(medication.class).toUpperCase()));
+  });
   const [pftSpec, visitSpec, inhalerSpec] = HIRA_COPD_2026_RULESET.metrics;
   const metrics = targetStatus !== "eligible"
     ? HIRA_COPD_2026_RULESET.metrics.map((spec) => metricResult(
@@ -442,9 +463,13 @@ export function evaluateHiraCopd2026Contribution(input = {}, options = {}) {
         ),
         metricResult(
           visitSpec,
-          maximumVisitCount >= visitSpec.minimum ? "included" : "not-included",
+          qualityScope.previousPeriodSameInstitutionVisitVerified !== true
+            ? "insufficient"
+            : maximumVisitCount >= visitSpec.minimum ? "included" : "not-included",
           maximumVisitCount,
-          maximumVisitCount >= visitSpec.minimum ? "동일 기관 COPD 외래가 3회 이상 확인됩니다." : `동일 기관 COPD 외래 ${maximumVisitCount}회가 확인됩니다.`,
+          qualityScope.previousPeriodSameInstitutionVisitVerified !== true
+            ? "이전 평가기간 마지막 방문과 동일 기관 연결을 확인해야 합니다."
+            : maximumVisitCount >= visitSpec.minimum ? "동일 기관 COPD 외래가 3회 이상 확인됩니다." : `동일 기관 COPD 외래 ${maximumVisitCount}회가 확인됩니다.`,
           eligibleVisits,
         ),
         metricResult(
@@ -460,16 +485,21 @@ export function evaluateHiraCopd2026Contribution(input = {}, options = {}) {
     status: targetStatus,
     target: {
       status: targetStatus,
-      eligible: targetEligible,
+      eligible: targetStatus === "eligible",
       ageYears: normalized.ageYears,
       diagnosisCode: cleanText(eligibleDiagnosis?.code),
       outpatientMedicationDates: [...targetMedicationDates].sort(),
+      qualityScope: {
+        officialDenominatorVerified: denominatorVerified,
+        officialExclusionsReviewed: exclusionsReviewed,
+        officialExclusionApplies: exclusionsReviewed ? exclusionApplies : null,
+      },
       reason: targetReasons.join(" · "),
     },
     metrics,
     evaluatedAt: validInstant(options.evaluatedAt ?? input.evaluatedAt) || new Date().toISOString(),
     period,
     rule: HIRA_COPD_2026_RULESET,
-    disclaimer: "환자별 지표 기여 예상이며 공식 기관 점수·등급·가산금액이 아닙니다. 지표 충족만을 위한 검사·내원·처방을 권하지 않습니다.",
+    disclaimer: "현재 연결 데이터에서 확인된 항목입니다. 공식 분모·제외조건이 확인되지 않으면 평가대상을 확정하지 않으며, 기관 점수·등급·가산금액이 아닙니다.",
   };
 }

@@ -736,7 +736,7 @@ function unsupportedItem(resource, reason) {
 
 export function parseEmrFhirBundle(input) {
   if (!input || typeof input !== "object" || input.resourceType !== "Bundle") throw new TypeError("FHIR Bundle 형식의 JSON 파일만 가져올 수 있습니다.");
-  if (input.type && !["collection", "document"].includes(input.type)) {
+  if (!["collection", "document"].includes(input.type)) {
     throw new TypeError("FHIR 가져오기는 collection 또는 document Bundle만 지원합니다.");
   }
   if (Object.hasOwn(input, "implicitRules") || hasUnknownModifierExtension({ modifierExtension: input.modifierExtension ?? [] })) {

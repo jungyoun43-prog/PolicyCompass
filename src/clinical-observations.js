@@ -1,17 +1,17 @@
 export const LOINC_SYSTEM = "http://loinc.org";
 
 export const CLINICAL_OBSERVATION_SPECS = Object.freeze([
-  Object.freeze({ key: "blood-pressure", patientTransferKey: "blood-pressure", code: "85354-9", label: "혈압", unit: "mmHg", acceptedUnits: ["mmHg", "mm[Hg]"], placeholder: "예: 120/80", kind: "blood-pressure" }),
-  Object.freeze({ key: "heart-rate", code: "8867-4", label: "맥박", unit: "{beats}/min", placeholder: "예: 72", minimum: 1, maximum: 300 }),
-  Object.freeze({ key: "body-temperature", code: "8310-5", label: "체온", unit: "Cel", placeholder: "예: 36.7", minimum: 20, maximum: 50 }),
-  Object.freeze({ key: "respiratory-rate", code: "9279-1", label: "호흡수", unit: "{breaths}/min", placeholder: "예: 18", minimum: 1, maximum: 100 }),
-  Object.freeze({ key: "oxygen-saturation", code: "59408-5", label: "산소포화도", unit: "%", placeholder: "예: 98", minimum: 1, maximum: 100 }),
-  Object.freeze({ key: "body-height", code: "8302-2", label: "키", unit: "cm", placeholder: "예: 168.5", minimum: 20, maximum: 300 }),
-  Object.freeze({ key: "body-weight", code: "29463-7", label: "체중", unit: "kg", placeholder: "예: 65.2", minimum: 0.2, maximum: 700 }),
-  Object.freeze({ key: "body-mass-index", code: "39156-5", label: "BMI", unit: "kg/m2", placeholder: "예: 23.1", minimum: 1, maximum: 150 }),
-  Object.freeze({ key: "fasting-glucose", patientTransferKey: "glucose", code: "1558-6", label: "공복 혈당", unit: "mg/dL", placeholder: "예: 108", minimum: 1, maximum: 2_000 }),
-  Object.freeze({ key: "hba1c", patientTransferKey: "hba1c", code: "4548-4", label: "당화혈색소", unit: "%", placeholder: "예: 6.5", minimum: 1, maximum: 30 }),
-  Object.freeze({ key: "ldl", patientTransferKey: "ldl", code: "2089-1", label: "LDL 콜레스테롤", unit: "mg/dL", placeholder: "예: 120", minimum: 0, maximum: 1_000 }),
+  Object.freeze({ key: "blood-pressure", patientTransferKey: "blood-pressure", code: "85354-9", label: "혈압", unit: "mmHg", ucumCode: "mm[Hg]", acceptedUnits: ["mmHg", "mm[Hg]"], placeholder: "예: 120/80", kind: "blood-pressure" }),
+  Object.freeze({ key: "heart-rate", code: "8867-4", label: "맥박", unit: "{beats}/min", ucumCode: "{beats}/min", placeholder: "예: 72", minimum: 1, maximum: 300 }),
+  Object.freeze({ key: "body-temperature", code: "8310-5", label: "체온", unit: "Cel", ucumCode: "Cel", placeholder: "예: 36.7", minimum: 20, maximum: 50 }),
+  Object.freeze({ key: "respiratory-rate", code: "9279-1", label: "호흡수", unit: "{breaths}/min", ucumCode: "{breaths}/min", placeholder: "예: 18", minimum: 1, maximum: 100 }),
+  Object.freeze({ key: "oxygen-saturation", code: "59408-5", label: "산소포화도", unit: "%", ucumCode: "%", placeholder: "예: 98", minimum: 1, maximum: 100 }),
+  Object.freeze({ key: "body-height", code: "8302-2", label: "키", unit: "cm", ucumCode: "cm", placeholder: "예: 168.5", minimum: 20, maximum: 300 }),
+  Object.freeze({ key: "body-weight", code: "29463-7", label: "체중", unit: "kg", ucumCode: "kg", placeholder: "예: 65.2", minimum: 0.2, maximum: 700 }),
+  Object.freeze({ key: "body-mass-index", code: "39156-5", label: "BMI", unit: "kg/m2", ucumCode: "kg/m2", placeholder: "예: 23.1", minimum: 1, maximum: 150 }),
+  Object.freeze({ key: "fasting-glucose", patientTransferKey: "glucose", code: "1558-6", label: "공복 혈당", unit: "mg/dL", ucumCode: "mg/dL", placeholder: "예: 108", minimum: 1, maximum: 2_000 }),
+  Object.freeze({ key: "hba1c", patientTransferKey: "hba1c", code: "4548-4", label: "당화혈색소", unit: "%", ucumCode: "%", placeholder: "예: 6.5", minimum: 1, maximum: 30 }),
+  Object.freeze({ key: "ldl", patientTransferKey: "ldl", code: "2089-1", label: "LDL 콜레스테롤", unit: "mg/dL", ucumCode: "mg/dL", placeholder: "예: 120", minimum: 0, maximum: 1_000 }),
 ]);
 
 const SPEC_BY_CODE = new Map(CLINICAL_OBSERVATION_SPECS.map((spec) => [spec.code, spec]));

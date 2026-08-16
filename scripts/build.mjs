@@ -56,6 +56,7 @@ const sourceAssets = [
   { route: "/insight-model.js", file: "src/insight-model.js", type: "text/javascript; charset=utf-8" },
   { route: "/patient-transfer.js", file: "src/patient-transfer.js", type: "text/javascript; charset=utf-8" },
   { route: "/care-bridge.js", file: "src/care-bridge.js", type: "text/javascript; charset=utf-8" },
+  { route: "/sample-navigation.js", file: "src/sample-navigation.js", type: "text/javascript; charset=utf-8" },
   { route: "/patient-question-assistant.js", file: "src/patient-question-assistant.js", type: "text/javascript; charset=utf-8" },
   { route: "/landing.js", file: "src/landing.js", type: "text/javascript; charset=utf-8" },
   { route: "/emr.js", file: "src/emr.js", type: "text/javascript; charset=utf-8" },
@@ -138,6 +139,7 @@ const baseHeaders = {
   "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
   "referrer-policy": "no-referrer",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY"
 };
@@ -151,6 +153,7 @@ function apiHeaders() {
   return {
     "cache-control": "no-store",
     "content-type": "application/json; charset=utf-8",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-content-type-options": "nosniff"
   };
 }

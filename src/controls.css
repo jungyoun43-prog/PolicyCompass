@@ -398,7 +398,7 @@ textarea:focus {
 }
 
 .signal-chip.is-clinical::after {
-  content: "EMR";
+  content: "파일";
   margin-left: var(--space-1);
   font: 700 .55rem var(--font-mono);
   letter-spacing: .04em;

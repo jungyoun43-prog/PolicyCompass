@@ -233,7 +233,9 @@ The paid-value hypothesis is a single plan around KRW 6,900 per month, aligned w
 
 - Public patient-facing routes must not use `AI`, `LLM`, probability, prediction, diagnosis, or personalized-risk language until a real model, traceable evidence layer, external validation, and monitoring exist. The local clinical sandbox may expose a clearly labelled copilot draft only when every statement links back to source chart data; its deterministic fallback must be labelled rule-based and never presented as model output.
 - Text matching is described as rule-based organization. An inferred measurement pattern is an “item to confirm,” never a newly diagnosed condition.
-- Sample data is opt-in, carries a persistent sample label, and is never saved to Journey.
+- Patient-declared conditions, clinician-confirmed imported conditions, and text-derived measurement or symptom signals are separate typed records. A flat condition ID must never erase that provenance.
+- Journey stores the original instant and `Asia/Seoul` clinical calendar date together with typed condition provenance and input signals. Restored backups are always labelled unverified and cannot promote an arbitrary source string to clinician-confirmed provenance.
+- Sample data is opt-in, carries a persistent sample label, and is isolated from imported records, Journey, export, and model requests.
 - Every generated question states why it appears. Questions are conversation prompts, not treatment advice.
 - Values always retain their unit, date when known, and source. Correlation uses “changed together,” never causal wording.
 - Trust claims describe only what the code proves: local browser processing, no application server upload, explicit local storage, export/delete controls when available, and the risk of browser-data deletion.

@@ -328,7 +328,8 @@ function serviceResource(event, identity, patientReference, encounterReference, 
 }
 
 function observationResource(event, identity, patientReference, encounterReference) {
-  if (event.system === LOINC_SYSTEM && clinicalObservationSpec(event.code) && !isCanonicalClinicalObservation(event)) {
+  const observationSpec = event.system === LOINC_SYSTEM ? clinicalObservationSpec(event.code) : null;
+  if (observationSpec && !isCanonicalClinicalObservation(event)) {
     throw new TypeError(`표준 Observation 값·단위가 유효하지 않습니다: ${event.id}`);
   }
   const value = typeof event.value === "number" && Number.isFinite(event.value) ? event.value : null;
@@ -363,7 +364,14 @@ function observationResource(event, identity, patientReference, encounterReferen
         bloodPressureComponent("8462-4", "Diastolic blood pressure", bloodPressure.diastolic),
       ],
     } : value !== null
-      ? { valueQuantity: { value, ...(cleanText(event.unit, 80) ? { unit: cleanText(event.unit, 80) } : {}) } }
+      ? { valueQuantity: observationSpec
+        ? {
+          value,
+          unit: observationSpec.unit,
+          system: "http://unitsofmeasure.org",
+          code: observationSpec.ucumCode,
+        }
+        : { value, ...(cleanText(event.unit, 80) ? { unit: cleanText(event.unit, 80) } : {}) } }
       : { valueString: textValue }),
     ...(cleanText(event.note, 2_000) ? { note: [{ text: cleanText(event.note, 2_000) }] } : {}),
   };

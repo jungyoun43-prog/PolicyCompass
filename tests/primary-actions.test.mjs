@@ -60,10 +60,11 @@ test("건강 지도 입력은 선택 가능한 질환 뒤에 제출 동작을 �
   assert.match(html, /class="input-panel__heading-actions"[\s\S]*?id="loadDemo"[\s\S]*?class="session-badge"/);
   assert.match(css, /\.input-panel__heading-actions\s*\{[\s\S]*?justify-items:\s*end/);
   assert.ok(html.indexOf('class="signal-fieldset"') < html.indexOf('id="analyzeButton"'));
-  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="connected-record"'));
-  assert.match(html, /id="refreshCareLink"/);
-  assert.match(html, /id="downloadClinicalJson"[^>]*disabled/);
-  assert.doesNotMatch(html, /id="(?:transferCode|fhirFile|importRecordButton)"/);
+  assert.ok(html.indexOf('id="analyzeButton"') < html.indexOf('id="import-record"'));
+  assert.match(html, /id="transferCode"/);
+  assert.match(html, /id="fhirFile"[^>]*type="file"/);
+  assert.match(html, /id="selectRecordFile"[^>]*aria-controls="fhirFile"/);
+  assert.match(html, /id="importRecordButton"[^>]*disabled/);
 });
 
 test("빈 EMR은 하나의 명시적 예시 환자 동작만 제공한다", async () => {

@@ -8,13 +8,13 @@ import {
   selectBodyArea,
 } from "../src/view-model.js";
 
-test("질환 신호를 진료과별 활성 상태로 중복 투영한다", () => {
+test("선택·가져오기 질환 항목을 진료과별 활성 상태로 중복 투영한다", () => {
   const model = createBodyModel(["hypertension", "dyslipidemia"], "dyslipidemia");
 
   assert.deepEqual(model.areas.cardio, ["hypertension", "dyslipidemia"]);
   assert.deepEqual(model.areas.renal, ["hypertension"]);
   assert.deepEqual(model.areas.endocrine, ["dyslipidemia"]);
-  assert.equal(model.statusText, "3개 진료과 · 2개 신호");
+  assert.equal(model.statusText, "3개 진료과 · 2개 선택·가져오기 항목");
   assert.equal(model.keyTone, "cyan");
 });
 

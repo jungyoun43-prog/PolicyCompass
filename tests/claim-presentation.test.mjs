@@ -89,7 +89,7 @@ test("같은 청구의 사전점검과 실제 심사 결과를 병렬로 보존�
   assert.equal(adjudication.state, "adjusted");
 });
 
-test("사전점검은 고위험·확인 필요·자료 부족·현재 기준 충족을 구분한다", () => {
+test("사전점검은 내부 규칙상 누락·확인 필요·자료 부족·등록 조건 일치를 구분한다", () => {
   assert.equal(resolveClaimPreflightPresentation({ evaluation: ready, claimItem: { riskConfirmed: true } }).state, "high-risk");
   assert.equal(resolveClaimPreflightPresentation({ evaluation: { ...ready, status: "due-soon" } }).state, "needs-review");
   assert.equal(resolveClaimPreflightPresentation({ evaluation: ready, claimItem: { riskEvaluable: false } }).state, "insufficient");

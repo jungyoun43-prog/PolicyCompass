@@ -1,10 +1,16 @@
 import { CONDITIONS, relationsFor } from "/data.js";
-import { readCareBridge, subscribeCareBridge } from "/care-bridge.js";
+import { retireLegacyCareBridge } from "/care-bridge.js";
+import { parsePatientTransferPackage } from "/patient-transfer.js";
 import { createExplorerScene, selectExplorerNode, settleExplorerScene } from "/explorer-model.js";
 import { createDetailModel } from "/view-model.js";
+import { preserveSampleNavigation } from "/sample-navigation.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
 const sessionKey = "vitagraph-scene";
+const forcedSampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
+preserveSampleNavigation(forcedSampleMode);
+const demoConditionIds = ["hypertension", "diabetes", "dyslipidemia", "reflux", "migraine"];
+const restoredTransferCode = "VG-00000-00000-00000-00000-000000";
 const desktopSceneSize = { width: 1180, height: 720 };
 const compactSceneSize = { width: 680, height: 720 };
 let sceneSize = { ...desktopSceneSize };
@@ -40,31 +46,94 @@ function conditionIds(value) {
     : [];
 }
 
-function clinicalIdsFromBridge(bridge) {
-  return conditionIds(bridge?.clinical?.snapshot?.healthMap?.conditions?.map(({ id }) => id));
+function hasExactKeys(value, keys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value);
+  const allowed = new Set(keys);
+  return actual.length === allowed.size && actual.every((key) => allowed.has(key));
 }
 
-function readSession(bridge = readCareBridge()) {
+function restoredClinicalConditionIds(stored) {
+  const transfer = stored?.transfer;
+  const ids = Array.isArray(stored?.clinicalConditionIds) ? stored.clinicalConditionIds : null;
+  const conditions = Array.isArray(stored?.clinicalConditions) ? stored.clinicalConditions : null;
+  const measurements = Array.isArray(stored?.clinicalMeasurements) ? stored.clinicalMeasurements : null;
+  if (!hasExactKeys(transfer, ["schema", "version", "exportedAt", "trust"])
+    || transfer.schema !== "vitagraph-patient-transfer"
+    || transfer.version !== 1
+    || transfer.trust !== "unsigned-local-export"
+    || !ids
+    || !conditions
+    || !measurements
+    || conditions.length + measurements.length === 0
+    || conditions.length + measurements.length > 1_000
+    || ids.length !== conditions.length
+    || new Set(ids).size !== ids.length
+    || conditions.some((item) => !hasExactKeys(item, ["id", "label", "recordedOn", "basis", "provenanceKind"])
+      || item.basis !== "confirmed-condition"
+      || item.provenanceKind !== "clinician-confirmed-unsigned-import")
+    || measurements.some((item) => !hasExactKeys(item, ["key", "code", "label", "value", "unit", "observedAt", "basis", "provenanceKind"])
+      || item.basis !== "final-observation"
+      || item.provenanceKind !== "clinician-final-unsigned-import")) return [];
+  try {
+    const imported = parsePatientTransferPackage({
+      schema: transfer.schema,
+      version: transfer.version,
+      exportedAt: transfer.exportedAt,
+      transferCode: restoredTransferCode,
+      scope: "patient-vita-graph",
+      trust: transfer.trust,
+      healthMap: {
+        conditions: conditions.map(({ id, label, recordedOn, basis }) => ({ id, label, recordedOn, basis })),
+        measurements: measurements.map(({ key, code, label, value, unit, observedAt, basis }) => ({
+          key,
+          code,
+          label,
+          value,
+          unit,
+          observedOn: observedAt,
+          basis,
+        })),
+      },
+      summary: {
+        includedConditions: conditions.length,
+        includedMeasurements: measurements.length,
+      },
+    });
+    return ids.every((id, index) => id === imported.conditionIds[index])
+      ? imported.conditionIds
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function readSession() {
+  if (forcedSampleMode) {
+    const visibleIds = conditionIds(demoConditionIds);
+    return {
+      visibleIds,
+      patientVisibleIds: visibleIds,
+      clinicalConditionIds: [],
+      declaredIds: [],
+      activeId: visibleIds[0] ?? "",
+      isDemo: true,
+    };
+  }
   try {
     const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "null");
-    const storedVisibleIds = conditionIds(stored?.visibleIds);
-    const storedClinicalIds = conditionIds(stored?.clinicalConditionIds);
     const declaredIds = conditionIds(stored?.declaredIds);
-    const isDemo = stored?.isDemo === true;
-    const patientVisibleIds = Array.isArray(stored?.patientVisibleIds)
-      ? conditionIds(stored.patientVisibleIds)
-      : storedVisibleIds.filter((id) => !storedClinicalIds.includes(id) || declaredIds.includes(id));
-    const clinicalConditionIds = isDemo ? [] : clinicalIdsFromBridge(bridge);
-    const visibleIds = isDemo
-      ? storedVisibleIds
-      : [...new Set([...patientVisibleIds, ...clinicalConditionIds])];
+    // Legacy patientVisibleIds/visibleIds may contain free-text threshold inference.
+    const patientVisibleIds = [...declaredIds];
+    const clinicalConditionIds = restoredClinicalConditionIds(stored);
+    const visibleIds = [...new Set([...patientVisibleIds, ...clinicalConditionIds])];
     return {
       visibleIds,
       patientVisibleIds,
       clinicalConditionIds,
-      declaredIds: declaredIds.filter((id) => visibleIds.includes(id)),
+      declaredIds,
       activeId: visibleIds.includes(stored?.activeId) ? stored.activeId : (visibleIds[0] ?? ""),
-      isDemo,
+      isDemo: false,
     };
   } catch {
     return {
@@ -79,7 +148,7 @@ function readSession(bridge = readCareBridge()) {
 }
 
 const state = {
-  ...readSession(readCareBridge()),
+  ...readSession(),
   selectedNodeId: "",
   scene: null,
   zoom: 1,
@@ -107,12 +176,20 @@ function renderList(target, items) {
 }
 
 function conditionProvenance(id) {
+  if (state.isDemo) {
+    return {
+      kind: "recorded",
+      source: "sample",
+      label: "합성 예시 · 실제 기록 아님",
+      aria: "제품 흐름을 보여 주기 위한 합성 예시 질환 항목, 실제 환자 기록 아님",
+    };
+  }
   if (state.clinicalConditionIds.includes(id)) {
     return {
       kind: "recorded",
-      source: "clinical",
-      label: "EMR 확정 기록 · 의료진이 서명·확정한 뒤 환자용으로 정제된 질환 항목",
-      aria: "EMR에서 서명·확정 후 정제되어 연결된 질환 기록",
+      source: "clinical-import",
+      label: "파일에 의료진 확정으로 표시 · 발행기관·변조 미검증",
+      aria: "환자 전달 파일에 의료진 확정으로 표시되었으나 발행기관과 변조는 검증되지 않은 질환 항목",
     };
   }
   if (state.declaredIds.includes(id)) {
@@ -124,10 +201,10 @@ function conditionProvenance(id) {
     };
   }
   return {
-    kind: "inferred",
-    source: "inferred",
-    label: "입력 신호에서 찾은 확인 후보 · 진단으로 기록된 사실이 아님",
-    aria: "입력 신호에서 찾은 확인 후보, 진단 사실 아님",
+    kind: "recorded",
+    source: "patient",
+    label: "환자 직접 확인 여부 미상 · 의료진 확정 진단 아님",
+    aria: "출처를 확인할 수 없는 개인 질환 항목, 의료진 확정 진단 아님",
   };
 }
 
@@ -194,6 +271,7 @@ function renderEmptyDetail() {
 }
 
 function saveSession() {
+  if (state.isDemo || forcedSampleMode) return;
   try {
     const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
     const preserved = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
@@ -429,8 +507,8 @@ function renderGraph() {
   renderConditionDetail(state.activeId);
 }
 
-function refreshFromBridge(bridge = readCareBridge()) {
-  const next = readSession(bridge);
+function refreshFromSession() {
+  const next = readSession();
   Object.assign(state, next);
   state.selectedNodeId = state.activeId;
   if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
@@ -541,6 +619,5 @@ window.addEventListener("resize", () => {
 updateSceneFraming();
 applyViewportTransform();
 if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
+retireLegacyCareBridge();
 renderGraph();
-const unsubscribeBridge = subscribeCareBridge((bridge) => refreshFromBridge(bridge));
-window.addEventListener("pagehide", unsubscribeBridge, { once: true });

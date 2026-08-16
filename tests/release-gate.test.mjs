@@ -50,15 +50,16 @@ test("pilot p95 produces a bounded per-cell cap and calculated hard kill", () =>
     configuredCellLimitMs: 30_000,
     adjustedCellCapMs: 10_000,
     stepTimeoutMs: 8_000,
-    hardKillMs: 339_000,
-    hardKillFormula: "ceil((ceil(168 / S) * adjustedCellCapMs + p95StartupArtifactMs) * 1.2)",
+    hardKillMs: 1_179_000,
+    hardKillFormula: "ceil(((84 + ceil(84 / S)) * adjustedCellCapMs + p95StartupArtifactMs) * 1.2)",
     p95StartupArtifactMs: 2_500,
   });
   assert.match(release, /p50CellMs/);
   assert.match(release, /p95CellMs/);
   assert.match(release, /p50StartupArtifactMs/);
   assert.match(release, /p95StartupArtifactMs/);
-  assert.match(release, /runTaskPool\(tasks, shardCount/);
+  assert.match(release, /runTaskPool\(sharedTasks, 1/);
+  assert.match(release, /runTaskPool\(freshTasks, shardCount/);
   assert.match(release, /terminateActiveBrowsers\("SIGKILL"\)/);
 });
 

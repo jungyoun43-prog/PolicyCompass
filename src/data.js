@@ -146,31 +146,91 @@ export const POSITIONS = {
   arthritis: [480, 360],
 };
 
-const bloodPressurePattern = /혈압\s*:?\s*(\d{2,3})\s*[\/／-]\s*(\d{2,3})/i;
-const textRules = [
-  ["hypertension", /고혈압/i],
-  ["diabetes", /당뇨|공복\s*혈당\s*:?\s*(?:12[6-9]|1[3-9]\d|[2-9]\d{2})/i],
-  ["dyslipidemia", /이상지질|고지혈|콜레스테롤|ldl\s*:?\s*(?:1[3-9]\d|[2-9]\d{2})/i],
-  ["migraine", /편두통|반복(?:되는)?\s*두통/i],
-  ["reflux", /위식도역류|역류성\s*식도염|속쓰림|신물/i],
-  ["asthma", /천식|쌕쌕|호흡\s*곤란/i],
-  ["mood", /우울|불안|공황/i],
-  ["arthritis", /관절염|무릎\s*통증|관절\s*통증/i],
-];
+const measurementSignalRules = Object.freeze([
+  Object.freeze({
+    key: "blood-pressure",
+    label: "혈압 측정 입력",
+    unit: "mmHg",
+    pattern: /혈압\s*:?\s*(\d{2,3})\s*[\/／-]\s*(\d{2,3})/i,
+    value: (match) => `${match[1]}/${match[2]}`,
+  }),
+  Object.freeze({
+    key: "fasting-glucose",
+    label: "공복 혈당 측정 입력",
+    unit: "mg/dL",
+    pattern: /공복\s*혈당\s*:?\s*(\d{1,4})/i,
+    value: (match) => match[1],
+  }),
+  Object.freeze({
+    key: "ldl",
+    label: "LDL 콜레스테롤 측정 입력",
+    unit: "mg/dL",
+    pattern: /\bldl(?:\s*콜레스테롤)?\s*:?\s*(\d{1,4})/i,
+    value: (match) => match[1],
+  }),
+]);
 
-function hasElevatedBloodPressure(note) {
-  const match = note.match(bloodPressurePattern);
-  if (!match) return false;
-  const systolic = Number(match[1]);
-  const diastolic = Number(match[2]);
-  return systolic >= 140 || diastolic >= 90;
+const symptomSignalRules = Object.freeze([
+  Object.freeze({ key: "headache", label: "두통 증상 입력", pattern: /반복(?:되는)?\s*두통|두통/i }),
+  Object.freeze({ key: "heartburn", label: "속쓰림·신물 증상 입력", pattern: /속쓰림|신물/i }),
+  Object.freeze({ key: "wheeze-dyspnea", label: "쌕쌕·호흡곤란 증상 입력", pattern: /쌕쌕|호흡\s*곤란/i }),
+  Object.freeze({ key: "mood-symptom", label: "기분·불안 증상 입력", pattern: /우울감|불안감|공황\s*증상/i }),
+  Object.freeze({ key: "joint-pain", label: "관절 통증 증상 입력", pattern: /무릎\s*통증|관절\s*통증/i }),
+]);
+
+function negatedNear(note, match) {
+  const start = Math.max(0, match.index - 12);
+  const end = Math.min(note.length, match.index + match[0].length + 14);
+  const context = note.slice(start, end);
+  return /(?:없(?:음|다|어요|고)?|아님|아니(?:다|에요)?|부인|호소하지\s*않)/i.test(context);
 }
 
-export function inferConditionIds(note, selectedIds) {
-  const ids = new Set(selectedIds);
-  if (hasElevatedBloodPressure(note)) ids.add("hypertension");
-  for (const [id, rule] of textRules) {
-    if (rule.test(note)) ids.add(id);
+function signalId(kind, key, index) {
+  return `input-${kind}-${key}-${index}`;
+}
+
+/**
+ * Free-text values and symptoms remain unverified review signals. This
+ * function never creates a Condition or asserts a diagnosis.
+ */
+export function extractInputSignals(note) {
+  const text = typeof note === "string" ? note.slice(0, 4_000) : "";
+  const signals = [];
+
+  for (const rule of measurementSignalRules) {
+    const match = rule.pattern.exec(text);
+    if (!match) continue;
+    signals.push({
+      id: signalId("measurement", rule.key, match.index),
+      kind: "measurement-input",
+      key: rule.key,
+      label: rule.label,
+      value: rule.value(match),
+      unit: rule.unit,
+      evidenceText: match[0],
+      provenanceKind: "input-pattern",
+    });
   }
-  return [...ids];
+
+  for (const rule of symptomSignalRules) {
+    const match = rule.pattern.exec(text);
+    if (!match || negatedNear(text, match)) continue;
+    signals.push({
+      id: signalId("symptom", rule.key, match.index),
+      kind: "symptom-input",
+      key: rule.key,
+      label: rule.label,
+      value: match[0],
+      unit: "",
+      evidenceText: match[0],
+      provenanceKind: "input-pattern",
+    });
+  }
+
+  return signals.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export function inferConditionIds(_note, selectedIds = []) {
+  return [...new Set(Array.isArray(selectedIds) ? selectedIds : [])]
+    .filter((id) => CONDITIONS[id]);
 }

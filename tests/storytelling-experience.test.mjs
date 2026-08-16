@@ -9,6 +9,16 @@ import { createJourneyNarrative, createJourneySnapshot } from "../src/journey-mo
 const execFileAsync = promisify(execFile);
 
 test("Journey 이야기는 관찰된 차이와 원인 판단을 분리한다", () => {
+  const inputSignal = {
+    id: "input-symptom-heartburn-0",
+    kind: "symptom-input",
+    key: "heartburn",
+    label: "속쓰림·신물 증상 입력",
+    value: "속쓰림",
+    unit: "",
+    evidenceText: "속쓰림",
+    provenanceKind: "input-pattern",
+  };
   const before = createJourneySnapshot({
     id: "before",
     observedAt: "2026-06-01",
@@ -19,6 +29,7 @@ test("Journey 이야기는 관찰된 차이와 원인 판단을 분리한다", (
     id: "after",
     observedAt: "2026-07-01",
     conditionIds: ["hypertension", "diabetes"],
+    signals: [inputSignal],
     measurements: [{ key: "ldl", label: "LDL", value: 140, unit: "mg/dL" }],
   });
 
@@ -26,12 +37,16 @@ test("Journey 이야기는 관찰된 차이와 원인 판단을 분리한다", (
 
   assert.equal(story.state, "comparison");
   assert.deepEqual(
-    story.observations.slice(0, 3).map(({ kind }) => kind),
-    ["added", "removed", "measurement"],
+    story.observations.slice(0, 4).map(({ kind }) => kind),
+    ["added", "removed", "added-pattern", "measurement"],
   );
   assert.match(story.observations[1].detail, /소실이나 회복을 뜻하지 않습니다/);
-  assert.match(story.observations[2].detail, /호전·악화를 판단하지 않습니다/);
-  assert.match(story.comparisonSummary, /2026-06-01 기록과 2026-07-01 기록 비교/);
+  assert.match(story.observations[0].title, /질환 항목/);
+  assert.match(story.observations.find(({ kind }) => kind === "measurement").detail, /호전·악화를 판단하지 않습니다/);
+  assert.match(story.comparisonSummary, /질환 항목 2개 → 2개 · 입력 확인 신호 0개 → 1개/);
+  assert.equal(story.comparison.currentConditionCount, 2);
+  assert.equal(story.comparison.currentInputSignalCount, 1);
+  assert.equal(story.comparison.currentSignalCount, 3);
   assert.equal(story.comparison.changedMeasurementCount, 1);
 });
 
@@ -65,12 +80,13 @@ test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리
   assert.match(insights, /class="question-panel"/);
   assert.match(insights, /data-first-use/);
   assert.match(insights, /id="refreshClinicalSnapshotEmpty"/);
-  assert.match(insights, /서명·확정된 최신 정제 기록 확인/);
+  assert.match(insights, /파일과 별도 확인 코드를 대조해 가져오세요/);
   assert.match(insights, /href="\/map\?sample=1"/);
   assert.match(insights, /Journey 저장 안 됨/);
-  assert.match(insights, /JSON은 병원과 연결하기 위한 업로드 파일이 아니라 환자가 직접 보관·활용하는 사본/);
+  assert.match(insights, /환자 전달 원본 파일이 개인 보관 사본/);
   assert.match(insights, /id="sharePatientBrief"/);
-  assert.doesNotMatch(insights, /href="\/map#import-record"|id="fhirFile"/);
+  assert.match(insights, /href="\/map#import-record"/);
+  assert.doesNotMatch(insights, /id="fhirFile"/);
 
   assert.match(journey, /data-story-section="changed"/);
   assert.match(journey, /data-story-section="context"/);

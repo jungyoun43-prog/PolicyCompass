@@ -86,6 +86,9 @@ function assertCanonicalInstant(value) {
   if (typeof value !== "string" || canonicalInstant(value) !== value) {
     throw new TypeError("환자 전달 파일의 내보내기 시각이 유효하지 않습니다.");
   }
+  if (new Date(value).valueOf() > Date.now() + 5 * 60 * 1_000) {
+    throw new TypeError("환자 전달 파일의 내보내기 시각이 미래입니다.");
+  }
 }
 
 function assertTransferCode(value) {

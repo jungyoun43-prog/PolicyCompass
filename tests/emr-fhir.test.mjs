@@ -195,7 +195,7 @@ test("의증 진단은 완료 Encounter와 함께 왕복 보존하되 확정 사
 
 test("FHIR 환자 인적사항은 MR 식별자와 구조화 이름·주소를 정확히 읽는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [{
       fullUrl: "Patient/structured",
       resource: {
@@ -221,7 +221,7 @@ test("FHIR 환자 인적사항은 MR 식별자와 구조화 이름·주소를 �
 test("FHIR 핵심 인적사항은 잘못된 날짜·성별·충돌 MR 식별자를 조용히 바꾸지 않는다", () => {
   const patient = { resourceType: "Patient", id: "demographics", name: [{ text: "검증 환자" }] };
   const bundle = (patch) => ({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [{ fullUrl: "Patient/demographics", resource: { ...patient, ...patch } }],
   });
 
@@ -239,7 +239,7 @@ test("FHIR 핵심 인적사항은 잘못된 날짜·성별·충돌 MR 식별자�
 
 test("진행 중 외부 Encounter와 그 연결 기록은 확정 차트에서 함께 제외한다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "진행 중 환자" }] } },
       {
@@ -288,7 +288,7 @@ test("진행 중 외부 Encounter와 그 연결 기록은 확정 차트에서 �
 
 test("Encounter 상대 참조는 참조 리소스의 서버 기준으로 해석하고 다른 서버 진료와 섞지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "https://hospital-a.example/fhir/Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "참조 환자" }] } },
       {
@@ -338,7 +338,7 @@ test("실행 가능한 XHTML SOAP는 임의 복구하지 않는다", () => {
 
 test("나이 전용 Patient 확장은 엄격한 단위·범위와 단일 출처만 허용한다", () => {
   const extension = { url: "https://vitagraph.local/fhir/StructureDefinition/age-at-export", valueAge: { value: 52, unit: "year", system: "http://unitsofmeasure.org", code: "a" } };
-  const base = { resourceType: "Bundle", entry: [{ resource: { resourceType: "Patient", id: "p1", extension: [extension] } }] };
+  const base = { resourceType: "Bundle", type: "collection", entry: [{ resource: { resourceType: "Patient", id: "p1", extension: [extension] } }] };
 
   assert.equal(parseEmrFhirBundle(base).patient.ageYears, 52);
   assert.throws(() => parseEmrFhirBundle({
@@ -357,7 +357,7 @@ test("나이 전용 Patient 확장은 엄격한 단위·범위와 단일 출처�
 
 test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존한다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     timestamp: "2026-07-19T09:00:00Z",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", identifier: [{ type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number" }] }, value: "VG-1001" }], name: [{ text: "김비타" }], birthDate: "1974-04-12", gender: "female" } },
@@ -390,7 +390,7 @@ test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존
 
 test("용법 없는 외부 MedicationRequest는 손실 없이 재내보내고 미해결 참조 약물은 거부한다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "외부 환자" }] } },
@@ -411,7 +411,7 @@ test("용법 없는 외부 MedicationRequest는 손실 없이 재내보내고 �
 
 test("취소·오류·비활성 리소스는 확정 이벤트로 만들지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       { resource: { resourceType: "Condition", id: "c1", subject: { reference: "Patient/p1" }, clinicalStatus: coding("resolved", "Resolved"), code: coding("I10", "고혈압") } },
@@ -427,7 +427,7 @@ test("취소·오류·비활성 리소스는 확정 이벤트로 만들지 않�
 
 test("결과 값이 없는 확정 Observation은 급여 근거가 되지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       {
@@ -460,7 +460,7 @@ test("결과 값이 없는 확정 Observation은 급여 근거가 되지 않는�
 test("단일값·비UCUM 혈압은 환자 전체를 중단하지 않고 미지원 리소스로 격리한다", () => {
   const loinc = (code, display) => ({ coding: [{ system: "http://loinc.org", code, display }], text: display });
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "혈압 검사 환자" }] } },
       {
@@ -513,19 +513,20 @@ test("단일값·비UCUM 혈압은 환자 전체를 중단하지 않고 미지�
 
 test("FHIR Bundle 형식과 최대 항목 수를 검증한다", () => {
   assert.throws(() => parseEmrFhirBundle({ resourceType: "Patient" }), /FHIR Bundle/);
+  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", entry: [] }), /collection 또는 document/);
   assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", type: "transaction", entry: [] }), /collection 또는 document/);
-  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", timestamp: "invalid", entry: [] }), /timestamp.*유효/);
-  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", entry: Array.from({ length: 1001 }, () => ({})) }), /1,000개/);
-  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", entry: [] }), /정확히 한 명/);
+  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", type: "collection", timestamp: "invalid", entry: [] }), /timestamp.*유효/);
+  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", type: "collection", entry: Array.from({ length: 1001 }, () => ({})) }), /1,000개/);
+  assert.throws(() => parseEmrFhirBundle({ resourceType: "Bundle", type: "collection", entry: [] }), /정확히 한 명/);
   assert.throws(() => parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [{ resource: { resourceType: "Patient", name: [{ text: "식별자 없음" }] } }],
   }), /id 또는 fullUrl/);
 });
 
 test("resource.id 없는 URN Patient도 반복 가져오기에서 같은 환자로 식별한다", () => {
   const bundle = {
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "urn:uuid:8f4a1a2a-1111-4444-8888-123456789abc", resource: { resourceType: "Patient", name: [{ text: "URN 환자" }] } },
       { resource: { resourceType: "Observation", id: "o1", subject: { reference: "urn:uuid:8f4a1a2a-1111-4444-8888-123456789abc" }, status: "final", code: coding("A", "기록"), effectiveDateTime: "2026-07-01" } },
@@ -542,7 +543,7 @@ test("resource.id 없는 URN Patient도 반복 가져오기에서 같은 환자�
 
 test("외부 FHIR 환자는 VitaGraph 왕복 뒤에도 원본 식별자를 보존해 중복 등록을 막는다", () => {
   const external = {
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [{
       fullUrl: "https://ehr.example/fhir/Patient/identity-1",
       resource: { resourceType: "Patient", id: "identity-1", name: [{ text: "식별 환자" }] },
@@ -558,7 +559,7 @@ test("외부 FHIR 환자는 VitaGraph 왕복 뒤에도 원본 식별자를 보�
 
 test("여러 환자 Bundle은 임의 환자 선택 없이 거부한다", () => {
   assert.throws(() => parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "첫 환자" }] } },
       { fullUrl: "Patient/p2", resource: { resourceType: "Patient", id: "p2", name: [{ text: "둘째 환자" }] } },
@@ -569,7 +570,7 @@ test("여러 환자 Bundle은 임의 환자 선택 없이 거부한다", () => {
 
 test("확정되지 않았거나 반박된 FHIR 상태를 차트 사실로 가져오지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       { resource: { resourceType: "Condition", id: "refuted", subject: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("refuted", "Refuted"), code: coding("I10", "반박된 진단"), recordedDate: "2026-01-01" } },
@@ -586,7 +587,7 @@ test("확정되지 않았거나 반박된 FHIR 상태를 차트 사실로 가져
 
 test("잠정 진단·미확인 알레르기·제안 약물은 현재 차트 사실로 가져오지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       { resource: { resourceType: "Condition", id: "provisional", subject: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("provisional", "Provisional"), code: coding("I10", "잠정 고혈압"), recordedDate: "2026-01-01" } },
@@ -602,7 +603,7 @@ test("잠정 진단·미확인 알레르기·제안 약물은 현재 차트 사�
 
 test("확정 상태와 주문 의도가 명시된 진단·알레르기·약물만 보존한다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       { resource: { resourceType: "Condition", id: "confirmed", subject: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("I10", "확정 고혈압"), recordedDate: "2026-01-01" } },
@@ -617,7 +618,7 @@ test("확정 상태와 주문 의도가 명시된 진단·알레르기·약물�
 
 test("doNotPerform 약물 요청은 활성 처방 사실로 가져오지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       { resource: { resourceType: "MedicationRequest", id: "negated", subject: { reference: "Patient/p1" }, status: "active", intent: "order", doNotPerform: true, medicationCodeableConcept: coding("MED", "투여하지 않을 약물"), authoredOn: "2026-01-03" } },
@@ -631,7 +632,7 @@ test("doNotPerform 약물 요청은 활성 처방 사실로 가져오지 않는�
 
 test("미지원 modifierExtension과 환자 상태 modifier는 fail-closed 처리한다", () => {
   const clinicalModifier = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }] } },
       {
@@ -653,7 +654,7 @@ test("미지원 modifierExtension과 환자 상태 modifier는 fail-closed 처�
   assert.ok(clinicalModifier.provenance.unsupportedItems.every(({ reason }) => /modifierExtension|implicitRules/.test(reason)));
 
   assert.throws(() => parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     implicitRules: "https://example.test/bundle-rules",
     entry: [{ resource: { resourceType: "Patient", id: "p1" } }],
   }), /implicitRules/);
@@ -670,7 +671,7 @@ test("미지원 modifierExtension과 환자 상태 modifier는 fail-closed 처�
     { implicitRules: "https://example.test/patient-rules" },
   ]) {
     assert.throws(() => parseEmrFhirBundle({
-      resourceType: "Bundle",
+      resourceType: "Bundle", type: "collection",
       entry: [{ resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }], ...patientPatch } }],
     }), /Patient|환자|modifierExtension|implicitRules|비활성|사망|대체/);
   }
@@ -680,14 +681,14 @@ test("과도하게 깊은 FHIR JSON은 재귀 스택을 소진하지 않고 제�
   let nested = { valueString: "끝" };
   for (let depth = 0; depth < 200; depth += 1) nested = { nested };
   assert.throws(() => parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [{ resource: { resourceType: "Patient", id: "p1", name: [{ text: "테스트" }], extension: [nested] } }],
   }), (error) => error instanceof TypeError && !(error instanceof RangeError) && /안전|modifierExtension|implicitRules/.test(error.message));
 });
 
 test("환자 참조가 없거나 다른 임상 리소스는 가져오지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "첫 환자" }] } },
       { resource: { resourceType: "Observation", id: "missing", status: "final", code: coding("A", "무참조"), effectiveDateTime: "2026-07-01" } },
@@ -703,7 +704,7 @@ test("환자 참조가 없거나 다른 임상 리소스는 가져오지 않는�
 
 test("다른 FHIR 서버의 같은 Patient ID를 절대 참조로 섞지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "https://hospital-a.example/fhir/Patient/123", resource: { resourceType: "Patient", id: "123", name: [{ text: "첫 환자" }] } },
       { resource: { resourceType: "Observation", id: "own", subject: { reference: "https://hospital-a.example/fhir/Patient/123" }, status: "final", code: coding("A", "본인 기록"), valueString: "정상", effectiveDateTime: "2026-07-01" } },
@@ -720,7 +721,7 @@ test("다른 FHIR 서버의 같은 Patient ID를 절대 참조로 섞지 않는�
 
 test("상대 Patient 참조는 참조 리소스 fullUrl의 FHIR 서버 기준으로만 해석한다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { resource: { resourceType: "Patient", id: "123", name: [{ text: "기준 없는 환자" }] } },
       { fullUrl: "https://hospital-b.example/fhir/Observation/foreign", resource: { resourceType: "Observation", id: "foreign", subject: { reference: "Patient/123" }, status: "final", code: coding("A", "귀속 불명"), valueString: "값", effectiveDateTime: "2026-07-01" } },
@@ -734,7 +735,7 @@ test("상대 Patient 참조는 참조 리소스 fullUrl의 FHIR 서버 기준으
 
 test("중복 FHIR 리소스 ID는 근거 개수와 다르게 조용히 유실되지 않는다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "첫 환자" }] } },
       { resource: { resourceType: "Observation", id: "same", subject: { reference: "Patient/p1" }, status: "final", code: coding("A", "첫 기록"), valueString: "첫 값", effectiveDateTime: "2026-07-01" } },
@@ -749,7 +750,7 @@ test("중복 FHIR 리소스 ID는 근거 개수와 다르게 조용히 유실되
 
 test("같은 FHIR 리소스의 절대 fullUrl·상대 ID 별칭은 한 번만 가져온다", () => {
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       {
         fullUrl: "https://hospital-a.example/fhir/Patient/p1",
@@ -800,7 +801,7 @@ test("resource.id 없는 동일 fullUrl 임상 리소스는 한 번만 가져온
     },
   };
   const result = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       { fullUrl: patientFullUrl, resource: { resourceType: "Patient", id: "p1", name: [{ text: "첫 환자" }] } },
       repeatedProcedure,
@@ -817,7 +818,7 @@ test("resource.id 없는 동일 fullUrl 임상 리소스는 한 번만 가져온
 test("Patient보다 앞선 임상 entry가 Patient fullUrl을 선점하지 못한다", () => {
   const patientFullUrl = "urn:uuid:shared-1111-4444-8888-123456789abc";
   const bundle = {
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     entry: [
       {
         fullUrl: patientFullUrl,
@@ -847,7 +848,7 @@ test("Patient보다 앞선 임상 entry가 Patient fullUrl을 선점하지 못�
 test("독립 FHIR 문제·약물·오더·알레르기·관찰·처치는 원출처와 함께 왕복한다", () => {
   const originBase = "https://origin.example/fhir";
   const initial = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     type: "collection",
     entry: [
       { fullUrl: `${originBase}/Patient/p1`, resource: { resourceType: "Patient", id: "p1", name: [{ text: "독립 기록 환자" }] } },
@@ -898,7 +899,7 @@ test("FHIR meta.source와 원본 리소스 식별자가 달라도 각각 보존�
   const metaSource = "https://provenance.example/source/A";
   const sourceIdentity = "https://origin.example/fhir/Observation/B";
   const imported = parseEmrFhirBundle({
-    resourceType: "Bundle",
+    resourceType: "Bundle", type: "collection",
     type: "collection",
     entry: [
       {

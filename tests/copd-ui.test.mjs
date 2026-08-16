@@ -91,11 +91,12 @@ test("COPD와 폐렴은 평가 지표와 임상 정합성을 서로 섞지 않�
   assert.match(js, /appendSourceLink/);
 });
 
-test("청구 색상은 텍스트 상태와 함께 표시하고 빨강은 최종 심사결과에서만 온다", () => {
-  assert.match(html, /빨강 · 불인정 고위험/);
-  assert.match(html, /주황 · 급여기준 확인 필요/);
-  assert.match(html, /초록 · 현재 기준 충족/);
+test("청구 색상은 내부 규칙 상태와 지급·심사 경계를 텍스트로 함께 표시한다", () => {
+  assert.match(html, /빨강 · 내부 규칙상 근거 누락/);
+  assert.match(html, /주황 · 등록 규칙 확인 필요/);
+  assert.match(html, /초록 · 등록 규칙 조건 일치/);
   assert.match(html, /보라 · 자료 부족/);
+  assert.match(html, /지급·급여·심사 결과 보장 아님/);
   assert.match(html, /ADJUDICATION RESULT[\s\S]*?2\. 심사 결과/);
   assert.match(js, /resolveClaimPreflightPresentation/);
   assert.match(js, /resolveClaimAdjudicationPresentation/);

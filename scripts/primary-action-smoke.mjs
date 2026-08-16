@@ -8,37 +8,41 @@ const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9229", 10);
 const links = [
   { from: "/", selector: ".role-card--clinical .role-action", path: "/emr", hash: "" },
-  { from: "/patient", selector: ".landing-actions .landing-button--primary", path: "/map", hash: "#connected-record" },
-  { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#connected-record" },
-  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#connected-record" },
+  { from: "/patient", selector: ".landing-actions .landing-button--primary", path: "/map", hash: "#import-record" },
+  { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#import-record" },
+  { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#import-record" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-primary-actions-"));
-const careBridgeFixture = {
-  schema: "vitagraph-care-bridge",
-  version: 1,
-  channelId: "primary-action-smoke-channel",
-  updatedAt: "2026-07-20T12:34:56.000Z",
-  clinical: {
-    publishedAt: "2026-07-20T12:34:56.000Z",
-    snapshot: {
-      schema: "vitagraph-clinical-snapshot",
-      version: 1,
-      preparedAt: "2026-07-20T12:34:56.000Z",
-      source: "finalized-clinical-record",
-      healthMap: {
-        conditions: [{
-          id: "hypertension",
-          label: "고혈압",
-          recordedOn: "2026-07-20",
-          basis: "confirmed-condition",
-        }],
-        measurements: [],
-      },
-      medications: [],
-      summary: { includedConditions: 1, includedMeasurements: 0, includedMedications: 0 },
-    },
+const importedSessionFixture = {
+  declaredIds: [],
+  patientVisibleIds: ["diabetes"],
+  clinicalConditionIds: ["hypertension"],
+  clinicalConditions: [{
+    id: "hypertension",
+    label: "고혈압",
+    recordedOn: "2024-12-31",
+    basis: "confirmed-condition",
+    provenanceKind: "clinician-confirmed-unsigned-import",
+  }],
+  clinicalMeasurements: [{
+    key: "blood-pressure",
+    code: "85354-9",
+    label: "혈압",
+    value: "138/86",
+    unit: "mmHg",
+    observedAt: "2024-12-31",
+    basis: "final-observation",
+    provenanceKind: "clinician-final-unsigned-import",
+  }],
+  visibleIds: ["diabetes", "hypertension"],
+  activeId: "hypertension",
+  transfer: {
+    schema: "vitagraph-patient-transfer",
+    version: 1,
+    exportedAt: "2024-12-31T12:34:56.000Z",
+    trust: "unsigned-local-export",
   },
-  patient: null,
+  note: "",
 };
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const browser = spawn(chrome, [
@@ -114,14 +118,15 @@ try {
   await waitFor("!document.getElementById('formError').hidden", "/map empty primary action did not expose validation");
   await evaluate(`document.getElementById('healthNote').value='혈압 148/94';document.getElementById('healthNote').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('analyzeButton').click()`);
   await waitFor("document.getElementById('miniConditionList').children.length > 0", "/map valid primary action did not update state");
+  assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님')"), "/map promoted a text pattern without marking it as a non-diagnostic signal");
 
-  await evaluate(`localStorage.setItem('vitagraph-care-bridge-v1', ${JSON.stringify(JSON.stringify(careBridgeFixture))});location.reload()`);
-  await waitFor("document.getElementById('careLinkStatus').dataset.state === 'connected'", "/map did not expose the automatic signed-record connection");
-  assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('고혈압')"), "/map automatic connection omitted the signed condition");
-  assert(await evaluate("!document.getElementById('downloadClinicalJson').disabled"), "/map patient-owned JSON export did not become available");
+  await evaluate(`sessionStorage.setItem('vitagraph-scene', ${JSON.stringify(JSON.stringify(importedSessionFixture))});localStorage.setItem('vitagraph-care-bridge-v1','legacy-sensitive-snapshot');location.reload()`);
+  await waitFor("document.getElementById('miniConditionList').textContent.includes('고혈압')", "/map did not restore the explicitly imported condition");
+  assert(await evaluate("!document.getElementById('miniConditionList').textContent.includes('당뇨병')"), "/map trusted a legacy inferred patientVisibleIds entry");
+  assert(await evaluate("localStorage.getItem('vitagraph-care-bridge-v1') === null"), "/map did not retire legacy global bridge data");
 
   await navigate("/insights");
-  await waitFor("document.getElementById('clinicalSnapshotStatus').textContent.includes('자동 연결')", "/insights did not expose the signed clinical snapshot");
+  await waitFor("document.getElementById('clinicalSnapshotStatus').textContent.includes('발행기관·변조 미검증')", "/insights did not expose unsigned-import provenance");
   await waitFor("!document.getElementById('printBrief').disabled", "/insights populated primary action was not enabled");
   await waitFor("Boolean(document.querySelector('.question-select__input'))", "/insights visit question selection was unavailable");
   const selectedQuestionId = await evaluate("document.querySelector('[data-question-id]').dataset.questionId");
@@ -131,9 +136,11 @@ try {
   await waitFor(`document.querySelector('[data-question-id="${selectedQuestionId}"] .question-select__input').checked`, "/insights visit question selection was not preserved");
   await evaluate("window.__printInvoked=false;window.print=()=>{window.__printInvoked=true};document.getElementById('printBrief').click()");
   await waitFor("window.__printInvoked === true", "/insights populated primary action did not invoke printing");
+  await evaluate("window.__copiedQuestion='';Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(value)=>{window.__copiedQuestion=value}}})");
   await evaluate("document.getElementById('sharePatientBrief').click()");
-  await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('의료진 EMR에 공유')", "/insights explicit patient-brief share did not finish");
-  assert(await evaluate("Boolean(JSON.parse(localStorage.getItem('vitagraph-care-bridge-v1')).patient?.brief?.questions?.length)"), "/insights did not persist the explicitly shared patient brief");
+  await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('클립보드에 복사')", "/insights local question copy did not finish");
+  assert(await evaluate("Boolean(window.__copiedQuestion)"), "/insights did not copy the selected question");
+  assert(await evaluate("localStorage.getItem('vitagraph-care-bridge-v1') === null"), "/insights recreated the retired global bridge");
 
   await evaluate(`localStorage.setItem('vitagraph-journey', JSON.stringify([
     {id:'journey-a',date:'2026-06-01',conditionIds:['hypertension'],measurements:[],source:'직접 입력',createdAt:'2026-06-01T00:00:00.000Z'},

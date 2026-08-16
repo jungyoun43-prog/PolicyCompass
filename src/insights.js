@@ -1,15 +1,8 @@
+import { retireLegacyCareBridge } from "/care-bridge.js";
+import { CONDITIONS } from "/data.js";
+import { parsePatientTransferPackage } from "/patient-transfer.js";
+import { preserveSampleNavigation } from "/sample-navigation.js";
 import {
-  createPatientBrief,
-  createPatientOwnedJson,
-  clinicalSnapshotFingerprint,
-  patientOwnedJsonFilename,
-  publishPatientBrief,
-  readCareBridge,
-  subscribeCareBridge,
-} from "/care-bridge.js";
-import { inferConditionIds } from "/data.js";
-import {
-  createCareBridgePatientBriefInput,
   createModelPatientBrief,
   createPatientFallbackBrief,
   createPatientQuestionContext,
@@ -19,6 +12,11 @@ import {
 
 const sessionKey = "vitagraph-scene";
 const selectedQuestionKey = "vitagraph-selected-visit-question";
+const forcedSampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
+preserveSampleNavigation(forcedSampleMode);
+const demoNote = "혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통";
+const demoConditionIds = ["hypertension", "diabetes", "dyslipidemia", "reflux", "migraine"];
+const restoredTransferCode = "VG-00000-00000-00000-00000-000000";
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const localAssistantAvailable = loopbackHosts.has(window.location.hostname);
 
@@ -52,8 +50,6 @@ const refs = {
   ].filter(Boolean),
 };
 
-let bridgeState = readCareBridge();
-let bridgeClinicalFingerprint = `${bridgeState?.channelId ?? ""}:${clinicalSnapshotFingerprint(bridgeState?.clinical?.snapshot)}`;
 let session = readSession();
 let brief = createPatientFallbackBrief(currentScene(), "");
 let selectedQuestionId = "";
@@ -62,22 +58,137 @@ let assistantRequestController = null;
 
 function clinicalFactCount(snapshot) {
   return (snapshot?.healthMap?.conditions?.length ?? 0)
-    + (snapshot?.healthMap?.measurements?.length ?? 0)
-    + (snapshot?.medications?.length ?? 0);
+    + (snapshot?.healthMap?.measurements?.length ?? 0);
+}
+
+function conditionIds(value) {
+  return Array.isArray(value)
+    ? [...new Set(value)].filter((id) => CONDITIONS[id])
+    : [];
+}
+
+function hasExactKeys(value, keys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value);
+  const allowed = new Set(keys);
+  return actual.length === allowed.size && actual.every((key) => allowed.has(key));
+}
+
+function restoredImportedTransfer(stored) {
+  const transfer = stored?.transfer;
+  const ids = Array.isArray(stored?.clinicalConditionIds) ? stored.clinicalConditionIds : null;
+  const conditions = Array.isArray(stored?.clinicalConditions) ? stored.clinicalConditions : null;
+  const measurements = Array.isArray(stored?.clinicalMeasurements) ? stored.clinicalMeasurements : null;
+  if (!hasExactKeys(transfer, ["schema", "version", "exportedAt", "trust"])
+    || transfer.schema !== "vitagraph-patient-transfer"
+    || transfer.version !== 1
+    || transfer.trust !== "unsigned-local-export"
+    || !ids
+    || !conditions
+    || !measurements
+    || conditions.length + measurements.length === 0
+    || conditions.length + measurements.length > 1_000
+    || ids.length !== conditions.length
+    || new Set(ids).size !== ids.length
+    || conditions.some((item) => !hasExactKeys(item, ["id", "label", "recordedOn", "basis", "provenanceKind"])
+      || item.basis !== "confirmed-condition"
+      || item.provenanceKind !== "clinician-confirmed-unsigned-import")
+    || measurements.some((item) => !hasExactKeys(item, ["key", "code", "label", "value", "unit", "observedAt", "basis", "provenanceKind"])
+      || item.basis !== "final-observation"
+      || item.provenanceKind !== "clinician-final-unsigned-import")) return null;
+  try {
+    const imported = parsePatientTransferPackage({
+      schema: transfer.schema,
+      version: transfer.version,
+      exportedAt: transfer.exportedAt,
+      transferCode: restoredTransferCode,
+      scope: "patient-vita-graph",
+      trust: transfer.trust,
+      healthMap: {
+        conditions: conditions.map(({ id, label, recordedOn, basis }) => ({ id, label, recordedOn, basis })),
+        measurements: measurements.map(({ key, code, label, value, unit, observedAt, basis }) => ({
+          key,
+          code,
+          label,
+          value,
+          unit,
+          observedOn: observedAt,
+          basis,
+        })),
+      },
+      summary: {
+        includedConditions: conditions.length,
+        includedMeasurements: measurements.length,
+      },
+    });
+    if (ids.some((id, index) => id !== imported.conditionIds[index])) return null;
+    return {
+      transfer: {
+        schema: "vitagraph-patient-transfer",
+        version: 1,
+        exportedAt: imported.provenance.exportedAt,
+        trust: "unsigned-local-export",
+      },
+      clinicalConditionIds: [...imported.conditionIds],
+      clinicalConditions: imported.conditions.map(({ id, recordedAt }) => ({
+        id,
+        label: CONDITIONS[id].label,
+        recordedOn: recordedAt,
+        basis: "confirmed-condition",
+        provenanceKind: "clinician-confirmed-unsigned-import",
+      })),
+      clinicalMeasurements: imported.measurements.map((item) => ({
+        ...item,
+        basis: "final-observation",
+        provenanceKind: "clinician-final-unsigned-import",
+      })),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function connectedClinicalSnapshot() {
   if (session.isDemo) return null;
-  const snapshot = bridgeState?.clinical?.snapshot ?? null;
+  const restored = restoredImportedTransfer(session);
+  if (!restored) return null;
+  const conditions = restored.clinicalConditions.map((item) => ({
+      id: item.id,
+      label: CONDITIONS[item.id].label,
+      recordedOn: item.recordedOn,
+      basis: "confirmed-condition",
+    }));
+  const measurements = restored.clinicalMeasurements.map((item) => ({
+      key: item.key,
+      code: item.code,
+      label: item.label,
+      value: item.value,
+      unit: item.unit,
+      observedOn: item.observedAt,
+      basis: "final-observation",
+    }));
+  const preparedAt = restored.transfer.exportedAt;
+  const snapshot = {
+    schema: "vitagraph-patient-transfer-import",
+    version: 1,
+    preparedAt,
+    source: "unsigned-local-export",
+    healthMap: { conditions, measurements },
+    summary: {
+      includedConditions: conditions.length,
+      includedMeasurements: measurements.length,
+    },
+  };
   return clinicalFactCount(snapshot) > 0 ? snapshot : null;
 }
 
 function sceneFingerprint(session) {
   const context = createPatientQuestionContext(session, refs.selfReport.value);
-  return `${session.isDemo ? "demo" : "record"}:${bridgeState?.channelId ?? "no-channel"}:${patientQuestionContextFingerprint(context)}`;
+  return `${session.isDemo ? "demo" : "record"}:${patientQuestionContextFingerprint(context)}`;
 }
 
 function readSelectedQuestionId(fingerprint) {
+  if (forcedSampleMode) return "";
   try {
     const stored = JSON.parse(sessionStorage.getItem(selectedQuestionKey) ?? "null");
     return stored?.scene === fingerprint && typeof stored?.questionId === "string"
@@ -89,6 +200,7 @@ function readSelectedQuestionId(fingerprint) {
 }
 
 function saveSelectedQuestionId(fingerprint, id) {
+  if (forcedSampleMode) return;
   try {
     sessionStorage.setItem(selectedQuestionKey, JSON.stringify({
       scene: fingerprint,
@@ -100,20 +212,40 @@ function saveSelectedQuestionId(fingerprint, id) {
 }
 
 function readSession() {
+  if (forcedSampleMode) {
+    const visibleIds = [...demoConditionIds];
+    return {
+      declaredIds: [],
+      patientVisibleIds: visibleIds,
+      clinicalConditionIds: [],
+      clinicalConditions: [],
+      clinicalMeasurements: [],
+      visibleIds,
+      measurements: [],
+      transfer: null,
+      isDemo: true,
+      note: demoNote,
+    };
+  }
   try {
     const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
-    const declaredIds = Array.isArray(stored?.declaredIds) ? stored.declaredIds : [];
+    const declaredIds = conditionIds(stored?.declaredIds);
     const note = typeof stored?.note === "string" ? stored.note.slice(0, 4_000) : "";
-    const patientVisibleIds = Array.isArray(stored?.patientVisibleIds)
-      ? stored.patientVisibleIds
-      : inferConditionIds(note, declaredIds);
+    // Legacy patientVisibleIds/visibleIds may contain free-text threshold inference.
+    const patientVisibleIds = [...declaredIds];
+    const restored = restoredImportedTransfer(stored);
+    const clinicalConditionIds = restored?.clinicalConditionIds ?? [];
+    const visibleIds = [...new Set([...patientVisibleIds, ...clinicalConditionIds])];
     return {
       declaredIds,
       patientVisibleIds,
-      clinicalConditionIds: Array.isArray(stored?.clinicalConditionIds) ? stored.clinicalConditionIds : [],
-      visibleIds: Array.isArray(stored?.visibleIds) ? stored.visibleIds : [],
-      measurements: Array.isArray(stored?.measurements) ? stored.measurements : [],
-      isDemo: stored?.isDemo === true,
+      clinicalConditionIds,
+      clinicalConditions: restored?.clinicalConditions ?? [],
+      clinicalMeasurements: restored?.clinicalMeasurements ?? [],
+      visibleIds,
+      measurements: restored?.clinicalMeasurements ?? [],
+      transfer: restored?.transfer ?? null,
+      isDemo: false,
       note,
     };
   } catch {
@@ -121,8 +253,11 @@ function readSession() {
       declaredIds: [],
       patientVisibleIds: [],
       clinicalConditionIds: [],
+      clinicalConditions: [],
+      clinicalMeasurements: [],
       visibleIds: [],
       measurements: [],
+      transfer: null,
       isDemo: false,
       note: "",
     };
@@ -168,7 +303,7 @@ function selectedProvider() {
 }
 
 function providerLabel(provider = selectedProvider()) {
-  return provider === "frontier" ? "프론티어 AI" : "로컬 AI";
+  return provider === "frontier" ? "외부 모델" : "이 기기 모델";
 }
 
 function setAssistantStatus(message, state = "") {
@@ -223,7 +358,7 @@ function renderQuestions(questions, initialSelectionId, fingerprint) {
         "dd",
         "",
         item.origin === "model"
-          ? `${brief.provider === "frontier" ? "프론티어 AI" : "로컬 AI"} 제안 · 환자 확인 필요`
+          ? `${providerLabel(brief.provider)} 제안 · 환자 확인 필요`
           : "결정론적 규칙 기반",
       ),
       createTextElement("dt", "", "왜 확인하나요"),
@@ -270,9 +405,17 @@ function renderSignals(signals) {
     const dot = createTextElement("span", "signal-dot", "");
     dot.setAttribute("aria-hidden", "true");
     const copy = document.createElement("div");
+    const importedConditionId = typeof signal.id === "string" && signal.id.startsWith("condition:")
+      ? signal.id.slice("condition:".length)
+      : "";
+    const basis = importedConditionId && session.clinicalConditionIds.includes(importedConditionId)
+      ? "파일에 의료진 확정으로 표시 · 발행기관·변조 미검증"
+      : typeof signal.id === "string" && signal.id.startsWith("measurement:") && session.clinicalMeasurements.length > 0
+        ? `${signal.basis} · 환자 전달 파일 · 발행기관·변조 미검증`
+        : signal.basis;
     copy.append(
       createTextElement("strong", "", signal.label),
-      createTextElement("p", "", signal.basis),
+      createTextElement("p", "", basis),
     );
     item.append(dot, copy);
     return item;
@@ -283,18 +426,19 @@ function renderSignals(signals) {
 
 function renderSnapshot() {
   const snapshot = connectedClinicalSnapshot();
-  refs.exportSnapshot.disabled = !snapshot;
+  if (refs.exportSnapshot) refs.exportSnapshot.disabled = true;
+  if (!refs.snapshotStatus || !refs.connectionBadge || !refs.snapshotCounts) return;
   refs.snapshotStatus.classList.toggle("is-connected", Boolean(snapshot));
   if (!snapshot) {
-    refs.connectionBadge.textContent = session.isDemo ? "예시 모드" : "연결 대기";
+    refs.connectionBadge.textContent = session.isDemo ? "예시 모드" : "파일 가져오기 대기";
     refs.connectionBadge.dataset.state = session.isDemo ? "demo" : "empty";
     refs.snapshotStatus.textContent = session.isDemo
-      ? "예시 데이터 보는 중 · 실제 EMR 연결 기록과 섞지 않습니다."
-      : "아직 서명·확정된 EMR 정제 기록이 연결되지 않았습니다.";
+      ? "예시 데이터만 사용 중입니다. 실제 환자 전달 파일·내보내기·AI 전송은 차단됩니다."
+      : "건강 지도에서 환자 전달 JSON과 별도 확인 코드를 직접 확인해 가져오세요.";
     refs.snapshotCounts.replaceChildren();
     return;
   }
-  refs.connectionBadge.textContent = "정제 기록 연결됨";
+  refs.connectionBadge.textContent = "환자 전달 파일 가져옴";
   refs.connectionBadge.dataset.state = "connected";
   const preparedAt = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -303,11 +447,10 @@ function renderSnapshot() {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(snapshot.preparedAt));
-  refs.snapshotStatus.textContent = `${preparedAt}에 준비된 서명·확정 기록이 자동 연결되었습니다.`;
+  refs.snapshotStatus.textContent = `${preparedAt}에 내보낸 환자 전달 파일을 명시적으로 가져왔습니다. 파일에 의료진 확정으로 표시 · 발행기관·변조 미검증.`;
   refs.snapshotCounts.replaceChildren(
     createDefinitionRow("건강 항목", `${snapshot.healthMap.conditions.length}개`),
     createDefinitionRow("최종 측정", `${snapshot.healthMap.measurements.length}개`),
-    createDefinitionRow("서명 처방", `${snapshot.medications.length}개`),
   );
 }
 
@@ -345,16 +488,14 @@ function updateActionAvailability() {
   }
   const frontierReady = provider !== "frontier" || refs.frontierConsent.checked;
   const providerReady = provider !== "local" || localAssistantAvailable;
-  refs.runAssistant.disabled = assistantBusy || !hasEvidence || !frontierReady || !providerReady;
+  refs.runAssistant.disabled = session.isDemo || assistantBusy || !hasEvidence || !frontierReady || !providerReady;
   refs.runAssistant.textContent = assistantBusy
     ? `${providerLabel(provider)} 질문 생성 중…`
     : `${providerLabel(provider)}로 질문 제안`;
   refs.useRules.disabled = assistantBusy || brief.kind === "rule-based";
   refs.printBrief.disabled = brief.questions.length === 0;
-  refs.shareBrief.disabled = assistantBusy
-    || session.isDemo
-    || !connectedClinicalSnapshot()
-    || !selectedQuestionId;
+  if (refs.shareBrief) refs.shareBrief.disabled = session.isDemo || assistantBusy || !selectedQuestionId;
+  if (refs.exportSnapshot) refs.exportSnapshot.disabled = true;
 }
 
 function resetToRules(message = "정제 기록에 연결된 결정론적 규칙 질문을 표시합니다.") {
@@ -371,33 +512,51 @@ function syncProviderControls({ announce = false } = {}) {
   if (provider !== "frontier") refs.frontierConsent.checked = false;
   if (announce || (provider === "local" && !localAssistantAvailable)) {
     setAssistantStatus(provider === "frontier"
-      ? "외부 전송 범위를 확인하고 동의한 뒤에만 프론티어 AI 요청을 보냅니다."
+      ? "가져온 확정 표시 질환·최종 측정값과 직접 적은 최근 변화의 외부 전송 범위를 확인하고 동의한 뒤에만 외부 모델 요청을 보냅니다."
       : localAssistantAvailable
-        ? "정제 항목은 이 기기의 로컬 Ollama에만 전달하며, 실패하면 규칙 질문을 유지합니다."
-        : "공개 미리보기에서는 로컬 AI 전송을 차단합니다. 규칙 기반 질문을 사용하거나, 동의 후 프론티어 AI를 선택하세요.");
+        ? "정제 항목은 이 기기에서 실행하는 Ollama에만 전달하며, 실패하면 규칙 질문을 유지합니다."
+        : "공개 미리보기에서는 이 기기 모델 요청을 차단합니다. 규칙 기반 질문을 사용하거나, 동의 후 외부 모델을 선택하세요.");
   }
   updateActionAvailability();
 }
 
 async function runPatientAssistant() {
   if (assistantBusy) return;
+  if (session.isDemo) {
+    setAssistantStatus("예시 모드에서는 이 기기 모델·외부 모델로 데이터를 전송하지 않습니다.", "error");
+    updateActionAvailability();
+    return;
+  }
   const provider = selectedProvider();
   if (provider === "local" && !localAssistantAvailable) {
     setAssistantStatus(
-      "로컬 AI는 localhost에서 실행할 때만 사용할 수 있습니다. 정제 기록을 이 서버로 보내지 않았습니다.",
+      "이 기기 모델은 localhost에서 실행할 때만 사용할 수 있습니다. 정제 기록을 이 서버로 보내지 않았습니다.",
       "error",
     );
     updateActionAvailability();
     return;
   }
   const sceneAtRequest = currentScene();
-  const bridgeChannelAtRequest = bridgeState?.channelId ?? "";
   let request;
   try {
     request = createPatientQuestionRequest(sceneAtRequest, refs.selfReport.value, {
       provider,
       frontierConsent: refs.frontierConsent.checked,
     });
+    if (request.clinicalSnapshot) {
+      const { medications: _unsupportedMedications, ...snapshot } = request.clinicalSnapshot;
+      request = {
+        ...request,
+        clinicalSnapshot: {
+          ...snapshot,
+          source: "unsigned-local-export",
+          summary: {
+            includedConditions: snapshot.healthMap.conditions.length,
+            includedMeasurements: snapshot.healthMap.measurements.length,
+          },
+        },
+      };
+    }
   } catch (error) {
     setAssistantStatus(error instanceof Error ? error.message : "질문 생성 조건을 확인해 주세요.", "error");
     updateActionAvailability();
@@ -417,8 +576,8 @@ async function runPatientAssistant() {
   assistantRequestController = controller;
   setAssistantStatus(
     provider === "frontier"
-      ? "동의한 정제 항목을 프론티어 AI에 보내 질문 초안을 만드는 중입니다."
-      : "정제 항목을 이 기기의 로컬 Ollama로 보내 질문 초안을 만드는 중입니다.",
+      ? "동의한 정제 항목을 외부 모델에 보내 질문 초안을 만드는 중입니다."
+      : "정제 항목을 이 기기에서 실행하는 Ollama로 보내 질문 초안을 만드는 중입니다.",
   );
   updateActionAvailability();
 
@@ -443,7 +602,6 @@ async function runPatientAssistant() {
     const currentContext = createPatientQuestionContext(currentScene(), refs.selfReport.value);
     if (controller.signal.aborted
       || selectedProvider() !== provider
-      || (bridgeState?.channelId ?? "") !== bridgeChannelAtRequest
       || patientQuestionContextFingerprint(currentContext) !== requestFingerprint) {
       return;
     }
@@ -464,7 +622,7 @@ async function runPatientAssistant() {
     setAssistantStatus(
       provider === "frontier"
         ? `${error instanceof Error ? error.message : "외부 모델 요청에 실패했습니다."} 규칙 기반 질문을 유지합니다.`
-        : `${error instanceof Error ? error.message : "로컬 AI를 사용할 수 없습니다."} 외부 전송 없이 규칙 기반 질문을 유지합니다.`,
+        : `${error instanceof Error ? error.message : "이 기기 모델을 사용할 수 없습니다."} 외부 전송 없이 규칙 기반 질문을 유지합니다.`,
       "error",
     );
   } finally {
@@ -475,78 +633,36 @@ async function runPatientAssistant() {
   }
 }
 
-function sharePatientQuestions() {
+async function copySelectedQuestion() {
   if (session.isDemo) {
-    setAssistantStatus("예시 질문은 의료진에게 공유되지 않습니다.", "error");
+    setAssistantStatus("예시 질문은 클립보드로 내보내지 않습니다.", "error");
     return;
   }
-  if (!connectedClinicalSnapshot()) {
-    setAssistantStatus("먼저 EMR에서 서명·확정된 정제 기록을 연결해 주세요.", "error");
+  const selected = brief.questions.find(({ id }) => id === selectedQuestionId);
+  if (!selected) {
+    setAssistantStatus("복사할 질문을 먼저 선택해 주세요.", "error");
     return;
   }
-  if (!selectedQuestionId) {
-    setAssistantStatus("의료진에게 먼저 보여 줄 질문을 하나 선택해 주세요.", "error");
-    return;
-  }
-  try {
-    const input = createCareBridgePatientBriefInput(
-      currentScene(),
-      brief,
-      selectedQuestionId,
-    );
-    bridgeState = publishPatientBrief(createPatientBrief(input), {
-      expectedChannelId: bridgeState.channelId,
-      expectedClinicalFingerprint: clinicalSnapshotFingerprint(bridgeState.clinical.snapshot),
-    });
-    setAssistantStatus(
-      "선택한 질문을 맨 앞에 두고 정제 요약과 질문 근거를 의료진 EMR에 공유했습니다. 확정 차트에는 자동 반영되지 않습니다.",
-      "success",
-    );
-    updateActionAvailability();
-  } catch (error) {
-    setAssistantStatus(
-      error instanceof Error ? error.message : "의료진에게 질문을 공유하지 못했습니다.",
-      "error",
-    );
-  }
-}
-
-function downloadClinicalSnapshot() {
-  const snapshot = connectedClinicalSnapshot();
-  if (!snapshot) {
-    setAssistantStatus("내보낼 서명 완료 정제 기록이 없습니다.", "error");
+  if (typeof navigator.clipboard?.writeText !== "function") {
+    setAssistantStatus("이 브라우저에서는 클립보드 복사를 사용할 수 없습니다. 브리프 인쇄를 이용해 주세요.", "error");
     return;
   }
   try {
-    const exportedAt = new Date();
-    const ownedCopy = createPatientOwnedJson(snapshot, exportedAt);
-    const blob = new Blob([JSON.stringify(ownedCopy, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = patientOwnedJsonFilename(exportedAt);
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    setAssistantStatus("식별정보와 EMR 원문을 제외한 환자 소유 정제 JSON을 내보냈습니다.", "success");
-  } catch (error) {
-    setAssistantStatus(error instanceof Error ? error.message : "정제 기록을 내보내지 못했습니다.", "error");
+    await navigator.clipboard.writeText(selected.question);
+    setAssistantStatus("선택한 질문 한 개를 이 기기의 클립보드에 복사했습니다. EMR이나 서버로 자동 공유하지 않았습니다.", "success");
+  } catch {
+    setAssistantStatus("클립보드 권한이 없어 복사하지 못했습니다. 브리프 인쇄를 이용해 주세요.", "error");
   }
 }
 
-function refreshFromBridge({ announce = true } = {}) {
-  const next = readCareBridge();
-  const nextFingerprint = `${next?.channelId ?? ""}:${clinicalSnapshotFingerprint(next?.clinical?.snapshot)}`;
-  const clinicalChanged = nextFingerprint !== bridgeClinicalFingerprint;
-  bridgeState = next;
-  bridgeClinicalFingerprint = nextFingerprint;
+function refreshFromSession({ announce = true } = {}) {
+  session = readSession();
   renderSnapshot();
-  if (clinicalChanged || announce) {
-    if (clinicalChanged) refs.frontierConsent.checked = false;
-    resetToRules(clinicalFactCount(next?.clinical?.snapshot) > 0
-      ? "서명·확정된 최신 정제 기록을 확인해 규칙 질문을 갱신했습니다."
-      : "연결된 서명·확정 기록이 아직 없습니다. 최근 변화를 직접 적어 규칙 질문을 준비할 수 있습니다.");
+  if (announce) {
+    refs.frontierConsent.checked = false;
+    resetToRules(connectedClinicalSnapshot()
+      ? "명시적으로 가져온 환자 전달 기록을 다시 확인해 규칙 질문을 갱신했습니다."
+      : "가져온 환자 전달 기록이 없습니다. 건강 지도에서 파일과 별도 확인 코드를 확인하세요.");
   } else {
     updateActionAvailability();
   }
@@ -561,9 +677,9 @@ refs.demoMode.hidden = !session.isDemo;
 refs.printBrief.addEventListener("click", () => window.print());
 refs.runAssistant.addEventListener("click", runPatientAssistant);
 refs.useRules.addEventListener("click", () => resetToRules());
-refs.shareBrief.addEventListener("click", sharePatientQuestions);
-refs.exportSnapshot.addEventListener("click", downloadClinicalSnapshot);
-refs.refreshButtons.forEach((button) => button.addEventListener("click", () => refreshFromBridge()));
+refs.shareBrief?.addEventListener("click", copySelectedQuestion);
+if (refs.exportSnapshot) refs.exportSnapshot.disabled = true;
+refs.refreshButtons.forEach((button) => button.addEventListener("click", () => refreshFromSession()));
 refs.providerInputs.forEach((input) => input.addEventListener("change", () => {
   assistantRequestController?.abort();
   resetToRules();
@@ -572,14 +688,13 @@ refs.providerInputs.forEach((input) => input.addEventListener("change", () => {
 refs.frontierConsent.addEventListener("change", updateActionAvailability);
 refs.selfReport.addEventListener("input", () => {
   refs.frontierConsent.checked = false;
-  resetToRules("최근 변화는 규칙 질문에 반영했습니다. AI로 다듬으려면 생성 방식을 확인하고 버튼을 누르세요.");
+  resetToRules("최근 변화는 규칙 질문에 반영했습니다. 모델로 다듬으려면 생성 방식을 확인하고 버튼을 누르세요.");
   syncProviderControls();
 });
 
-const unsubscribeBridge = subscribeCareBridge(() => refreshFromBridge({ announce: false }));
+retireLegacyCareBridge();
 window.addEventListener("pagehide", () => {
   assistantRequestController?.abort();
-  unsubscribeBridge();
 }, { once: true });
 
 renderSnapshot();

@@ -3,11 +3,15 @@ import {
   compareSnapshots,
   createJourneyBackup,
   createJourneyNarrative,
+  JOURNEY_TIME_ZONE,
   normalizeJourney,
   parseJourneyBackup,
 } from "/journey-model.js";
+import { preserveSampleNavigation } from "/sample-navigation.js";
 
 const storageKey = "vitagraph-journey";
+const sampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
+preserveSampleNavigation(sampleMode);
 const elements = {
   timeline: document.querySelector("#journeyTimeline"), empty: document.querySelector("#journeyEmpty"),
   title: document.querySelector("#comparisonTitle"), copy: document.querySelector("#comparisonCopy"),
@@ -25,13 +29,20 @@ const elements = {
 };
 
 function readJourney() {
+  if (sampleMode) return [];
   try { return normalizeJourney(JSON.parse(localStorage.getItem(storageKey) ?? "[]")); } catch { return []; }
 }
 let journey = readJourney();
 
-function persistJourney() {
-  if (journey.length === 0) localStorage.removeItem(storageKey);
-  else localStorage.setItem(storageKey, JSON.stringify(journey));
+function persistJourney(nextJourney) {
+  if (sampleMode) return false;
+  try {
+    if (nextJourney.length === 0) localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey, JSON.stringify(nextJourney));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function setTransferStatus(message, state = "") {
@@ -39,10 +50,38 @@ function setTransferStatus(message, state = "") {
   elements.transferStatus.className = `journey-transfer-status${state ? ` is-${state}` : ""}`;
 }
 
-function conditionPills(target, ids, emptyText) {
+const provenanceLabels = Object.freeze({
+  "clinician-confirmed": "의료진 확정",
+  "clinician-confirmed-unsigned-import": "파일에 의료진 확정으로 표시 · 발행기관·변조 미검증",
+  "patient-declared": "환자 진술",
+  "unverified-import": "백업 복원·미검증",
+  unverified: "출처 미확인",
+});
+
+function conditionPills(target, values, emptyText) {
   target.replaceChildren();
-  if (ids.length === 0) { const span = document.createElement("span"); span.className = "change-empty"; span.textContent = emptyText; target.append(span); return; }
-  for (const id of ids) { const span = document.createElement("span"); span.className = `journey-pill tone-${CONDITIONS[id].tone}`; span.textContent = CONDITIONS[id].label; target.append(span); }
+  if (values.length === 0) {
+    if (emptyText) { const span = document.createElement("span"); span.className = "change-empty"; span.textContent = emptyText; target.append(span); }
+    return;
+  }
+  for (const value of values) {
+    const entry = typeof value === "string" ? { id: value, provenanceKind: "" } : value;
+    if (!CONDITIONS[entry?.id]) continue;
+    const span = document.createElement("span");
+    span.className = `journey-pill tone-${CONDITIONS[entry.id].tone}`;
+    const provenance = provenanceLabels[entry.provenanceKind];
+    span.textContent = `${CONDITIONS[entry.id].label}${provenance ? ` · ${provenance}` : ""}`;
+    target.append(span);
+  }
+}
+
+function appendPatternSignals(target, values) {
+  for (const signal of values) {
+    const span = document.createElement("span");
+    span.className = "journey-pill";
+    span.textContent = `입력 확인 신호 · 진단 아님 · ${signal.label} ${signal.value}${signal.unit ? ` ${signal.unit}` : ""}`;
+    target.append(span);
+  }
 }
 
 const numberFormatter = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 4 });
@@ -88,7 +127,7 @@ function renderStoryContexts(contexts) {
     elements.contexts.replaceChildren(textElement(
       "p",
       "journey-story-empty",
-      "현재 신호 조합에서 연결할 수 있는 일반 참고 근거가 없습니다.",
+      "현재 질환 항목 조합에서 연결할 수 있는 일반 참고 근거가 없습니다.",
     ));
     return;
   }
@@ -175,8 +214,8 @@ function renderComparison() {
   const changes = compareSnapshots(before, after);
   const displayDate = (value) => value.replaceAll("-", "\u2011");
   elements.title.textContent = `${displayDate(before.date)} → ${displayDate(after.date)}`;
-  elements.copy.textContent = "최근 두 기록에 포함된 신호의 차이입니다. 임상적 변화로 해석하지 않습니다.";
-  conditionPills(elements.added, changes.added, "새 신호 없음"); conditionPills(elements.steady, changes.unchanged, "유지 신호 없음"); conditionPills(elements.removed, changes.removed, "빠진 신호 없음");
+  elements.copy.textContent = "아래 열은 질환 항목의 차이입니다. 입력 확인 신호의 추가·삭제는 위 기록 비교에 별도로 표시하며, 모두 임상적 변화로 해석하지 않습니다.";
+  conditionPills(elements.added, changes.added, "새 질환 항목 없음"); conditionPills(elements.steady, changes.unchanged, "유지 질환 항목 없음"); conditionPills(elements.removed, changes.removed, "빠진 질환 항목 없음");
   renderMeasurementChanges(changes.measurementChanges);
 }
 
@@ -188,7 +227,10 @@ function snapshotCard(snapshot, index) {
   const date = document.createElement("time"); date.dateTime = snapshot.date; date.textContent = snapshot.date;
   const source = document.createElement("span"); source.textContent = snapshot.source; meta.append(date, source);
   const signals = document.createElement("div"); signals.className = "snapshot-signals";
-  conditionPills(signals, snapshot.conditionIds, "표시된 질환 신호 없음");
+  const conditionEntries = Array.isArray(snapshot.conditionEntries) ? snapshot.conditionEntries : [];
+  const patternSignals = Array.isArray(snapshot.signals) ? snapshot.signals : [];
+  conditionPills(signals, conditionEntries, patternSignals.length ? "" : "표시된 항목 없음");
+  appendPatternSignals(signals, patternSignals);
   const measures = document.createElement("div"); measures.className = "snapshot-measures";
   for (const item of snapshot.measurements) {
     const row = document.createElement("span");
@@ -201,8 +243,12 @@ function snapshotCard(snapshot, index) {
   remove.setAttribute("aria-label", `${snapshot.date} 기록 삭제`);
   remove.addEventListener("click", () => {
     if (!window.confirm(`${snapshot.date} Journey 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
-    journey = journey.filter(({ id }) => id !== snapshot.id);
-    persistJourney();
+    const nextJourney = journey.filter(({ id }) => id !== snapshot.id);
+    if (!persistJourney(nextJourney)) {
+      setTransferStatus("브라우저 저장소를 사용할 수 없어 Journey 기록을 삭제하지 않았습니다.", "error");
+      return;
+    }
+    journey = nextJourney;
     render();
     setTransferStatus(`${snapshot.date} Journey 기록을 삭제했습니다.`, "success");
   });
@@ -223,12 +269,16 @@ elements.reviewChanges.addEventListener("click", () => {
 });
 
 elements.export.addEventListener("click", () => {
+  if (sampleMode) {
+    setTransferStatus("예시 모드에서는 Journey 내보내기를 사용할 수 없습니다.", "error");
+    return;
+  }
   const backup = createJourneyBackup(journey);
   const blob = new Blob([`${JSON.stringify(backup, null, 2)}\n`], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `vitagraph-journey-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `vitagraph-journey-${new Intl.DateTimeFormat("en-CA", { timeZone: JOURNEY_TIME_ZONE }).format(new Date())}.json`;
   document.body.append(link);
   link.click();
   link.remove();
@@ -236,8 +286,19 @@ elements.export.addEventListener("click", () => {
   setTransferStatus(`Journey 기록 ${journey.length}개를 개인 백업 JSON으로 내보냈습니다. EMR 연결 기록에는 영향을 주지 않습니다.`, "success");
 });
 
-elements.importTrigger.addEventListener("click", () => elements.importInput.click());
+elements.importTrigger.addEventListener("click", () => {
+  if (sampleMode) {
+    setTransferStatus("예시 모드에서는 Journey 백업을 복원할 수 없습니다.", "error");
+    return;
+  }
+  elements.importInput.click();
+});
 elements.importInput.addEventListener("change", async () => {
+  if (sampleMode) {
+    elements.importInput.value = "";
+    setTransferStatus("예시 모드에서는 Journey 백업을 복원할 수 없습니다.", "error");
+    return;
+  }
   const [file] = elements.importInput.files;
   if (!file) return;
   setTransferStatus("백업 파일을 확인하고 있습니다.");
@@ -249,10 +310,10 @@ elements.importInput.addEventListener("change", async () => {
       setTransferStatus("Journey 백업 복원을 취소했습니다.");
       return;
     }
+    if (!persistJourney(imported)) throw new Error("브라우저 저장소를 사용할 수 없어 Journey 백업을 복원하지 않았습니다.");
     journey = imported;
-    persistJourney();
     render();
-    setTransferStatus(`Journey 백업에서 기록 ${journey.length}개를 복원해 현재 Journey를 교체했습니다.`, "success");
+    setTransferStatus(`Journey 백업에서 기록 ${journey.length}개를 복원했습니다. 모든 복원 항목의 원본 출처는 미검증입니다.`, "success");
   } catch (error) {
     const message = error instanceof SyntaxError
       ? "Journey 백업 JSON을 읽을 수 없습니다."
@@ -263,5 +324,25 @@ elements.importInput.addEventListener("change", async () => {
   }
 });
 
-elements.clear.addEventListener("click", () => { if (!window.confirm("이 브라우저에 저장된 Journey 기록을 모두 지울까요? 내보내지 않은 기록은 복구할 수 없습니다.")) return; journey = []; persistJourney(); render(); setTransferStatus("이 브라우저의 Journey 기록을 모두 지웠습니다.", "success"); });
+elements.clear.addEventListener("click", () => {
+  if (sampleMode) {
+    setTransferStatus("예시 모드에서는 저장된 Journey를 삭제하지 않습니다.", "error");
+    return;
+  }
+  if (!window.confirm("이 브라우저에 저장된 Journey 기록을 모두 지울까요? 내보내지 않은 기록은 복구할 수 없습니다.")) return;
+  if (!persistJourney([])) {
+    setTransferStatus("브라우저 저장소를 사용할 수 없어 Journey 기록을 지우지 않았습니다.", "error");
+    return;
+  }
+  journey = [];
+  render();
+  setTransferStatus("이 브라우저의 Journey 기록을 모두 지웠습니다.", "success");
+});
+if (sampleMode) {
+  elements.importTrigger.disabled = true;
+  elements.importInput.disabled = true;
+  elements.export.disabled = true;
+  elements.clear.hidden = true;
+  setTransferStatus("예시 모드 · 기존 Journey를 읽거나 변경하지 않습니다.");
+}
 render();

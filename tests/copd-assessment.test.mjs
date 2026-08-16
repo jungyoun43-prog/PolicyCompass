@@ -34,6 +34,16 @@ const context = {
   symptoms: [{ label: "만성 기침", status: "VERIFIED" }],
 };
 
+function withVerifiedQualityScope(profile) {
+  profile.qualityScope = {
+    officialDenominatorVerified: true,
+    officialExclusionsReviewed: true,
+    officialExclusionApplies: false,
+    previousPeriodSameInstitutionVisitVerified: true,
+  };
+  return profile;
+}
+
 test("ratio normalization accepts explicit percent and rejects invalid units", () => {
   assert.equal(normalizeSpirometryRatio("64%"), 0.64);
   assert.equal(normalizeSpirometryRatio(64, "%"), 0.64);
@@ -113,7 +123,7 @@ test("pre-BD, incomplete, bad quality and unverified external PFT stay insuffici
 });
 
 test("HIRA result has exactly three independent patient contribution metrics and no institution score fields", () => {
-  const profile = getCopdDemoProfile("demo-patient-lee");
+  const profile = withVerifiedQualityScope(getCopdDemoProfile("demo-patient-lee"));
   for (const session of profile.pftSessions) session.quality = { status: "ACCEPTABLE" };
   const result = evaluateHiraCopd2026Contribution(profile);
   assert.equal(result.target.eligible, true);
@@ -129,13 +139,13 @@ test("HIRA result has exactly three independent patient contribution metrics and
 });
 
 test("HIRA PFT contribution uses verified code/date provenance, not the GOLD ratio", () => {
-  const profile = getCopdDemoProfile("demo-patient-lee");
+  const profile = withVerifiedQualityScope(getCopdDemoProfile("demo-patient-lee"));
   profile.pftSessions[0].postBronchodilator.fev1Fvc = 0.90;
   profile.pftSessions[0].quality = { status: "ACCEPTABLE" };
   profile.pftSessions[1].quality = { status: "ACCEPTABLE" };
   assert.equal(evaluateHiraCopd2026Contribution(profile).metrics[0].status, "included");
 
-  const external = getCopdDemoProfile("demo-patient-jung");
+  const external = withVerifiedQualityScope(getCopdDemoProfile("demo-patient-jung"));
   external.pftSessions[0].quality = { status: "ACCEPTABLE" };
   const result = evaluateHiraCopd2026Contribution(external);
   assert.equal(result.target.eligible, true);
@@ -144,7 +154,7 @@ test("HIRA PFT contribution uses verified code/date provenance, not the GOLD rat
 });
 
 test("changing GOLD sessions does not mutate HIRA contribution and vice versa", () => {
-  const profile = getCopdDemoProfile("demo-patient-lee");
+  const profile = withVerifiedQualityScope(getCopdDemoProfile("demo-patient-lee"));
   for (const session of profile.pftSessions) session.quality = { status: "ACCEPTABLE" };
   const before = evaluateHiraCopd2026Contribution(profile);
   const changed = structuredClone(profile);
@@ -153,4 +163,13 @@ test("changing GOLD sessions does not mutate HIRA contribution and vice versa", 
   const after = evaluateHiraCopd2026Contribution(changed);
   assert.equal(gold.clinicianReviewRequired, true);
   assert.deepEqual(after.metrics.map(({ status }) => status), before.metrics.map(({ status }) => status));
+});
+
+test("공식 분모·제외조건이 미확인이면 COPD 평가대상을 eligible로 확정하지 않는다", () => {
+  const profile = getCopdDemoProfile("demo-patient-lee");
+  const result = evaluateHiraCopd2026Contribution(profile);
+  assert.equal(result.status, "insufficient");
+  assert.equal(result.target.eligible, false);
+  assert.match(result.target.reason, /공식 분모.*제외조건/);
+  assert.ok(result.metrics.every(({ status }) => status === "insufficient"));
 });

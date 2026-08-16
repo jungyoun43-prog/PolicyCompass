@@ -93,7 +93,7 @@ test("임상 워크스페이스 빈 상태 이미지를 투명 PNG 자산으로 
   assert.equal(signature, "89504e470d0a1a0a");
 });
 
-test("Journey의 양방향 진료 준비 일러스트를 WebP 자산으로 제공한다", async () => {
+test("Journey의 진료 준비 일러스트를 WebP 자산으로 제공한다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
 
   const response = await worker.fetch(

@@ -354,34 +354,40 @@ test("자기보고 정리는 길이와 흔한 직접식별자 마스킹 경계�
   assert.doesNotMatch(text, /김영희|서울시 종로구|900101-5234567|010-1111-2222/);
 });
 
-test("진료 준비 화면은 자동 연결·provider 동의·명시 공유·선택 내보내기 흐름을 노출한다", async () => {
+test("진료 준비 화면은 명시적으로 가져온 기록·모델 동의·로컬 질문 복사 흐름만 노출한다", async () => {
   const [html, client, css] = await Promise.all([
     readFile(new URL("../src/insights.html", import.meta.url), "utf8"),
     readFile(new URL("../src/insights.js", import.meta.url), "utf8"),
     readFile(new URL("../src/insights.css", import.meta.url), "utf8"),
   ]);
 
-  assert.match(html, /EMR에서 서명하거나 의료진이 확인·확정한 기록 중 식별정보를 제외/);
+  assert.match(html, /환자용 기록을 직접 가져오면 질문 브리프가 시작됩니다/);
+  assert.match(html, /파일과 별도 확인 코드를 대조/);
   assert.match(html, /id="patientSelfReport"[^>]*maxlength="1000"/);
   assert.match(html, /무엇을 먹어도 될까요/);
   assert.match(html, /운동은 일주일에 몇 번·몇 분 하면 좋을까요/);
   assert.match(html, /약은 언제 먹고, 검사 전에는 무엇을 준비할까요/);
   assert.match(html, /name="question-provider" value="local" checked/);
+  assert.match(html, /이 기기 모델/);
   assert.match(html, /name="question-provider" value="frontier"/);
+  assert.match(html, /외부 모델/);
   assert.match(html, /id="frontierConsent"/);
-  assert.match(html, /외부 모델 서비스로 전송/);
+  assert.match(html, /파일에 의료진 확정으로 표시된 질환·최종 측정값과 위에 직접 적은 최근 변화가 모델 서비스로 전송/);
+  assert.match(html, /파일의 발행기관과 변조 여부는 검증되지 않습니다/);
+  assert.doesNotMatch(html, /서명 처방.*모델 서비스로 전송/);
   assert.match(html, /id="sharePatientBrief"[^>]*disabled/);
+  assert.match(html, /선택 질문 복사/);
   assert.match(html, /id="exportClinicalSnapshot"[^>]*disabled/);
-  assert.match(html, /내 정제 기록을 보관하려면/);
-  assert.match(html, /JSON은 병원과 연결하기 위한 업로드 파일이 아니라 환자가 직접 보관·활용하는 사본/);
+  assert.match(html, /Personal은 별도의 정제 JSON을 다시 만들지 않습니다/);
 
   assert.match(client, /fetch\("\/api\/patient-question-assistant"/);
   assert.match(client, /createPatientQuestionRequest/);
-  assert.match(client, /publishPatientBrief\(createPatientBrief\(input\), \{/);
-  assert.match(client, /expectedChannelId: bridgeState\.channelId/);
-  assert.match(client, /expectedClinicalFingerprint: clinicalSnapshotFingerprint\(bridgeState\.clinical\.snapshot\)/);
-  assert.match(client, /createPatientOwnedJson\(snapshot, exportedAt\)/);
+  assert.match(client, /parsePatientTransferPackage/);
+  assert.match(client, /source: "unsigned-local-export"/);
+  assert.match(client, /navigator\.clipboard\?\.writeText/);
+  assert.doesNotMatch(client, /publishPatientBrief|readCareBridge|subscribeCareBridge|createPatientOwnedJson/);
   assert.match(client, /session\.isDemo[\s\S]*?shareBrief\.disabled/);
+  assert.match(client, /예시 모드에서는 이 기기 모델·외부 모델로 데이터를 전송하지 않습니다/);
   assert.match(css, /\.frontier-consent\[hidden\]/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.assistant-provider/);
 });

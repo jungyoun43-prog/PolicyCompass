@@ -138,7 +138,8 @@ await runBrowserSmoke({
     && disclosure.after.calculationHeading === "시간·횟수 계산"
     && /시행 횟수|기간·횟수 미집계/.test(disclosure.after.calculation ?? "")
     && disclosure.after.evidenceHeading === "EMR에서 확인한 사실"
-    && /확정 차트 근거|확인되지 않은 후보/.test(disclosure.after.evidence ?? "")
+    && /고혈압[\s\S]*직접 입력 · 의료진 검토 확정/.test(disclosure.after.evidence ?? "")
+    && /혈압[\s\S]*직접 입력 · 의료진 검토 확정/.test(disclosure.after.evidence ?? "")
     && disclosure.after.inPersistentHost === true
     && disclosure.after.hostActive === "true"
     && disclosure.after.hostPosition === "sticky"
@@ -230,7 +231,10 @@ await runBrowserSmoke({
   assert(JSON.stringify(afterDrag.summaryCounts) === JSON.stringify(initial.summaryCounts), "Saving the drag review changed the immutable rule summary.");
   assert(afterDrag.auditAction === "claim-review.stage.evidence" && afterDrag.auditEntityId === initial.cardId, "Saved drag review was not audited against the evaluation.");
   assert(/규칙 판정 .* 유지/.test(afterDrag.auditDetail), "Review audit does not state that the calculated result was preserved.");
-  assert(/자동 규칙 판정 .*변경되지 않았습니다/.test(afterDrag.live), "Assistive live status does not explain the safe move semantics.");
+  assert(
+    /자동 규칙 판정[\s\S]*변경되지 않았습니다/.test(afterDrag.live),
+    `Assistive live status does not explain the safe move semantics: ${JSON.stringify(afterDrag.live)}`,
+  );
   assert(afterDrag.durableStage === "evidence" && afterDrag.durableAssignee === "김심사" && afterDrag.durableReviewer === "이검토", "Saved drag review did not persist the stage, assignee, and reviewer together.");
   assert(afterDrag.durableCalculatedStatus === initial.computedStatus && afterDrag.fingerprintLength > 0, "Durable review state did not bind the stage to its calculated result fingerprint.");
 
@@ -333,30 +337,18 @@ await runBrowserSmoke({
     let saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
     const patientId = saved.selectedPatientId;
     const eventDate = new Date().toISOString().slice(0, 10);
-    const conditionId = 'claim-smoke-i10';
-    const observationId = 'claim-smoke-bp';
+    const serviceId = 'claim-smoke-follow-up-service';
     saved = appendPatientEvent(saved, patientId, {
-      id: conditionId,
-      type: 'condition',
+      id: serviceId,
+      type: 'procedure',
       date: eventDate,
-      system: 'urn:kr:kcd',
-      code: 'I10',
-      label: '고혈압',
+      system: 'urn:vitagraph:demo:service',
+      code: 'DEMO-BP-FOLLOWUP',
+      label: '고혈압 추적검사',
+      status: 'completed',
       source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
     });
-    saved = confirmPatientEvent(saved, patientId, conditionId);
-    saved = appendPatientEvent(saved, patientId, {
-      id: observationId,
-      type: 'observation',
-      date: eventDate,
-      system: 'http://loinc.org',
-      code: '85354-9',
-      label: '혈압',
-      value: '120/80',
-      unit: 'mmHg',
-      source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
-    });
-    saved = confirmPatientEvent(saved, patientId, observationId);
+    saved = confirmPatientEvent(saved, patientId, serviceId);
     localStorage.setItem('vitagraph-emr-v2', JSON.stringify(saved));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {

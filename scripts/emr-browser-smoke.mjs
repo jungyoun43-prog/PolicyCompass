@@ -405,6 +405,7 @@ try {
   await waitFor("location.pathname === '/emr' && location.search === '' && document.readyState === 'complete' && Boolean(document.getElementById('fhirImport')) && Boolean(document.getElementById('patientBirthDate')?.max)", "EMR did not become ready after navigation.");
   const fhirBundle = {
     resourceType: "Bundle",
+    type: "collection",
     timestamp: "2026-07-19T09:00:00Z",
     entry: [
       {

@@ -8,11 +8,11 @@ const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9228", 10);
 const routes = [
   { route: "/", selector: ".role-card--clinical .role-action", text: "의료진 EMR 열기" },
-  { route: "/patient", selector: ".landing-actions .landing-button--primary", text: "연결 기록으로 시작" },
+  { route: "/patient", selector: ".landing-actions .landing-button--primary", text: "환자용 기록 가져오기" },
   { route: "/map", selector: "#analyzeButton", text: "건강 지도 업데이트" },
-  { route: "/connections", selector: "#sceneEmpty .primary-button", text: "건강 지도에서 연결 확인" },
-  { route: "/insights", selector: "#refreshClinicalSnapshot", text: "연결 기록 다시 확인" },
-  { route: "/journey", selector: "#journeyEmpty .primary-button", text: "첫 지도 만들기" },
+  { route: "/connections", selector: "#connectionsPrimaryEntry", text: "관계 지도 바로 보기", beforeSelector: ".explorer-first-use" },
+  { route: "/insights", selector: "#refreshClinicalSnapshot", text: "가져온 기록 다시 확인" },
+  { route: "/journey", selector: "#journeyEmpty .journey-first-action--primary", text: "첫 지도 만들기", beforeSelector: ".journey-data-tools" },
   { route: "/emr", selector: "#loadDemo", text: "예시 환자 불러오기" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "vitagraph-responsive-primary-"));
@@ -101,6 +101,9 @@ try {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      const secondary = ${JSON.stringify(expectation.beforeSelector ?? "")}
+        ? document.querySelector(${JSON.stringify(expectation.beforeSelector ?? "")})
+        : null;
       return {
         text: element.textContent.replace(/\\s+/g, ' ').trim(),
         top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right,
@@ -110,6 +113,7 @@ try {
         closedDisclosure: Boolean(element.closest('details:not([open])')),
         unobstructed: center === element || element.contains(center),
         documentWidth: document.documentElement.scrollWidth,
+        precedesSecondary: !secondary || Boolean(element.compareDocumentPosition(secondary) & Node.DOCUMENT_POSITION_FOLLOWING),
       };
     })()`, returnByValue: true });
     const action = result.result.value;
@@ -140,6 +144,7 @@ try {
       [action.left >= 0 && action.right <= 390, `primary action clips horizontally (${action.left}-${action.right})`],
       [action.documentWidth <= 390, `document horizontally overflows (${action.documentWidth})`],
       [action.unobstructed, "primary action center is obstructed"],
+      [action.precedesSecondary, `primary action does not precede ${expectation.beforeSelector}`],
       [keyboardFocus.focused, "primary action cannot receive keyboard focus"],
       [keyboardFocus.focusVisible, "primary action has no visible focus indicator"],
     ];

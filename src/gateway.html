@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="서명·확정 기록을 환자용으로 정제하고 진료 질문을 양방향으로 이어 보는 의료진 EMR과 개인 VitaGraph 중 사용할 공간을 선택합니다."
+      content="서명·확정 기록을 환자용 파일로 내보내고 규칙 기반 진료 질문을 준비하는 의료진 EMR과 개인 VitaGraph 중 사용할 공간을 선택합니다."
     />
     <title>VitaGraph | 사용할 공간 선택</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23fbfaf7%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%230b6663%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%230b6663%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%23247f87%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23668a45%27/%3E%3C/svg%3E" />
@@ -48,7 +48,7 @@
         </div>
         <p class="gateway-intro__lead">
           의료진은 EMR에서 진료기록을 확정하고 환자에게 확인할 질문을 준비합니다. 개인은 식별정보가
-          빠진 정제 기록을 확인하고, 다음 진료에서 물어볼 질문을 직접 선택해 공유합니다.
+          빠진 정제 기록을 확인하고, 다음 진료에서 물어볼 질문을 직접 선택해 보여줍니다.
         </p>
       </section>
 
@@ -69,7 +69,7 @@
           <ul class="role-card__features" aria-label="의료진 EMR 주요 기능">
             <li>선택 환자의 임상 기록과 신체·진료과 지도</li>
             <li>진료 완료·로컬 서명·근거 추적</li>
-            <li>환자용 정제 기록 연결과 공유 질문 확인</li>
+            <li>환자용 정제 기록 내보내기와 환자가 직접 전한 질문 확인</li>
           </ul>
           <a class="role-action role-action--primary" href="/emr" data-main-link>
             의료진 EMR 열기
@@ -93,8 +93,8 @@
           </div>
           <ul class="role-card__features" aria-label="개인 VitaGraph 주요 기능">
             <li>개인 건강 지도와 질환 연결 보기</li>
-            <li>로컬 AI 중심의 양방향 진료 질문</li>
-            <li>선택적 프론티어 AI와 내 정제 JSON 내보내기</li>
+            <li>검증 가능한 규칙 기반 진료 질문 정리</li>
+            <li>동의한 실행의 선택적 외부 모델과 로컬 Journey</li>
           </ul>
           <a class="role-action role-action--secondary" href="/patient">
             개인 VitaGraph 열기
@@ -106,17 +106,17 @@
 
       <section class="handoff-panel" aria-labelledby="handoffTitle">
         <div class="handoff-panel__copy">
-          <p class="gateway-eyebrow">SIGNED CARE BRIDGE</p>
-          <h2 id="handoffTitle">서명·확정 기록과 확인 질문이 양방향으로 이어집니다.</h2>
+          <p class="gateway-eyebrow">EXPLICIT RECORD HANDOFF</p>
+          <h2 id="handoffTitle">정제 기록과 확인 질문을 각 사용자가 직접 전달합니다.</h2>
           <p>
-            의료진이 진료를 서명하면 허용된 확정 항목만 환자용으로 정제되어 자동 연결됩니다.
-            환자는 질문 초안을 검토한 뒤 선택한 내용만 의료진에게 공유하며, JSON은 연결 수단이 아니라 환자가 원할 때 내려받는 소유 사본입니다.
+            의료진은 선택 환자와 일회성 확인 코드를 대조한 뒤 허용된 확정 항목만 환자용 파일로 내보냅니다.
+            환자는 파일과 별도 경로로 받은 코드를 확인해 직접 가져오고, 질문 초안을 검토한 뒤 진료에서 직접 전달할 내용만 선택합니다.
           </p>
         </div>
-        <ol class="handoff-steps" aria-label="양방향 진료 준비 순서">
+        <ol class="handoff-steps" aria-label="진료 전 준비 순서">
           <li><span>1</span><strong>EMR 서명·정제</strong><small>식별정보·원문 메모 제외</small></li>
-          <li><span>2</span><strong>환자 질문 준비</strong><small>로컬 기본 · 외부 AI는 동의 후</small></li>
-          <li><span>3</span><strong>서로 확인</strong><small>환자가 선택한 질문만 공유</small></li>
+          <li><span>2</span><strong>환자 확인·가져오기</strong><small>파일과 별도 확인 코드 대조</small></li>
+          <li><span>3</span><strong>진료에서 확인</strong><small>환자가 선택한 질문을 직접 전달</small></li>
         </ol>
       </section>
 

@@ -47,13 +47,12 @@ body.insights-page {
     align-items: flex-start;
     margin-bottom: var(--space-3);
   }
-  .map-page .import-box { padding: var(--space-3); }
-  .map-page .import-box > p { display: none; }
+  .map-page .import-box { padding: 0; }
   .map-page .care-link-box > .care-link-status { display: block; }
-  .map-page .import-box > .import-warning {
+  .map-page .import-box__body > .import-warning {
     display: block;
     margin-top: var(--space-2);
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     line-height: 1.4;
   }
   .map-page .demo-trigger { width: auto; }

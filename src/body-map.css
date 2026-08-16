@@ -20,6 +20,21 @@
   margin-bottom: var(--space-3);
 }
 
+.map-first-use > summary {
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+.map-first-use > summary small {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 620;
+}
+
+.map-first-use .context-disclosure__body {
+  padding-bottom: 0;
+}
+
 .map-first-use__heading .panel-index,
 .map-legend__heading .panel-index {
   margin-bottom: 2px;

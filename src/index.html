@@ -63,14 +63,13 @@
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            내가 확인해 가져온 정제 기록과 직접 적은 증상·검사 수치를 신체 부위,
-            관련 질환, 확인할 관리 항목으로 이어 봅니다.
+            가져온 기록과 직접 적은 신호를 몸의 위치와 연결해 봅니다.
           </p>
           <p class="page-hero__note" data-route-context>
             진단 결과가 아닌 대화 준비용 지도입니다. 최종 판단은 의료진과 함께하세요.
           </p>
           <div class="page-hero__actions">
-            <button class="text-button" id="sourceToggle" type="button">정보 원칙</button>
+            <button class="secondary-button" id="sourceToggle" type="button">정보 원칙 보기</button>
           </div>
         </div>
       </section>
@@ -135,58 +134,66 @@
             </div>
           </form>
 
-          <section class="import-box" id="import-record" aria-labelledby="fhirImportTitle">
-            <div class="import-heading">
-              <div>
+          <details class="import-box" id="import-record" aria-labelledby="fhirImportTitle">
+            <summary class="import-heading">
+              <span class="import-heading__title-group">
                 <span class="import-tag">PATIENT TRANSFER · FILE + CODE</span>
-                <h3 id="fhirImportTitle">환자용 기록 가져오기</h3>
-              </div>
-            </div>
-            <label class="transfer-code-field" for="transferCode">
-              <span>1. 파일과 다른 경로로 받은 확인 코드</span>
+                <span class="import-heading__title" id="fhirImportTitle">환자용 기록 가져오기</span>
+              </span>
+              <span class="import-heading__hint">파일 + 확인 코드</span>
+            </summary>
+            <div class="import-box__body">
+              <label class="transfer-code-field" for="transferCode">
+                <span>1. 파일과 다른 경로로 받은 확인 코드</span>
+                <input
+                  id="transferCode"
+                  name="transferCode"
+                  type="text"
+                  inputmode="text"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  maxlength="33"
+                  pattern="VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}"
+                  placeholder="VG-…"
+                  aria-invalid="false"
+                  aria-errormessage="fhirResult"
+                  aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
+                />
+              </label>
+              <p id="recordImportHelp">확인 코드를 입력하고 환자용 파일을 선택하세요.</p>
               <input
-                id="transferCode"
-                name="transferCode"
-                type="text"
-                inputmode="text"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                maxlength="33"
-                pattern="VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}"
-                placeholder="VG-…"
-                aria-invalid="false"
-                aria-errormessage="fhirResult"
+                id="fhirFile"
+                type="file"
+                accept="application/json,.json"
+                tabindex="-1"
+                aria-label="VitaGraph 환자 전달 JSON 파일"
                 aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
               />
-            </label>
-            <p id="recordImportHelp">
-              의료진이 내 이름과 선택 환자를 대조한 뒤 내보낸 파일만 사용하세요. 코드를 먼저 입력하고 파일을 고른 뒤 마지막 확인을 눌러야 지도가 바뀝니다.
-            </p>
-            <input
-              id="fhirFile"
-              type="file"
-              accept="application/json,.json"
-              tabindex="-1"
-              aria-label="VitaGraph 환자 전달 JSON 파일"
-              aria-describedby="recordImportHelp recordFileStatus recordImportWarning"
-            />
-            <div class="import-file-actions">
-              <button class="import-button" id="selectRecordFile" type="button" aria-controls="fhirFile">
-                2. 기록 파일 선택
-              </button>
-              <button class="primary-button" id="importRecordButton" type="button" disabled>
-                3. 본인 기록 확인 후 교체
-              </button>
+              <div class="import-file-actions">
+                <button class="import-button" id="selectRecordFile" type="button" aria-controls="fhirFile">
+                  2. 기록 파일 선택
+                </button>
+                <button class="primary-button" id="importRecordButton" type="button" disabled>
+                  3. 본인 기록 확인 후 교체
+                </button>
+              </div>
+              <p class="record-file-status" id="recordFileStatus" role="status" aria-live="polite">
+                확인 코드를 먼저 입력한 뒤 환자용 기록 파일을 선택하세요.
+              </p>
+              <p class="import-warning" id="recordImportWarning">
+                <strong>현재 지도에서 아직 Journey에 저장하지 않은 기록은 가져온 내용으로 교체됩니다.</strong> 기존 Journey는 바뀌지 않습니다.
+              </p>
+              <details class="context-disclosure context-disclosure--compact">
+                <summary>파일 확인 시 주의사항</summary>
+                <div class="context-disclosure__body">
+                  <p>파일에는 이름·등록번호가 없습니다. 내 기록인지와 별도 경로의 코드가 맞는지 직접 확인하세요.</p>
+                  <p>평문·미서명 사본이므로 발행기관과 변조 여부는 검증되지 않습니다.</p>
+                </div>
+              </details>
+              <div class="import-result" id="fhirResult" role="status" aria-live="polite" hidden></div>
             </div>
-            <p class="record-file-status" id="recordFileStatus" role="status" aria-live="polite">
-              확인 코드를 먼저 입력한 뒤 환자용 기록 파일을 선택하세요.
-            </p>
-            <p class="import-warning" id="recordImportWarning">
-              <strong>가져오기 전 확인:</strong> 현재 지도에서 아직 Journey에 저장하지 않은 기록은 가져온 내용으로 교체됩니다. 기존 Journey는 바뀌지 않습니다. 파일에는 이름·등록번호가 없으므로 전달받은 대상과 코드를 직접 대조하세요.
-            </p>
-            <div class="import-result" id="fhirResult" role="status" aria-live="polite" hidden></div>
-          </section>
+          </details>
 
           <div class="detected-summary" aria-live="polite">
             <span>확인 필요 신호 · 진단 아님</span>
@@ -207,17 +214,16 @@
             <span class="map-status" id="mapStatus">분석 대기</span>
           </div>
 
-          <section class="map-first-use" aria-labelledby="mapInstructionsTitle" data-graph-instructions>
-            <div class="map-first-use__heading">
-              <p class="panel-index">FIRST LOOK</p>
-              <h3 id="mapInstructionsTitle">처음이라면 이렇게 보세요</h3>
+          <details class="map-first-use context-disclosure" aria-labelledby="mapInstructionsTitle" data-graph-instructions>
+            <summary id="mapInstructionsTitle">지도 사용법 <small>입력 → 표식 → 관계</small></summary>
+            <div class="context-disclosure__body">
+              <ol id="mapInstructions">
+                <li><b>1</b><span>증상·수치를 입력하거나 환자용 기록을 가져옵니다.</span></li>
+                <li><b>2</b><span>3D 모형을 돌려 보고 색 있는 표식을 선택합니다.</span></li>
+                <li><b>3</b><span>관계 화면에서 출처와 근거를 확인합니다.</span></li>
+              </ol>
             </div>
-            <ol id="mapInstructions">
-              <li><b>1</b><span>왼쪽에 증상·수치를 넣거나 환자용 파일과 확인 코드로 기록을 가져옵니다.</span></li>
-              <li><b>2</b><span>3D 신체 모형을 드래그해 돌려 보고, 색 있는 신체 표식을 선택합니다.</span></li>
-              <li><b>3</b><span>아래의 다음 단계에서 관계와 출처 근거를 확인합니다.</span></li>
-            </ol>
-          </section>
+          </details>
 
           <section class="map-legend" aria-labelledby="mapLegendTitle" data-graph-legend>
             <div class="map-legend__heading">
@@ -330,22 +336,27 @@
               <h3>왜 연결되나요</h3>
               <p id="detailRelation">그래프의 질환 노드를 누르면 관계 설명이 표시됩니다.</p>
             </div>
-            <div class="detail-column">
-              <h3>확인할 데이터</h3>
-              <ul id="detailChecks">
-                <li>증상 발생 시점</li>
-                <li>검사실 결과</li>
-                <li>복용 중인 약</li>
-              </ul>
-            </div>
-            <div class="detail-column">
-              <h3>관리 대화</h3>
-              <ul id="detailCare">
-                <li>의료진과 우선순위 정하기</li>
-                <li>생활 변화의 안전성 확인</li>
-                <li>추적 시점 기록하기</li>
-              </ul>
-            </div>
+            <details class="detail-column context-disclosure">
+              <summary>확인할 데이터와 관리 대화</summary>
+              <div class="context-disclosure__body detail-column__expanded">
+                <section>
+                  <h3>확인할 데이터</h3>
+                  <ul id="detailChecks">
+                    <li>증상 발생 시점</li>
+                    <li>검사실 결과</li>
+                    <li>복용 중인 약</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>관리 대화</h3>
+                  <ul id="detailCare">
+                    <li>의료진과 우선순위 정하기</li>
+                    <li>생활 변화의 안전성 확인</li>
+                    <li>추적 시점 기록하기</li>
+                  </ul>
+                </section>
+              </div>
+            </details>
           </section>
 
           <div class="department-index" aria-label="진료과별 연결 상태">
@@ -382,8 +393,7 @@
             </h2>
             <div class="connection-support">
               <p class="connection-description">
-                <span>기록에서 찾은 건강 항목과 문헌을 바탕으로 제안한 관계를 구분해 보여 줍니다.</span>
-                <span>노드를 선택하고, 왜 연결됐는지 출처와 함께 확인해 보세요.</span>
+                <span>기록과 문헌 관계를 구분해 보여 줍니다. 노드를 선택해 근거를 확인하세요.</span>
               </p>
               <div class="connection-actions">
                 <a class="primary-button" href="/connections" data-connections-link data-next-action>다음: 관계와 근거 확인하기</a>

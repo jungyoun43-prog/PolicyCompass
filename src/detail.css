@@ -43,6 +43,26 @@
   border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
 }
 
+.detail-column.context-disclosure {
+  grid-column: 1 / -1;
+  padding-block: 0;
+}
+
+.detail-column.context-disclosure > summary {
+  color: var(--ink);
+}
+
+.detail-column__expanded {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.detail-column__expanded section + section {
+  border-left: 1px solid var(--line);
+  padding-left: var(--space-4);
+}
+
 .detail-column h3 {
   margin: 0;
   font-size: 1rem;

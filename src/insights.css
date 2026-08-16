@@ -82,7 +82,7 @@
 }
 
 .insight-status span {
-  border-radius: var(--radius-pill);
+  border-radius: 6px;
   background: var(--surface-soft);
   padding: var(--space-1) var(--space-3);
   color: var(--muted);
@@ -299,11 +299,29 @@
 }
 
 .question-assistant {
-  margin-bottom: var(--space-6);
+  margin-top: var(--space-6);
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
   border-radius: var(--radius-panel);
   background: color-mix(in srgb, var(--surface-soft) 72%, var(--surface));
-  padding: var(--space-5);
+  padding: 0 var(--space-5);
+}
+
+.question-assistant.context-disclosure > summary {
+  min-height: 56px;
+  color: var(--ink);
+}
+
+.question-assistant.context-disclosure > summary .assistant-mode {
+  margin-left: auto;
+}
+
+.question-assistant.context-disclosure > summary::after {
+  margin-left: 0;
+}
+
+.question-assistant__body {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-5);
 }
 
 .question-assistant__heading {
@@ -335,7 +353,7 @@
 .assistant-report {
   display: grid;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: 0;
 }
 
 .assistant-report > span {
@@ -750,6 +768,23 @@
   color: var(--surface);
 }
 
+.method-card.context-disclosure > summary {
+  color: var(--surface);
+}
+
+.method-card.context-disclosure > summary::after {
+  border-color: color-mix(in srgb, var(--surface) 30%, transparent);
+}
+
+.method-card.context-disclosure > summary:focus-visible {
+  outline-color: var(--surface);
+  outline-offset: -4px;
+}
+
+.method-card .context-disclosure__body {
+  color: color-mix(in srgb, var(--surface) 80%, var(--muted));
+}
+
 .method-card .eyebrow {
   color: var(--status-amber-on-dark);
 }
@@ -783,7 +818,7 @@
   font-size: 0.75rem;
 }
 
-.method-card > p:last-child {
+.method-card #disclaimer {
   margin: var(--space-5) 0 0;
   border-top: 1px solid color-mix(in srgb, var(--surface) 20%, transparent);
   padding-top: var(--space-4);

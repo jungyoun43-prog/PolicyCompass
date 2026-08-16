@@ -11,7 +11,7 @@ const identities = [
   { route: "/", selector: "#gatewayTitle", text: "사용할 공간을 선택하세요." },
   { route: "/patient", selector: "#landingTitle", text: "내 건강 기록을 내가 이어 보는 공간." },
   { route: "/map", selector: "#pageTitle", text: "내 몸의 신호를 연결해서 보기" },
-  { route: "/connections", selector: "#explorerTitle", text: "질환 관계를 자유롭게 탐색하세요" },
+  { route: "/connections", selector: "#explorerTitle", text: "기록과 추론을 나눠 보기" },
   { route: "/insights", selector: "#insightTitle", text: "진료실에서 바로 꺼내 보는 질문 브리프" },
   { route: "/journey", selector: "#journeyPageTitle", text: "한 장면이 아니라 변화를 봅니다." },
   { route: "/emr", selector: "#emrTitle", text: "오늘 진료" },

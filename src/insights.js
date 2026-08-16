@@ -40,7 +40,6 @@ const refs = {
   useRules: document.querySelector("#useRuleQuestions"),
   shareBrief: document.querySelector("#sharePatientBrief"),
   assistantStatus: document.querySelector("#patientAssistantStatus"),
-  exportSnapshot: document.querySelector("#exportClinicalSnapshot"),
   snapshotStatus: document.querySelector("#clinicalSnapshotStatus"),
   snapshotCounts: document.querySelector("#clinicalSnapshotCounts"),
   connectionBadge: document.querySelector("#clinicalConnectionBadge"),
@@ -426,7 +425,6 @@ function renderSignals(signals) {
 
 function renderSnapshot() {
   const snapshot = connectedClinicalSnapshot();
-  if (refs.exportSnapshot) refs.exportSnapshot.disabled = true;
   if (!refs.snapshotStatus || !refs.connectionBadge || !refs.snapshotCounts) return;
   refs.snapshotStatus.classList.toggle("is-connected", Boolean(snapshot));
   if (!snapshot) {
@@ -678,7 +676,6 @@ refs.printBrief.addEventListener("click", () => window.print());
 refs.runAssistant.addEventListener("click", runPatientAssistant);
 refs.useRules.addEventListener("click", () => resetToRules());
 refs.shareBrief?.addEventListener("click", copySelectedQuestion);
-if (refs.exportSnapshot) refs.exportSnapshot.disabled = true;
 refs.refreshButtons.forEach((button) => button.addEventListener("click", () => refreshFromSession()));
 refs.providerInputs.forEach((input) => input.addEventListener("change", () => {
   assistantRequestController?.abort();

@@ -33,7 +33,7 @@ test("개인 홈은 역할·데이터 경계 안내 뒤에 직접 가져오기�
   const html = await readFile("src/landing.html", "utf8");
   const hero = html.match(/<section class="landing-hero[\s\S]*?<\/section>/)?.[0] ?? "";
   const identity = hero.indexOf("VITAGRAPH PERSONAL · 내 기록 공간");
-  const localCopy = hero.indexOf("질문은 검증 가능한 규칙으로 먼저 정리합니다");
+  const localCopy = hero.indexOf("환자용 기록을 직접 가져와 건강 지도와 다음 진료 질문으로 정리합니다");
   const startAction = hero.indexOf("환자용 기록 가져오기");
   const sampleAction = hero.indexOf("예시로 보기");
 
@@ -44,9 +44,9 @@ test("개인 홈은 역할·데이터 경계 안내 뒤에 직접 가져오기�
   assert.equal((hero.match(/data-primary-action/g) ?? []).length, 1);
   assert.match(hero, /href="\/map#import-record"/);
   assert.match(hero, /href="\/map\?sample=1"/);
-  assert.match(hero, /식별정보·원문 메모 제외/);
-  assert.match(hero, /선택적 외부 모델은 전송 범위를 확인하고 해당 실행에 동의한 경우에만/);
-  assert.match(hero, /진단·처방 아님/);
+  assert.match(html, /식별정보와 원문 메모를 제외/);
+  assert.match(html, /외부 모델은 전송 범위를 확인하고 해당 실행에 동의한 경우에만/);
+  assert.match(hero, /진단이나 처방 아님/);
   assert.doesNotMatch(hero, /로컬 AI|프론티어 AI|자동으로 이어집니다/);
 });
 

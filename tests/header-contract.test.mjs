@@ -46,10 +46,10 @@ test("게이트웨이는 의료진 EMR과 개인 VitaGraph 진입점을 분리�
   assert.match(html, /class="app-brand" href="\/"/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
   assert.match(html, /href="\/patient"[^>]*>\s*개인 VitaGraph 열기/s);
-  assert.match(html, /EXPLICIT RECORD HANDOFF/);
-  assert.match(html, /선택 환자와 일회성 확인 코드를 대조한 뒤 허용된 확정 항목만 환자용 파일로 내보냅니다/);
-  assert.match(html, /파일과 별도 경로로 받은 코드를 확인해 직접 가져오고/);
-  assert.match(html, /진료에서 직접 전달할 내용만 선택/);
+  assert.match(html, /의료진과 개인 사이의 기록 전달 방식/);
+  assert.match(html, /의료진이 환자용 파일과 일회성 코드를 따로 전달/);
+  assert.match(html, /파일과 별도 확인 코드 대조/);
+  assert.match(html, /선택한 질문을 직접 전달/);
   assert.doesNotMatch(html, /자동 연결/);
 });
 

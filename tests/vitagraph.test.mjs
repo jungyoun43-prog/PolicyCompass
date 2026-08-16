@@ -96,7 +96,7 @@ test("연결 탐색 전용 페이지를 제공한다", async () => {
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /질환 관계를 자유롭게 탐색/);
+  assert.match(html, /기록과 추론을 나눠 보기/);
   assert.match(html, /networkScene/);
 });
 

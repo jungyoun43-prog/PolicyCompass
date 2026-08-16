@@ -2529,7 +2529,7 @@ body.emr-page {
 
 .clinical-body-record__action {
   justify-self: start;
-  min-height: 34px;
+  min-height: 44px;
   margin-top: var(--space-1);
   border: 0;
   border-radius: 8px;
@@ -4401,7 +4401,7 @@ body.emr-page {
 }
 
 .rule-version-actions input {
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 8px;
 }
 
@@ -6127,7 +6127,7 @@ body.emr-page {
 
 .claim-rule-trust__link {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 1px solid color-mix(in srgb, var(--claim-quality) 30%, var(--line));
@@ -7282,7 +7282,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-search__field button {
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
   background: var(--surface-soft);

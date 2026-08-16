@@ -27,7 +27,7 @@ function assertDiscoveryContract(html, route) {
 
 test("Health Map은 기록, 추론, 선택 상태와 다음 행동을 한 흐름에서 설명한다", () => {
   assertDiscoveryContract(mapHtml, "map");
-  assert.match(mapHtml, /처음이라면 이렇게 보세요/);
+  assert.match(mapHtml, /지도 사용법/);
   assert.match(mapHtml, /기록 신호/);
   assert.match(mapHtml, /추론 관계/);
   assert.match(mapHtml, /진단 아님/);
@@ -58,7 +58,7 @@ test("Health Map 관계 안내는 제목 아래 설명을 들여 쓰고 한국�
   const portalCss = await readFile("src/portal.css", "utf8");
 
   assert.match(mapHtml, /class="connection-support"/);
-  assert.match(mapHtml, /class="connection-description"[\s\S]*?<span>기록에서 찾은/);
+  assert.match(mapHtml, /class="connection-description"[\s\S]*?<span>기록과 문헌 관계를 구분/);
   assert.match(mapHtml, /class="connection-actions__status" role="status" aria-live="polite"/);
   assert.match(portalCss, /\.connection-support\s*\{[\s\S]*?margin-left:\s*clamp/);
   assert.match(portalCss, /\.connection-description\s*\{[\s\S]*?word-break:\s*keep-all/);
@@ -67,11 +67,13 @@ test("Health Map 관계 안내는 제목 아래 설명을 들여 쓰고 한국�
 
 test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내를 제공한다", () => {
   assertDiscoveryContract(connectionsHtml, "connections");
-  assert.match(connectionsHtml, /노드 클릭·Enter: 선택/);
+  assert.match(connectionsHtml, /클릭·Enter: 선택/);
   assert.match(connectionsHtml, /빈 공간 드래그/);
   assert.match(connectionsHtml, /방향키: 화면 이동/);
-  assert.match(connectionsHtml, /휠이나 −\/\+: 확대·축소/);
+  assert.match(connectionsHtml, /휠·−\/\+: 확대·축소/);
   assert.match(connectionsHtml, /id="zoomLevel"/);
+  assert.match(connectionsHtml, /class="visually-hidden" id="sceneInteractionHelp"[\s\S]*?class="scene-controls"/);
+  assert.match(explorerCss, /\.explorer-first-use\.context-disclosure > summary\s*\{[\s\S]*?color: var\(--ink\)/);
   assert.match(connectionsHtml, /tabindex="0"[\s\S]*?aria-describedby="sceneInteractionHelp relationshipMeaning"/);
   assert.match(connectionsJs, /elements\.scene\.addEventListener\("pointerdown"/);
   assert.match(connectionsJs, /elements\.scene\.addEventListener\("keydown"/);
@@ -81,11 +83,11 @@ test("Connections는 실제 조작과 일치하는 선택, 확대, 이동 안내
 });
 
 test("Connections는 개인 기록 근거와 문헌 기반 추론 관계를 시각·텍스트로 구분한다", () => {
-  assert.match(connectionsHtml, /파일에 의료진 확정으로 표시 · 발행기관·변조 미검증/);
-  assert.match(connectionsHtml, /본인이 알고 있다고 선택 · 의료진 확인 안 됨/);
+  assert.match(connectionsHtml, /파일 표시 · 발행기관·변조 미검증/);
+  assert.match(connectionsHtml, /본인 선택 · 의료진 미확인/);
   assert.match(explorerCss, /\.legend-dot\.declared-dot/);
   assert.doesNotMatch(connectionsHtml, /입력 신호에서 찾은 후보/);
-  assert.match(connectionsHtml, /문헌 기반 추론 관계 · 환자 기록 사실 아님/);
+  assert.match(connectionsHtml, /점선 · 문헌 추론, 기록 아님/);
   assert.match(connectionsJs, /function conditionProvenance\(id\)/);
   assert.match(connectionsJs, /state\.clinicalConditionIds\.includes\(id\)/);
   assert.match(connectionsJs, /source: "clinical-import"/);

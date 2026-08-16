@@ -58,12 +58,10 @@
             <span><em>내가 이어 보는</em> 공간.</span>
           </h1>
           <p class="landing-hero__lead">
-            의료진이 내보낸 환자용 기록은 파일과 별도 확인 코드를 받은 뒤 내가 직접 가져옵니다.
-            내가 남긴 최근 변화와 함께 읽고, 다음 진료에서 서로 확인할 질문까지 준비합니다.
+            환자용 기록을 직접 가져와 건강 지도와 다음 진료 질문으로 정리합니다.
           </p>
           <div class="landing-hero__boundary" aria-label="개인 앱의 역할과 저장 방식" data-route-context>
-            <p class="patient-presentation__assurance">개인용 앱 · EMR 업무 공간과 분리 · 식별정보·원문 메모 제외 · 임상 기록을 직접 바꾸지 않음 · 진단·처방 아님</p>
-            <p><strong>질문은 검증 가능한 규칙으로 먼저 정리합니다.</strong> 선택적 외부 모델은 전송 범위를 확인하고 해당 실행에 동의한 경우에만 사용합니다. Journey는 선택한 기록만 이 브라우저에 저장합니다.</p>
+            <p class="patient-presentation__assurance">개인용 · 이 브라우저에 저장 · 진단이나 처방 아님</p>
           </div>
           <div class="landing-actions">
             <a class="landing-button landing-button--primary" href="/map#import-record" data-primary-action>환자용 기록 가져오기</a>
@@ -83,57 +81,35 @@
 
       <section class="patient-start-path" aria-labelledby="patientStartTitle" data-first-use="patient" data-reveal>
         <header>
-          <p class="eyebrow">FIRST VISIT · 4 STEPS</p>
-          <h2 id="patientStartTitle">처음이라면 이 순서만 따라가세요.</h2>
-          <p>의료진에게 받은 환자용 파일이 아직 없어도 예시로 전체 흐름을 먼저 볼 수 있습니다. 예시는 가져온 기록이나 의료진 브리프와 섞이지 않습니다.</p>
+          <p class="eyebrow">FIRST VISIT · 3 STEPS</p>
+          <h2 id="patientStartTitle">처음이라면 세 단계면 됩니다.</h2>
+          <p>파일이 없어도 안전한 예시로 먼저 볼 수 있습니다.</p>
         </header>
         <ol aria-label="VitaGraph Personal 첫 사용 순서">
           <li data-first-use-step="record">
             <span class="patient-start-path__signal" aria-hidden="true">01</span>
-            <div><strong>정제 기록 가져오기</strong><p>의료진에게 받은 환자용 파일과 별도 확인 코드를 직접 대조해 가져오거나 안전한 예시를 엽니다.</p></div>
+            <div><strong>기록 가져오기</strong><p>환자용 파일과 별도 확인 코드를 대조하거나 예시를 엽니다.</p></div>
           </li>
           <li data-first-use-step="map">
             <span class="patient-start-path__signal" aria-hidden="true">02</span>
-            <div><strong>신호 확인</strong><p>지도에서 기록된 항목과 직접 선택한 항목을 구분합니다.</p></div>
-          </li>
-          <li data-first-use-step="connections">
-            <span class="patient-start-path__signal" aria-hidden="true">03</span>
-            <div><strong>연결 살펴보기</strong><p>기록 근거와 키워드 기반 추론 관계를 따로 읽습니다.</p></div>
+            <div><strong>지도·연결 확인</strong><p>기록 항목과 직접 더한 항목, 문헌 관계를 구분해 봅니다.</p></div>
           </li>
           <li data-first-use-step="prepare">
-            <span class="patient-start-path__signal" aria-hidden="true">04</span>
-            <div><strong>질문 확인·직접 전달</strong><p>규칙 기반 질문 초안을 확인한 뒤 필요한 질문을 복사하거나 진료에서 직접 보여줍니다.</p></div>
+            <span class="patient-start-path__signal" aria-hidden="true">03</span>
+            <div><strong>질문 준비</strong><p>근거를 확인하고 필요한 질문만 골라 진료에 가져갑니다.</p></div>
           </li>
         </ol>
         <div class="patient-start-path__actions">
-          <a class="landing-button landing-button--primary" href="/map?sample=1">예시로 4단계 시작</a>
+          <a class="landing-button landing-button--primary" href="/map?sample=1">예시로 시작</a>
           <a class="text-action" href="/map#import-record">환자용 기록 가져오기 <span aria-hidden="true">→</span></a>
         </div>
-      </section>
-
-      <section class="fact-strip" aria-label="제품 데이터 처리 방식" data-reveal>
-        <article>
-          <span>01</span>
-          <div><strong>파일·확인 코드로 가져오기</strong><p>대상 환자를 대조한 뒤 식별정보와 원문 메모를 뺀 확정 항목만 직접 가져옵니다.</p></div>
-        </article>
-        <article>
-          <span>02</span>
-          <div><strong>직접 받는 최소 사본</strong><p>의료진이 내보낸 환자용 파일과 별도 확인 코드를 직접 대조해 가져옵니다.</p></div>
-        </article>
-        <article>
-          <span>03</span>
-          <div><strong>규칙 기반 질문 정리</strong><p>기본 질문은 규칙으로 만들고, 외부 모델은 전송 범위를 확인·동의한 실행에만 사용합니다.</p></div>
-        </article>
       </section>
 
       <section class="outcome" aria-labelledby="outcomeTitle" data-reveal>
         <header class="section-intro">
           <p class="eyebrow">VISIT PREP</p>
           <h2 id="outcomeTitle">진료실에서 바로 꺼내 볼 순서로 정리합니다.</h2>
-          <p>
-            숫자를 해석해 진단하지 않습니다. 정제 기록과 내가 적은 최근 변화에서 확인할 항목을
-            최대 다섯 개 질문으로 모으고, 내가 선택한 질문만 복사하거나 진료에서 직접 보여줍니다.
-          </p>
+          <p>확인할 내용을 최대 다섯 개 질문으로 모읍니다.</p>
           <a class="text-action" href="/insights">진료 준비 화면 보기 <span aria-hidden="true">↗</span></a>
         </header>
 
@@ -166,19 +142,16 @@
         </article>
       </section>
 
-      <section class="workflow" aria-labelledby="workflowTitle" data-reveal>
-        <header class="section-intro section-intro--wide">
-          <p class="eyebrow">ONE RECORD, ONE CONVERSATION</p>
-          <h2 id="workflowTitle">그래프를 만드는 데서 끝내지 않습니다.</h2>
-          <p>서명·확정 기록은 환자용 파일로 직접 받고, 환자는 선택한 질문을 복사하거나 진료에서 보여주며 대화를 준비합니다.</p>
-        </header>
-        <ol class="workflow__steps">
-          <li><span>01</span><div><h3>정제 기록 가져오기</h3><p>의료진이 내보낸 환자용 파일과 별도 확인 코드를 대조한 뒤, 파일에 의료진 확정으로 표시된 질환과 최종 측정값을 직접 가져옵니다. 발행기관·변조 여부는 검증되지 않습니다.</p></div></li>
-          <li><span>02</span><div><h3>신호·근거 확인</h3><p>EMR 기록, 내가 더한 신호, 문헌 기반 추론을 구분해 읽습니다.</p></div></li>
-          <li><span>03</span><div><h3>질문 직접 전달</h3><p>환자는 물어볼 질문을 고른 뒤 복사하거나 진료에서 직접 보여줍니다.</p></div></li>
-          <li><span>04</span><div><h3>변화 저장</h3><p>원할 때만 현재 기기의 Journey에 시점을 남깁니다.</p></div></li>
-        </ol>
-      </section>
+      <details class="workflow context-disclosure" data-reveal>
+        <summary>기록이 어떻게 이동하는지 보기</summary>
+        <div class="context-disclosure__body">
+          <ol class="workflow__steps">
+            <li><span>01</span><div><h3>파일 직접 받기</h3><p>의료진에게 환자용 파일과 별도 확인 코드를 받습니다.</p></div></li>
+            <li><span>02</span><div><h3>근거 구분하기</h3><p>파일 표시, 본인 선택, 문헌 기반 추론을 구분합니다.</p></div></li>
+            <li><span>03</span><div><h3>질문 가져가기</h3><p>필요한 질문만 골라 복사하거나 진료에서 보여줍니다.</p></div></li>
+          </ol>
+        </div>
+      </details>
 
       <section class="closing" aria-labelledby="closingTitle" data-reveal>
         <div>
@@ -192,6 +165,15 @@
         </div>
       </section>
     </main>
+
+    <details class="context-disclosure context-disclosure--footer">
+      <summary>데이터·안전 안내</summary>
+      <div class="context-disclosure__body">
+        <p>환자용 파일은 식별정보와 원문 메모를 제외하지만 평문·미서명 사본입니다. 파일과 다른 경로로 받은 확인 코드를 직접 대조하세요.</p>
+        <p>기본 질문은 규칙으로 정리합니다. 외부 모델은 전송 범위를 확인하고 해당 실행에 동의한 경우에만 사용하며, Journey는 선택한 기록만 현재 브라우저에 저장합니다.</p>
+        <p>VitaGraph는 진단·처방 또는 응급 판단을 제공하지 않습니다.</p>
+      </div>
+    </details>
 
     <footer class="app-footer">
       <span>VitaGraph Personal</span>

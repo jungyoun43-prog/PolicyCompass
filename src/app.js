@@ -52,6 +52,7 @@ const elements = {
   sourceToggle: document.querySelector("#sourceToggle"),
   sourceDialog: document.querySelector("#sourceDialog"),
   sourceClose: document.querySelector("#sourceClose"),
+  importBox: document.querySelector("#import-record"),
   fhirFile: document.querySelector("#fhirFile"),
   transferCode: document.querySelector("#transferCode"),
   selectRecordFile: document.querySelector("#selectRecordFile"),
@@ -60,6 +61,20 @@ const elements = {
   fhirResult: document.querySelector("#fhirResult"),
   saveJourney: document.querySelector("#saveJourney"),
 };
+
+function revealImportFromHash() {
+  if (window.location.hash === "#import-record" && elements.importBox) {
+    elements.importBox.open = true;
+  }
+}
+
+revealImportFromHash();
+window.addEventListener("hashchange", revealImportFromHash);
+for (const link of document.querySelectorAll('a[href$="#import-record"]')) {
+  link.addEventListener("click", () => {
+    if (elements.importBox) elements.importBox.open = true;
+  });
+}
 
 const state = {
   declaredIds: [],

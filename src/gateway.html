@@ -47,8 +47,7 @@
           <h1 id="gatewayTitle">사용할 공간을 선택하세요.</h1>
         </div>
         <p class="gateway-intro__lead">
-          의료진은 EMR에서 진료기록을 확정하고 환자에게 확인할 질문을 준비합니다. 개인은 식별정보가
-          빠진 정제 기록을 확인하고, 다음 진료에서 물어볼 질문을 직접 선택해 보여줍니다.
+          의료진용 진료 공간과 개인용 기록 공간 중 하나를 선택하세요.
         </p>
       </section>
 
@@ -62,19 +61,23 @@
             <p class="role-card__kicker">진료의 기준 공간</p>
             <h2>의료진 EMR</h2>
             <p class="role-card__summary">
-              환자 선택부터 Encounter, SOAP, 처방·오더, 급여 점검과 환자별 신체·진료과 지도까지 한 흐름에서
-              확인합니다.
+              환자 선택부터 진료 기록, 서명, 급여 점검까지 이어갑니다.
             </p>
           </div>
-          <ul class="role-card__features" aria-label="의료진 EMR 주요 기능">
-            <li>선택 환자의 임상 기록과 신체·진료과 지도</li>
-            <li>진료 완료·로컬 서명·근거 추적</li>
-            <li>환자용 정제 기록 내보내기와 환자가 직접 전한 질문 확인</li>
-          </ul>
           <a class="role-action role-action--primary" href="/emr" data-main-link>
             의료진 EMR 열기
             <span aria-hidden="true">→</span>
           </a>
+          <details class="role-card__details context-disclosure">
+            <summary>주요 기능 보기</summary>
+            <div class="context-disclosure__body">
+              <ul class="role-card__features" aria-label="의료진 EMR 주요 기능">
+                <li>선택 환자의 임상 기록과 신체·진료과 지도</li>
+                <li>진료 완료·로컬 서명·근거 추적</li>
+                <li>환자용 정제 기록 내보내기</li>
+              </ul>
+            </div>
+          </details>
           <p class="role-card__caution">로컬 평가용 샌드박스 · 인증된 운영 EMR 아님</p>
         </article>
 
@@ -87,37 +90,39 @@
             <p class="role-card__kicker">내 건강정보를 보는 공간</p>
             <h2>개인 VitaGraph</h2>
             <p class="role-card__summary">
-              EMR 화면이나 병원 운영 정보 없이, 서명·확정 후 정제된 내 건강 지도와 연결 근거,
-              다음 진료 질문만 다룹니다.
+              내 건강 지도와 연결 근거를 보고 다음 진료 질문을 준비합니다.
             </p>
           </div>
-          <ul class="role-card__features" aria-label="개인 VitaGraph 주요 기능">
-            <li>개인 건강 지도와 질환 연결 보기</li>
-            <li>검증 가능한 규칙 기반 진료 질문 정리</li>
-            <li>동의한 실행의 선택적 외부 모델과 로컬 Journey</li>
-          </ul>
           <a class="role-action role-action--secondary" href="/patient">
             개인 VitaGraph 열기
             <span aria-hidden="true">→</span>
           </a>
+          <details class="role-card__details context-disclosure">
+            <summary>주요 기능 보기</summary>
+            <div class="context-disclosure__body">
+              <ul class="role-card__features" aria-label="개인 VitaGraph 주요 기능">
+                <li>개인 건강 지도와 질환 연결 보기</li>
+                <li>규칙 기반 진료 질문 정리</li>
+                <li>선택한 시점만 로컬 Journey에 저장</li>
+              </ul>
+            </div>
+          </details>
           <p class="role-card__caution patient-presentation__assurance">개인 기록 도구 · 진단이나 치료를 대신하지 않음</p>
         </article>
       </section>
 
       <section class="handoff-panel" aria-labelledby="handoffTitle">
-        <div class="handoff-panel__copy">
-          <p class="gateway-eyebrow">EXPLICIT RECORD HANDOFF</p>
-          <h2 id="handoffTitle">정제 기록과 확인 질문을 각 사용자가 직접 전달합니다.</h2>
-          <p>
-            의료진은 선택 환자와 일회성 확인 코드를 대조한 뒤 허용된 확정 항목만 환자용 파일로 내보냅니다.
-            환자는 파일과 별도 경로로 받은 코드를 확인해 직접 가져오고, 질문 초안을 검토한 뒤 진료에서 직접 전달할 내용만 선택합니다.
-          </p>
-        </div>
-        <ol class="handoff-steps" aria-label="진료 전 준비 순서">
-          <li><span>1</span><strong>EMR 서명·정제</strong><small>식별정보·원문 메모 제외</small></li>
-          <li><span>2</span><strong>환자 확인·가져오기</strong><small>파일과 별도 확인 코드 대조</small></li>
-          <li><span>3</span><strong>진료에서 확인</strong><small>환자가 선택한 질문을 직접 전달</small></li>
-        </ol>
+        <details class="context-disclosure">
+          <summary id="handoffTitle">의료진과 개인 사이의 기록 전달 방식</summary>
+          <div class="context-disclosure__body">
+            <p>의료진이 환자용 파일과 일회성 코드를 따로 전달하면, 개인이 직접 대조해 가져옵니다.</p>
+            <ol class="handoff-steps" aria-label="진료 전 준비 순서">
+              <li><span>1</span><strong>EMR 서명·정제</strong><small>식별정보·원문 메모 제외</small></li>
+              <li><span>2</span><strong>환자 확인·가져오기</strong><small>파일과 별도 확인 코드 대조</small></li>
+              <li><span>3</span><strong>진료에서 확인</strong><small>선택한 질문을 직접 전달</small></li>
+            </ol>
+          </div>
+        </details>
       </section>
 
       <aside class="gateway-boundary" aria-label="데이터 경계 안내">

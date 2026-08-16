@@ -46,7 +46,7 @@
             <span class="page-hero__eyebrow signal-kicker__label">TODAY · LOCAL CLINICAL WORKSPACE</span>
           </div>
           <h1 id="emrTitle">오늘 진료</h1>
-          <p>접수부터 SOAP, 진단, 처방, 오더, 서명까지 한 화면에서 기록합니다.</p>
+          <p>환자 선택 → 진료 기록 → 서명 순서로 진행합니다.</p>
         </div>
         <div class="command-actions" aria-label="로컬 데이터 작업">
           <button class="clinical-button" id="exitDemo" type="button" hidden>내 로컬 기록으로</button>
@@ -66,7 +66,7 @@
               <div class="patient-transfer-guidance" id="patientTransferGuidance">
                 <div>
                   <b>선택 환자에게 직접 전달</b>
-                  <span>선택 환자의 이름과 일회성 확인 코드를 대조한 뒤 지원되는 최종·확정 사실만 파일로 내보냅니다. 코드는 파일과 다른 경로로 환자에게 전달하세요. 환자가 가져오면 저장 전 건강 지도의 현재 기록만 교체되고 기존 Journey는 바뀌지 않습니다.</span>
+                  <span>선택 환자의 이름과 일회성 확인 코드를 대조한 뒤 확정 질환·최종 측정만 내보냅니다. 코드는 파일과 다른 경로로 환자에게 전달하세요. 가져오면 저장 전 현재 기록만 교체되고 기존 Journey는 바뀌지 않습니다.</span>
                 </div>
                 <p id="personalSyncStatus" role="status" aria-live="polite"></p>
               </div>
@@ -96,7 +96,7 @@
           <b>예시 환자</b>
           <span>실제 환자 아님 · 저장되지 않음</span>
         </div>
-        <p data-route-context>이 화면은 현장 검증용 로컬 샌드박스입니다. 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않습니다.</p>
+        <p data-route-context>평가용 샌드박스 · 인증된 EMR·청구 소프트웨어가 아니며 삭감 방지 보장을 제공하지 않음</p>
       </section>
 
       <p class="workspace-status" id="workspaceStatus" role="status" aria-live="polite"></p>
@@ -917,6 +917,14 @@
           </div>
         </section>
       </div>
+
+      <details class="context-disclosure context-disclosure--footer emr-safety-notes">
+        <summary>데이터·임상 한계 안내</summary>
+        <div class="context-disclosure__body">
+          <p>환자 기록은 현재 브라우저에만 저장되며 내보낸 백업 파일은 암호화되지 않습니다. 데이터 작업 전 선택 환자를 다시 확인하세요.</p>
+          <p>AI 초안·급여 사전점검·적정성 예상은 진단, 처방, 서명된 임상 판단이나 보험자의 최종 지급 결정을 대신하지 않습니다.</p>
+        </div>
+      </details>
     </main>
 
     <footer class="app-footer clinical-footer">

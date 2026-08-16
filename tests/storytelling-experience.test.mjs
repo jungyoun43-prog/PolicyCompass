@@ -83,7 +83,7 @@ test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리
   assert.match(insights, /파일과 별도 확인 코드를 대조해 가져오세요/);
   assert.match(insights, /href="\/map\?sample=1"/);
   assert.match(insights, /Journey 저장 안 됨/);
-  assert.match(insights, /환자 전달 원본 파일이 개인 보관 사본/);
+  assert.match(insights, /원본 전달 파일이 개인 보관 사본/);
   assert.match(insights, /id="sharePatientBrief"/);
   assert.match(insights, /href="\/map#import-record"/);
   assert.doesNotMatch(insights, /id="fhirFile"/);

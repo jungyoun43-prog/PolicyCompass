@@ -54,13 +54,13 @@
             </span>
             <span class="page-hero__eyebrow signal-kicker__label">CONNECTION EXPLORER</span>
           </div>
-          <h1 id="explorerTitle">질환 관계를 자유롭게 탐색하세요</h1>
+          <h1 id="explorerTitle">기록과 추론을 나눠 보기</h1>
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            내가 확인해 가져온 정제 항목과 직접 더한 신호의 관계를 구분해 표시합니다. 노드를 선택하면 기록 근거와 문헌 근거를 따로 읽을 수 있습니다.
+            노드를 선택하면 기록 근거와 문헌 관계를 따로 볼 수 있습니다.
           </p>
-          <p class="explorer-data-boundary">가져온 기록과 예시 데이터는 한 지도에 섞이지 않습니다.</p>
+          <p class="explorer-data-boundary">예시와 실제 기록은 섞이지 않습니다.</p>
           <a class="primary-button connections-primary-entry" id="connectionsPrimaryEntry" href="#networkScene">
             관계 지도 바로 보기
           </a>
@@ -75,27 +75,27 @@
         예시 데이터만 보는 중 · 가져온 실제 기록과 분리 · 현재 탭에서만 유지 · Journey 미저장
       </p>
 
-      <section class="explorer-first-use" aria-labelledby="explorerGuideTitle" data-graph-instructions>
-        <div class="explorer-first-use__heading">
-          <p class="panel-index">FIRST EXPLORATION</p>
-          <h2 id="explorerGuideTitle">처음이라면 세 단계로 살펴보세요</h2>
+      <details class="explorer-first-use context-disclosure" aria-labelledby="explorerGuideTitle" data-graph-instructions>
+        <summary id="explorerGuideTitle">관계 지도 사용법 <small>선택 → 연결 → 근거</small></summary>
+        <div class="context-disclosure__body">
+          <ol>
+            <li><b>1</b><span><strong>노드 선택</strong>클릭하거나 Tab과 Enter를 사용합니다.</span></li>
+            <li><b>2</b><span><strong>연결 확인</strong>선명해진 점선과 관계 이름을 봅니다.</span></li>
+            <li><b>3</b><span><strong>근거 읽기</strong>상세 패널에서 설명과 출처를 확인합니다.</span></li>
+          </ol>
         </div>
-        <ol>
-          <li><b>1</b><span><strong>노드 선택</strong>클릭하거나 Tab으로 이동한 뒤 Enter를 누릅니다.</span></li>
-          <li><b>2</b><span><strong>직접 관계 확인</strong>선명해진 점선을 따라 이웃 질환과 관계 이름을 봅니다.</span></li>
-          <li><b>3</b><span><strong>근거 읽기</strong>오른쪽 패널에서 관계 설명과 문헌 출처를 확인합니다.</span></li>
-        </ol>
-      </section>
+      </details>
 
       <section class="explorer-workspace clinician-hierarchy__groups" aria-label="건강 관계 탐색 장면">
         <div class="scene-shell">
           <div class="scene-legend" aria-labelledby="sceneLegendTitle" data-graph-legend>
             <strong class="scene-legend__title" id="sceneLegendTitle">지도 표기</strong>
-            <span><i class="legend-dot condition-dot" aria-hidden="true"></i>파일에 의료진 확정으로 표시 · 발행기관·변조 미검증</span>
-            <span><i class="legend-dot declared-dot" aria-hidden="true"></i>본인이 알고 있다고 선택 · 의료진 확인 안 됨</span>
+            <span><i class="legend-dot condition-dot" aria-hidden="true"></i>파일 표시 · 발행기관·변조 미검증</span>
+            <span><i class="legend-dot declared-dot" aria-hidden="true"></i>본인 선택 · 의료진 미확인</span>
             <span><i class="legend-dot focus-dot" aria-hidden="true">✓</i>현재 선택 · 이중 링</span>
-            <span id="relationshipMeaning" data-relationship-meaning><i class="legend-line legend-line--inferred" aria-hidden="true"></i>문헌 기반 추론 관계 · 환자 기록 사실 아님</span>
+            <span id="relationshipMeaning" data-relationship-meaning><i class="legend-line legend-line--inferred" aria-hidden="true"></i>점선 · 문헌 추론, 기록 아님</span>
           </div>
+          <p class="visually-hidden" id="sceneInteractionHelp">클릭 또는 Enter로 선택합니다. 노드를 드래그해 위치를 조정하고, 빈 공간 드래그 또는 방향키로 화면을 이동합니다. 휠이나 빼기·더하기 버튼으로 확대·축소하고, 숫자 0으로 초기 화면으로 돌아갑니다.</p>
           <div class="scene-controls" aria-label="지도 확대, 축소 및 초기화" aria-describedby="sceneInteractionHelp">
             <button id="zoomOut" type="button" aria-label="지도 축소" aria-controls="networkScene">−</button>
             <output id="zoomLevel" aria-label="현재 확대 비율">100%</output>
@@ -122,7 +122,10 @@
             <p>의료진에게 받은 환자용 파일과 별도 확인 코드를 건강 지도에서 대조해 가져오거나, 내 신호를 직접 더하세요.</p>
             <a class="primary-button" href="/map#import-record">건강 지도에서 기록 가져오기</a>
           </div>
-          <p class="scene-hint" id="sceneInteractionHelp">노드 클릭·Enter: 선택 · 노드 드래그: 위치 조정 · 빈 공간 드래그 또는 지도를 선택한 뒤 방향키: 화면 이동 · 휠이나 −/+: 확대·축소 · 0: 초기 화면</p>
+          <details class="scene-hint context-disclosure">
+            <summary>지도 조작법 보기</summary>
+            <p class="context-disclosure__body">클릭·Enter: 선택 · 노드 드래그: 위치 조정 · 빈 공간 드래그·방향키: 화면 이동 · 휠·−/+: 확대·축소 · 0: 초기 화면</p>
+          </details>
         </div>
 
         <aside class="explorer-detail" aria-live="polite" aria-labelledby="explorerDetailTitle">
@@ -143,25 +146,35 @@
               <h3>왜 연결되나요</h3>
               <p id="explorerDetailRelation">선을 따라가며 가까운 질환을 선택해 보세요.</p>
             </section>
-            <section>
-              <h3>다음에 확인할 것</h3>
-              <ul id="explorerDetailChecks"></ul>
-            </section>
-            <section>
-              <h3>식사·영양 대화</h3>
-              <ul id="explorerDetailNutrition"></ul>
-            </section>
-            <section>
-              <h3>관리 대화</h3>
-              <ul id="explorerDetailCare"></ul>
-            </section>
+            <details class="context-disclosure">
+              <summary>검사·식사·관리 항목 보기</summary>
+              <div class="context-disclosure__body">
+                <section>
+                  <h3>다음에 확인할 것</h3>
+                  <ul id="explorerDetailChecks"></ul>
+                </section>
+                <section>
+                  <h3>식사·영양 대화</h3>
+                  <ul id="explorerDetailNutrition"></ul>
+                </section>
+                <section>
+                  <h3>관리 대화</h3>
+                  <ul id="explorerDetailCare"></ul>
+                </section>
+              </div>
+            </details>
           </div>
 
           <div class="explorer-detail__evidence">
-            <section>
-              <h3>관련 관계의 문헌 근거</h3>
-              <div class="evidence-list" id="explorerEvidenceList"></div>
-            </section>
+            <details class="context-disclosure">
+              <summary>문헌 근거 보기</summary>
+              <div class="context-disclosure__body">
+                <section>
+                  <h3>관련 관계의 문헌 근거</h3>
+                  <div class="evidence-list" id="explorerEvidenceList"></div>
+                </section>
+              </div>
+            </details>
             <div class="explorer-next-step">
               <p class="panel-index">NEXT · VISIT PREP</p>
               <h3>선택한 내용을 진료 질문으로 이어 보세요.</h3>

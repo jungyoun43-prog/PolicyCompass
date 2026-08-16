@@ -54,15 +54,13 @@
         </div>
         <div class="page-hero__aside">
           <p class="page-hero__lead">
-            내가 파일과 확인 코드를 대조해 가져온 환자용 정제 항목과 직접 적은 최근 변화만 읽어, 의료진에게 확인할 질문을 최대 다섯 개로 정리합니다.
+            가져온 정제 기록을 진료 질문 다섯 개 이내로 정리합니다.
           </p>
           <div class="page-hero__actions">
             <button class="brief-action brief-action--primary" id="printBrief" type="button" disabled>
               브리프 인쇄
             </button>
-            <button class="brief-action brief-action--secondary" id="exportClinicalSnapshot" type="button" disabled>
-              별도 JSON 내보내기 지원 안 함
-            </button>
+            <span class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다</span>
             <a class="brief-action brief-action--secondary" href="/map">건강 지도 편집</a>
           </div>
         </div>
@@ -88,9 +86,10 @@
             <div>
               <p class="eyebrow">QUESTIONS TO TAKE</p>
               <h2 id="questionTitle">의료진에게 확인할 질문</h2>
-              <p class="question-examples">
-                예: “무엇을 먹어도 될까요?” · “운동은 일주일에 몇 번·몇 분 하면 좋을까요?” · “약은 언제 먹고, 검사 전에는 무엇을 준비할까요?”
-              </p>
+              <details class="question-examples context-disclosure context-disclosure--compact">
+                <summary>질문 예시 보기</summary>
+                <p class="context-disclosure__body">식사, 운동 횟수·시간, 약 복용 시점, 검사 준비를 물어볼 수 있습니다.</p>
+              </details>
             </div>
             <p id="printDate" class="print-date"></p>
           </header>
@@ -99,89 +98,32 @@
             진료에서 먼저 확인할 질문을 하나 선택하세요.
           </p>
 
-          <section class="question-assistant" id="questionAssistant" aria-labelledby="assistantTitle">
-            <header class="question-assistant__heading">
-              <div>
-                <p class="eyebrow">QUESTION ASSISTANT</p>
-                <h3 id="assistantTitle">최근 변화를 더하고 질문을 다듬어 보세요.</h3>
-              </div>
-              <span class="assistant-mode" id="questionProviderMode">규칙 기반 안전망</span>
-            </header>
-
-            <label class="assistant-report" for="patientSelfReport">
-              <span>이번 진료에서 전할 최근 변화 <small>선택 · 1,000자 이내</small></span>
-              <textarea
-                id="patientSelfReport"
-                maxlength="1000"
-                rows="3"
-                placeholder="예: 2주 전부터 밤에 기침이 잦아졌어요."
-                aria-describedby="selfReportPrivacy"
-              ></textarea>
-            </label>
-            <p class="assistant-privacy" id="selfReportPrivacy">
-              이름·연락처·주소는 적지 마세요. 흔한 연락처·이메일·등록번호 형식은 제거하지만 자동 탐지는 완전하지 않습니다.
-            </p>
-
-            <fieldset class="assistant-provider">
-              <legend>선택적 모델 사용</legend>
-              <label>
-                <input type="radio" name="question-provider" value="local" checked />
-                <span><b>이 기기 모델</b><small>localhost의 Ollama · 사용할 수 없으면 규칙 기반 유지</small></span>
-              </label>
-              <label>
-                <input type="radio" name="question-provider" value="frontier" />
-                <span><b>외부 모델</b><small>선택 실행 · 아래 전송 범위 확인과 동의 필요</small></span>
-              </label>
-            </fieldset>
-
-            <div class="frontier-consent" id="frontierConsentPanel" hidden>
-              <p>
-                외부 모델을 사용하면 파일에 의료진 확정으로 표시된 질환·최종 측정값과 위에 직접 적은 최근 변화가 모델 서비스로 전송됩니다. 파일의 발행기관과 변조 여부는 검증되지 않습니다.
-                EMR의 이름·등록번호·원문은 제외하지만, 최근 변화에 직접 적은 이름·주소는 자동 탐지가 완전하지 않으므로 전송 전에 삭제하세요.
-              </p>
-              <label>
-                <input id="frontierConsent" type="checkbox" />
-                <span>위 전송 범위를 확인했고 이번 질문 생성에 동의합니다.</span>
-              </label>
-            </div>
-
-            <div class="question-assistant__actions">
-              <button class="brief-action brief-action--primary" id="runPatientAssistant" type="button">
-                선택한 모델로 질문 다시 제안
-              </button>
-              <button class="brief-action brief-action--secondary" id="useRuleQuestions" type="button">
-                규칙 기반 질문 사용
-              </button>
-              <button class="brief-action brief-action--secondary" id="sharePatientBrief" type="button" disabled>
-                선택 질문 복사
-              </button>
-            </div>
-            <p class="assistant-status" id="patientAssistantStatus" role="status" aria-live="polite">
-              기본 질문은 검증 가능한 규칙으로 정리합니다. 모델 제안도 복사하거나 보여주기 전에 직접 선택하고 확인하세요.
-            </p>
-          </section>
-
           <div class="brief-empty" id="briefEmpty" data-first-use hidden>
             <span class="brief-empty__index" aria-hidden="true">00</span>
             <div>
               <p class="eyebrow">WAITING FOR PATIENT TRANSFER</p>
               <h3>환자용 기록을 직접 가져오면 질문 브리프가 시작됩니다.</h3>
-              <p>의료진에게 받은 파일과 별도 확인 코드를 대조해 가져오세요. 이름·등록번호와 원문 메모를 제외한 환자용 항목만 사용합니다.</p>
+              <p>의료진에게 받은 파일과 별도 확인 코드를 대조해 가져오세요.</p>
               <div class="first-use-actions">
                 <a class="first-use-action first-use-action--primary brief-action brief-action--primary" id="refreshClinicalSnapshotEmpty" href="/map#import-record">
                   <span>환자용 기록 가져오기</span><small>파일과 별도 확인 코드를 직접 대조</small>
                 </a>
-                <a class="first-use-action" href="/map?sample=1">
+                <a class="first-use-action brief-action brief-action--secondary" href="/map?sample=1">
                   <span>예시로 먼저 보기</span><small>현재 탭에서만 유지 · Journey 저장 안 됨</small>
                 </a>
               </div>
-              <ol class="first-use-steps" aria-label="첫 질문 브리프 만들기">
-                <li><span>1</span><div><b>의료진 내보내기</b><small>선택 환자를 확인하고 정제 파일과 코드를 전달</small></div></li>
-                <li><span>2</span><div><b>환자 확인·가져오기</b><small>파일과 별도 확인 코드를 대조한 뒤 직접 가져오기</small></div></li>
-                <li><span>3</span><div><b>질문 확인·직접 전달</b><small>근거를 대조하고 선택한 질문만 복사하거나 진료에서 보여주기</small></div></li>
-              </ol>
-              <p class="legacy-record-path">의료진에게 받은 환자 전달 원본 파일이 개인 보관 사본입니다. Personal은 별도의 정제 JSON을 다시 만들지 않습니다.</p>
               <p class="first-use-safety">가져온 기록은 환자용 정제 사본입니다. 예시 모드에서는 실제 기록을 표시하거나 질문을 복사·모델 요청하지 않습니다.</p>
+              <details class="context-disclosure context-disclosure--compact">
+                <summary>가져오기 과정과 데이터 안내</summary>
+                <div class="context-disclosure__body">
+                  <ol class="first-use-steps" aria-label="첫 질문 브리프 만들기">
+                    <li><span>1</span><div><b>의료진 내보내기</b><small>선택 환자의 정제 파일과 코드를 전달</small></div></li>
+                    <li><span>2</span><div><b>환자 확인</b><small>파일과 별도 확인 코드를 직접 대조</small></div></li>
+                    <li><span>3</span><div><b>질문 선택</b><small>근거를 보고 선택한 질문만 직접 전달</small></div></li>
+                  </ol>
+                  <p class="legacy-record-path">원본 전달 파일이 개인 보관 사본입니다. Personal은 별도의 정제 JSON을 만들지 않습니다.</p>
+                </div>
+              </details>
             </div>
           </div>
 
@@ -192,6 +134,65 @@
             aria-labelledby="questionTitle"
             aria-describedby="questionSelectionStatus"
           ></ol>
+
+          <details class="question-assistant context-disclosure" id="questionAssistant">
+            <summary>
+              <span id="assistantTitle">최근 변화를 더해 질문 다듬기</span>
+              <span class="assistant-mode" id="questionProviderMode">규칙 기반 안전망</span>
+            </summary>
+            <div class="context-disclosure__body question-assistant__body">
+              <label class="assistant-report" for="patientSelfReport">
+                <span>이번 진료에서 전할 최근 변화 <small>선택 · 1,000자 이내</small></span>
+                <textarea
+                  id="patientSelfReport"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="예: 2주 전부터 밤에 기침이 잦아졌어요."
+                  aria-describedby="selfReportPrivacy"
+                ></textarea>
+              </label>
+              <p class="assistant-privacy" id="selfReportPrivacy">
+                이름·연락처·주소는 적지 마세요. 자동 탐지는 완전하지 않습니다.
+              </p>
+
+              <fieldset class="assistant-provider">
+                <legend>선택적 모델 사용</legend>
+                <label>
+                  <input type="radio" name="question-provider" value="local" checked />
+                  <span><b>이 기기 모델</b><small>localhost의 Ollama · 사용할 수 없으면 규칙 기반 유지</small></span>
+                </label>
+                <label>
+                  <input type="radio" name="question-provider" value="frontier" />
+                  <span><b>외부 모델</b><small>선택 실행 · 전송 범위 확인과 동의 필요</small></span>
+                </label>
+              </fieldset>
+
+              <div class="frontier-consent" id="frontierConsentPanel" hidden>
+                <p>
+                  외부 모델에는 파일에 확정으로 표시된 질환·최종 측정값과 직접 적은 최근 변화가 전송됩니다. 파일 발행기관·변조 여부는 검증되지 않으며, 최근 변화에 적은 개인정보 탐지도 완전하지 않습니다.
+                </p>
+                <label>
+                  <input id="frontierConsent" type="checkbox" />
+                  <span>전송 범위를 확인했고 이번 질문 생성에 동의합니다.</span>
+                </label>
+              </div>
+
+              <div class="question-assistant__actions">
+                <button class="brief-action brief-action--primary" id="runPatientAssistant" type="button">
+                  질문 다시 제안
+                </button>
+                <button class="brief-action brief-action--secondary" id="useRuleQuestions" type="button">
+                  규칙 기반으로 되돌리기
+                </button>
+                <button class="brief-action brief-action--secondary" id="sharePatientBrief" type="button" disabled>
+                  선택 질문 복사
+                </button>
+              </div>
+              <p class="assistant-status" id="patientAssistantStatus" role="status" aria-live="polite">
+                모델 제안도 복사하기 전에 직접 선택하고 확인하세요.
+              </p>
+            </div>
+          </details>
         </section>
 
         <aside class="brief-rail" aria-label="브리프 보조 정보">
@@ -200,7 +201,7 @@
             <h2 id="snapshotTitle">가져온 정제 기록</h2>
             <p class="snapshot-card__status" id="clinicalSnapshotStatus">직접 가져온 환자용 기록을 확인하는 중입니다.</p>
             <dl class="snapshot-counts" id="clinicalSnapshotCounts"></dl>
-            <p class="snapshot-card__note">이름·등록번호·연락처·EMR 원문은 이 화면의 모델 입력에 포함하지 않습니다. Personal은 별도 정제 JSON 내보내기를 제공하지 않습니다.</p>
+            <p class="snapshot-card__note">이름·등록번호·연락처·EMR 원문은 모델 입력에서 제외합니다.</p>
           </section>
 
           <section class="signal-card" aria-labelledby="signalTitle">
@@ -209,16 +210,17 @@
             <div class="signal-list" id="signals"></div>
           </section>
 
-          <section class="method-card" aria-labelledby="methodTitle">
-            <p class="eyebrow">HOW IT WORKS</p>
-            <h2 id="methodTitle">기록을 질문으로만 바꿉니다.</h2>
-            <ol aria-label="브리프 정리 과정">
-              <li><span>1</span>정제 기록·최근 변화 확인</li>
-              <li><span>2</span>규칙 또는 동의한 선택적 모델로 질문 제안</li>
-              <li><span>3</span>근거 대조 후 최대 다섯 개 복사·직접 보여주기</li>
-            </ol>
-            <p id="disclaimer"></p>
-          </section>
+          <details class="method-card context-disclosure" aria-labelledby="methodTitle">
+            <summary id="methodTitle">브리프 작성 방식과 한계</summary>
+            <div class="context-disclosure__body">
+              <ol aria-label="브리프 정리 과정">
+                <li><span>1</span>정제 기록·최근 변화 확인</li>
+                <li><span>2</span>규칙 또는 동의한 모델로 질문 제안</li>
+                <li><span>3</span>근거 대조 후 최대 다섯 개 직접 전달</li>
+              </ol>
+              <p id="disclaimer"></p>
+            </div>
+          </details>
         </aside>
       </div>
     </main>

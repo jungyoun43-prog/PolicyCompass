@@ -298,7 +298,7 @@ try {
   await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
   await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Visit brief did not receive the explicit imported state.");
   assert(await evaluate("document.getElementById('clinicalSnapshotStatus').textContent.includes('파일에 의료진 확정으로 표시 · 발행기관·변조 미검증')"), "Visit brief did not identify unsigned-import provenance.");
-  assert(await evaluate("!document.getElementById('clinicalSnapshotCounts').textContent.includes('처방') && document.getElementById('exportClinicalSnapshot').disabled"), "Visit brief claimed unsupported medication/export scope.");
+  assert(await evaluate("!document.getElementById('clinicalSnapshotCounts').textContent.includes('처방') && document.getElementById('exportClinicalSnapshot').tagName === 'SPAN'"), "Visit brief claimed unsupported medication/export scope.");
   await evaluate(`
     document.getElementById("patientSelfReport").value = "이름 홍길동, 010-1234-5678, 지난 2주 동안 야간 기침이 심했습니다.";
     document.getElementById("patientSelfReport").dispatchEvent(new Event("input", { bubbles: true }));
@@ -356,7 +356,7 @@ try {
   assert(await evaluate("document.getElementById('transferCode').disabled && document.getElementById('importRecordButton').disabled && document.getElementById('saveJourney').disabled"), "Sample map enabled import or Journey actions.");
   assert(await evaluate("!document.body.textContent.includes('7.1') && localStorage.getItem('vitagraph-care-bridge-v1') === null"), "Sample map exposed imported/legacy clinical detail.");
   await navigate("/insights?sample=1", "Boolean(document.getElementById('questionCount'))");
-  assert(await evaluate("document.getElementById('clinicalConnectionBadge').textContent === '예시 모드' && document.getElementById('runPatientAssistant').disabled && document.getElementById('sharePatientBrief').disabled && document.getElementById('exportClinicalSnapshot').disabled"), "Sample insights enabled real-data actions.");
+  assert(await evaluate("document.getElementById('clinicalConnectionBadge').textContent === '예시 모드' && document.getElementById('runPatientAssistant').disabled && document.getElementById('sharePatientBrief').disabled && document.getElementById('exportClinicalSnapshot').tagName === 'SPAN'"), "Sample insights enabled real-data actions.");
   assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(validImportedSceneText)} && !document.body.textContent.includes('7.1')`), "Sample insights exposed or mutated imported detail.");
   await navigate("/connections?sample=1", "Boolean(document.getElementById('networkScene'))");
   assert(await evaluate("!document.getElementById('personalDemoMode').hidden && document.querySelectorAll('[data-node-id]').length === 5"), "Sample connections did not stay in the synthetic fixture.");

@@ -180,8 +180,8 @@
 
 .patient-start-path ol {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--space-6);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -264,47 +264,12 @@
   margin-top: 0;
 }
 
-.fact-strip {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-
-.fact-strip article {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-4);
-  padding: var(--space-5);
-}
-
-.fact-strip article + article {
-  border-left: 1px solid var(--line);
-}
-
-.fact-strip span,
 .workflow__steps > li > span {
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 750;
   letter-spacing: 0.08em;
-}
-
-.fact-strip strong,
-.fact-strip p {
-  display: block;
-}
-
-.fact-strip strong {
-  font-size: 0.875rem;
-}
-
-.fact-strip p {
-  margin: var(--space-1) 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.55;
 }
 
 .outcome,
@@ -463,11 +428,24 @@
 
 .workflow__steps {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-5);
   margin: var(--space-8) 0 0;
   padding: 0;
   list-style: none;
+}
+
+.workflow.context-disclosure {
+  margin: var(--space-8) 0;
+  padding: 0;
+}
+
+.workflow.context-disclosure > summary {
+  font-size: 1rem;
+}
+
+.workflow.context-disclosure .workflow__steps {
+  margin-top: 0;
 }
 
 .workflow__steps li {
@@ -659,14 +637,8 @@
     width: 100%;
   }
 
-  .fact-strip,
   .workflow__steps {
     grid-template-columns: 1fr;
-  }
-
-  .fact-strip article + article {
-    border-top: 1px solid var(--line);
-    border-left: 0;
   }
 
   .brief-preview__header {

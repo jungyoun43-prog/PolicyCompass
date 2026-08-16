@@ -26,15 +26,27 @@
 }
 
 .gateway-header__status {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
   margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+}
+
+.gateway-header__status::before {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent-mid);
+  content: "";
 }
 
 .gateway-shell {
@@ -43,6 +55,7 @@
 
 .gateway-intro {
   display: grid;
+  width: min(100%, 58rem);
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: center;
@@ -53,7 +66,7 @@
   background:
     radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-mid) 20%, transparent), transparent 19rem),
     linear-gradient(128deg, var(--accent-wash), color-mix(in srgb, var(--surface-raised) 76%, var(--accent-soft)));
-  padding: clamp(var(--space-6), 4vw, var(--space-10));
+  padding: clamp(var(--space-6), 3vw, var(--space-8));
 }
 
 .gateway-eyebrow,

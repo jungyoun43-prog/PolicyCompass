@@ -328,9 +328,11 @@
   padding: var(--hero-top) 0 var(--space-12);
 }
 .journey-page .journey-intro {
+  width: min(100%, 64rem);
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   margin: 0 0 var(--hero-bottom);
+  padding: clamp(var(--space-6), 3vw, var(--space-8));
 }
 .journey-page .journey-intro h1 { max-width: 16ch; font-size: clamp(2.5rem, 4.4vw, 4.35rem); line-height: 1.08; }
 .journey-page .journey-intro > p { margin-bottom: 0; }

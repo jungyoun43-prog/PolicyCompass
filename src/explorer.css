@@ -433,21 +433,28 @@
 }
 
 .edge-caption__surface {
-  fill: color-mix(in srgb, var(--surface) 96%, var(--data-cyan));
-  stroke: color-mix(in srgb, var(--line) 82%, var(--accent));
-  stroke-width: 1.2;
+  fill: none;
+  stroke: none;
 }
 
 .edge-caption.is-active .edge-caption__surface {
-  fill: color-mix(in srgb, var(--accent) 11%, var(--surface));
-  stroke: color-mix(in srgb, var(--accent) 48%, var(--line));
+  fill: none;
+  stroke: none;
 }
 
 .edge-caption__text {
   fill: var(--ink);
+  stroke: color-mix(in srgb, var(--surface-soft) 94%, transparent);
+  stroke-width: 7px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
   font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 760;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.edge-caption.is-active .edge-caption__text {
+  fill: color-mix(in srgb, var(--accent) 78%, var(--ink));
 }
 
 .network-node {
@@ -784,6 +791,11 @@
 }
 
 @media (max-width: 1080px) {
+  .explorer-first-use {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
   .explorer-workspace {
     grid-template-columns: 1fr;
   }
@@ -794,6 +806,11 @@
 
   .explorer-detail__identity {
     grid-column: 1 / -1;
+  }
+
+  .edge-caption__text {
+    stroke-width: 8px;
+    font-size: 20px;
   }
 }
 
@@ -818,6 +835,11 @@
 
   .explorer-detail__identity {
     grid-column: auto;
+  }
+
+  .edge-caption__text {
+    stroke-width: 10px;
+    font-size: 24px;
   }
 }
 

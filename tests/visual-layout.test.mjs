@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, mapCss, hierarchyCss, connections, journey, captureScript] = await Promise.all([
+const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, mapCss, hierarchyCss, connections, explorerCss, journey, journeyCss, captureScript] = await Promise.all([
   readFile("src/shell.css", "utf8"),
   readFile("src/controls.css", "utf8"),
   readFile("src/gateway.css", "utf8"),
@@ -14,7 +14,9 @@ const [shell, controls, gateway, landing, insights, insightsCss, insightsScript,
   readFile("src/body-map.css", "utf8"),
   readFile("src/clinician-hierarchy.css", "utf8"),
   readFile("src/connections.html", "utf8"),
+  readFile("src/explorer.css", "utf8"),
   readFile("src/journey.html", "utf8"),
+  readFile("src/journey.css", "utf8"),
   readFile("scripts/visual-layout-capture.mjs", "utf8"),
 ]);
 
@@ -93,4 +95,23 @@ test("태블릿 역할 선택은 두 카드를 비교하고 모바일에서만 �
 test("환자 랜딩의 다음 핵심 구간은 상단 정렬과 짧은 section rhythm을 사용한다", () => {
   assert.match(landing, /\.outcome,[\s\S]*?\.closing\s*\{[\s\S]*?padding: clamp\(40px, 4vw, 56px\) 0/);
   assert.match(landing, /\.outcome\s*\{[\s\S]*?align-items: start/);
+});
+
+test("비동작 정보는 버튼이나 선택 chip의 면을 사용하지 않는다", () => {
+  assert.match(explorerCss, /\.edge-caption__surface\s*\{[^}]*fill: none[^}]*stroke: none/);
+  assert.match(explorerCss, /\.edge-caption\.is-active \.edge-caption__surface\s*\{[^}]*fill: none[^}]*stroke: none/);
+  assert.match(explorerCss, /\.edge-caption__text\s*\{[^}]*paint-order: stroke fill/);
+  const explorerMediumBlock = explorerCss.slice(explorerCss.indexOf("@media (max-width: 1080px)"), explorerCss.indexOf("@media (max-width: 800px)"));
+  assert.match(explorerMediumBlock, /\.explorer-first-use\s*\{[^}]*grid-template-columns: 1fr/);
+  assert.match(explorerMediumBlock, /\.edge-caption__text\s*\{[^}]*stroke-width: 8px[^}]*font-size: 20px/);
+  const explorerTabletBlock = explorerCss.slice(explorerCss.indexOf("@media (max-width: 800px)"), explorerCss.indexOf("@media (max-width: 620px)"));
+  assert.match(explorerTabletBlock, /\.edge-caption__text\s*\{[^}]*stroke-width: 10px[^}]*font-size: 24px/);
+  assert.match(gateway, /\.gateway-header__status\s*\{[^}]*border: 0[^}]*border-radius: 0/);
+  assert.match(gateway, /\.gateway-header__status::before\s*\{[^}]*border-radius: 50%/);
+  assert.match(landing, /\.brief-preview__signals span\s*\{[^}]*border: 0[^}]*border-radius: 0[^}]*background: transparent[^}]*padding: 0[^}]*pointer-events: none/);
+});
+
+test("내용이 짧은 넓은 hero는 정보량에 맞는 최대 폭을 사용한다", () => {
+  assert.match(gateway, /\.gateway-intro\s*\{[^}]*width: min\(100%, 58rem\)/);
+  assert.match(journeyCss, /\.journey-page \.journey-intro\s*\{[^}]*width: min\(100%, 64rem\)/);
 });

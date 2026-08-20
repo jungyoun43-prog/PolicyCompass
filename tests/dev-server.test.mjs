@@ -106,6 +106,76 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
     });
     assert.equal(frontierUnconfigured.status, 503);
     assert.equal((await frontierUnconfigured.json()).code, "FRONTIER_NOT_CONFIGURED");
+
+    const jsonHeaders = { "content-type": "application/json", origin: baseUrl };
+    const snapshotPayload = {
+      clinicalSnapshot: {
+        schema: "vitagraph-clinical-snapshot",
+        version: 1,
+        healthMap: {
+          conditions: [{ id: "hypertension", label: "고혈압", recordedOn: "2026-07-01" }],
+          measurements: [],
+        },
+        medications: [{
+          code: "ACE-001",
+          label: "ACE 억제제",
+          prescribedOn: "2026-07-10",
+          dose: 1,
+          doseUnit: "정",
+          route: "경구",
+          frequency: "1일 1회",
+          durationDays: 30,
+        }],
+      },
+      selfReport: { summary: "야간 기침이 있습니다." },
+    };
+    const insightsResponse = await fetch(`${baseUrl}/api/connection-insights`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(snapshotPayload),
+    });
+    assert.equal(insightsResponse.status, 200);
+    const insightsBody = await insightsResponse.json();
+    assert.equal(insightsBody.mode, "rule-based");
+    assert.ok(insightsBody.insights.length >= 1);
+
+    const reviewStart = await fetch(`${baseUrl}/api/claim-review/start`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        evaluation: {
+          id: "claim-1",
+          title: "고혈압 추적검사",
+          status: "missing-evidence",
+          explanation: "최근 검사 기록이 없습니다.",
+          missingEvidence: ["최근 혈액검사"],
+          evidenceEventIds: ["e1"],
+        },
+        events: [{ id: "e1", label: "고혈압", date: "2026-01-01" }],
+      }),
+    });
+    assert.equal(reviewStart.status, 200);
+    const startedReview = await reviewStart.json();
+    assert.equal(startedReview.status, "awaiting-review");
+    assert.ok(startedReview.threadId);
+
+    const reviewResume = await fetch(`${baseUrl}/api/claim-review/resume`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ threadId: startedReview.threadId, action: "approve", note: "확인" }),
+    });
+    assert.equal(reviewResume.status, 200);
+    const completedReview = await reviewResume.json();
+    assert.equal(completedReview.status, "completed");
+    assert.equal(completedReview.result.status, "clinician-confirmed");
+
+    const refineUnconfigured = await fetch(`${baseUrl}/api/patient-question-assistant/refine`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ ...snapshotPayload, instruction: "더 짧게 바꿔줘" }),
+    });
+    assert.equal(refineUnconfigured.status, 503);
+    assert.equal((await refineUnconfigured.json()).code, "LOCAL_AI_NOT_CONFIGURED");
   } finally {
     await stopChild(child);
   }

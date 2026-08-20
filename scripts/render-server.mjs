@@ -1,6 +1,8 @@
 import http from "node:http";
 
 import worker from "../dist/server/index.js";
+import { runConnectionInsights } from "./graphs/connection-insights-graph.mjs";
+import { runQuestionRefine } from "./graphs/question-refine-graph.mjs";
 import {
   patientQuestionAssistantStatus,
   runPatientQuestionAssistant,
@@ -104,6 +106,34 @@ const server = http.createServer((request, response) => {
         sendJson(response, 200, patientQuestionAssistantStatus());
         return;
       }
+      if (url.pathname === "/api/patient-question-assistant/refine" && request.method === "POST") {
+        const payload = await readJson(request);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          throw new ApiError(400, "INVALID_PAYLOAD", "질문 다듬기 요청 데이터가 필요합니다.");
+        }
+        const provider = payload.provider === "frontier" ? "frontier" : "local";
+        if (provider === "frontier" && payload.consent !== true) {
+          throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
+        }
+        const status = patientQuestionAssistantStatus();
+        if (!status[provider].configured) {
+          sendJson(response, 503, {
+            code: provider === "frontier" ? "FRONTIER_NOT_CONFIGURED" : "LOCAL_AI_NOT_CONFIGURED",
+            message: "질문 다듬기에는 AI 설정이 필요합니다.",
+          });
+          return;
+        }
+        if (provider === "frontier") assertFrontierRequestAllowed(request);
+        try {
+          sendJson(response, 200, await runQuestionRefine(payload));
+        } catch (error) {
+          if (error instanceof TypeError) {
+            throw new ApiError(400, "INVALID_REFINE_REQUEST", error.message);
+          }
+          throw new ApiError(502, "REFINE_FAILED", "질문을 다듬지 못했습니다.");
+        }
+        return;
+      }
       if (url.pathname === "/api/patient-question-assistant" && request.method === "POST") {
         const payload = await readJson(request);
         if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -133,6 +163,26 @@ const server = http.createServer((request, response) => {
         return;
       }
       sendJson(response, 405, { code: "METHOD_NOT_ALLOWED", message: "지원하지 않는 API 요청입니다." });
+      return;
+    }
+    if (url.pathname === "/api/connection-insights") {
+      assertSameOrigin(request);
+      if (request.method !== "POST") {
+        sendJson(response, 405, { code: "METHOD_NOT_ALLOWED", message: "지원하지 않는 API 요청입니다." });
+        return;
+      }
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "정제 건강 지도 데이터가 필요합니다.");
+      }
+      try {
+        sendJson(response, 200, await runConnectionInsights(payload));
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new ApiError(400, "INVALID_PATIENT_CONTEXT", error.message);
+        }
+        throw new ApiError(502, "CONNECTION_INSIGHTS_FAILED", "관계 근거를 생성하지 못했습니다.");
+      }
       return;
     }
     const workerResponse = await worker.fetch(

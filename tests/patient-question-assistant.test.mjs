@@ -102,10 +102,12 @@ test("local provider uses loopback Ollama and rejects fabricated evidence", asyn
   assert.match(prompt, /약은 언제 먹고 불편하면 어떻게 문의할지/);
   assert.match(prompt, /검사 전 무엇을 준비할지/);
 
-  await assert.rejects(
-    () => runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-      environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
-      fetchImpl: async () => new Response(JSON.stringify({
+  let fabricatedCalls = 0;
+  const fallback = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
+    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    fetchImpl: async () => {
+      fabricatedCalls += 1;
+      return new Response(JSON.stringify({
         model: "patient-local",
         message: {
           content: JSON.stringify({
@@ -113,10 +115,15 @@ test("local provider uses loopback Ollama and rejects fabricated evidence", asyn
             questions: [{ ...modelOutput.questions[0], evidenceIds: ["fabricated"] }],
           }),
         },
-      }), { status: 200 }),
-    }),
-    /유효한 정제 근거/,
-  );
+      }), { status: 200 });
+    },
+  });
+  assert.equal(fabricatedCalls, 2);
+  assert.equal(fallback.provider, "rule-based");
+  assert.match(fallback.fallback.reason, /유효한 정제 근거/);
+  assert.ok(fallback.questions.length >= 1);
+  const allowed = new Set(["condition:hypertension", "medication:1", "self-report:1"]);
+  assert.ok(fallback.questions.every((item) => item.evidenceIds.every((id) => allowed.has(id))));
 });
 
 test("frontier provider requires per-run consent and uses Responses structured output server-side", async () => {
@@ -173,24 +180,24 @@ test("provider status reveals configuration state, never the API key", () => {
 });
 
 test("patient model output rejects medication-change instructions even with valid evidence", async () => {
-  await assert.rejects(
-    () => runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-      environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
-      fetchImpl: async () => new Response(JSON.stringify({
-        model: "patient-local",
-        message: {
-          content: JSON.stringify({
-            ...modelOutput,
-            summary: "에날라프릴 중단이 필요합니다.",
-            questions: [{
-              question: "약을 바로 끊으시겠습니까?",
-              reason: "위험하므로 지금 끊으세요.",
-              evidenceIds: ["medication:1"],
-            }],
-          }),
-        },
-      }), { status: 200 }),
-    }),
-    /진단 또는 복약 변경/,
-  );
+  const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
+    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    fetchImpl: async () => new Response(JSON.stringify({
+      model: "patient-local",
+      message: {
+        content: JSON.stringify({
+          ...modelOutput,
+          summary: "에날라프릴 중단이 필요합니다.",
+          questions: [{
+            question: "약을 바로 끊으시겠습니까?",
+            reason: "위험하므로 지금 끊으세요.",
+            evidenceIds: ["medication:1"],
+          }],
+        }),
+      },
+    }), { status: 200 }),
+  });
+  assert.equal(result.provider, "rule-based");
+  assert.match(result.fallback.reason, /진단 또는 복약 변경/);
+  assert.doesNotMatch(JSON.stringify(result.questions), /끊으|중단/);
 });

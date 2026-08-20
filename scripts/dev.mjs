@@ -2,6 +2,9 @@ import http from "node:http";
 
 import worker from "../dist/server/index.js";
 import { runClinicalCopilot } from "./clinical-copilot.mjs";
+import { resumeClaimReview, startClaimReview } from "./graphs/claim-review-graph.mjs";
+import { runConnectionInsights } from "./graphs/connection-insights-graph.mjs";
+import { runQuestionRefine } from "./graphs/question-refine-graph.mjs";
 import {
   patientQuestionAssistantStatus,
   runPatientQuestionAssistant,
@@ -86,7 +89,9 @@ const server = http.createServer((request, response) => {
     if (!requestTarget.startsWith("/")) throw new ApiError(400, "INVALID_TARGET", "요청 경로가 올바르지 않습니다.");
     const url = new URL(requestTarget, localBaseUrl);
     const isApi = url.pathname.startsWith("/api/clinical-copilot")
-      || url.pathname.startsWith("/api/patient-question-assistant");
+      || url.pathname.startsWith("/api/patient-question-assistant")
+      || url.pathname.startsWith("/api/connection-insights")
+      || url.pathname.startsWith("/api/claim-review");
     if (isApi) assertLocalApiRequest(request);
 
     if (url.pathname === "/api/clinical-copilot/status" && request.method === "GET") {
@@ -116,6 +121,67 @@ const server = http.createServer((request, response) => {
     }
     if (url.pathname === "/api/patient-question-assistant/status" && request.method === "GET") {
       sendJson(response, 200, patientQuestionAssistantStatus());
+      return;
+    }
+    if (url.pathname === "/api/patient-question-assistant/refine" && request.method === "POST") {
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "질문 다듬기 요청 데이터가 필요합니다.");
+      }
+      const provider = payload.provider === "frontier" ? "frontier" : "local";
+      if (provider === "frontier" && payload.consent !== true) {
+        throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
+      }
+      const status = patientQuestionAssistantStatus();
+      if (!status[provider].configured) {
+        sendJson(response, 503, {
+          code: provider === "frontier" ? "FRONTIER_NOT_CONFIGURED" : "LOCAL_AI_NOT_CONFIGURED",
+          message: "질문 다듬기에는 AI 설정이 필요합니다.",
+        });
+        return;
+      }
+      try {
+        sendJson(response, 200, await runQuestionRefine(payload));
+      } catch (error) {
+        if (error instanceof TypeError) throw new ApiError(400, "INVALID_REFINE_REQUEST", error.message);
+        throw new ApiError(502, "REFINE_FAILED", "질문을 다듬지 못했습니다.");
+      }
+      return;
+    }
+    if (url.pathname === "/api/connection-insights" && request.method === "POST") {
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "정제 건강 지도 데이터가 필요합니다.");
+      }
+      try {
+        sendJson(response, 200, await runConnectionInsights(payload));
+      } catch (error) {
+        if (error instanceof TypeError) throw new ApiError(400, "INVALID_PATIENT_CONTEXT", error.message);
+        throw new ApiError(502, "CONNECTION_INSIGHTS_FAILED", "관계 근거를 생성하지 못했습니다.");
+      }
+      return;
+    }
+    if (url.pathname === "/api/claim-review/start" && request.method === "POST") {
+      const payload = await readJson(request);
+      try {
+        sendJson(response, 200, await startClaimReview(payload));
+      } catch (error) {
+        if (error instanceof TypeError) throw new ApiError(400, "INVALID_CLAIM_REVIEW", error.message);
+        throw new ApiError(502, "CLAIM_REVIEW_FAILED", "청구 검토 초안을 만들지 못했습니다.");
+      }
+      return;
+    }
+    if (url.pathname === "/api/claim-review/resume" && request.method === "POST") {
+      const payload = await readJson(request);
+      try {
+        sendJson(response, 200, await resumeClaimReview(payload?.threadId, {
+          action: payload?.action,
+          note: payload?.note,
+        }));
+      } catch (error) {
+        if (error instanceof TypeError) throw new ApiError(400, "INVALID_CLAIM_REVIEW", error.message);
+        throw new ApiError(502, "CLAIM_REVIEW_FAILED", "청구 검토를 재개하지 못했습니다.");
+      }
       return;
     }
     if (url.pathname === "/api/patient-question-assistant" && request.method === "POST") {

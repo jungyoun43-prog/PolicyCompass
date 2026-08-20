@@ -1,3 +1,5 @@
+import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+
 const OUTPUT_SCHEMA = {
   type: "object",
   properties: {
@@ -253,80 +255,164 @@ function validateModelOutput(value, allowedEventIds, allowedPatientBriefIds) {
   };
 }
 
+const ClinicalCopilotState = Annotation.Root({
+  request: Annotation(),
+  options: Annotation(),
+  attempt: Annotation({ reducer: (_previous, next) => next, default: () => 0 }),
+  feedback: Annotation(),
+  parsed: Annotation(),
+  raw: Annotation(),
+  modelMeta: Annotation(),
+  failure: Annotation(),
+  output: Annotation(),
+  verified: Annotation(),
+});
+
+let compiledClinicalCopilotGraph = null;
+
+function clinicalCopilotGraph() {
+  compiledClinicalCopilotGraph ??= new StateGraph(ClinicalCopilotState)
+    .addNode("generate", async (state) => {
+      const { request, options, feedback } = state;
+      const messages = feedback
+        ? [
+          ...request.messages,
+          { role: "assistant", content: feedback.previous ?? "" },
+          { role: "user", content: `이전 초안이 거부되었습니다: ${feedback.reason} 같은 JSON 스키마와 안전 규칙을 지켜 초안을 다시 작성하세요.` },
+        ]
+        : request.messages;
+      const response = await options.fetchImpl(`${options.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...request, messages }),
+        redirect: "error",
+        signal: AbortSignal.timeout(options.timeoutMs),
+      });
+      if (!response.ok) {
+        let detail = "";
+        try {
+          detail = cleanText((await response.json()).error, 500);
+        } catch {
+          detail = cleanText(await response.text(), 500);
+        }
+        throw new Error(`로컬 Ollama 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
+      }
+      const body = await response.json();
+      const raw = cleanText(body?.message?.content, 20_000);
+      const modelMeta = {
+        model: cleanText(body?.model, 160) || request.model,
+        generatedAt: cleanText(body?.created_at, 80) || new Date().toISOString(),
+      };
+      try {
+        return { parsed: JSON.parse(raw), raw, modelMeta, failure: null, attempt: state.attempt + 1 };
+      } catch {
+        const message = "로컬 모델 응답이 JSON 형식이 아닙니다.";
+        return {
+          parsed: null,
+          raw,
+          modelMeta,
+          attempt: state.attempt + 1,
+          failure: { message },
+          feedback: { reason: message, previous: raw },
+        };
+      }
+    })
+    .addNode("validate", (state) => {
+      if (!state.parsed) return {};
+      try {
+        const output = validateModelOutput(state.parsed, state.options.allowedEventIds, state.options.allowedPatientBriefIds);
+        return { output, failure: null };
+      } catch (error) {
+        return {
+          failure: { message: error.message },
+          feedback: { reason: error.message, previous: state.raw },
+        };
+      }
+    })
+    .addNode("fail", (state) => {
+      throw new Error(state.failure?.message ?? "로컬 모델이 유효한 초안을 반환하지 못했습니다.");
+    })
+    .addNode("verifyEvidence", (state) => {
+      const { output } = state;
+      const { eventById, patientBriefById } = state.options;
+      const provenanceIds = new Set([
+        ...output.summary.flatMap(({ evidenceEventIds }) => evidenceEventIds),
+        ...output.priorities.flatMap(({ evidenceEventIds }) => evidenceEventIds),
+        ...output.clinicianQuestions.flatMap(({ evidenceEventIds }) => evidenceEventIds),
+        ...output.patientQuestions.flatMap(({ evidenceEventIds }) => evidenceEventIds),
+        ...output.warnings.flatMap(({ evidenceEventIds }) => evidenceEventIds),
+      ]);
+      const patientBriefProvenanceIds = new Set([
+        ...output.clinicianQuestions.flatMap(({ patientBriefIds }) => patientBriefIds),
+        ...output.patientQuestions.flatMap(({ patientBriefIds }) => patientBriefIds),
+      ]);
+      return {
+        verified: {
+          ...output,
+          provenance: [...provenanceIds].map((eventId) => eventById.get(eventId)).filter(Boolean).map((event) => ({
+            eventId: event.id,
+            label: event.label,
+            date: event.date,
+            sourceLabel: "로컬 모델 입력 차트",
+          })),
+          patientBriefProvenance: [...patientBriefProvenanceIds]
+            .map((id) => patientBriefById.get(id))
+            .filter(Boolean)
+            .map((item) => ({
+              id: item.id,
+              kind: item.kind,
+              label: item.kind === "question" ? `환자 질문 · ${item.text}` : `환자 보고 · ${item.text}`,
+              observedOn: item.observedOn,
+              sourceLabel: "환자용 VitaGraph 로컬 브리프",
+            })),
+        },
+      };
+    })
+    .addEdge(START, "generate")
+    .addEdge("generate", "validate")
+    .addConditionalEdges("validate", (state) => {
+      if (state.output) return "verifyEvidence";
+      if (state.attempt < state.options.maxAttempts) return "generate";
+      return "fail";
+    }, ["generate", "verifyEvidence", "fail"])
+    .addEdge("verifyEvidence", END)
+    .compile();
+  return compiledClinicalCopilotGraph;
+}
+
 export async function runClinicalCopilot(payload, {
   endpoint = process.env.VITAGRAPH_OLLAMA_URL ?? "http://127.0.0.1:11434",
   model = process.env.VITAGRAPH_OLLAMA_MODEL ?? "",
   fetchImpl = globalThis.fetch,
   timeoutMs = 45_000,
+  maxAttempts = 2,
 } = {}) {
   if (!cleanText(model)) throw new Error("VITAGRAPH_OLLAMA_MODEL이 설정되지 않았습니다.");
   const baseUrl = loopbackEndpoint(endpoint);
   const request = buildClinicalCopilotRequest(payload, model);
-  const response = await fetchImpl(`${baseUrl}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
-    redirect: "error",
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!response.ok) {
-    let detail = "";
-    try {
-      detail = cleanText((await response.json()).error, 500);
-    } catch {
-      detail = cleanText(await response.text(), 500);
-    }
-    throw new Error(`로컬 Ollama 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
-  }
-  const body = await response.json();
-  const content = cleanText(body?.message?.content, 20_000);
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new Error("로컬 모델 응답이 JSON 형식이 아닙니다.");
-  }
-  const allowedEventIds = new Set(safeEvents(payload?.patient).map(({ id }) => id));
+  const events = safeEvents(payload?.patient);
   const safeBrief = safePatientBrief(payload?.patientBrief, payload?.patient);
-  const allowedPatientBriefIds = new Set(safeBrief.items.map(({ id }) => id));
-  const output = validateModelOutput(parsed, allowedEventIds, allowedPatientBriefIds);
-  const eventById = new Map(safeEvents(payload?.patient).map((event) => [event.id, event]));
-  const patientBriefById = new Map(safeBrief.items.map((item) => [item.id, item]));
-  const provenanceIds = new Set([
-    ...output.summary.flatMap(({ evidenceEventIds }) => evidenceEventIds),
-    ...output.priorities.flatMap(({ evidenceEventIds }) => evidenceEventIds),
-    ...output.clinicianQuestions.flatMap(({ evidenceEventIds }) => evidenceEventIds),
-    ...output.patientQuestions.flatMap(({ evidenceEventIds }) => evidenceEventIds),
-    ...output.warnings.flatMap(({ evidenceEventIds }) => evidenceEventIds),
-  ]);
-  const patientBriefProvenanceIds = new Set([
-    ...output.clinicianQuestions.flatMap(({ patientBriefIds }) => patientBriefIds),
-    ...output.patientQuestions.flatMap(({ patientBriefIds }) => patientBriefIds),
-  ]);
+  const state = await clinicalCopilotGraph().invoke({
+    request,
+    options: {
+      baseUrl,
+      fetchImpl,
+      timeoutMs,
+      maxAttempts,
+      allowedEventIds: new Set(events.map(({ id }) => id)),
+      allowedPatientBriefIds: new Set(safeBrief.items.map(({ id }) => id)),
+      eventById: new Map(events.map((event) => [event.id, event])),
+      patientBriefById: new Map(safeBrief.items.map((item) => [item.id, item])),
+    },
+  });
   return {
     id: `model-brief-${Date.now()}`,
     kind: "model",
-    label: `로컬 AI 초안 · ${cleanText(body.model, 160) || cleanText(model, 160)}`,
-    model: cleanText(body.model, 160) || cleanText(model, 160),
+    label: `로컬 AI 초안 · ${state.modelMeta.model}`,
+    model: state.modelMeta.model,
     confirmed: false,
-    generatedAt: cleanText(body.created_at, 80) || new Date().toISOString(),
-    ...output,
-    provenance: [...provenanceIds].map((eventId) => eventById.get(eventId)).filter(Boolean).map((event) => ({
-      eventId: event.id,
-      label: event.label,
-      date: event.date,
-      sourceLabel: "로컬 모델 입력 차트",
-    })),
-    patientBriefProvenance: [...patientBriefProvenanceIds]
-      .map((id) => patientBriefById.get(id))
-      .filter(Boolean)
-      .map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        label: item.kind === "question" ? `환자 질문 · ${item.text}` : `환자 보고 · ${item.text}`,
-        observedOn: item.observedOn,
-        sourceLabel: "환자용 VitaGraph 로컬 브리프",
-      })),
+    generatedAt: state.modelMeta.generatedAt,
+    ...state.verified,
     disclaimer: "의료진 검토 전 확정 기록이 아닙니다. 질문 준비용 초안이며 진단·처방·인과관계·급여 결정을 자동 수행하지 않습니다.",
   };
 }

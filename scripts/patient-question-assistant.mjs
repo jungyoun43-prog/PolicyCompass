@@ -1,3 +1,5 @@
+import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+
 const OUTPUT_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -66,12 +68,12 @@ const UNSAFE_GENERATED_CLAIM = new RegExp([
   "응급실에?\\s*가지\\s*마세요",
 ].join("|"), "i");
 
-function cleanText(value, maximum = 500) {
+export function cleanText(value, maximum = 500) {
   if (typeof value !== "string") return "";
   return value.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, maximum);
 }
 
-function scrubDirectIdentifiers(value, maximum = 500) {
+export function scrubDirectIdentifiers(value, maximum = 500) {
   let text = cleanText(value, maximum * 2);
   for (const pattern of DIRECT_IDENTIFIER_PATTERNS) {
     text = text.replace(pattern, "[개인정보 제거]");
@@ -79,7 +81,7 @@ function scrubDirectIdentifiers(value, maximum = 500) {
   return cleanText(text, maximum);
 }
 
-function safeGeneratedText(value, maximum = 500) {
+export function safeGeneratedText(value, maximum = 500) {
   const text = cleanText(value, maximum);
   if (UNSAFE_GENERATED_CLAIM.test(text)) {
     throw new Error("모델이 진단 또는 복약 변경으로 오해할 수 있는 문장을 반환했습니다.");
@@ -171,7 +173,7 @@ function instructions() {
   ].join(" ");
 }
 
-function ollamaEndpoint(value) {
+export function ollamaEndpoint(value) {
   const url = new URL(value);
   if (url.protocol !== "http:" || !new Set(["localhost", "127.0.0.1", "::1", "[::1]"]).has(url.hostname)) {
     throw new Error("환자 로컬 AI는 이 기기의 Ollama만 사용할 수 있습니다.");
@@ -228,18 +230,29 @@ function validateOutput(value, allowed) {
   return { summary, questions, sharedSignals };
 }
 
-async function runLocal(context, options) {
+class DraftRejectedError extends Error {}
+
+function retryFeedbackMessage(feedback) {
+  return `이전 초안이 거부되었습니다: ${feedback.reason} 같은 JSON 스키마와 안전 규칙을 지켜 질문 초안을 다시 작성하세요.`;
+}
+
+async function generateLocalDraft(context, options, feedback) {
   const model = cleanText(options.model, 160);
   if (!model) throw new Error("환자용 로컬 모델이 설정되지 않았습니다.");
+  const messages = [
+    { role: "system", content: instructions() },
+    { role: "user", content: responseInput(context) },
+  ];
+  if (feedback?.reason) {
+    if (feedback.previous) messages.push({ role: "assistant", content: feedback.previous });
+    messages.push({ role: "user", content: retryFeedbackMessage(feedback) });
+  }
   const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: instructions() },
-        { role: "user", content: responseInput(context) },
-      ],
+      messages,
       stream: false,
       think: false,
       format: OUTPUT_SCHEMA,
@@ -250,25 +263,29 @@ async function runLocal(context, options) {
   });
   if (!response.ok) throw new Error(`환자용 로컬 모델 요청 실패 (${response.status})`);
   const body = await response.json();
-  const content = cleanText(body?.message?.content, 30_000);
+  const raw = cleanText(body?.message?.content, 30_000);
   let parsed;
   try {
-    parsed = JSON.parse(content);
+    parsed = JSON.parse(raw);
   } catch {
-    throw new Error("환자용 로컬 모델 응답이 JSON 형식이 아닙니다.");
+    throw new DraftRejectedError("환자용 로컬 모델 응답이 JSON 형식이 아닙니다.");
   }
   return {
     provider: "local",
     model: cleanText(body?.model, 160) || model,
     generatedAt: cleanText(body?.created_at, 80) || new Date().toISOString(),
-    ...validateOutput(parsed, context.evidenceIds),
+    parsed,
+    raw,
   };
 }
 
-async function runFrontier(context, options) {
+async function generateFrontierDraft(context, options, feedback) {
   const apiKey = cleanText(options.apiKey, 500);
   const model = cleanText(options.model, 160);
   if (!apiKey || !model) throw new Error("프론티어 모델이 서버에 설정되지 않았습니다.");
+  const input = feedback?.reason
+    ? `${responseInput(context)}\n\n[재시도 안내] ${retryFeedbackMessage(feedback)}`
+    : responseInput(context);
   const response = await options.fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -280,7 +297,7 @@ async function runFrontier(context, options) {
       store: false,
       reasoning: { effort: "low" },
       instructions: instructions(),
-      input: responseInput(context),
+      input,
       max_output_tokens: 2_000,
       text: {
         format: {
@@ -305,19 +322,139 @@ async function runFrontier(context, options) {
     throw new Error(`프론티어 모델 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
   }
   const body = await response.json();
+  let raw;
+  try {
+    raw = parseStructuredText(body);
+  } catch (error) {
+    if (error.message.includes("거부")) throw error;
+    throw new DraftRejectedError(error.message);
+  }
   let parsed;
   try {
-    parsed = JSON.parse(parseStructuredText(body));
-  } catch (error) {
-    if (error instanceof SyntaxError) throw new Error("프론티어 모델 응답이 JSON 형식이 아닙니다.");
-    throw error;
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new DraftRejectedError("프론티어 모델 응답이 JSON 형식이 아닙니다.");
   }
   return {
     provider: "frontier",
     model: cleanText(body?.model, 160) || model,
     generatedAt: cleanText(body?.created_at, 80) || new Date().toISOString(),
-    ...validateOutput(parsed, context.evidenceIds),
+    parsed,
+    raw: cleanText(raw, 30_000),
   };
+}
+
+export function buildRuleBasedPatientQuestions(context) {
+  const questions = [];
+  for (const medication of context.clinical.medications) {
+    questions.push({
+      question: `${medication.label} 약은 언제 먹는 것이 좋고, 불편한 증상이 생기면 어떻게 문의하면 될까요?`,
+      reason: `${medication.prescribedOn}에 기록된 약을 안전하게 챙겨 먹기 위해서입니다.`,
+      evidenceIds: [medication.evidenceId],
+    });
+  }
+  for (const condition of context.clinical.conditions) {
+    questions.push({
+      question: `${condition.label} 관리에서 무엇을 먹어도 되고, 어떤 운동을 일주일에 몇 번 하면 좋을까요?`,
+      reason: `${condition.recordedOn}에 기록된 질환을 생활에서 관리하기 위해서입니다.`,
+      evidenceIds: [condition.evidenceId],
+    });
+  }
+  for (const measurement of context.clinical.measurements) {
+    questions.push({
+      question: `최근 잰 ${measurement.label} 값을 보고 생활에서 신경 쓸 점이 있을까요?`,
+      reason: `${measurement.observedOn}에 기록된 측정값을 진료에서 확인하기 위해서입니다.`,
+      evidenceIds: [measurement.evidenceId],
+    });
+  }
+  if (context.selfReport) {
+    questions.push({
+      question: "최근에 직접 적어 둔 변화에 대해 진료 때 무엇을 더 확인하면 좋을까요?",
+      reason: "스스로 기록한 최근 변화를 진료에서 다루기 위해서입니다.",
+      evidenceIds: [context.selfReport.evidenceId],
+    });
+  }
+  const sharedSignals = [];
+  if (context.selfReport) {
+    sharedSignals.push({ text: context.selfReport.summary, evidenceIds: [context.selfReport.evidenceId] });
+  }
+  for (const condition of context.clinical.conditions.slice(0, 3)) {
+    sharedSignals.push({
+      text: `${condition.recordedOn}에 ${condition.label} 기록이 있습니다.`,
+      evidenceIds: [condition.evidenceId],
+    });
+  }
+  return {
+    summary: "AI 없이 가져온 기록에서 바로 만든 규칙 기반 질문입니다. 진료 전에 그대로 읽거나 고쳐 쓸 수 있습니다.",
+    questions: questions.slice(0, 5),
+    sharedSignals: sharedSignals.slice(0, 8),
+  };
+}
+
+const PatientQuestionState = Annotation.Root({
+  context: Annotation(),
+  options: Annotation(),
+  attempt: Annotation({ reducer: (_previous, next) => next, default: () => 0 }),
+  feedback: Annotation(),
+  draft: Annotation(),
+  failure: Annotation(),
+  result: Annotation(),
+});
+
+let compiledPatientQuestionGraph = null;
+
+function patientQuestionGraph() {
+  compiledPatientQuestionGraph ??= new StateGraph(PatientQuestionState)
+    .addNode("generate", async (state) => {
+      try {
+        const draft = state.options.provider === "frontier"
+          ? await generateFrontierDraft(state.context, state.options, state.feedback)
+          : await generateLocalDraft(state.context, state.options, state.feedback);
+        return { draft, failure: null, attempt: state.attempt + 1 };
+      } catch (error) {
+        return {
+          draft: null,
+          attempt: state.attempt + 1,
+          failure: { message: error.message, retryable: error instanceof DraftRejectedError },
+          feedback: { reason: error.message },
+        };
+      }
+    })
+    .addNode("validate", (state) => {
+      if (!state.draft) return {};
+      try {
+        const { parsed, raw, ...meta } = state.draft;
+        return { result: { ...meta, ...validateOutput(parsed, state.context.evidenceIds) }, failure: null };
+      } catch (error) {
+        return {
+          failure: { message: error.message, retryable: true },
+          feedback: { reason: error.message, previous: state.draft.raw },
+        };
+      }
+    })
+    .addNode("fallback", (state) => ({
+      result: {
+        provider: "rule-based",
+        model: "",
+        generatedAt: new Date().toISOString(),
+        ...buildRuleBasedPatientQuestions(state.context),
+        fallback: {
+          requestedProvider: state.options.provider,
+          reason: state.failure?.message ?? "모델 초안을 사용할 수 없습니다.",
+          attempts: state.attempt,
+        },
+      },
+    }))
+    .addEdge(START, "generate")
+    .addEdge("generate", "validate")
+    .addConditionalEdges("validate", (state) => {
+      if (state.result) return END;
+      if (state.failure?.retryable && state.attempt < state.options.maxAttempts) return "generate";
+      return "fallback";
+    }, ["generate", "fallback", END])
+    .addEdge("fallback", END)
+    .compile();
+  return compiledPatientQuestionGraph;
 }
 
 export function patientQuestionAssistantStatus(environment = process.env) {
@@ -338,6 +475,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
   environment = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs = 45_000,
+  maxAttempts = 2,
 } = {}) {
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
   if (provider === "frontier" && payload?.consent !== true) {
@@ -348,22 +486,27 @@ export async function runPatientQuestionAssistant(payload = {}, {
     throw new Error("프론티어 모델은 서버에서 명시적으로 활성화되지 않았습니다.");
   }
   const context = buildPatientQuestionContext(payload);
-  if (provider === "frontier") {
-    return runFrontier(context, {
+  const options = provider === "frontier"
+    ? {
+      provider,
       apiKey: environment.OPENAI_API_KEY ?? "",
       model: environment.VITAGRAPH_FRONTIER_MODEL ?? "gpt-5.6-sol",
       fetchImpl,
       timeoutMs,
-    });
-  }
-  return runLocal(context, {
-    endpoint: environment.VITAGRAPH_PATIENT_OLLAMA_URL
-      ?? environment.VITAGRAPH_OLLAMA_URL
-      ?? "http://127.0.0.1:11434",
-    model: environment.VITAGRAPH_PATIENT_OLLAMA_MODEL
-      ?? environment.VITAGRAPH_OLLAMA_MODEL
-      ?? "",
-    fetchImpl,
-    timeoutMs,
-  });
+      maxAttempts,
+    }
+    : {
+      provider,
+      endpoint: environment.VITAGRAPH_PATIENT_OLLAMA_URL
+        ?? environment.VITAGRAPH_OLLAMA_URL
+        ?? "http://127.0.0.1:11434",
+      model: environment.VITAGRAPH_PATIENT_OLLAMA_MODEL
+        ?? environment.VITAGRAPH_OLLAMA_MODEL
+        ?? "",
+      fetchImpl,
+      timeoutMs,
+      maxAttempts,
+    };
+  const state = await patientQuestionGraph().invoke({ context, options });
+  return state.result;
 }

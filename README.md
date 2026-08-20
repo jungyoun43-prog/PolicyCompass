@@ -55,6 +55,18 @@ npm run dev
 
 모델 요청은 현재 Encounter의 미서명 SOAP·처방 지시를 사용하지 않습니다. 이벤트 ID는 요청별 별칭으로 바꾸고 반박된 진단이나 lifecycle이 모순된 약물도 제외합니다. 모든 AI 결과는 환자 또는 의료진이 직접 검토해야 하는 질문 초안이며 진단, 처방 변경, 응급도 판단을 하지 않습니다.
 
+## LangGraph 백엔드
+
+서버 AI 기능은 LangGraph(`@langchain/langgraph`) StateGraph로 구성됩니다. 모델 호출 자체는 기존과 같이 루프백 Ollama와 OpenAI Responses(`store: false`)만 사용하며, 그래프는 오케스트레이션(재시도 루프, 병렬 검증, 사람 개입, 대화 상태)만 담당합니다.
+
+- 환자 질문 도우미(`/api/patient-question-assistant`): 정제 → 생성 → 검증 노드로 돌고, 검증 실패 사유를 피드백으로 넘겨 한 번 재생성합니다. 반복 실패나 전송 실패 시 502 대신 근거가 연결된 규칙 기반 질문으로 폴백하며 응답의 `provider: "rule-based"`와 `fallback.reason`으로 표시합니다.
+- 의료진 코파일럿(`/api/clinical-copilot`): 생성 → 검증 → 근거 대조(provenance) 노드로 분리되고, 근거 조작·비JSON 초안은 거부 사유를 피드백으로 한 번 재생성한 뒤에만 502로 실패합니다.
+- 관계 근거(`POST /api/connection-insights`): 정제 스냅샷에서 약물·질환·측정·자기보고 후보 쌍을 규칙으로 만들고, 모델이 설정된 경우 후보마다 병렬(Send)로 관련성을 검증합니다. 모델이 없으면 외부 호출 없이 시간 관계 기반 규칙 설명만 반환합니다(`mode: "rule-based"`). 인과관계를 단정하는 문장은 거부합니다.
+- 청구 전 검토(`POST /api/claim-review/start` → `/api/claim-review/resume`, 로컬 개발 서버 전용): 규칙 평가에 대한 보완 설명 초안을 만들고 `interrupt`로 일시정지합니다. 의료진이 `approve`/`revise`(의견 필수)/`discard`로 재개하며, revise는 의견을 반영한 새 초안으로 같은 스레드에서 다시 멈춥니다. 초안은 급여 상태를 바꾸지 않습니다.
+- 질문 다듬기(`POST /api/patient-question-assistant/refine`): 체크포인터 기반 멀티턴으로, 첫 요청에서 받은 정제 컨텍스트와 질문을 `threadId`로 유지해 이후에는 지시문만 보내면 됩니다. 안전 규칙을 어기는 다듬기는 재시도 후에도 실패하면 기존 질문을 유지하고 `applied: false`로 알립니다. AI 미설정 시 503을 반환합니다.
+
+검토·다듬기 스레드는 서버 메모리에만 있으며 2시간 후 만료됩니다. 모든 그래프는 기존 PII 제거·근거 ID 화이트리스트·위험 문장 거부 검증을 그대로 통과해야 결과를 반환합니다.
+
 ## FHIR 교환과 청구 전 점검
 
 EMR 가져오기는 `type`이 명시된 `collection` 또는 `document` FHIR R4 Bundle 중, 정확히 한 명의 Patient가 들어 있고 각 임상 리소스가 그 Patient를 명시적으로 참조하는 파일을 최대 1,000개 항목까지 읽습니다. 절대·URN 참조는 Patient `fullUrl`과 정확히 같아야 하고, 상대 `Patient/{id}` 참조는 해당 임상 entry의 `fullUrl`이 가리키는 FHIR 서버 기준으로만 해석합니다. Patient 등록번호는 MR 유형 또는 VitaGraph MRN 시스템으로 표시된 identifier만 사용해 보험번호 오인식을 막습니다. Condition의 의증·잠정 기록은 출처와 함께 보존하지만 확정 임상 사실·모델·급여 근거에서는 제외합니다. AllergyIntolerance는 활성·확정 상태, MedicationRequest는 활성 주문 계열 intent이며 `doNotPerform`이 아닌 경우만 현재 차트 사실로 가져옵니다. 지원 LOINC 숫자 측정의 내보내기에는 표시 단위와 UCUM `system`·`code`를 함께 기록합니다. 해석하지 못하는 `modifierExtension`·`implicitRules`, 비활성·사망·대체 연결 Patient, 형식이 잘못된 modifier 필드는 fail-closed 처리합니다. 제외 항목과 사유는 가져오기 보고서에 남습니다. 가져온 기록의 출처 인증·전자서명은 검증하지 않으므로 의료진 대조 확인이 필요합니다.

@@ -19,6 +19,8 @@ const requestedViewports = new Set(
 );
 
 const allViewports = Object.freeze([
+  { name: "ultrawide", width: 2560, height: 1440, mobile: false },
+  { name: "wide", width: 1920, height: 1080, mobile: false },
   { name: "desktop", width: 1440, height: 1100, mobile: false },
   { name: "tablet", width: 768, height: 1024, mobile: false },
   { name: "mobile", width: 390, height: 844, mobile: true },

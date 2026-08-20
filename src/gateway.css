@@ -80,7 +80,7 @@
 }
 
 .gateway-intro h1 {
-  max-width: 13ch;
+  max-width: 18ch;
   margin: var(--space-3) 0 0;
   font-size: clamp(2.75rem, 4.6vw, 4.5rem);
   font-weight: 790;

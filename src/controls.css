@@ -672,6 +672,7 @@ textarea:focus {
   font-size: 0.8125rem;
   font-weight: 740;
   list-style: none;
+  word-break: keep-all;
 }
 
 .context-disclosure > summary::-webkit-details-marker {

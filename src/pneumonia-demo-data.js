@@ -6,8 +6,8 @@ const EVALUATION_PERIOD = Object.freeze({
 });
 
 const RULE_VERSIONS = Object.freeze({
-  claimPreflight: "vitagraph-pneumonia-claim-preflight-demo-v1",
-  diagnosticConcordance: "vitagraph-cap-concordance-demo-v1",
+  claimPreflight: "policycompass-pneumonia-claim-preflight-demo-v1",
+  diagnosticConcordance: "policycompass-cap-concordance-demo-v1",
   qualityContribution: "hira-pneumonia-7th-demo-v1",
 });
 
@@ -24,7 +24,7 @@ function verifiedProvenance(sourceId, verifiedAt, reviewerId = "demo-clinician-p
   return {
     kind: "synthetic-local-emr",
     sourceId,
-    sourceLabel: "VitaGraph 예시 환자 폐렴 기록",
+    sourceLabel: "PolicyCompass 예시 환자 폐렴 기록",
     verificationStatus: "VERIFIED",
     patientMatch: "VERIFIED",
     reviewerId,
@@ -35,7 +35,7 @@ function verifiedProvenance(sourceId, verifiedAt, reviewerId = "demo-clinician-p
 
 function baseProfile(patient, scenario) {
   return {
-    schema: "vitagraph-pneumonia-demo-profile",
+    schema: "policycompass-pneumonia-demo-profile",
     version: 1,
     physicianOnly: true,
     synthetic: true,
@@ -207,7 +207,7 @@ function medicationAdministration({ prefix, encounterId, id, label, administered
     id: `${prefix}-${id}`,
     encounterId,
     code: id.toUpperCase(),
-    system: "urn:vitagraph:demo:drug",
+    system: "urn:policycompass:demo:drug",
     label,
     route: "IV",
     status: "COMPLETED",

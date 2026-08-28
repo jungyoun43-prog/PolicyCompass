@@ -1,6 +1,6 @@
 const BODY_STAGE_SELECTOR = ".body-stage[data-body-3d]";
 const MODEL_VIEWER_TAG = "model-viewer";
-const STYLE_ID = "vitagraph-body-3d-styles";
+const STYLE_ID = "policycompass-body-3d-styles";
 const controllers = new WeakMap();
 
 export const CLINICAL_BODY_PALETTE = Object.freeze({

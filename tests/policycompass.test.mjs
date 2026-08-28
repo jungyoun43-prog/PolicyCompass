@@ -70,22 +70,22 @@ test("빌드된 Worker가 역할 게이트웨이와 보안 헤더를 제공한�
 
   // Then
   assert.equal(response.status, 200);
-  assert.match(html, /VitaGraph/);
+  assert.match(html, /PolicyCompass/);
   assert.match(html, /사용할 공간을 선택하세요/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
-  assert.match(html, /href="\/patient"[^>]*>\s*개인 VitaGraph 열기/s);
+  assert.match(html, /href="\/patient"[^>]*>\s*개인 PolicyCompass 열기/s);
   assert.doesNotMatch(html, /id="fhirFile"/);
   assert.match(response.headers.get("content-security-policy") ?? "", /default-src 'self'/);
   assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
 });
 
-test("개인 VitaGraph 홈은 /patient에서 EMR 없이 제공된다", async () => {
+test("개인 PolicyCompass 홈은 /patient에서 EMR 없이 제공된다", async () => {
   const { default: worker } = await import("../dist/server/index.js");
   const response = await worker.fetch(new Request("https://example.com/patient"));
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /VitaGraph Personal/);
+  assert.match(html, /PolicyCompass Personal/);
   assert.match(html, /내 건강 기록을.*내가 이어 보는/s);
   assert.doesNotMatch(html, /id="patientList"|id="encounterForm"|id="claimBoard"/);
 });

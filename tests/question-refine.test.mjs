@@ -5,7 +5,7 @@ import { runQuestionRefine } from "../scripts/graphs/question-refine-graph.mjs";
 
 const payload = {
   clinicalSnapshot: {
-    schema: "vitagraph-clinical-snapshot",
+    schema: "policycompass-clinical-snapshot",
     version: 1,
     healthMap: {
       conditions: [{ id: "hypertension", label: "고혈압", recordedOn: "2026-07-01" }],
@@ -37,7 +37,7 @@ function ollamaResponse(questions) {
   }), { status: 200, headers: { "content-type": "application/json" } });
 }
 
-const environment = { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" };
+const environment = { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" };
 
 test("같은 스레드에서 컨텍스트를 다시 보내지 않아도 대화형으로 질문을 다듬는다", async () => {
   const inputs = [];

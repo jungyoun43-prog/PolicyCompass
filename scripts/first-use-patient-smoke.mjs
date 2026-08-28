@@ -23,7 +23,7 @@ let patternSignalPresentationVerified = false;
 await runBrowserSmoke({
   appUrl,
   debugPort,
-  profilePrefix: "vitagraph-first-use-patient-",
+  profilePrefix: "policycompass-first-use-patient-",
   initialViewport: viewports[0],
 }, async ({ evaluate, navigate, setViewport, tabTo, waitFor }) => {
   for (const viewport of viewports) {
@@ -98,7 +98,7 @@ await runBrowserSmoke({
   await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
   const sampleState = await evaluate(`(() => ({
     count: Number.parseInt(document.getElementById('conditionCount')?.textContent ?? '0', 10),
-    scenePersisted: Boolean(sessionStorage.getItem('vitagraph-scene')),
+    scenePersisted: Boolean(sessionStorage.getItem('policycompass-scene')),
     importDisabled: document.getElementById('transferCode')?.disabled === true
       && document.getElementById('selectRecordFile')?.disabled === true
       && document.getElementById('importRecordButton')?.disabled === true,
@@ -126,7 +126,7 @@ await runBrowserSmoke({
       };
       return {
         emrLinks: [...document.querySelectorAll('a[href]')].filter((link) => new URL(link.href).pathname === '/emr').length,
-        sampleScenePersisted: Boolean(sessionStorage.getItem('vitagraph-scene')),
+        sampleScenePersisted: Boolean(sessionStorage.getItem('policycompass-scene')),
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: innerWidth,
         legend: visible('[data-graph-legend]'),
@@ -190,9 +190,9 @@ await runBrowserSmoke({
   patternSignalPresentationVerified = true;
   await waitFor("!document.getElementById('saveJourney').disabled", "Journey save did not become available.");
   await evaluate("document.getElementById('saveJourney').click()");
-  await waitFor("JSON.parse(localStorage.getItem('vitagraph-journey') || '[]').length === 1", "Journey save did not persist one record.");
+  await waitFor("JSON.parse(localStorage.getItem('policycompass-journey') || '[]').length === 1", "Journey save did not persist one record.");
   await navigate("/journey", "document.querySelectorAll('.snapshot-card').length === 1");
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-journey') || '[]').length === 1"),
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-journey') || '[]').length === 1"),
     "Journey record did not persist across patient route navigation.");
   journeyDataPersistenceVerified = true;
 

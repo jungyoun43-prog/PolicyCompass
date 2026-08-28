@@ -6,7 +6,7 @@ import { createDetailModel } from "/view-model.js";
 import { preserveSampleNavigation } from "/sample-navigation.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
-const sessionKey = "vitagraph-scene";
+const sessionKey = "policycompass-scene";
 const forcedSampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
 preserveSampleNavigation(forcedSampleMode);
 const demoConditionIds = ["hypertension", "diabetes", "dyslipidemia", "reflux", "migraine"];
@@ -59,7 +59,7 @@ function restoredClinicalConditionIds(stored) {
   const conditions = Array.isArray(stored?.clinicalConditions) ? stored.clinicalConditions : null;
   const measurements = Array.isArray(stored?.clinicalMeasurements) ? stored.clinicalMeasurements : null;
   if (!hasExactKeys(transfer, ["schema", "version", "exportedAt", "trust"])
-    || transfer.schema !== "vitagraph-patient-transfer"
+    || transfer.schema !== "policycompass-patient-transfer"
     || transfer.version !== 1
     || transfer.trust !== "unsigned-local-export"
     || !ids
@@ -81,7 +81,7 @@ function restoredClinicalConditionIds(stored) {
       version: transfer.version,
       exportedAt: transfer.exportedAt,
       transferCode: restoredTransferCode,
-      scope: "patient-vita-graph",
+      scope: "patient-policy-compass",
       trust: transfer.trust,
       healthMap: {
         conditions: conditions.map(({ id, label, recordedOn, basis }) => ({ id, label, recordedOn, basis })),

@@ -10,8 +10,8 @@ import {
   patientQuestionContextFingerprint,
 } from "/patient-question-assistant.js";
 
-const sessionKey = "vitagraph-scene";
-const selectedQuestionKey = "vitagraph-selected-visit-question";
+const sessionKey = "policycompass-scene";
+const selectedQuestionKey = "policycompass-selected-visit-question";
 const forcedSampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
 preserveSampleNavigation(forcedSampleMode);
 const demoNote = "혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통";
@@ -79,7 +79,7 @@ function restoredImportedTransfer(stored) {
   const conditions = Array.isArray(stored?.clinicalConditions) ? stored.clinicalConditions : null;
   const measurements = Array.isArray(stored?.clinicalMeasurements) ? stored.clinicalMeasurements : null;
   if (!hasExactKeys(transfer, ["schema", "version", "exportedAt", "trust"])
-    || transfer.schema !== "vitagraph-patient-transfer"
+    || transfer.schema !== "policycompass-patient-transfer"
     || transfer.version !== 1
     || transfer.trust !== "unsigned-local-export"
     || !ids
@@ -101,7 +101,7 @@ function restoredImportedTransfer(stored) {
       version: transfer.version,
       exportedAt: transfer.exportedAt,
       transferCode: restoredTransferCode,
-      scope: "patient-vita-graph",
+      scope: "patient-policy-compass",
       trust: transfer.trust,
       healthMap: {
         conditions: conditions.map(({ id, label, recordedOn, basis }) => ({ id, label, recordedOn, basis })),
@@ -123,7 +123,7 @@ function restoredImportedTransfer(stored) {
     if (ids.some((id, index) => id !== imported.conditionIds[index])) return null;
     return {
       transfer: {
-        schema: "vitagraph-patient-transfer",
+        schema: "policycompass-patient-transfer",
         version: 1,
         exportedAt: imported.provenance.exportedAt,
         trust: "unsigned-local-export",
@@ -168,7 +168,7 @@ function connectedClinicalSnapshot() {
     }));
   const preparedAt = restored.transfer.exportedAt;
   const snapshot = {
-    schema: "vitagraph-patient-transfer-import",
+    schema: "policycompass-patient-transfer-import",
     version: 1,
     preparedAt,
     source: "unsigned-local-export",

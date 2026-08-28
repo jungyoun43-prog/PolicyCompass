@@ -57,7 +57,7 @@ test("EMR은 샘플을 자동 저장하지 않는 빈 로컬 상태로 시작한
   await saveEmrState(state, storage);
   const reloaded = loadEmrState(storage);
 
-  assert.equal(state.schema, "vitagraph-emr");
+  assert.equal(state.schema, "policycompass-emr");
   assert.equal(state.version, 2);
   assert.deepEqual(state.patients, []);
   assert.equal(state.demo, false);
@@ -182,7 +182,7 @@ test("진료가 선택된 상태에서도 새 환자를 등록하고 저장할 �
 
 test("손상되거나 중복된 EMR 입력은 안전하게 정규화한다", () => {
   const normalized = normalizeEmrState({
-    schema: "vitagraph-emr",
+    schema: "policycompass-emr",
     version: 1,
     patients: [
       { id: "p1", mrn: "A", name: "첫 환자", events: [{ id: "e1", type: "note", label: "메모", date: "2026-07-01" }] },
@@ -262,7 +262,7 @@ test("EMR 백업은 스키마·버전을 검증하며 왕복한다", () => {
   const backup = exportEmrBackup(state, "2026-07-19T11:00:00.000Z");
   const restored = parseEmrBackup(JSON.parse(JSON.stringify(backup)));
 
-  assert.equal(backup.schema, "vitagraph-emr-backup");
+  assert.equal(backup.schema, "policycompass-emr-backup");
   assert.equal(restored.patients.length, state.patients.length);
   assert.equal(restored.demo, false);
   assert.throws(() => parseEmrBackup({ ...backup, version: 99 }), /지원하지 않는/);

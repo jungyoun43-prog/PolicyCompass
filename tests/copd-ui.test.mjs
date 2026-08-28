@@ -66,7 +66,7 @@ test("선택 환자 헤더는 확정 활성 질환을 별도 목록으로 렌더
   assert.match(js, /clear\(refs\.selectedPatientConditions\)/);
   assert.match(js, /renderPatientConditions\(patient\)/);
   assert.match(js, /startsWith\("DEMO-"\)/);
-  assert.match(js, /includes\("vitagraph:demo"\)/);
+  assert.match(js, /includes\("policycompass:demo"\)/);
 });
 
 test("공개 EMR UI는 공모전·DEMO 배지 대신 예시 환자 경계를 한 번 명시한다", () => {

@@ -310,7 +310,7 @@ test("Encounter 상대 참조는 참조 리소스의 서버 기준으로 해석�
           encounter: { reference: "Encounter/e1" },
           status: "active",
           intent: "order",
-          category: [{ coding: [{ system: "https://vitagraph.local/fhir/CodeSystem/order-kind", code: "laboratory", display: "Laboratory" }] }],
+          category: [{ coding: [{ system: "https://policycompass.local/fhir/CodeSystem/order-kind", code: "laboratory", display: "Laboratory" }] }],
           priority: "routine",
           code: coding("4548-4", "당화혈색소"),
           authoredOn: "2026-07-19",
@@ -337,7 +337,7 @@ test("실행 가능한 XHTML SOAP는 임의 복구하지 않는다", () => {
 });
 
 test("나이 전용 Patient 확장은 엄격한 단위·범위와 단일 출처만 허용한다", () => {
-  const extension = { url: "https://vitagraph.local/fhir/StructureDefinition/age-at-export", valueAge: { value: 52, unit: "year", system: "http://unitsofmeasure.org", code: "a" } };
+  const extension = { url: "https://policycompass.local/fhir/StructureDefinition/age-at-export", valueAge: { value: 52, unit: "year", system: "http://unitsofmeasure.org", code: "a" } };
   const base = { resourceType: "Bundle", type: "collection", entry: [{ resource: { resourceType: "Patient", id: "p1", extension: [extension] } }] };
 
   assert.equal(parseEmrFhirBundle(base).patient.ageYears, 52);
@@ -541,7 +541,7 @@ test("resource.id 없는 URN Patient도 반복 가져오기에서 같은 환자�
   assert.throws(() => addPatient(state, second), /이미|같은 FHIR 환자/);
 });
 
-test("외부 FHIR 환자는 VitaGraph 왕복 뒤에도 원본 식별자를 보존해 중복 등록을 막는다", () => {
+test("외부 FHIR 환자는 PolicyCompass 왕복 뒤에도 원본 식별자를 보존해 중복 등록을 막는다", () => {
   const external = {
     resourceType: "Bundle", type: "collection",
     entry: [{
@@ -854,7 +854,7 @@ test("독립 FHIR 문제·약물·오더·알레르기·관찰·처치는 원출
       { fullUrl: `${originBase}/Patient/p1`, resource: { resourceType: "Patient", id: "p1", name: [{ text: "독립 기록 환자" }] } },
       { fullUrl: `${originBase}/Condition/c1`, resource: { resourceType: "Condition", id: "c1", subject: { reference: `${originBase}/Patient/p1` }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("DX", "독립 진단"), recordedDate: "2026-07-01" } },
       { fullUrl: `${originBase}/MedicationRequest/m1`, resource: { resourceType: "MedicationRequest", id: "m1", subject: { reference: `${originBase}/Patient/p1` }, status: "active", intent: "order", medicationCodeableConcept: coding("MED", "독립 약물"), authoredOn: "2026-07-02" } },
-      { fullUrl: `${originBase}/ServiceRequest/s1`, resource: { resourceType: "ServiceRequest", id: "s1", subject: { reference: `${originBase}/Patient/p1` }, status: "active", intent: "order", category: [{ coding: [{ system: "https://vitagraph.local/fhir/CodeSystem/order-kind", code: "laboratory" }] }], priority: "routine", code: coding("LAB", "독립 검사"), authoredOn: "2026-07-03" } },
+      { fullUrl: `${originBase}/ServiceRequest/s1`, resource: { resourceType: "ServiceRequest", id: "s1", subject: { reference: `${originBase}/Patient/p1` }, status: "active", intent: "order", category: [{ coding: [{ system: "https://policycompass.local/fhir/CodeSystem/order-kind", code: "laboratory" }] }], priority: "routine", code: coding("LAB", "독립 검사"), authoredOn: "2026-07-03" } },
       { fullUrl: `${originBase}/AllergyIntolerance/a1`, resource: { resourceType: "AllergyIntolerance", id: "a1", patient: { reference: `${originBase}/Patient/p1` }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("ALG", "독립 알레르기"), recordedDate: "2026-07-04" } },
       { fullUrl: `${originBase}/Observation/o1`, resource: { resourceType: "Observation", id: "o1", subject: { reference: `${originBase}/Patient/p1` }, status: "final", code: coding("OBS", "독립 관찰"), valueString: "정상", effectiveDateTime: "2026-07-05" } },
       { fullUrl: `${originBase}/Procedure/p1`, resource: { resourceType: "Procedure", id: "p1", subject: { reference: `${originBase}/Patient/p1` }, status: "completed", code: coding("PROC", "독립 처치"), performedDateTime: "2026-07-06" } },
@@ -913,7 +913,7 @@ test("FHIR meta.source와 원본 리소스 식별자가 달라도 각각 보존�
           id: "exchanged",
           meta: { source: metaSource },
           identifier: [{
-            system: "https://vitagraph.local/fhir/identifier/source-resource",
+            system: "https://policycompass.local/fhir/identifier/source-resource",
             value: sourceIdentity,
           }],
           subject: { reference: "https://origin.example/fhir/Patient/p1" },

@@ -16,8 +16,8 @@ import {
 } from "/view-model.js";
 
 const toneClasses = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "tone-amber"];
-const sessionKey = "vitagraph-scene";
-const journeyKey = "vitagraph-journey";
+const sessionKey = "policycompass-scene";
+const journeyKey = "policycompass-journey";
 const demoNote = "혈압 148/94, 공복혈당 132, LDL 156, 속쓰림, 편두통";
 const demoConditionIds = ["hypertension", "diabetes", "dyslipidemia", "reflux", "migraine"];
 const forcedSampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
@@ -136,7 +136,7 @@ function hasExactKeys(value, keys) {
 
 function persistedTransfer(value) {
   if (!hasExactKeys(value, ["schema", "version", "exportedAt", "trust"])
-    || value.schema !== "vitagraph-patient-transfer"
+    || value.schema !== "policycompass-patient-transfer"
     || value.version !== 1
     || value.trust !== "unsigned-local-export"
     || typeof value.exportedAt !== "string"
@@ -144,7 +144,7 @@ function persistedTransfer(value) {
     || new Date(value.exportedAt).toISOString() !== value.exportedAt
     || new Date(value.exportedAt).valueOf() > Date.now() + 5 * 60 * 1_000) return null;
   return {
-    schema: "vitagraph-patient-transfer",
+    schema: "policycompass-patient-transfer",
     version: 1,
     exportedAt: new Date(value.exportedAt).toISOString(),
     trust: "unsigned-local-export",
@@ -174,7 +174,7 @@ function restoredImportedTransfer(stored) {
       version: transfer.version,
       exportedAt: transfer.exportedAt,
       transferCode: restoredTransferCode,
-      scope: "patient-vita-graph",
+      scope: "patient-policy-compass",
       trust: transfer.trust,
       healthMap: {
         conditions: conditions.map(({ id, label, recordedOn, basis }) => ({ id, label, recordedOn, basis })),
@@ -403,7 +403,7 @@ function provenanceLabel(provenance) {
     provenance?.author,
     provenance?.format,
   ].map(displayText).find(Boolean);
-  return `${source || "VitaGraph 환자 전달 파일"} · 파일에 의료진 확정으로 표시 · 발행기관·변조 미검증`;
+  return `${source || "PolicyCompass 환자 전달 파일"} · 파일에 의료진 확정으로 표시 · 발행기관·변조 미검증`;
 }
 
 function importedConditionLabels(imported) {
@@ -506,7 +506,7 @@ function renderImportPreview({ file, imported }) {
   details.className = "import-preview";
   details.append(
     previewRow("파일", file.name),
-    previewRow("형식", "VitaGraph 환자 전달 JSON v1"),
+    previewRow("형식", "PolicyCompass 환자 전달 JSON v1"),
     previewRow("출처", provenanceLabel(imported.provenance)),
     previewRow("내보낸 시각", formatObservedAt(imported.provenance.exportedAt)),
     previewRow("기준 시점", formatObservedAt(imported.observedAt)),
@@ -530,8 +530,8 @@ function renderImportPreview({ file, imported }) {
 async function importHealthRecord(file) {
   if (file.size > 2 * 1024 * 1024) throw new RangeError("2MB 이하의 JSON 기록 파일만 가져올 수 있습니다.");
   const payload = JSON.parse(await file.text());
-  if (payload?.schema !== "vitagraph-patient-transfer") {
-    throw new TypeError("VitaGraph 환자 전달 JSON v1 파일만 가져올 수 있습니다.");
+  if (payload?.schema !== "policycompass-patient-transfer") {
+    throw new TypeError("PolicyCompass 환자 전달 JSON v1 파일만 가져올 수 있습니다.");
   }
   return parsePatientTransferPackage(payload);
 }
@@ -558,7 +558,7 @@ function replaceMapWithImportedTransfer(imported) {
   }));
   state.measurements = [...state.clinicalMeasurements];
   state.transfer = {
-    schema: "vitagraph-patient-transfer",
+    schema: "policycompass-patient-transfer",
     version: 1,
     exportedAt: imported.provenance.exportedAt,
     trust: "unsigned-local-export",
@@ -822,7 +822,7 @@ elements.importRecordButton?.addEventListener("click", async () => {
     return;
   }
   if (!pendingTransferFile) {
-    setImportResult("가져올 VitaGraph 환자 전달 JSON 파일을 선택해 주세요.", "error", "alert");
+    setImportResult("가져올 PolicyCompass 환자 전달 JSON 파일을 선택해 주세요.", "error", "alert");
     elements.selectRecordFile?.focus({ preventScroll: true });
     return;
   }
@@ -874,7 +874,7 @@ elements.importRecordButton?.addEventListener("click", async () => {
       return;
     }
     const message = error instanceof SyntaxError
-      ? "JSON 형식을 읽을 수 없습니다. VitaGraph 환자 전달 JSON v1 파일인지 확인해 주세요."
+      ? "JSON 형식을 읽을 수 없습니다. PolicyCompass 환자 전달 JSON v1 파일인지 확인해 주세요."
       : error instanceof Error ? error.message : "기록 파일을 가져오지 못했습니다.";
     setImportResult(message, "error", "alert");
     elements.selectRecordFile?.focus({ preventScroll: true });

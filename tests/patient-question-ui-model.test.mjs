@@ -15,7 +15,7 @@ import {
 } from "../src/patient-question-assistant.js";
 
 const signedSnapshot = {
-  schema: "vitagraph-clinical-snapshot",
+  schema: "policycompass-clinical-snapshot",
   version: 1,
   preparedAt: "2026-07-20T11:30:00.000Z",
   source: "finalized-clinical-record",
@@ -338,12 +338,12 @@ test("명시 공유 payload는 우선 질문을 앞에 두고 모델·환자 요
 test("정제 스냅샷 내보내기 모델은 원문·식별자 없이 고정 스키마를 사용한다", () => {
   const exported = createPatientClinicalSnapshotExport(scene, "2026-07-26T12:30:00Z");
 
-  assert.equal(exported.schema, "vitagraph-personal-clinical-snapshot");
+  assert.equal(exported.schema, "policycompass-personal-clinical-snapshot");
   assert.equal(exported.safety.directIdentifiersIncluded, false);
   assert.equal(exported.safety.rawClinicalNoteIncluded, false);
   assert.equal(exported.refinedContext.medications.length, 1);
   assert.doesNotMatch(JSON.stringify(exported), /홍길동|VG-SECRET-42|원문 자유메모|010-9999-8888/);
-  assert.equal(patientClinicalSnapshotFilename(exported.exportedAt), "vitagraph-personal-snapshot-2026-07-26.json");
+  assert.equal(patientClinicalSnapshotFilename(exported.exportedAt), "policycompass-personal-snapshot-2026-07-26.json");
 });
 
 test("자기보고 정리는 길이와 흔한 직접식별자 마스킹 경계를 지킨다", () => {

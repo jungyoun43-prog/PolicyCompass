@@ -1,4 +1,4 @@
-# VitaGraph frontend design state
+# PolicyCompass frontend design state
 
 ## Objective
 
@@ -10,7 +10,7 @@ Turn the current health-graph prototype into a credible paid-beta MVP whose conc
 - Job: organize scattered symptoms, measurements, and known conditions into one appointment page in about ten minutes.
 - Primary outcome: Visit Brief; body map and connections are supporting views.
 - Honest beta: local browser processing and storage only. No account, cloud sync, checkout, compliance certification, or live AI claims.
-- Visual direction: Apple-style focal restraint + PicnicHealth human/record orbit + Parsley clinical warmth, expressed with VitaGraph’s own palette.
+- Visual direction: Apple-style focal restraint + PicnicHealth human/record orbit + Parsley clinical warmth, expressed with PolicyCompass’s own palette.
 - Generated images provide atmosphere only. All facts, values, controls, and product proof remain native UI.
 - Sample and private input are separate. Sample data is never persisted to Journey.
 

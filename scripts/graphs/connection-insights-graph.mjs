@@ -205,9 +205,9 @@ export async function runConnectionInsights(payload = {}, {
   const state = await connectionGraph().invoke({
     context,
     options: {
-      model: cleanText(environment.VITAGRAPH_PATIENT_OLLAMA_MODEL ?? environment.VITAGRAPH_OLLAMA_MODEL ?? "", 160),
-      endpoint: environment.VITAGRAPH_PATIENT_OLLAMA_URL
-        ?? environment.VITAGRAPH_OLLAMA_URL
+      model: cleanText(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL ?? "", 160),
+      endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
+        ?? environment.POLICYCOMPASS_OLLAMA_URL
         ?? "http://127.0.0.1:11434",
       fetchImpl,
       timeoutMs,

@@ -7,11 +7,11 @@ import {
 } from "./clinical-question-assistant.js";
 import { CONDITIONS } from "./data.js";
 
-export const EMR_SCHEMA = "vitagraph-emr";
-export const EMR_BACKUP_SCHEMA = "vitagraph-emr-backup";
+export const EMR_SCHEMA = "policycompass-emr";
+export const EMR_BACKUP_SCHEMA = "policycompass-emr-backup";
 export const EMR_VERSION = 2;
-export const EMR_STORAGE_KEY = "vitagraph-emr-v2";
-export const LEGACY_EMR_STORAGE_KEY = "vitagraph-emr-v1";
+export const EMR_STORAGE_KEY = "policycompass-emr-v2";
+export const LEGACY_EMR_STORAGE_KEY = "policycompass-emr-v1";
 export const KOREA_TIMEZONE_OFFSET_MINUTES = -540;
 
 const EVENT_TYPES = new Set(["encounter", "condition", "observation", "medication", "allergy", "procedure", "service-request", "symptom", "note"]);
@@ -1446,7 +1446,7 @@ function dateBefore(asOf, days) {
 }
 
 function demoEvent(id, type, code, label, date, extras = {}) {
-  return normalizePatientEvent({ id, type, code, label, date, source: { kind: "demo", label: "VitaGraph 예시 환자 기록" }, ...extras });
+  return normalizePatientEvent({ id, type, code, label, date, source: { kind: "demo", label: "PolicyCompass 예시 환자 기록" }, ...extras });
 }
 
 export function createDemoEmrState(now = new Date().toISOString()) {
@@ -1496,7 +1496,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("kim-visit-med", "medication", "MED-ARB", "예시 혈압약", asOf, {
         recordStatus: "draft",
         encounterId: "kim-visit-today",
-        system: "urn:vitagraph:demo:drug",
+        system: "urn:policycompass:demo:drug",
         status: "active",
         intent: "order",
         prescription: { dose: 1, doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 30, quantity: 30, instructions: "아침 식후" },
@@ -1504,7 +1504,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("kim-visit-order", "service-request", "DEMO-A1C-FOLLOWUP", "당화혈색소 추적검사", asOf, {
         recordStatus: "draft",
         encounterId: "kim-visit-today",
-        system: "urn:vitagraph:demo:service",
+        system: "urn:policycompass:demo:service",
         status: "active",
         intent: "order",
         order: { kind: "laboratory", priority: "routine", instructions: "다음 내원 전 시행" },
@@ -1514,7 +1514,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("kim-a1c", "observation", "4548-4", "당화혈색소", dateBefore(asOf, 12), { system: "http://loinc.org", value: 7.1, unit: "%" }),
       demoEvent("kim-ldl", "observation", "2089-1", "LDL 콜레스테롤", dateBefore(asOf, 12), { system: "http://loinc.org", value: 156, unit: "mg/dL" }),
       demoEvent("kim-med", "medication", "MED-ARB", "예시 혈압약", dateBefore(asOf, 28), { status: "active", note: "1일 1회" }),
-      demoEvent("kim-procedure", "procedure", "DEMO-BP-FOLLOWUP", "고혈압 추적검사", dateBefore(asOf, 55), { system: "urn:vitagraph:demo:service", status: "completed" }),
+      demoEvent("kim-procedure", "procedure", "DEMO-BP-FOLLOWUP", "고혈압 추적검사", dateBefore(asOf, 55), { system: "urn:policycompass:demo:service", status: "completed" }),
       demoEvent("kim-diabetes", "condition", "E11", "제2형 당뇨병", dateBefore(asOf, 940), { system: KCD_SYSTEM, status: "active" }),
       demoEvent("kim-hypertension", "condition", "I10", "고혈압", dateBefore(asOf, 1_460), { system: KCD_SYSTEM, status: "active" }),
       demoEvent("kim-allergy", "allergy", "ALG-PEN", "페니실린 알레르기", dateBefore(asOf, 2_100), { status: "active", note: "발진" }),
@@ -1565,8 +1565,8 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("park-symptom", "symptom", "SYM-HEADACHE", "반복되는 두통", dateBefore(asOf, 2), { note: "월 5회, 빛에 민감" }),
       demoEvent("park-migraine", "condition", "G43", "편두통", dateBefore(asOf, 460), { status: "active" }),
       demoEvent("park-med", "medication", "MED-TRIPTAN", "예시 편두통 약", dateBefore(asOf, 35), { status: "active", note: "증상 시 복용" }),
-      demoEvent("park-bmd-indication", "condition", "DEMO-BMD-INDICATION", "골밀도검사 적응증 확인 기록", dateBefore(asOf, 40), { system: "urn:vitagraph:demo:condition", status: "active" }),
-      demoEvent("park-bmd", "procedure", "DEMO-BMD", "골밀도검사", dateBefore(asOf, 350), { system: "urn:vitagraph:demo:service", status: "completed" }),
+      demoEvent("park-bmd-indication", "condition", "DEMO-BMD-INDICATION", "골밀도검사 적응증 확인 기록", dateBefore(asOf, 40), { system: "urn:policycompass:demo:condition", status: "active" }),
+      demoEvent("park-bmd", "procedure", "DEMO-BMD", "골밀도검사", dateBefore(asOf, 350), { system: "urn:policycompass:demo:service", status: "completed" }),
       demoEvent("park-copd-encounter", "encounter", "AMB", "호흡기내과 외래", dateBefore(asOf, 90), {
         status: "finished",
         department: "호흡기내과",
@@ -1662,7 +1662,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       }),
       demoEvent("lee-copd-lama", "medication", "DEMO-LAMA", "LAMA 흡입제", dateBefore(asOf, 89), {
         encounterId: "lee-copd-encounter",
-        system: "urn:vitagraph:demo:drug",
+        system: "urn:policycompass:demo:drug",
         status: "active",
         note: "흡입기 사용법과 증상 변화를 추적한 예시 기록",
       }),
@@ -1756,7 +1756,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         status: "active",
       }),
       demoEvent("jung-therapy", "procedure", "DEMO-PT", "무릎 재활운동 교육", dateBefore(asOf, 45), {
-        system: "urn:vitagraph:demo:service",
+        system: "urn:policycompass:demo:service",
         status: "completed",
       }),
       demoEvent("jung-bmi", "observation", "39156-5", "체질량지수", dateBefore(asOf, 12), {
@@ -1787,7 +1787,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       }),
       demoEvent("jung-copd-lama", "medication", "DEMO-LAMA", "LAMA 흡입제", dateBefore(asOf, 53), {
         encounterId: "jung-copd-encounter",
-        system: "urn:vitagraph:demo:drug",
+        system: "urn:policycompass:demo:drug",
         status: "active",
         intent: "order",
         prescription: {
@@ -2190,7 +2190,7 @@ export function createClinicalBodyAtlas(patientInput = {}) {
   const candidateAreaIds = areas.filter(({ candidateActive }) => candidateActive).map(({ id }) => id);
   const signalAreaIds = areas.filter(({ signalActive }) => signalActive).map(({ id }) => id);
   return {
-    schema: "vitagraph-clinical-body-atlas",
+    schema: "policycompass-clinical-body-atlas",
     areas,
     activeAreaIds,
     careAreaIds,
@@ -2576,8 +2576,8 @@ function validateCanonicalEmrState(input) {
 }
 
 export function parseEmrBackup(input) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("VitaGraph EMR 백업 파일 형식이 아닙니다.");
-  if (input.schema !== EMR_BACKUP_SCHEMA) throw new TypeError("VitaGraph EMR 백업 파일이 아닙니다.");
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("PolicyCompass EMR 백업 파일 형식이 아닙니다.");
+  if (input.schema !== EMR_BACKUP_SCHEMA) throw new TypeError("PolicyCompass EMR 백업 파일이 아닙니다.");
   if (!input.data || typeof input.data !== "object") throw new TypeError("EMR 백업에 데이터가 없습니다.");
   if (![1, EMR_VERSION].includes(input.version)) throw new TypeError(`지원하지 않는 EMR 백업 버전입니다: ${String(input.version)}`);
   if (input.data.version !== input.version) throw new TypeError("EMR 백업의 버전 참조가 일치하지 않습니다.");

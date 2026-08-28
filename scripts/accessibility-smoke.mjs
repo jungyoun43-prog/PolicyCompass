@@ -14,7 +14,7 @@ const viewports = [
 ];
 const fixedTime = Date.parse("2025-01-01T00:00:00.000Z");
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-accessibility-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-accessibility-"));
 let chromeStderr = "";
 
 const browser = spawn(chrome, [

@@ -37,7 +37,7 @@ test("Insights 질문은 하나의 명시적 선택 동작과 복원 가능한 �
 
   assert.match(html, /id="questionSelectionStatus" role="status" aria-live="polite" hidden/);
   assert.match(html, /id="questions"[\s\S]*?role="radiogroup"/);
-  assert.match(client, /const selectedQuestionKey = "vitagraph-selected-visit-question"/);
+  assert.match(client, /const selectedQuestionKey = "policycompass-selected-visit-question"/);
   assert.match(client, /function sceneFingerprint\(session\)/);
   assert.match(client, /sessionStorage\.setItem\(selectedQuestionKey, JSON\.stringify/);
   assert.match(client, /renderQuestions\(brief\.questions, readSelectedQuestionId\(fingerprint\), fingerprint\)/);

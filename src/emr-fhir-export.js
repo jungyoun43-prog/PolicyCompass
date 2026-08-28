@@ -5,7 +5,7 @@ import {
   LOINC_SYSTEM,
 } from "./clinical-observations.js";
 
-const FHIR_BASE_URL = "https://vitagraph.local/fhir";
+const FHIR_BASE_URL = "https://policycompass.local/fhir";
 const SOURCE_PATIENT_IDENTITY_SYSTEM = `${FHIR_BASE_URL}/identifier/source-patient`;
 const SOURCE_RESOURCE_IDENTITY_SYSTEM = `${FHIR_BASE_URL}/identifier/source-resource`;
 const ENCOUNTER_LOCAL_DATE_URL = `${FHIR_BASE_URL}/StructureDefinition/encounter-local-date`;
@@ -424,7 +424,7 @@ function compositionResource(event, identity, patientReference, encounterReferen
   const soap = event.soap && typeof event.soap === "object" ? event.soap : {};
   const signature = event.signature && typeof event.signature === "object" ? event.signature : {};
   const signedAt = validDateTime(signature.signedAt);
-  const authorDisplay = cleanText(signature.signer, 200) || cleanText(event.clinician, 200) || "VitaGraph 로컬 내보내기";
+  const authorDisplay = cleanText(signature.signer, 200) || cleanText(event.clinician, 200) || "PolicyCompass 로컬 내보내기";
   const documentDate = signedAt || validDateTime(event.finishedAt) || validDateTime(event.date) || exportedAt;
   return {
     resourceType: "Composition",

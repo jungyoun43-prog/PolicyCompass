@@ -1,9 +1,9 @@
 // Automatic same-origin clinical/personal synchronization was retired.
 // The only supported clinical-to-personal path is the explicit
-// vitagraph-patient-transfer v1 file and its separately delivered code.
+// policycompass-patient-transfer v1 file and its separately delivered code.
 
-export const CARE_BRIDGE_STORAGE_KEY = "vitagraph-care-bridge-v1";
-export const PERSONAL_SYNC_SUSPENDED_KEY = "vitagraph-personal-sync-suspended-v1";
+export const CARE_BRIDGE_STORAGE_KEY = "policycompass-care-bridge-v1";
+export const PERSONAL_SYNC_SUSPENDED_KEY = "policycompass-personal-sync-suspended-v1";
 
 function localStorageOrNull(storageProvided, storage) {
   if (storageProvided) return storage ?? null;

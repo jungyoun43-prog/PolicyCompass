@@ -17,7 +17,7 @@ const identities = [
   { route: "/emr", selector: "#emrTitle", text: "오늘 진료" },
 ];
 
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-route-identity-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-route-identity-"));
 const browser = spawn(chrome, [
   "--headless",
   "--no-sandbox",

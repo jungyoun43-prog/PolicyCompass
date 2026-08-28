@@ -7,7 +7,7 @@ const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
 const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.CHROME_DEBUG_PORT ?? "9227", 10);
 const routes = ["/", "/patient", "/map", "/connections", "/insights", "/journey", "/emr"];
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-route-context-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-route-context-"));
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const browser = spawn(chrome, [

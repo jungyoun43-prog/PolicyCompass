@@ -42,7 +42,7 @@ for (const node of document.nodes ?? []) {
 
 document.asset = {
   ...document.asset,
-  generator: "VitaGraph clinical anatomy atlas 4.0 (contained-organ presentation)",
+  generator: "PolicyCompass clinical anatomy atlas 4.0 (contained-organ presentation)",
   extras: {
     ...document.asset?.extras,
     sourceModel: "body-atlas-3d-v3.glb",

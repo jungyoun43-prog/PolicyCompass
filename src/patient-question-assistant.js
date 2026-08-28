@@ -4,11 +4,11 @@ import {
 } from "./clinical-observations.js";
 import { CONDITIONS } from "./data.js";
 
-export const PATIENT_QUESTION_REQUEST_SCHEMA = "vitagraph-patient-question-request";
+export const PATIENT_QUESTION_REQUEST_SCHEMA = "policycompass-patient-question-request";
 export const PATIENT_QUESTION_REQUEST_VERSION = 1;
-export const PATIENT_QUESTION_HANDOFF_SCHEMA = "vitagraph-patient-brief";
+export const PATIENT_QUESTION_HANDOFF_SCHEMA = "policycompass-patient-brief";
 export const PATIENT_QUESTION_HANDOFF_VERSION = 1;
-export const PATIENT_SNAPSHOT_EXPORT_SCHEMA = "vitagraph-personal-clinical-snapshot";
+export const PATIENT_SNAPSHOT_EXPORT_SCHEMA = "policycompass-personal-clinical-snapshot";
 export const PATIENT_SNAPSHOT_EXPORT_VERSION = 1;
 
 const MAX_SELF_REPORT_LENGTH = 1_000;
@@ -559,7 +559,7 @@ export function createPatientQuestionRequest(
     throw new TypeError("질문을 만들 정제된 건강 항목이나 최근 변화가 없습니다.");
   }
   const clinicalSnapshot = factCount ? {
-    schema: "vitagraph-clinical-snapshot",
+    schema: "policycompass-clinical-snapshot",
     version: 1,
     preparedAt: safeTimestamp(sourceSnapshot?.preparedAt),
     source: sourceSnapshot ? "finalized-clinical-record" : "patient-refined-record",
@@ -840,5 +840,5 @@ export function createPatientClinicalSnapshotExport(session = {}, exportedAt = n
 }
 
 export function patientClinicalSnapshotFilename(exportedAt = new Date().toISOString()) {
-  return `vitagraph-personal-snapshot-${safeTimestamp(exportedAt).slice(0, 10)}.json`;
+  return `policycompass-personal-snapshot-${safeTimestamp(exportedAt).slice(0, 10)}.json`;
 }

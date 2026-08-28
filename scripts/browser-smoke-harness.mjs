@@ -433,7 +433,7 @@ async function captureBrowserDiagnostics({
 export async function runBrowserSmoke({
   appUrl = "http://127.0.0.1:4173",
   debugPort = 0,
-  profilePrefix = "vitagraph-browser-smoke-",
+  profilePrefix = "policycompass-browser-smoke-",
   initialViewport = { width: 1280, height: 800, mobile: false },
   cdpTimeoutMs = positiveInteger(process.env.BROWSER_CDP_TIMEOUT_MS, DEFAULT_CDP_TIMEOUT_MS),
   stepTimeoutMs = positiveInteger(process.env.BROWSER_STEP_TIMEOUT_MS, DEFAULT_STEP_TIMEOUT_MS),

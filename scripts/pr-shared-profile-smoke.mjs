@@ -17,7 +17,7 @@ try {
   await runBrowserSmoke({
     appUrl,
     debugPort: Number.parseInt(process.env.PR_GATE_CHROME_DEBUG_PORT ?? "9244", 10),
-    profilePrefix: "vitagraph-pr-shared-",
+    profilePrefix: "policycompass-pr-shared-",
   }, async ({ client, evaluate, navigate, waitFor }) => {
     const step = async (name, action) => {
       activeStep = name;
@@ -47,7 +47,7 @@ try {
         local: document.querySelector('[data-route-context]')?.textContent ?? '',
         clinicianLinks: [...document.querySelectorAll('a[href]')]
           .filter((link) => new URL(link.href).pathname === '/emr').length,
-        journeyBefore: localStorage.getItem('vitagraph-journey')
+        journeyBefore: localStorage.getItem('policycompass-journey')
       })`);
       assert(
         /이 기기|브라우저/.test(boundary.local)
@@ -59,9 +59,9 @@ try {
 
     await step("patient-sample-boundary", async () => {
       await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
-      assert(await evaluate("sessionStorage.getItem('vitagraph-scene') === null"), "Patient sample wrote a real Personal scene.");
+      assert(await evaluate("sessionStorage.getItem('policycompass-scene') === null"), "Patient sample wrote a real Personal scene.");
       await navigate("/journey?sample=1", "Boolean(document.querySelector('[data-story-section=\"changed\"]'))");
-      assert(await evaluate("new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('journeyTimeline').hidden && sessionStorage.getItem('vitagraph-scene') === null"), "Patient sample crossed into real Journey or persisted a scene.");
+      assert(await evaluate("new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('journeyTimeline').hidden && sessionStorage.getItem('policycompass-scene') === null"), "Patient sample crossed into real Journey or persisted a scene.");
     });
 
     await writeSmokeReport(reportPath, {

@@ -9,7 +9,7 @@ import {
 
 const payload = {
   clinicalSnapshot: {
-    schema: "vitagraph-clinical-snapshot",
+    schema: "policycompass-clinical-snapshot",
     version: 1,
     healthMap: {
       conditions: [{ id: "hypertension", label: "고혈압", recordedOn: "2026-07-01" }],
@@ -82,7 +82,7 @@ test("모델이 있으면 후보마다 병렬 검증하고 관련 없음은 지�
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
   const result = await runConnectionInsights(payload, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl,
   });
   assert.equal(result.mode, "local-model");
@@ -111,7 +111,7 @@ test("한 후보의 모델 검증이 계속 실패하면 그 후보만 규칙 �
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
   const result = await runConnectionInsights(payload, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl,
   });
   const fallback = result.insights.find(({ verifiedBy }) => verifiedBy === "rule");

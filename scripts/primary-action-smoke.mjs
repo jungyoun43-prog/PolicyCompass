@@ -12,7 +12,7 @@ const links = [
   { from: "/connections", selector: "#sceneEmpty .primary-button", path: "/map", hash: "#import-record" },
   { from: "/journey", selector: "#journeyEmpty .primary-button", path: "/map", hash: "#import-record" },
 ];
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-primary-actions-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-primary-actions-"));
 const importedSessionFixture = {
   declaredIds: [],
   patientVisibleIds: ["diabetes"],
@@ -37,7 +37,7 @@ const importedSessionFixture = {
   visibleIds: ["diabetes", "hypertension"],
   activeId: "hypertension",
   transfer: {
-    schema: "vitagraph-patient-transfer",
+    schema: "policycompass-patient-transfer",
     version: 1,
     exportedAt: "2024-12-31T12:34:56.000Z",
     trust: "unsigned-local-export",
@@ -120,10 +120,10 @@ try {
   await waitFor("document.getElementById('miniConditionList').children.length > 0", "/map valid primary action did not update state");
   assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님')"), "/map promoted a text pattern without marking it as a non-diagnostic signal");
 
-  await evaluate(`sessionStorage.setItem('vitagraph-scene', ${JSON.stringify(JSON.stringify(importedSessionFixture))});localStorage.setItem('vitagraph-care-bridge-v1','legacy-sensitive-snapshot');location.reload()`);
+  await evaluate(`sessionStorage.setItem('policycompass-scene', ${JSON.stringify(JSON.stringify(importedSessionFixture))});localStorage.setItem('policycompass-care-bridge-v1','legacy-sensitive-snapshot');location.reload()`);
   await waitFor("document.getElementById('miniConditionList').textContent.includes('고혈압')", "/map did not restore the explicitly imported condition");
   assert(await evaluate("!document.getElementById('miniConditionList').textContent.includes('당뇨병')"), "/map trusted a legacy inferred patientVisibleIds entry");
-  assert(await evaluate("localStorage.getItem('vitagraph-care-bridge-v1') === null"), "/map did not retire legacy global bridge data");
+  assert(await evaluate("localStorage.getItem('policycompass-care-bridge-v1') === null"), "/map did not retire legacy global bridge data");
 
   await navigate("/insights");
   await waitFor("document.getElementById('clinicalSnapshotStatus').textContent.includes('발행기관·변조 미검증')", "/insights did not expose unsigned-import provenance");
@@ -140,9 +140,9 @@ try {
   await evaluate("document.getElementById('sharePatientBrief').click()");
   await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('클립보드에 복사')", "/insights local question copy did not finish");
   assert(await evaluate("Boolean(window.__copiedQuestion)"), "/insights did not copy the selected question");
-  assert(await evaluate("localStorage.getItem('vitagraph-care-bridge-v1') === null"), "/insights recreated the retired global bridge");
+  assert(await evaluate("localStorage.getItem('policycompass-care-bridge-v1') === null"), "/insights recreated the retired global bridge");
 
-  await evaluate(`localStorage.setItem('vitagraph-journey', JSON.stringify([
+  await evaluate(`localStorage.setItem('policycompass-journey', JSON.stringify([
     {id:'journey-a',date:'2026-06-01',conditionIds:['hypertension'],measurements:[],source:'직접 입력',createdAt:'2026-06-01T00:00:00.000Z'},
     {id:'journey-b',date:'2026-07-01',conditionIds:['hypertension','diabetes'],measurements:[],source:'직접 입력',createdAt:'2026-07-01T00:00:00.000Z'}
   ]))`);

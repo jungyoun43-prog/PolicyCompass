@@ -8,7 +8,7 @@ import {
   writeSmokeReport,
 } from "./browser-smoke-harness.mjs";
 
-const screenshotRoot = process.env.BODY_3D_SCREENSHOT_ROOT ?? "/tmp/vitagraph-body-3d-screens";
+const screenshotRoot = process.env.BODY_3D_SCREENSHOT_ROOT ?? "/tmp/policycompass-body-3d-screens";
 const reportPath = process.env.BODY_3D_SMOKE_REPORT ?? `${screenshotRoot}/body-3d-report.json`;
 const patientScreenshot = `${screenshotRoot}/patient-body-3d-1440.png`;
 const patientAngledScreenshot = `${screenshotRoot}/patient-body-3d-angled-1440.png`;
@@ -30,7 +30,7 @@ const app = await startManagedAppServer({ healthPath: "/map" });
 try {
   await runBrowserSmoke({
     appUrl: app.appUrl,
-    profilePrefix: "vitagraph-body-3d-",
+    profilePrefix: "policycompass-body-3d-",
     initialViewport: { width: 1440, height: 1100, mobile: false },
   }, async ({ client, delay, evaluate, navigate, setViewport, waitFor }) => {
     await navigate("/map?sample=1", "Boolean(document.querySelector('[data-body-3d]'))");

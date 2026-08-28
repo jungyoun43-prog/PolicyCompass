@@ -4,7 +4,7 @@ import {
   normalizeClinicalObservationValue,
 } from "./clinical-observations.js";
 
-export const JOURNEY_BACKUP_SCHEMA = "vitagraph-journey";
+export const JOURNEY_BACKUP_SCHEMA = "policycompass-journey";
 export const JOURNEY_BACKUP_VERSION = 2;
 export const JOURNEY_TIME_ZONE = "Asia/Seoul";
 const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1_000;
@@ -706,7 +706,7 @@ function strictSnapshot(value, exportedAt) {
 export function parseJourneyBackup(value) {
   assertExactKeys(value, ["schema", "version", "exportedAt", "timeZone", "snapshots"], "Journey 백업");
   if (value.schema !== JOURNEY_BACKUP_SCHEMA) {
-    throw new TypeError("VitaGraph Journey 백업 파일이 아닙니다.");
+    throw new TypeError("PolicyCompass Journey 백업 파일이 아닙니다.");
   }
   if (value.version !== JOURNEY_BACKUP_VERSION) {
     throw new TypeError(`지원하지 않는 Journey 백업 버전입니다: ${String(value.version)}`);

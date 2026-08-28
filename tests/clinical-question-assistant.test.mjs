@@ -57,7 +57,7 @@ const patient = {
 };
 
 const bridgeBrief = {
-  schema: "vitagraph-patient-brief",
+  schema: "policycompass-patient-brief",
   version: 1,
   preparedAt: "2026-07-26T08:00:00.000Z",
   source: "local-model",

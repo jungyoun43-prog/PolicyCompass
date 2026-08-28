@@ -215,7 +215,7 @@ test("프로필 청구 line은 상태 규칙에 없더라도 안전한 식별자
       version: "1",
       title: "COPD 상병의 경구약 급여조건 확인",
       serviceCode: "DEMO-ORAL-COPD",
-      serviceSystem: "urn:vitagraph:profile:service",
+      serviceSystem: "urn:policycompass:profile:service",
       serviceEventType: "procedure",
       windowDays: 365,
       maxCount: 1,
@@ -401,7 +401,7 @@ test("검토 이력은 50건으로 제한하고 자동 무효화 뒤에도 이�
   let changed = appendPatientEvent(state, "claim-review-history-patient", {
     id: "claim-review-history-service",
     type: "procedure",
-    system: "urn:vitagraph:demo:service",
+    system: "urn:policycompass:demo:service",
     code: "DEMO-BP-FOLLOWUP",
     label: "고혈압 추적검사",
     date: "2026-08-03",

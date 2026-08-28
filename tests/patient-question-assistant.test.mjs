@@ -8,7 +8,7 @@ import {
 } from "../scripts/patient-question-assistant.mjs";
 
 const snapshot = {
-  schema: "vitagraph-clinical-snapshot",
+  schema: "policycompass-clinical-snapshot",
   version: 1,
   preparedAt: "2026-07-26T08:00:00.000Z",
   source: "finalized-clinical-record",
@@ -87,8 +87,8 @@ test("local provider uses loopback Ollama and rejects fabricated evidence", asyn
   };
   const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
     environment: {
-      VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local",
-      VITAGRAPH_PATIENT_OLLAMA_URL: "http://127.0.0.1:11434",
+      POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local",
+      POLICYCOMPASS_PATIENT_OLLAMA_URL: "http://127.0.0.1:11434",
     },
     fetchImpl,
   });
@@ -104,7 +104,7 @@ test("local provider uses loopback Ollama and rejects fabricated evidence", asyn
 
   let fabricatedCalls = 0;
   const fallback = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl: async () => {
       fabricatedCalls += 1;
       return new Response(JSON.stringify({
@@ -142,8 +142,8 @@ test("frontier provider requires per-run consent and uses Responses structured o
   }, {
     environment: {
       OPENAI_API_KEY: "server-only-test-key",
-      VITAGRAPH_FRONTIER_ENABLED: "true",
-      VITAGRAPH_FRONTIER_MODEL: "gpt-5.6-sol",
+      POLICYCOMPASS_FRONTIER_ENABLED: "true",
+      POLICYCOMPASS_FRONTIER_MODEL: "gpt-5.6-sol",
     },
     fetchImpl: async (url, options) => {
       captured = { url, options, body: JSON.parse(options.body) };
@@ -171,8 +171,8 @@ test("frontier provider requires per-run consent and uses Responses structured o
 test("provider status reveals configuration state, never the API key", () => {
   const status = patientQuestionAssistantStatus({
     OPENAI_API_KEY: "secret",
-    VITAGRAPH_FRONTIER_ENABLED: "true",
-    VITAGRAPH_FRONTIER_MODEL: "gpt-5.6-sol",
+    POLICYCOMPASS_FRONTIER_ENABLED: "true",
+    POLICYCOMPASS_FRONTIER_MODEL: "gpt-5.6-sol",
   });
   assert.equal(status.frontier.configured, true);
   assert.equal(status.frontier.model, "gpt-5.6-sol");
@@ -181,7 +181,7 @@ test("provider status reveals configuration state, never the API key", () => {
 
 test("patient model output rejects medication-change instructions even with valid evidence", async () => {
   const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl: async () => new Response(JSON.stringify({
       model: "patient-local",
       message: {

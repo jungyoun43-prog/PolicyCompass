@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
 const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.HANDOFF_CHROME_DEBUG_PORT ?? "9226", 10);
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-handoff-smoke-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-handoff-smoke-"));
 const reportPath = process.env.HANDOFF_SMOKE_REPORT ?? join("artifacts", "smoke", "handoff-smoke-report.json");
 const initialPersonalScene = {
   declaredIds: ["migraine"],
@@ -145,7 +145,7 @@ try {
   );
   const initialPersonalSceneText = JSON.stringify(initialPersonalScene);
   const existingJourneyText = JSON.stringify(existingJourney);
-  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(initialPersonalSceneText)});localStorage.setItem("vitagraph-journey", ${JSON.stringify(existingJourneyText)})`);
+  await evaluate(`sessionStorage.setItem("policycompass-scene", ${JSON.stringify(initialPersonalSceneText)});localStorage.setItem("policycompass-journey", ${JSON.stringify(existingJourneyText)})`);
   await evaluate(`
     document.getElementById("patientMrn").value = "HANDOFF-001";
     document.getElementById("patientName").value = "전달검증환자";
@@ -213,8 +213,8 @@ try {
   await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
 
-  assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(initialPersonalSceneText)}`), "Signing an EMR encounter changed the Personal scene without an explicit import.");
-  assert(await evaluate("localStorage.getItem('vitagraph-care-bridge-v1') === null"), "Signing recreated the retired global care bridge.");
+  assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(initialPersonalSceneText)}`), "Signing an EMR encounter changed the Personal scene without an explicit import.");
+  assert(await evaluate("localStorage.getItem('policycompass-care-bridge-v1') === null"), "Signing recreated the retired global care bridge.");
 
   await evaluate(`
     window.__transferJsonText = "";
@@ -230,7 +230,7 @@ try {
   await waitFor("window.__transferJsonText.length > 0", "EMR did not produce an explicit patient transfer file.");
   const transferJsonText = await evaluate("window.__transferJsonText");
   const transferPackage = JSON.parse(transferJsonText);
-  assert(transferPackage.schema === "vitagraph-patient-transfer" && transferPackage.version === 1, "Patient transfer schema/version mismatch.");
+  assert(transferPackage.schema === "policycompass-patient-transfer" && transferPackage.version === 1, "Patient transfer schema/version mismatch.");
   assert(transferPackage.healthMap.conditions.some(({ id }) => id === "hypertension"), "Explicit transfer omitted the confirmed condition.");
   assert(transferPackage.healthMap.measurements.some(({ key, value }) => key === "hba1c" && value === 7.1), "Explicit transfer omitted the final observation.");
   assert(!("medications" in transferPackage.healthMap) && !("medications" in transferPackage), "Explicit transfer included unsupported medication scope.");
@@ -250,7 +250,7 @@ try {
     const input = document.getElementById("transferCode");
     input.value = ${JSON.stringify(wrongTransferCode)};
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    const transferFile = new File([${JSON.stringify(transferJsonText)}], "vitagraph-patient-transfer.json", { type: "application/json" });
+    const transferFile = new File([${JSON.stringify(transferJsonText)}], "policycompass-patient-transfer.json", { type: "application/json" });
     const files = new DataTransfer();
     files.items.add(transferFile);
     const picker = document.getElementById("fhirFile");
@@ -259,8 +259,8 @@ try {
     document.getElementById("importRecordButton").click();
   })()`);
   await waitFor("document.getElementById('transferCode').getAttribute('aria-invalid') === 'true'", "A mismatched transfer code did not fail closed.");
-  assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(initialPersonalSceneText)}`), "A failed transfer-code check changed the Personal scene.");
-  assert(await evaluate(`localStorage.getItem("vitagraph-journey") === ${JSON.stringify(existingJourneyText)}`), "A failed import changed Journey.");
+  assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(initialPersonalSceneText)}`), "A failed transfer-code check changed the Personal scene.");
+  assert(await evaluate(`localStorage.getItem("policycompass-journey") === ${JSON.stringify(existingJourneyText)}`), "A failed import changed Journey.");
 
   await evaluate(`
     window.__importConfirmCount = 0;
@@ -271,7 +271,7 @@ try {
     document.getElementById("importRecordButton").click();
   `);
   await waitFor("document.getElementById('fhirResult').classList.contains('is-success')", "Correct file+code import did not finish.");
-  const validImportedSceneText = await evaluate("sessionStorage.getItem('vitagraph-scene')");
+  const validImportedSceneText = await evaluate("sessionStorage.getItem('policycompass-scene')");
   const validImportedScene = JSON.parse(validImportedSceneText);
   assert(await evaluate("window.__importConfirmCount >= 3"), "Import did not require patient, Journey-subject, and replacement confirmations.");
   assert(validImportedScene.declaredIds.length === 0 && validImportedScene.patientVisibleIds.length === 0, "Explicit import merged the previous Personal patient's conditions.");
@@ -280,7 +280,7 @@ try {
   assert(validImportedScene.clinicalMeasurements[0].provenanceKind === "clinician-final-unsigned-import", "Imported measurement provenance was lost.");
   assert(validImportedScene.note === "" && validImportedScene.signals.length === 0, "Explicit import retained the previous patient's unsaved note/signals.");
   assert(!("transferCode" in validImportedScene.transfer), "Personal session persisted the separately delivered transfer code.");
-  assert(await evaluate(`localStorage.getItem("vitagraph-journey") === ${JSON.stringify(existingJourneyText)}`), "Successful import changed existing Journey records.");
+  assert(await evaluate(`localStorage.getItem("policycompass-journey") === ${JSON.stringify(existingJourneyText)}`), "Successful import changed existing Journey records.");
   assert(await evaluate("!document.getElementById('downloadClinicalJson')"), "Personal recreated a second clinical JSON export path.");
 
   await navigate("/connections", "Boolean(document.getElementById('networkScene'))");
@@ -313,7 +313,7 @@ try {
   await waitFor("!document.getElementById('sharePatientBrief').disabled", "Patient did not explicitly select a question for copying.");
   await evaluate("document.getElementById('sharePatientBrief').click()");
   await waitFor("document.getElementById('patientAssistantStatus').textContent.includes('클립보드에 복사')", "Selected question was not copied locally.");
-  assert(await evaluate("Boolean(window.__copiedQuestion) && localStorage.getItem('vitagraph-care-bridge-v1') === null"), "Question copy recreated an EMR bridge or copied no question.");
+  assert(await evaluate("Boolean(window.__copiedQuestion) && localStorage.getItem('policycompass-care-bridge-v1') === null"), "Question copy recreated an EMR bridge or copied no question.");
 
   await evaluate(`
     window.__patientAssistantRequest = null;
@@ -350,16 +350,16 @@ try {
 
   const tamperedScene = structuredClone(validImportedScene);
   tamperedScene.clinicalMeasurements[0].value = 9_999;
-  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(JSON.stringify(tamperedScene))})`);
+  await evaluate(`sessionStorage.setItem("policycompass-scene", ${JSON.stringify(JSON.stringify(tamperedScene))})`);
   await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
   await waitFor("document.getElementById('clinicalConnectionBadge').textContent.includes('파일 가져오기 대기')", "Tampered imported measurement was not rejected.");
   assert(await evaluate("document.getElementById('questionCount').textContent === '0개 질문' && document.getElementById('runPatientAssistant').disabled"), "Tampered session data reached questions or model controls.");
 
-  await evaluate(`sessionStorage.setItem("vitagraph-scene", ${JSON.stringify(validImportedSceneText)});localStorage.setItem("vitagraph-care-bridge-v1", "legacy-secret-snapshot")`);
+  await evaluate(`sessionStorage.setItem("policycompass-scene", ${JSON.stringify(validImportedSceneText)});localStorage.setItem("policycompass-care-bridge-v1", "legacy-secret-snapshot")`);
   await navigate("/map?sample=1", "Boolean(document.getElementById('healthForm'))");
-  assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample map mutated the real imported session.");
+  assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample map mutated the real imported session.");
   assert(await evaluate("document.getElementById('transferCode').disabled && document.getElementById('importRecordButton').disabled && document.getElementById('saveJourney').disabled"), "Sample map enabled import or Journey actions.");
-  assert(await evaluate("!document.body.textContent.includes('7.1') && localStorage.getItem('vitagraph-care-bridge-v1') === null"), "Sample map exposed imported/legacy clinical detail.");
+  assert(await evaluate("!document.body.textContent.includes('7.1') && localStorage.getItem('policycompass-care-bridge-v1') === null"), "Sample map exposed imported/legacy clinical detail.");
   await navigate("/insights?sample=1", "Boolean(document.getElementById('questionCount'))");
   assert(await evaluate(`(() => {
     const note = document.getElementById("exportClinicalSnapshot");
@@ -369,16 +369,16 @@ try {
       && note?.tagName === "P"
       && !note.matches("button, a, input, [role='button']");
   })()`), "Sample insights enabled real-data actions.");
-  assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(validImportedSceneText)} && !document.body.textContent.includes('7.1')`), "Sample insights exposed or mutated imported detail.");
+  assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)} && !document.body.textContent.includes('7.1')`), "Sample insights exposed or mutated imported detail.");
   await navigate("/connections?sample=1", "Boolean(document.getElementById('networkScene'))");
   assert(await evaluate("!document.getElementById('personalDemoMode').hidden && document.querySelectorAll('[data-node-id]').length === 5"), "Sample connections did not stay in the synthetic fixture.");
-  assert(await evaluate(`sessionStorage.getItem("vitagraph-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample connections mutated the real imported session.");
+  assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample connections mutated the real imported session.");
   await evaluate(`document.querySelector('.app-nav a[href^="/insights"]').click()`);
   await waitFor("location.pathname === '/insights' && new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('clinicalConnectionBadge')?.textContent === '예시 모드'", "Sample navigation dropped its boundary from Connections to Insights.");
   assert(await evaluate("document.getElementById('clinicalConnectionBadge').textContent === '예시 모드' && !document.body.textContent.includes('7.1')"), "A sample navigation click exposed imported Insights data.");
   await evaluate(`document.querySelector('.app-nav a[href^="/journey"]').click()`);
   await waitFor("location.pathname === '/journey' && new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('journeyTimeline')?.hidden", "Sample navigation dropped its boundary from Insights to Journey.");
-  assert(await evaluate(`document.getElementById("journeyTimeline").hidden && localStorage.getItem("vitagraph-journey") === ${JSON.stringify(existingJourneyText)}`), "Sample Journey exposed or changed the real timeline after an actual navigation click.");
+  assert(await evaluate(`document.getElementById("journeyTimeline").hidden && localStorage.getItem("policycompass-journey") === ${JSON.stringify(existingJourneyText)}`), "Sample Journey exposed or changed the real timeline after an actual navigation click.");
 
   await client.call("Emulation.setDeviceMetricsOverride", {
     width: 390,

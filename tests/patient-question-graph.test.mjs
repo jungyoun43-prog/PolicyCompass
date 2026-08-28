@@ -9,7 +9,7 @@ import {
 
 const payload = {
   clinicalSnapshot: {
-    schema: "vitagraph-clinical-snapshot",
+    schema: "policycompass-clinical-snapshot",
     version: 1,
     healthMap: {
       conditions: [{ id: "hypertension", label: "고혈압", recordedOn: "2026-07-01" }],
@@ -62,7 +62,7 @@ test("검증 실패 초안은 거부 사유를 피드백으로 넘겨 같은 실
     return ollamaResponse(JSON.stringify(validModelOutput));
   };
   const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl,
   });
   assert.equal(requests.length, 2);
@@ -78,7 +78,7 @@ test("검증 실패 초안은 거부 사유를 피드백으로 넘겨 같은 실
 test("JSON이 아닌 모델 응답도 재시도 대상이며 반복 실패 시 규칙 기반으로 폴백한다", async () => {
   let calls = 0;
   const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl: async () => {
       calls += 1;
       return ollamaResponse("이건 JSON이 아닙니다");
@@ -94,7 +94,7 @@ test("JSON이 아닌 모델 응답도 재시도 대상이며 반복 실패 시 �
 test("전송 자체가 실패하면 재시도 없이 즉시 규칙 기반으로 폴백한다", async () => {
   let calls = 0;
   const result = await runPatientQuestionAssistant({ ...payload, provider: "local" }, {
-    environment: { VITAGRAPH_PATIENT_OLLAMA_MODEL: "patient-local" },
+    environment: { POLICYCOMPASS_PATIENT_OLLAMA_MODEL: "patient-local" },
     fetchImpl: async () => {
       calls += 1;
       return new Response("{}", { status: 500 });

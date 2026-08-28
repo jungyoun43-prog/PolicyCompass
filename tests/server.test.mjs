@@ -11,9 +11,9 @@ async function freePort() {
   return port;
 }
 
-async function startRenderServer(environment = {}) {
+async function startAppServer(environment = {}) {
   const port = await freePort();
-  const child = spawn(process.execPath, ["scripts/render-server.mjs"], {
+  const child = spawn(process.execPath, ["scripts/server.mjs"], {
     cwd: new URL("..", import.meta.url),
     env: { ...process.env, OPENAI_API_KEY: "", PORT: String(port), ...environment },
     stdio: ["ignore", "pipe", "pipe"],
@@ -29,7 +29,7 @@ async function startRenderServer(environment = {}) {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   child.kill("SIGKILL");
-  throw new Error("Render server did not start.");
+  throw new Error("PolicyCompass server did not start.");
 }
 
 async function stop(child) {
@@ -45,7 +45,7 @@ async function stop(child) {
 }
 
 test("production server exposes same-origin patient AI status and keeps credentials server-side", async () => {
-  const { baseUrl, child } = await startRenderServer();
+  const { baseUrl, child } = await startAppServer();
   try {
     const statusResponse = await fetch(`${baseUrl}/api/patient-question-assistant/status`);
     assert.equal(statusResponse.status, 200);

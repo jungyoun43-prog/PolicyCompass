@@ -38,7 +38,7 @@ test("canonical sequence fixes all seven routes and four viewports", () => {
 
 test("one sequential browser profile observes real product and layout behavior", () => {
   assert.match(sequence, /const profileType = "shared-sequential"/);
-  assert.match(sequence, /localStorage\.setItem\("vitagraph-release-profile"/);
+  assert.match(sequence, /localStorage\.setItem\("policycompass-release-profile"/);
   assert.match(sequence, /for \(const viewport of RESPONSIVE_VIEWPORTS\)/);
   assert.match(sequence, /for \(const expectation of CANONICAL_STEPS\)/);
   assert.match(sequence, /observeResponsiveRoute\(api/);

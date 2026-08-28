@@ -1,5 +1,5 @@
 {
-  "name": "vitagraph-health-map",
+  "name": "policycompass-health-map",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -26,7 +26,7 @@
     "capture:visual": "npm run build && node scripts/visual-layout-capture.mjs",
     "gate:pr": "npm run build && node scripts/pr-golden-flow-gate.mjs",
     "gate:release": "npm run build && node scripts/release-gate.mjs",
-    "start": "node scripts/render-server.mjs",
+    "start": "node scripts/server.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },
   "type": "module",

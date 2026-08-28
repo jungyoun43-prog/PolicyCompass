@@ -5,10 +5,10 @@ import {
   normalizeClinicalObservationValue,
 } from "./clinical-observations.js";
 
-export const PATIENT_TRANSFER_SCHEMA = "vitagraph-patient-transfer";
+export const PATIENT_TRANSFER_SCHEMA = "policycompass-patient-transfer";
 export const PATIENT_TRANSFER_VERSION = 1;
 
-const TRANSFER_SCOPE = "patient-vita-graph";
+const TRANSFER_SCOPE = "patient-policy-compass";
 const TRANSFER_TRUST = "unsigned-local-export";
 const KCD_SYSTEM = "urn:kr:kcd";
 const MAX_TRANSFER_BYTES = 2 * 1024 * 1024;
@@ -287,7 +287,7 @@ export function createPatientTransferPackage(patient, exportedAt, transferCode =
   const instant = canonicalInstant(exportedAt);
   const { conditions, measurements } = createPatientHealthMap(patient, instant);
   if (conditions.length + measurements.length === 0) {
-    throw new TypeError("환자용 VitaGraph에 내보낼 최종·확정 지원 기록이 없습니다.");
+    throw new TypeError("환자용 PolicyCompass에 내보낼 최종·확정 지원 기록이 없습니다.");
   }
   return {
     schema: PATIENT_TRANSFER_SCHEMA,
@@ -340,10 +340,10 @@ function parseMeasurement(item, seen) {
 
 export function parsePatientTransferPackage(value) {
   if (serializedByteLength(value) > MAX_TRANSFER_BYTES) {
-    throw new RangeError("2MB 이하의 환자용 VitaGraph JSON 파일만 가져올 수 있습니다.");
+    throw new RangeError("2MB 이하의 환자용 PolicyCompass JSON 파일만 가져올 수 있습니다.");
   }
   assertExactKeys(value, ["schema", "version", "exportedAt", "transferCode", "scope", "trust", "healthMap", "summary"], "환자 전달 파일");
-  if (value.schema !== PATIENT_TRANSFER_SCHEMA) throw new TypeError("VitaGraph 환자 전달 파일이 아닙니다.");
+  if (value.schema !== PATIENT_TRANSFER_SCHEMA) throw new TypeError("PolicyCompass 환자 전달 파일이 아닙니다.");
   if (value.version !== PATIENT_TRANSFER_VERSION) throw new TypeError(`지원하지 않는 환자 전달 파일 버전입니다: ${String(value.version)}`);
   if (value.scope !== TRANSFER_SCOPE || value.trust !== TRANSFER_TRUST) {
     throw new TypeError("환자 전달 파일의 사용 범위 또는 신뢰 표시가 유효하지 않습니다.");
@@ -385,7 +385,7 @@ export function parsePatientTransferPackage(value) {
     measurements,
     observedAt: latestDate,
     provenance: {
-      format: "VitaGraph 환자 전달 JSON",
+      format: "PolicyCompass 환자 전달 JSON",
       supported: totalFacts,
       unsupported: 0,
       total: totalFacts,
@@ -422,5 +422,5 @@ export function verifyPatientTransferCode(imported, enteredCode) {
 
 export function patientTransferFilename(exportedAt) {
   const instant = canonicalInstant(exportedAt);
-  return `vitagraph-patient-transfer-${koreanCalendarDate(instant)}.json`;
+  return `policycompass-patient-transfer-${koreanCalendarDate(instant)}.json`;
 }

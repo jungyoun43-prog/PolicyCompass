@@ -1,17 +1,19 @@
-import http from "node:http";
-
 import worker from "../dist/server/index.js";
 import { runConnectionInsights } from "./graphs/connection-insights-graph.mjs";
+import {
+  medicationClaimReviewStatus,
+  runMedicationClaimReview,
+} from "./graphs/medication-claim-review-graph.mjs";
 import { runQuestionRefine } from "./graphs/question-refine-graph.mjs";
 import {
   patientQuestionAssistantStatus,
   runPatientQuestionAssistant,
 } from "./patient-question-assistant.mjs";
 
-const port = Number.parseInt(process.env.PORT ?? "10000", 10);
 const frontierWindows = new Map();
 const FRONTIER_WINDOW_MS = 60_000;
 const FRONTIER_REQUEST_LIMIT = 12;
+const MAX_JSON_BYTES = 256 * 1024;
 
 class ApiError extends Error {
   constructor(status, code, message) {
@@ -34,7 +36,7 @@ function sendJson(response, status, value) {
 function assertSameOrigin(request) {
   const fetchSite = String(request.headers["sec-fetch-site"] ?? "");
   if (fetchSite && !["same-origin", "none"].includes(fetchSite)) {
-    throw new ApiError(403, "ORIGIN_NOT_ALLOWED", "같은 VitaGraph 출처의 요청만 허용합니다.");
+    throw new ApiError(403, "ORIGIN_NOT_ALLOWED", "같은 PolicyCompass 출처의 요청만 허용합니다.");
   }
   const origin = request.headers.origin;
   if (!origin) return;
@@ -42,7 +44,7 @@ function assertSameOrigin(request) {
     const originUrl = new URL(origin);
     if (originUrl.host !== request.headers.host) throw new Error("host mismatch");
   } catch {
-    throw new ApiError(403, "ORIGIN_NOT_ALLOWED", "같은 VitaGraph 출처의 요청만 허용합니다.");
+    throw new ApiError(403, "ORIGIN_NOT_ALLOWED", "같은 PolicyCompass 출처의 요청만 허용합니다.");
   }
 }
 
@@ -72,11 +74,30 @@ async function readJson(request) {
   if (!String(request.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
     throw new ApiError(415, "JSON_REQUIRED", "application/json 요청만 허용합니다.");
   }
-  const chunks = [];
+  // Vercel's Node runtime parses JSON bodies before the handler runs, which drains the stream.
+  if (request.body !== undefined && request.body !== null) {
+    if (typeof request.body === "string") {
+      try {
+        return JSON.parse(request.body || "{}");
+      } catch {
+        throw new ApiError(400, "INVALID_JSON", "JSON 요청 형식이 올바르지 않습니다.");
+      }
+    }
+    if (typeof request.body === "object" && !Buffer.isBuffer(request.body)) return request.body;
+    if (Buffer.isBuffer(request.body)) {
+      if (request.body.length > MAX_JSON_BYTES) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "정제 질문 요청은 256KB 이하여야 합니다.");
+      try {
+        return JSON.parse(request.body.toString("utf8") || "{}");
+      } catch {
+        throw new ApiError(400, "INVALID_JSON", "JSON 요청 형식이 올바르지 않습니다.");
+      }
+    }
+  }
+  const chunks = []; 
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 256 * 1024) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "정제 질문 요청은 256KB 이하여야 합니다.");
+    if (size > MAX_JSON_BYTES) throw new ApiError(413, "PAYLOAD_TOO_LARGE", "정제 질문 요청은 256KB 이하여야 합니다.");
     chunks.push(chunk);
   }
   try {
@@ -84,6 +105,15 @@ async function readJson(request) {
   } catch {
     throw new ApiError(400, "INVALID_JSON", "JSON 요청 형식이 올바르지 않습니다.");
   }
+}
+
+/**
+ * Vercel rewrites every path to this function. The platform normally forwards the
+ * original path, but a bare `/api` or `/api/index` means the rewrite target leaked
+ * through, so fall back to the site root instead of a 404.
+ */
+function requestPath(target) {
+  return ["/api", "/api/index", "/api/index.js"].includes(target) ? "/" : target;
 }
 
 function runtimeHeaders(pathname, headers) {
@@ -95,10 +125,15 @@ function runtimeHeaders(pathname, headers) {
   return next;
 }
 
-const server = http.createServer((request, response) => {
+/**
+ * Serves the built PolicyCompass worker plus the same-origin AI APIs.
+ * The signature is the Node `(request, response)` pair so the same handler backs
+ * both `scripts/server.mjs` and the Vercel Serverless Function in `api/index.js`.
+ */
+export function handleNodeRequest(request, response) {
   void (async () => {
-    const host = request.headers.host ?? `127.0.0.1:${port}`;
-    const url = new URL(request.url ?? "/", `http://${host}`);
+    const host = request.headers.host ?? "127.0.0.1";
+    const url = new URL(requestPath(request.url ?? "/"), `http://${host}`);
     const isPatientApi = url.pathname.startsWith("/api/patient-question-assistant");
     if (isPatientApi) {
       assertSameOrigin(request);
@@ -165,6 +200,43 @@ const server = http.createServer((request, response) => {
       sendJson(response, 405, { code: "METHOD_NOT_ALLOWED", message: "지원하지 않는 API 요청입니다." });
       return;
     }
+    if (url.pathname.startsWith("/api/medication-claim-review")) {
+      assertSameOrigin(request);
+      if (url.pathname === "/api/medication-claim-review/status" && request.method === "GET") {
+        sendJson(response, 200, medicationClaimReviewStatus());
+        return;
+      }
+      if (url.pathname !== "/api/medication-claim-review" || request.method !== "POST") {
+        sendJson(response, 405, { code: "METHOD_NOT_ALLOWED", message: "지원하지 않는 API 요청입니다." });
+        return;
+      }
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "약제 급여 사전점검 비교 결과가 필요합니다.");
+      }
+      const provider = payload.provider === "frontier" ? "frontier" : "local";
+      if (provider === "frontier" && payload.consent !== true) {
+        throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
+      }
+      const status = medicationClaimReviewStatus();
+      if (!status[provider].configured) {
+        sendJson(response, 503, {
+          code: provider === "frontier" ? "FRONTIER_NOT_CONFIGURED" : "LOCAL_AI_NOT_CONFIGURED",
+          message: "AI 검토가 설정되지 않아 규칙 기반 사전점검을 사용합니다.",
+        });
+        return;
+      }
+      if (provider === "frontier") assertFrontierRequestAllowed(request);
+      try {
+        sendJson(response, 200, await runMedicationClaimReview(payload));
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new ApiError(400, "INVALID_MEDICATION_REVIEW", error.message);
+        }
+        throw new ApiError(502, "MEDICATION_REVIEW_FAILED", "약제 급여 사전점검 초안을 만들지 못했습니다.");
+      }
+      return;
+    }
     if (url.pathname === "/api/connection-insights") {
       assertSameOrigin(request);
       if (request.method !== "POST") {
@@ -200,8 +272,6 @@ const server = http.createServer((request, response) => {
     }
     sendJson(response, 500, { code: "INTERNAL_ERROR", message: "요청을 처리하지 못했습니다." });
   });
-});
+}
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`Listening on port ${port}`);
-});
+export default handleNodeRequest;

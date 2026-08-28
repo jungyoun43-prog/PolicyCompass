@@ -144,7 +144,7 @@ test("확정·완료·서명된 진료를 참조가 모두 해소되는 FHIR R4 
     bundle.entry.map(({ resource }) => resource.resourceType).sort(),
     ["Patient", "Encounter", "Composition", "Condition", "MedicationRequest", "ServiceRequest", "Observation", "Procedure"].sort(),
   );
-  assert.ok(bundle.entry.every((entry) => entry.fullUrl.startsWith("https://vitagraph.local/fhir/")));
+  assert.ok(bundle.entry.every((entry) => entry.fullUrl.startsWith("https://policycompass.local/fhir/")));
   assert.ok(bundle.entry.every((entry) => !Object.hasOwn(entry, "request")));
 
   const fullUrls = new Set(bundle.entry.map(({ fullUrl }) => fullUrl));

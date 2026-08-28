@@ -315,7 +315,7 @@
 }
 
 
-/* Shared VitaGraph rhythm for Journey */
+/* Shared PolicyCompass rhythm for Journey */
 .journey-page { background: transparent; }
 .journey-page .explorer-topbar {
   width: min(100% - var(--page-gutter), var(--page-width));

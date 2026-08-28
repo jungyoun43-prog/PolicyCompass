@@ -84,7 +84,7 @@ test("모델이 설정되면 초안을 모델이 쓰고 근거 ID는 입력으�
     }), { status: 200, headers: { "content-type": "application/json" } });
   };
   const started = await startClaimReview(payload, {
-    environment: { VITAGRAPH_OLLAMA_MODEL: "clinic-local" },
+    environment: { POLICYCOMPASS_OLLAMA_MODEL: "clinic-local" },
     fetchImpl,
   });
   assert.equal(calls, 2);

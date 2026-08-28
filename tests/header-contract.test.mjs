@@ -18,7 +18,7 @@ const navigation = [
   ["/journey", "기록"],
 ];
 
-test("모든 화면은 같은 VitaGraph 앱 헤더 계약을 사용한다", async () => {
+test("모든 화면은 같은 PolicyCompass 앱 헤더 계약을 사용한다", async () => {
   for (const [file, activeRoute] of pages) {
     const html = await readFile(file, "utf8");
     const header = html.match(/<header class="app-header">([\s\S]*?)<\/header>/)?.[0] ?? "";
@@ -40,12 +40,12 @@ test("모든 화면은 같은 VitaGraph 앱 헤더 계약을 사용한다", asyn
   }
 });
 
-test("게이트웨이는 의료진 EMR과 개인 VitaGraph 진입점을 분리한다", async () => {
+test("게이트웨이는 의료진 EMR과 개인 PolicyCompass 진입점을 분리한다", async () => {
   const html = await readFile("src/gateway.html", "utf8");
 
   assert.match(html, /class="app-brand" href="\/"/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
-  assert.match(html, /href="\/patient"[^>]*>\s*개인 VitaGraph 열기/s);
+  assert.match(html, /href="\/patient"[^>]*>\s*개인 PolicyCompass 열기/s);
   assert.match(html, /의료진과 개인 사이의 기록 전달 방식/);
   assert.match(html, /의료진이 환자용 파일과 일회성 코드를 따로 전달/);
   assert.match(html, /파일과 별도 확인 코드 대조/);

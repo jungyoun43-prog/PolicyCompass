@@ -12,7 +12,7 @@ import {
 } from "./clinical-observations.js";
 
 const MAXIMUM_ENTRIES = 1_000;
-const FHIR_BASE_URL = "https://vitagraph.local/fhir";
+const FHIR_BASE_URL = "https://policycompass.local/fhir";
 const AGE_AT_EXPORT_URL = `${FHIR_BASE_URL}/StructureDefinition/age-at-export`;
 const RECORDED_BLOOD_TYPE_URL = `${FHIR_BASE_URL}/StructureDefinition/recorded-blood-type`;
 const LOCAL_INSURANCE_TYPE_URL = `${FHIR_BASE_URL}/StructureDefinition/local-insurance-type`;

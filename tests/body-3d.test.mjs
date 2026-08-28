@@ -84,7 +84,7 @@ test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보�
   assert.doesNotMatch(adapterSource, /body-3d-control|body-3d-reset|정면/);
   assert.match(adapterSource, /set2D\(\{ announce: false, reason \}\)/);
   assert.match(adapterSource, /prefers-reduced-motion: reduce/);
-  assert.doesNotMatch(adapterSource, /vitagraph-body-view|saveData/);
+  assert.doesNotMatch(adapterSource, /policycompass-body-view|saveData/);
   assert.match(adapterSource, /setAttribute\("loading", "eager"\)/);
   assert.match(adapterSource, /touch-action: pan-y/);
   assert.match(adapterSource, /data-visibility-attribute/);

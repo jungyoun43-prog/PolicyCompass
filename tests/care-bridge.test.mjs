@@ -26,15 +26,15 @@ test("legacy automatic care bridge state is removed without touching unrelated s
   const storage = memoryStorage({
     [CARE_BRIDGE_STORAGE_KEY]: "sensitive-old-snapshot",
     [PERSONAL_SYNC_SUSPENDED_KEY]: "1",
-    "vitagraph-scene": "personal-state",
-    "vitagraph-emr-v1": "clinical-state",
+    "policycompass-scene": "personal-state",
+    "policycompass-emr-v1": "clinical-state",
   });
 
   assert.equal(retireLegacyCareBridge(storage), true);
   assert.equal(storage.value(CARE_BRIDGE_STORAGE_KEY), null);
   assert.equal(storage.value(PERSONAL_SYNC_SUSPENDED_KEY), null);
-  assert.equal(storage.value("vitagraph-scene"), "personal-state");
-  assert.equal(storage.value("vitagraph-emr-v1"), "clinical-state");
+  assert.equal(storage.value("policycompass-scene"), "personal-state");
+  assert.equal(storage.value("policycompass-emr-v1"), "clinical-state");
 });
 
 test("legacy bridge retirement degrades normally when localStorage getter throws SecurityError", () => {

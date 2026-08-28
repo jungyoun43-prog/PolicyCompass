@@ -129,7 +129,7 @@ async function callFrontierRefine(state, options, feedback) {
       text: {
         format: {
           type: "json_schema",
-          name: "vitagraph_question_refine",
+          name: "policycompass_question_refine",
           strict: true,
           schema: REFINE_SCHEMA,
         },
@@ -232,7 +232,7 @@ export async function runQuestionRefine(payload = {}, {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }
   if (provider === "frontier"
-    && (!environment.OPENAI_API_KEY || environment.VITAGRAPH_FRONTIER_ENABLED !== "true")) {
+    && (!environment.OPENAI_API_KEY || environment.POLICYCOMPASS_FRONTIER_ENABLED !== "true")) {
     throw new Error("프론티어 모델은 서버에서 명시적으로 활성화되지 않았습니다.");
   }
   const instruction = scrubDirectIdentifiers(payload?.instruction, 500);
@@ -241,18 +241,18 @@ export async function runQuestionRefine(payload = {}, {
     ? {
       provider,
       apiKey: cleanText(environment.OPENAI_API_KEY ?? "", 500),
-      model: environment.VITAGRAPH_FRONTIER_MODEL ?? "gpt-5.6-sol",
+      model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
       fetchImpl,
       timeoutMs,
       maxAttempts,
     }
     : {
       provider,
-      endpoint: environment.VITAGRAPH_PATIENT_OLLAMA_URL
-        ?? environment.VITAGRAPH_OLLAMA_URL
+      endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
+        ?? environment.POLICYCOMPASS_OLLAMA_URL
         ?? "http://127.0.0.1:11434",
-      model: cleanText(environment.VITAGRAPH_PATIENT_OLLAMA_MODEL
-        ?? environment.VITAGRAPH_OLLAMA_MODEL
+      model: cleanText(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL
+        ?? environment.POLICYCOMPASS_OLLAMA_MODEL
         ?? "", 160),
       fetchImpl,
       timeoutMs,

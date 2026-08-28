@@ -6,8 +6,8 @@ const EVALUATION_PERIOD = Object.freeze({
 });
 
 const RULE_VERSIONS = Object.freeze({
-  claimPreflight: "vitagraph-claim-preflight-2026-demo-v1",
-  adjudication: "vitagraph-synthetic-adjudication-2026-demo-v1",
+  claimPreflight: "policycompass-claim-preflight-2026-demo-v1",
+  adjudication: "policycompass-synthetic-adjudication-2026-demo-v1",
   diagnosticConcordance: "gold-2026-v1.3-demo",
   qualityContribution: "hira-copd-12th-2026-demo-v1",
 });
@@ -31,7 +31,7 @@ function verifiedProvenance(sourceId, verifiedAt, reviewerId = "demo-clinician-0
   return {
     kind: "synthetic-local-emr",
     sourceId,
-    sourceLabel: "VitaGraph 예시 환자 기록",
+    sourceLabel: "PolicyCompass 예시 환자 기록",
     verificationStatus: "VERIFIED",
     patientMatch: "VERIFIED",
     reviewerId,
@@ -55,7 +55,7 @@ function externalUnverifiedProvenance(sourceId) {
 
 function baseProfile(patient, scenario) {
   return {
-    schema: "vitagraph-copd-demo-profile",
+    schema: "policycompass-copd-demo-profile",
     version: 1,
     programId: "copd",
     preferred: true,
@@ -180,7 +180,7 @@ const NORMAL_STAGED_PROFILE = {
     {
       id: "lee-lama-2026-01",
       code: "DEMO-LAMA",
-      system: "urn:vitagraph:demo:drug",
+      system: "urn:policycompass:demo:drug",
       label: "LAMA 흡입제",
       class: "LAMA",
       route: "INHALED",
@@ -193,7 +193,7 @@ const NORMAL_STAGED_PROFILE = {
     {
       id: "lee-lama-2026-05",
       code: "DEMO-LAMA",
-      system: "urn:vitagraph:demo:drug",
+      system: "urn:policycompass:demo:drug",
       label: "LAMA 흡입제 유지",
       class: "LAMA",
       route: "INHALED",
@@ -320,7 +320,7 @@ const MISSING_EVIDENCE_PROFILE = {
       provenance: {
         kind: "synthetic-local-emr",
         sourceId: "park-pft-data-gap",
-        sourceLabel: "VitaGraph 예시 환자 기록",
+        sourceLabel: "PolicyCompass 예시 환자 기록",
         verificationStatus: "UNVERIFIED",
         patientMatch: "UNCONFIRMED",
         reviewerId: "",

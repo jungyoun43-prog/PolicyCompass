@@ -87,6 +87,16 @@ import {
 } from "./disease-assessment.js";
 import { createClaimSearchEntry, searchClaimIndex } from "./claim-search.js";
 import {
+  findMedicationInCatalog,
+  MEDICATION_CATALOG_BOUNDARY,
+  searchMedicationCatalog,
+} from "./medication-catalog.js";
+import {
+  applyMedicationReviewDraft,
+  buildMedicationClaimComparison,
+  MEDICATION_REVIEW_VERDICTS,
+} from "./medication-claim-review.js";
+import {
   createPatientTransferPackage,
   patientTransferFilename,
 } from "./patient-transfer.js";
@@ -144,7 +154,7 @@ const AUDIT_LABELS = {
   "claim-review.invalidated": "급여 담당자 검토 · 재검토 필요",
   "fhir.imported": "FHIR 가져오기",
   "fhir.exported": "의료기관용 FHIR 내보내기",
-  "patient.transfer.exported": "환자용 VitaGraph 전달",
+  "patient.transfer.exported": "환자용 PolicyCompass 전달",
   "backup.restored": "백업 복원",
   "demo.loaded": "예시 환자 불러오기",
 };
@@ -292,6 +302,25 @@ const refs = {
   medicationQuantity: byId("medicationQuantity"),
   medicationInstructions: byId("medicationInstructions"),
   prescriptionList: byId("prescriptionList"),
+  openPrescriptionDialog: byId("openPrescriptionDialog"),
+  closePrescriptionDialog: byId("closePrescriptionDialog"),
+  prescriptionDialog: byId("prescriptionDialog"),
+  rxDialogContext: byId("rxDialogContext"),
+  rxDialogBoundary: byId("rxDialogBoundary"),
+  rxConsentField: byId("rxConsentField"),
+  medicationFrontierConsent: byId("medicationFrontierConsent"),
+  medicationSearchForm: byId("medicationSearchForm"),
+  medicationSearchInput: byId("medicationSearchInput"),
+  medicationResultList: byId("medicationResultList"),
+  medicationResultCount: byId("medicationResultCount"),
+  medicationSelectedSummary: byId("medicationSelectedSummary"),
+  medicationReviewMode: byId("medicationReviewMode"),
+  medicationReviewEmpty: byId("medicationReviewEmpty"),
+  medicationReviewBody: byId("medicationReviewBody"),
+  medicationReviewVerdict: byId("medicationReviewVerdict"),
+  medicationReviewRationale: byId("medicationReviewRationale"),
+  medicationReviewSources: byId("medicationReviewSources"),
+  medicationReviewBoundary: byId("medicationReviewBoundary"),
   orderForm: byId("orderForm"),
   orderKind: byId("orderKind"),
   orderCode: byId("orderCode"),
@@ -438,6 +467,11 @@ let copilotBusy = false;
 let stateGeneration = 0;
 let copilotRequestController = null;
 let aiCapability = { checked: false, configured: false, model: "" };
+let medicationReviewCapability = { checked: false, local: false, frontier: false, model: "" };
+let medicationSearchResults = [];
+let selectedCatalogMedicationId = "";
+const medicationReviewById = new Map();
+const medicationReviewBusyIds = new Set();
 let lastFhirReport = null;
 let draggedClaimReviewId = "";
 let claimEvaluationById = new Map();
@@ -828,7 +862,7 @@ function renderPatients() {
 
 function isInternalExampleCoding(event = {}) {
   return String(event.code ?? "").toUpperCase().startsWith("DEMO-")
-    || String(event.system ?? "").toLowerCase().includes("vitagraph:demo");
+    || String(event.system ?? "").toLowerCase().includes("policycompass:demo");
 }
 
 function displayCoding(event = {}) {
@@ -1612,7 +1646,7 @@ function profileClaimRule(item) {
     version: "2026.1",
     title: `${item?.label || "청구 항목"} 사전점검`,
     serviceCode,
-    serviceSystem: serviceCode.startsWith("DEMO-") ? "urn:vitagraph:linked-claim" : "urn:hira:fee-code",
+    serviceSystem: serviceCode.startsWith("DEMO-") ? "urn:policycompass:linked-claim" : "urn:hira:fee-code",
     serviceEventType: "procedure",
     windowDays: 365,
     maxCount: 1,
@@ -3478,6 +3512,8 @@ function renderEncounter(patient, evaluations) {
   setFormControlsDisabled(refs.vitalForm, !editable);
   setFormControlsDisabled(refs.diagnosisForm, !editable);
   setFormControlsDisabled(refs.prescriptionForm, !editable);
+  refs.openPrescriptionDialog.disabled = !editable;
+  if (!editable) closePrescriptionDialog();
   setFormControlsDisabled(refs.orderForm, !editable);
   clear(refs.vitalList);
   clear(refs.diagnosisList);
@@ -3598,6 +3634,8 @@ function clearPatientWorkspaceUi() {
   setFormControlsDisabled(refs.vitalForm, true);
   setFormControlsDisabled(refs.diagnosisForm, true);
   setFormControlsDisabled(refs.prescriptionForm, true);
+  refs.openPrescriptionDialog.disabled = true;
+  closePrescriptionDialog();
   setFormControlsDisabled(refs.orderForm, true);
   for (const node of [
     refs.safetyAlerts,
@@ -3879,7 +3917,7 @@ async function exportPatientTransfer() {
     );
   } catch (error) {
     setPersonalSyncStatus(
-      error instanceof Error ? error.message : "환자용 VitaGraph JSON 내보내기에 실패했습니다.",
+      error instanceof Error ? error.message : "환자용 PolicyCompass JSON 내보내기에 실패했습니다.",
       "error",
     );
   }
@@ -4345,6 +4383,300 @@ refs.diagnosisForm.addEventListener("submit", async (event) => {
   }
 });
 
+const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
+
+async function checkMedicationReviewStatus() {
+  try {
+    const response = await fetch(`${MEDICATION_REVIEW_ENDPOINT}/status`, { headers: { accept: "application/json" } });
+    if (!response.ok) throw new Error("status");
+    const result = await response.json();
+    medicationReviewCapability = {
+      checked: true,
+      local: result?.local?.configured === true,
+      frontier: result?.frontier?.configured === true,
+      model: String(result?.local?.model || result?.frontier?.model || ""),
+    };
+  } catch {
+    medicationReviewCapability = { checked: true, local: false, frontier: false, model: "" };
+  }
+  refs.rxConsentField.hidden = !(medicationReviewCapability.frontier && !medicationReviewCapability.local);
+  renderMedicationReviewMode();
+}
+
+function medicationReviewProvider() {
+  if (medicationReviewCapability.local) return "local";
+  if (medicationReviewCapability.frontier && refs.medicationFrontierConsent.checked) return "frontier";
+  return "";
+}
+
+function renderMedicationReviewMode(review = null) {
+  if (review && review.generatedBy !== "rule") {
+    refs.medicationReviewMode.textContent = `AI 검토 · ${review.model || review.generatedBy}`;
+    return;
+  }
+  const provider = medicationReviewProvider();
+  refs.medicationReviewMode.textContent = provider
+    ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : "프론티어 모델"}`
+    : "규칙 기반";
+}
+
+function catalogDosingDraft(medication) {
+  if (selectedCatalogMedicationId !== medication.id) return medication.dosing;
+  return {
+    dose: refs.medicationDose.value,
+    doseUnit: refs.medicationDoseUnit.value,
+    route: refs.medicationRoute.value,
+    frequency: refs.medicationFrequency.value,
+    durationDays: refs.medicationDurationDays.value,
+    quantity: refs.medicationQuantity.value,
+    instructions: refs.medicationInstructions.value,
+  };
+}
+
+function pickCatalogMedication(medicationId) {
+  const medication = findMedicationInCatalog(medicationId);
+  if (!medication) return;
+  selectedCatalogMedicationId = medication.id;
+  refs.medicationCode.value = medication.code;
+  refs.medicationSystem.value = medication.system;
+  refs.medicationName.value = medication.label;
+  refs.medicationDose.value = medication.dosing.dose;
+  refs.medicationDoseUnit.value = medication.dosing.doseUnit;
+  refs.medicationRoute.value = medication.dosing.route;
+  refs.medicationFrequency.value = medication.dosing.frequency;
+  refs.medicationDurationDays.value = String(medication.dosing.durationDays);
+  refs.medicationQuantity.value = String(medication.dosing.quantity);
+  refs.medicationInstructions.value = medication.dosing.instructions;
+  refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient} · ${medication.classLabel} 기본 용법을 채웠습니다. 용법과 총 수량은 의료진이 직접 확인하고 수정하세요.`;
+  renderMedicationResults();
+}
+
+function renderMedicationResults() {
+  clear(refs.medicationResultList);
+  refs.medicationResultCount.textContent = `${medicationSearchResults.length}건`;
+  if (!medicationSearchResults.length) {
+    refs.medicationResultList.append(element(
+      "li",
+      "rx-result-empty",
+      refs.medicationSearchInput.value.trim()
+        ? "검색어와 맞는 예시 약품이 없습니다. 성분명이나 계열로 다시 검색하세요."
+        : "약품명·성분명·계열·상병코드로 검색하세요.",
+    ));
+    return;
+  }
+  for (const medication of medicationSearchResults) {
+    const item = element("li", "rx-result");
+    if (medication.id === selectedCatalogMedicationId) item.classList.add("is-selected");
+    const review = medicationReviewById.get(medication.id);
+    const heading = element("div", "rx-result__heading");
+    heading.append(element("b", "rx-result__label", medication.label));
+    if (review) {
+      const chip = element("span", "rx-verdict-chip", `${review.verdictSymbol} ${review.verdictLabel}`);
+      chip.dataset.tone = review.verdictTone;
+      heading.append(chip);
+    }
+    item.append(
+      heading,
+      element("span", "rx-result__meta", [medication.ingredient, medication.classLabel].filter(Boolean).join(" · ")),
+      element("span", "rx-result__meta", `${medication.system} | ${medication.code} · 인정 상병 ${medication.coverage.indications.map(({ code }) => code).join(", ") || "미등록"}`),
+      element("span", "rx-result__meta", `기본 용법 1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일`),
+    );
+    const actions = element("div", "rx-result__actions");
+    const busy = medicationReviewBusyIds.has(medication.id);
+    const reviewButton = element("button", "clinical-button rx-result__review", busy ? "AI 검토 중…" : "AI 검토");
+    reviewButton.type = "button";
+    reviewButton.dataset.reviewMedication = medication.id;
+    reviewButton.disabled = busy;
+    const pickButton = element("button", "clinical-button", "처방 담기");
+    pickButton.type = "button";
+    pickButton.dataset.pickMedication = medication.id;
+    actions.append(reviewButton, pickButton);
+    item.append(actions);
+    refs.medicationResultList.append(item);
+  }
+}
+
+function renderMedicationReviewSources(review) {
+  clear(refs.medicationReviewSources);
+  for (const check of review.checks) {
+    const item = element("li", "rx-source");
+    item.dataset.verdict = check.verdict;
+    const title = element("div", "rx-source__title");
+    title.append(
+      element("span", "rx-source__mark", MEDICATION_REVIEW_VERDICTS[check.verdict].symbol),
+      element("b", "", check.title),
+    );
+    const grid = element("div", "rx-source__grid");
+    const criterion = element("div", "rx-source__cell");
+    criterion.append(
+      element("span", "rx-source__cell-label", "삭감 근거"),
+      element("b", "", check.criterion.requirement),
+      element("span", "rx-source__cell-detail", check.criterion.detail),
+    );
+    const chart = element("div", "rx-source__cell");
+    chart.append(
+      element("span", "rx-source__cell-label", "환자 정보"),
+      element("b", "", check.chart.detail),
+    );
+    const findings = element("ul", "rx-source__findings");
+    for (const record of check.chart.findings) {
+      const entry = element("li", "");
+      entry.append(
+        element("b", "", record.label),
+        element("span", "", [
+          record.code,
+          record.date ? displayDate(record.date) : "",
+          record.provenance,
+          record.detail,
+        ].filter(Boolean).join(" · ")),
+      );
+      findings.append(entry);
+    }
+    if (!check.chart.findings.length) {
+      findings.append(element("li", "rx-source__findings-empty", "대조된 환자 기록 없음"));
+    }
+    chart.append(findings);
+    grid.append(criterion, chart);
+    item.append(
+      title,
+      grid,
+      element("p", "rx-source__document", [
+        check.source.label,
+        check.source.documentNumber,
+        check.source.version ? `v${check.source.version}` : "",
+        check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
+      ].filter(Boolean).join(" · ")),
+    );
+    refs.medicationReviewSources.append(item);
+  }
+}
+
+function renderMedicationReview(review) {
+  refs.medicationReviewEmpty.hidden = true;
+  refs.medicationReviewBody.hidden = false;
+  clear(refs.medicationReviewVerdict);
+  refs.medicationReviewVerdict.dataset.tone = review.verdictTone;
+  const text = element("span", "rx-verdict__text");
+  text.append(element("b", "", review.verdictLabel), element("span", "", review.summary));
+  refs.medicationReviewVerdict.append(element("span", "rx-verdict__symbol", review.verdictSymbol), text);
+  renderMedicationReviewMode(review);
+  clear(refs.medicationReviewRationale);
+  for (const line of review.rationale) refs.medicationReviewRationale.append(element("li", "", line));
+  if (review.note) refs.medicationReviewRationale.append(element("li", "rx-rationale-note", review.note));
+  renderMedicationReviewSources(review);
+  refs.medicationReviewBoundary.textContent = review.boundary;
+}
+
+function resetMedicationReviewPanel() {
+  refs.medicationReviewEmpty.hidden = false;
+  refs.medicationReviewBody.hidden = true;
+  clear(refs.medicationReviewVerdict);
+  clear(refs.medicationReviewRationale);
+  clear(refs.medicationReviewSources);
+  refs.medicationReviewBoundary.textContent = "";
+  renderMedicationReviewMode();
+}
+
+async function runMedicationReview(medicationId) {
+  const medication = findMedicationInCatalog(medicationId);
+  const patient = selectedPatient();
+  if (!medication || !patient || medicationReviewBusyIds.has(medicationId)) return;
+  const encounter = currentEncounter(patient);
+  let review;
+  try {
+    review = buildMedicationClaimComparison({
+      patient,
+      medication,
+      prescription: catalogDosingDraft(medication),
+      encounterId: encounter?.id ?? "",
+      asOf: today(),
+    });
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : "약제 사전점검을 만들지 못했습니다.", "error");
+    return;
+  }
+  medicationReviewById.set(medicationId, review);
+  renderMedicationResults();
+  renderMedicationReview(review);
+  const provider = medicationReviewProvider();
+  if (!provider) {
+    setStatus("등록된 예시 기준과 이 환자 기록을 대조한 규칙 기반 사전점검입니다. AI 모델이 설정되지 않아 환자 자료를 전송하지 않았습니다.");
+    return;
+  }
+  medicationReviewBusyIds.add(medicationId);
+  renderMedicationResults();
+  try {
+    const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ comparison: review, provider, consent: provider === "frontier" }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
+    const merged = applyMedicationReviewDraft(review, result.draft ?? {});
+    if (selectedPatient()?.id !== patient.id) return;
+    medicationReviewById.set(medicationId, merged);
+    if (refs.prescriptionDialog.open) renderMedicationReview(merged);
+    setStatus("AI 검토 초안을 만들었습니다. 급여 인정·삭감을 확정하지 않습니다.", "success");
+  } catch (error) {
+    setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
+  } finally {
+    medicationReviewBusyIds.delete(medicationId);
+    renderMedicationResults();
+  }
+}
+
+function openPrescriptionDialog() {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounter.recordStatus !== "draft" || encounter.status !== "in-progress") {
+    setStatus("진료를 시작한 뒤 처방을 담을 수 있습니다.", "error");
+    return;
+  }
+  refs.prescriptionDialog.closest("details")?.setAttribute("open", "");
+  refs.rxDialogBoundary.textContent = MEDICATION_CATALOG_BOUNDARY;
+  refs.rxDialogContext.textContent = [
+    patient.name,
+    patientAgeLabel(patient),
+    INSURANCE_LABELS[patient.insuranceType] ?? INSURANCE_LABELS.unknown,
+    `진료일 ${displayDate(encounter.date)}`,
+  ].filter(Boolean).join(" · ");
+  medicationReviewById.clear();
+  resetMedicationReviewPanel();
+  renderMedicationResults();
+  if (!refs.prescriptionDialog.open) refs.prescriptionDialog.showModal();
+  refs.medicationSearchInput.focus();
+}
+
+function closePrescriptionDialog() {
+  if (refs.prescriptionDialog.open) refs.prescriptionDialog.close();
+}
+
+refs.openPrescriptionDialog.addEventListener("click", openPrescriptionDialog);
+refs.closePrescriptionDialog.addEventListener("click", closePrescriptionDialog);
+refs.medicationFrontierConsent.addEventListener("change", () => renderMedicationReviewMode());
+
+refs.medicationSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  medicationSearchResults = searchMedicationCatalog(refs.medicationSearchInput.value, 8);
+  renderMedicationResults();
+});
+
+refs.medicationSearchInput.addEventListener("input", () => {
+  medicationSearchResults = searchMedicationCatalog(refs.medicationSearchInput.value, 8);
+  renderMedicationResults();
+});
+
+refs.medicationResultList.addEventListener("click", (event) => {
+  const reviewButton = event.target.closest("[data-review-medication]");
+  if (reviewButton) {
+    void runMedicationReview(reviewButton.dataset.reviewMedication);
+    return;
+  }
+  const pickButton = event.target.closest("[data-pick-medication]");
+  if (pickButton) pickCatalogMedication(pickButton.dataset.pickMedication);
+});
+
 refs.prescriptionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!reportFormValidity(refs.prescriptionForm)) return;
@@ -4365,6 +4697,9 @@ refs.prescriptionForm.addEventListener("submit", async (event) => {
       instructions: refs.medicationInstructions.value,
     }), "처방 초안을 추가했습니다.");
     refs.prescriptionForm.reset();
+    selectedCatalogMedicationId = "";
+    refs.medicationSelectedSummary.textContent = "검색 결과에서 약을 선택하면 기본 용법이 채워집니다. 용법은 의료진이 직접 확인하고 수정하세요.";
+    closePrescriptionDialog();
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "처방을 추가하지 못했습니다.";
   }
@@ -5093,7 +5428,7 @@ function exportBackup() {
     setStatus(blocker, "error");
     return;
   }
-  downloadJson(exportEmrBackup(exportState), "vitagraph-emr-backup-" + today() + ".json");
+  downloadJson(exportEmrBackup(exportState), "policycompass-emr-backup-" + today() + ".json");
   setStatus(state.demo ? "기존 로컬 기록을 백업했습니다." : "전체 로컬 기록을 JSON으로 내보냈습니다.", "success");
 }
 
@@ -5123,7 +5458,7 @@ refs.exportFhir.addEventListener("click", async () => {
         { preserveDraft: false, announce: false },
       );
     }
-    downloadJson(bundle, `vitagraph-fhir-${today()}.json`);
+    downloadJson(bundle, `policycompass-fhir-${today()}.json`);
     setStatus(`선택 환자의 완료·서명 진료를 FHIR R4 Bundle로 내보냈습니다.${state.demo ? " · 예시 환자 파일" : ""}`, "success");
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "FHIR 내보내기에 실패했습니다.", "error");
@@ -5134,17 +5469,17 @@ refs.exportRecoveryRaw.addEventListener("click", () => {
     setStatus("내보낼 손상 저장 원본이 없습니다.");
     return;
   }
-  downloadText(state.recoveryRaw, "vitagraph-emr-recovery-raw-" + today() + ".json", "application/json;charset=utf-8");
+  downloadText(state.recoveryRaw, "policycompass-emr-recovery-raw-" + today() + ".json", "application/json;charset=utf-8");
   setStatus("손상 저장 원본을 변경 없이 내보냈습니다.", "success");
 });
 
 refs.wipeEmr.addEventListener("click", async () => {
-  if (!window.confirm("이 브라우저의 VitaGraph EMR 환자 기록과 기관 규칙을 모두 삭제할까요? 백업 없이는 복구할 수 없습니다.")) return;
+  if (!window.confirm("이 브라우저의 PolicyCompass EMR 환자 기록과 기관 규칙을 모두 삭제할까요? 백업 없이는 복구할 수 없습니다.")) return;
   try {
     await withStateTransition(async () => {
       const cleared = await clearEmrState();
       adoptClearedEmrState(cleared);
-      setStatus("이 브라우저의 VitaGraph EMR 기록을 모두 삭제했습니다.", "success");
+      setStatus("이 브라우저의 PolicyCompass EMR 기록을 모두 삭제했습니다.", "success");
     });
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "로컬 기록을 삭제하지 못했습니다.", "error");
@@ -5194,3 +5529,4 @@ if (!state.demo && state.storageError) {
   setStatus("로컬 저장을 읽지 못했습니다. 손상 원본을 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.", "error");
 }
 void checkAiStatus();
+void checkMedicationReviewStatus();

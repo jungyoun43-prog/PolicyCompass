@@ -15,7 +15,7 @@ const routes = [
   { route: "/journey", selector: "#journeyEmpty .journey-first-action--primary", text: "첫 지도 만들기", beforeSelector: ".journey-data-tools" },
   { route: "/emr", selector: "#loadDemo", text: "예시 환자 불러오기" },
 ];
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-responsive-primary-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-responsive-primary-"));
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const browser = spawn(chrome, [
   "--headless", "--no-sandbox", "--disable-gpu", "--disable-background-networking",

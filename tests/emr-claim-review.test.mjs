@@ -273,7 +273,7 @@ test("자동 판정 근거가 바뀌면 순수 조회에서 이전 검토를 무
   let changed = appendPatientEvent(reviewed, "claim-review-patient", {
     id: "claim-review-service",
     type: "procedure",
-    system: "urn:vitagraph:demo:service",
+    system: "urn:policycompass:demo:service",
     code: "DEMO-BP-FOLLOWUP",
     label: "고혈압 추적검사",
     date: "2026-07-20",

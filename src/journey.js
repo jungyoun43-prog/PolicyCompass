@@ -9,7 +9,7 @@ import {
 } from "/journey-model.js";
 import { preserveSampleNavigation } from "/sample-navigation.js";
 
-const storageKey = "vitagraph-journey";
+const storageKey = "policycompass-journey";
 const sampleMode = new URLSearchParams(window.location.search).get("sample") === "1";
 preserveSampleNavigation(sampleMode);
 const elements = {
@@ -278,7 +278,7 @@ elements.export.addEventListener("click", () => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `vitagraph-journey-${new Intl.DateTimeFormat("en-CA", { timeZone: JOURNEY_TIME_ZONE }).format(new Date())}.json`;
+  link.download = `policycompass-journey-${new Intl.DateTimeFormat("en-CA", { timeZone: JOURNEY_TIME_ZONE }).format(new Date())}.json`;
   document.body.append(link);
   link.click();
   link.remove();

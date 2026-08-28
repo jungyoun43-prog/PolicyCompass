@@ -12,7 +12,7 @@ const screenshotPath = process.env.CLAIM_BOARD_SCREENSHOT
 await runBrowserSmoke({
   appUrl,
   debugPort,
-  profilePrefix: "vitagraph-claim-board-",
+  profilePrefix: "policycompass-claim-board-",
   initialViewport: { width: 1280, height: 800, mobile: false },
 }, async ({ client, evaluate, navigate, setViewport, tabTo, waitFor }) => {
   await navigate("/emr", "Boolean(document.getElementById('patientBirthDate')?.max)");
@@ -30,12 +30,12 @@ await runBrowserSmoke({
     selectedName: document.getElementById('selectedPatientName')?.textContent,
     formMessage: document.getElementById('patientFormMessage')?.textContent,
     workspaceStatus: document.getElementById('workspaceStatus')?.textContent,
-    stored: localStorage.getItem('vitagraph-emr-v2'),
+    stored: localStorage.getItem('policycompass-emr-v2'),
   })`);
   assert(creation.selectedName === "급여 검토 테스트", `Claim smoke patient was not created: ${JSON.stringify(creation)}`);
   await evaluate(`(async () => {
     const { appendPatientEvent, confirmPatientEvent } = await import('/emr-model.js');
-    let saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    let saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const patientId = saved.selectedPatientId;
     const baseTime = Date.parse(saved.updatedAt) + 1000;
     const date = new Date().toISOString().slice(0, 10);
@@ -65,7 +65,7 @@ await runBrowserSmoke({
       source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
     }, new Date(baseTime + 2000).toISOString());
     saved = confirmPatientEvent(saved, patientId, 'claim-smoke-blood-pressure', new Date(baseTime + 3000).toISOString());
-    localStorage.setItem('vitagraph-emr-v2', JSON.stringify(saved));
+    localStorage.setItem('policycompass-emr-v2', JSON.stringify(saved));
   })()`);
   await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '급여 검토 테스트'");
   await evaluate("document.getElementById('tab-claims').click(); document.getElementById('claimWorkflowDisclosure').open = true");
@@ -173,7 +173,7 @@ await runBrowserSmoke({
   const stagedDrag = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
     const details = document.getElementById(card.querySelector('[data-claim-detail-toggle]').getAttribute('aria-controls'));
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       computedStatus: card.dataset.status,
@@ -207,7 +207,7 @@ await runBrowserSmoke({
 
   const afterDrag = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const audit = saved.audit.at(-1);
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
@@ -240,7 +240,7 @@ await runBrowserSmoke({
 
   const auditRollover = await evaluate(`(async () => {
     const { appendStateAudit } = await import('/emr-model.js');
-    let saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    let saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     for (let index = 0; index < 1001; index += 1) {
       saved = appendStateAudit(
         saved,
@@ -250,7 +250,7 @@ await runBrowserSmoke({
         saved.selectedPatientId,
       );
     }
-    localStorage.setItem('vitagraph-emr-v2', JSON.stringify(saved));
+    localStorage.setItem('policycompass-emr-v2', JSON.stringify(saved));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       auditLength: saved.audit.length,
@@ -271,7 +271,7 @@ await runBrowserSmoke({
   const reloadedAssignment = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
     const details = document.getElementById(card.querySelector('[data-claim-detail-toggle]').getAttribute('aria-controls'));
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       owner: card.querySelector('.claim-card__owner')?.textContent,
@@ -294,7 +294,7 @@ await runBrowserSmoke({
   })()`);
   const stagedKeyboard = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       renderedLane: card.closest('[data-claim-review-lane]')?.dataset.claimReviewLane,
@@ -321,7 +321,7 @@ await runBrowserSmoke({
   );
 
   const beforeStale = await evaluate(`(() => {
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       durableStage: review?.stage,
@@ -334,7 +334,7 @@ await runBrowserSmoke({
 
   const changedComputation = await evaluate(`(async () => {
     const { appendPatientEvent, confirmPatientEvent } = await import('/emr-model.js');
-    let saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    let saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const patientId = saved.selectedPatientId;
     const eventDate = new Date().toISOString().slice(0, 10);
     const serviceId = 'claim-smoke-follow-up-service';
@@ -342,14 +342,14 @@ await runBrowserSmoke({
       id: serviceId,
       type: 'procedure',
       date: eventDate,
-      system: 'urn:vitagraph:demo:service',
+      system: 'urn:policycompass:demo:service',
       code: 'DEMO-BP-FOLLOWUP',
       label: '고혈압 추적검사',
       status: 'completed',
       source: { kind: 'manual', label: '직접 입력 · 검토 대기' },
     });
     saved = confirmPatientEvent(saved, patientId, serviceId);
-    localStorage.setItem('vitagraph-emr-v2', JSON.stringify(saved));
+    localStorage.setItem('policycompass-emr-v2', JSON.stringify(saved));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       storedStage: review?.stage,
@@ -369,7 +369,7 @@ await runBrowserSmoke({
 
   const staleView = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     return {
       computedStatus: card?.dataset.status,
@@ -403,7 +403,7 @@ await runBrowserSmoke({
 
   const staleRecovery = await evaluate(`(() => {
     const card = document.querySelector('[data-claim-evaluation-id="${initial.cardId}"]');
-    const saved = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const saved = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const review = saved.claimReviews.find((item) => item.evaluationId === '${initial.cardId}');
     const relevantAudit = saved.audit.filter((item) => item.entityId === '${initial.cardId}' && item.action.startsWith('claim-review.'));
     return {

@@ -69,6 +69,8 @@ const sourceAssets = [
   { route: "/clinical-observations.js", file: "src/clinical-observations.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-rules.js", file: "src/claim-rules.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-search.js", file: "src/claim-search.js", type: "text/javascript; charset=utf-8" },
+  { route: "/medication-catalog.js", file: "src/medication-catalog.js", type: "text/javascript; charset=utf-8" },
+  { route: "/medication-claim-review.js", file: "src/medication-claim-review.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-presentation.js", file: "src/claim-presentation.js", type: "text/javascript; charset=utf-8" },
   { route: "/copd-demo-data.js", file: "src/copd-demo-data.js", type: "text/javascript; charset=utf-8" },
   { route: "/copd-assessment.js", file: "src/copd-assessment.js", type: "text/javascript; charset=utf-8" },
@@ -165,9 +167,9 @@ function jsonResponse(status, value) {
 function environmentFromBindings(env) {
   return {
     OPENAI_API_KEY: typeof env?.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY : "",
-    VITAGRAPH_FRONTIER_ENABLED: env?.VITAGRAPH_FRONTIER_ENABLED === "true" ? "true" : "false",
-    VITAGRAPH_FRONTIER_MODEL: typeof env?.VITAGRAPH_FRONTIER_MODEL === "string"
-      ? env.VITAGRAPH_FRONTIER_MODEL
+    POLICYCOMPASS_FRONTIER_ENABLED: env?.POLICYCOMPASS_FRONTIER_ENABLED === "true" ? "true" : "false",
+    POLICYCOMPASS_FRONTIER_MODEL: typeof env?.POLICYCOMPASS_FRONTIER_MODEL === "string"
+      ? env.POLICYCOMPASS_FRONTIER_MODEL
       : "gpt-5.6-sol"
   };
 }
@@ -205,7 +207,7 @@ function allowFrontierRequest(request) {
 
 async function patientQuestionApi(request, url, env) {
   if (!assertSameOrigin(request, url)) {
-    return jsonResponse(403, { code: "ORIGIN_NOT_ALLOWED", message: "같은 VitaGraph 출처의 요청만 허용합니다." });
+    return jsonResponse(403, { code: "ORIGIN_NOT_ALLOWED", message: "같은 PolicyCompass 출처의 요청만 허용합니다." });
   }
   const environment = environmentFromBindings(env);
   if (url.pathname === "/api/patient-question-assistant/status" && request.method === "GET") {
@@ -262,6 +264,18 @@ export default {
     }
     if (url.pathname === "/api/clinical-copilot/status" && request.method === "GET") {
       return jsonResponse(200, { configured: false, mode: "rule-based", model: "" });
+    }
+    if (url.pathname === "/api/medication-claim-review/status" && request.method === "GET") {
+      return jsonResponse(200, {
+        local: { configured: false, model: "" },
+        frontier: { configured: false, model: "" }
+      });
+    }
+    if (url.pathname.startsWith("/api/medication-claim-review")) {
+      return jsonResponse(503, {
+        code: "LOCAL_AI_NOT_CONFIGURED",
+        message: "AI 검토가 설정되지 않아 규칙 기반 사전점검을 사용합니다."
+      });
     }
     if (url.pathname.startsWith("/api/clinical-copilot")) {
       return jsonResponse(405, {

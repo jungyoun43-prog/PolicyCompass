@@ -233,7 +233,7 @@ a {
 }
 
 
-/* Shared VitaGraph application shell */
+/* Shared PolicyCompass application shell */
 :root {
   --page-width: 1480px;
   --page-gutter: var(--space-12);

@@ -1,6 +1,6 @@
-export const CLINICAL_PATIENT_BRIEF_SCHEMA = "vitagraph-clinical-patient-brief";
+export const CLINICAL_PATIENT_BRIEF_SCHEMA = "policycompass-clinical-patient-brief";
 export const CLINICAL_PATIENT_BRIEF_VERSION = 1;
-export const CLINICAL_PATIENT_BRIEF_EVENT = "vitagraph:clinical-patient-brief";
+export const CLINICAL_PATIENT_BRIEF_EVENT = "policycompass:clinical-patient-brief";
 
 const PATIENT_BRIEF_KINDS = new Set(["summary", "concern", "question"]);
 const PATIENT_BRIEF_SOURCE_LABELS = {
@@ -231,7 +231,7 @@ export function createClinicalQuestionSuggestions(patient = {}, patientBriefInpu
   for (const item of patientBrief.items.filter(({ kind }) => kind === "question").slice(0, 3)) {
     pushQuestion(patientQuestions, patientSeen, questionItem(
       questionMark(item.text),
-      "환자용 VitaGraph에서 정리되어 진료 중 답변을 준비할 수 있는 질문입니다.",
+      "환자용 PolicyCompass에서 정리되어 진료 중 답변을 준비할 수 있는 질문입니다.",
       [],
       [item.id],
     ));

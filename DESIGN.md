@@ -1,6 +1,6 @@
 # Design
 
-VitaGraph 제품·UI·데이터 경계의 단일 설계 기준입니다.
+PolicyCompass 제품·UI·데이터 경계의 단일 설계 기준입니다.
 
 ## 0. Canonical Two-App Product Architecture
 
@@ -8,8 +8,8 @@ This section is normative. When a later patient or clinical detail conflicts wit
 
 ### Product hierarchy and personas
 
-- **Clinical app — primary product:** `/emr` is the physician-centered system of work. Physicians and authorized clinical staff select a patient, document the Encounter, review chart facts, use the selected patient's VitaGraph projection, run pre-claim checks, and explicitly export a patient-safe transfer file. Clinical facts remain owned by the EMR record.
-- **Patient app — personal companion:** `/patient` plus `/map`, `/connections`, `/insights`, and `/journey` are one personal VitaGraph app for a patient or caregiver. It manages only that person's health map, relationship context, visit brief, and local Journey. It must not expose EMR queues, SOAP, clinicians, claims, audit history, or institutional controls.
+- **Clinical app — primary product:** `/emr` is the physician-centered system of work. Physicians and authorized clinical staff select a patient, document the Encounter, review chart facts, use the selected patient's PolicyCompass projection, run pre-claim checks, and explicitly export a patient-safe transfer file. Clinical facts remain owned by the EMR record.
+- **Patient app — personal companion:** `/patient` plus `/map`, `/connections`, `/insights`, and `/journey` are one personal PolicyCompass app for a patient or caregiver. It manages only that person's health map, relationship context, visit brief, and local Journey. It must not expose EMR queues, SOAP, clinicians, claims, audit history, or institutional controls.
 - **Gateway — neutral and stateless:** `/` only asks which app to open. It has no data-entry controls, scripts, storage access, PHI, role detection, or background routing. The physician action is visually primary and links to `/emr`; the personal action links to `/patient`.
 - The two apps are separate products with a narrow file handoff, not two tabs over one shared browser record. They must not read each other's `localStorage` or `sessionStorage`, pass health data in URLs, use `BroadcastChannel` for chart exchange, or silently synchronize through a server.
 
@@ -20,7 +20,7 @@ This section is normative. When a later patient or clinical detail conflicts wit
 | `/` | Gateway | Explicit role choice | Stateless; no PHI or storage |
 | `/emr` | Clinical app | Primary physician EMR workspace | Full local clinical sandbox record |
 | `/emr?demo=1` | Clinical app | Labelled synthetic evaluation record | Demo only; never real patient data on a public preview |
-| `/patient` | Patient app | Personal VitaGraph landing and start | Personal app state only |
+| `/patient` | Patient app | Personal PolicyCompass landing and start | Personal app state only |
 | `/map` | Patient app | Personal record input and health map | Personal app state and explicit file import |
 | `/connections` | Patient app | Condition relationship explorer | Patient-safe condition context only |
 | `/insights` | Patient app | Visit brief and questions | Personal app state only |
@@ -30,17 +30,17 @@ This section is normative. When a later patient or clinical detail conflicts wit
 
 ### Explicit patient-file handoff
 
-The only sanctioned bridge is a manually downloaded and manually selected JSON file with `schema: "vitagraph-patient-transfer"` and `version: 1`. Export always scopes to the clinician's currently selected patient. Import never inspects EMR storage.
+The only sanctioned bridge is a manually downloaded and manually selected JSON file with `schema: "policycompass-patient-transfer"` and `version: 1`. Export always scopes to the clinician's currently selected patient. Import never inspects EMR storage.
 
 The v1 object is an exact allowlist:
 
 ```text
 {
-  schema: "vitagraph-patient-transfer",
+  schema: "policycompass-patient-transfer",
   version: 1,
   exportedAt: <canonical ISO-8601 instant>,
   transferCode: <128-bit random Crockford Base32 code>,
-  scope: "patient-vita-graph",
+  scope: "patient-policy-compass",
   trust: "unsigned-local-export",
   healthMap: {
     conditions: [{ id, label, recordedOn, basis: "confirmed-condition" }],
@@ -80,8 +80,8 @@ Production cannot proceed until owners answer and test these questions:
 
 - `GET /` and `HEAD /` return the role gateway. It contains explicit links to `/emr` and `/patient`, presents EMR as primary, and contains no `script`, form/input control, storage call, PHI field, or automatic redirect.
 - `GET /patient` returns the personal landing. `/map`, `/connections`, `/insights`, and `/journey` remain working patient routes; their navigation contains no EMR workflow controls.
-- `GET /emr` remains the physician workspace. Its VitaGraph and patient export use only the currently selected EMR patient and never read patient-app storage.
-- Clinical-to-personal exchange works only through an explicit `vitagraph-patient-transfer` v1 download and explicit import. There is no direct storage sharing, background sync, URL payload, or implicit role coupling.
+- `GET /emr` remains the physician workspace. Its PolicyCompass and patient export use only the currently selected EMR patient and never read patient-app storage.
+- Clinical-to-personal exchange works only through an explicit `policycompass-patient-transfer` v1 download and explicit import. There is no direct storage sharing, background sync, URL payload, or implicit role coupling.
 - Export uses the exact allowlist above and excludes every prohibited field. Only confirmed conditions and final observations from a locally signed Encounter or explicit manual clinician confirmation qualify; raw FHIR, generic import, copilot, demo, draft, provisional, refuted, cancelled, or external-unverified facts do not.
 - Import validates the complete object before mutation, rejects unknown or malformed content, communicates unsigned/unencrypted risk, and stores accepted data only inside the personal app boundary.
 - Demo records cannot be exported. Patient transfer and institutional FHIR exports reject stale cross-tab revisions and unsaved form state; successful real-patient exports append a local audit event before download.
@@ -90,15 +90,15 @@ Production cannot proceed until owners answer and test these questions:
 
 ## 1. Atmosphere & Identity
 
-VitaGraph feels like a bright clinical atlas rather than a hospital portal. The signature is a white full-body field threaded into a vivid health graph, so body regions and related conditions feel like one explorable system. The product communicates possibility and clarity while avoiding diagnostic certainty.
+PolicyCompass feels like a bright clinical atlas rather than a hospital portal. The signature is a white full-body field threaded into a vivid health graph, so body regions and related conditions feel like one explorable system. The product communicates possibility and clarity while avoiding diagnostic certainty.
 
 ### Connected life signals
 
-The recurring VitaGraph signature is a small thread of connected nodes. A solid path and filled node mean a fact present in the person's record; a dashed cyan path and outlined node mean a relationship inferred from labelled literature or keyword context. This motif appears in brand kickers, graph legends, and first-use paths so the identity also teaches the product's evidence model.
+The recurring PolicyCompass signature is a small thread of connected nodes. A solid path and filled node mean a fact present in the person's record; a dashed cyan path and outlined node mean a relationship inferred from labelled literature or keyword context. This motif appears in brand kickers, graph legends, and first-use paths so the identity also teaches the product's evidence model.
 
 - Use the shared `.signal-kicker` and `.signal-thread` contract instead of inventing page-specific medical icons.
 - Always pair record/inference color with line style, fill, text, and accessible naming. Color alone never communicates evidence status.
-- Keep the motif restrained: one signature moment per hero or major graph surface. It must not resemble an ECG trace, DNA helix, medical cross, or AI sparkle, because those shapes imply capabilities VitaGraph does not claim.
+- Keep the motif restrained: one signature moment per hero or major graph surface. It must not resemble an ECG trace, DNA helix, medical cross, or AI sparkle, because those shapes imply capabilities PolicyCompass does not claim.
 
 ## 2. Color
 
@@ -226,7 +226,7 @@ Strategy: shadows. Raised panels use a cool tinted shadow and white surface. Inn
 
 ## 8. Personal Companion Product Contract
 
-Within the patient app, VitaGraph is a visit-preparation companion, not a diagnostic graph demo. Its consumer audience is a Korean-speaking adult who manages multiple chronic health topics for themselves or a parent. Their job is: “turn scattered measurements, symptoms, and known conditions into one page I can use at the next appointment.” This companion contract does not override `/emr` as the primary product and clinical source of truth.
+Within the patient app, PolicyCompass is a visit-preparation companion, not a diagnostic graph demo. Its consumer audience is a Korean-speaking adult who manages multiple chronic health topics for themselves or a parent. Their job is: “turn scattered measurements, symptoms, and known conditions into one page I can use at the next appointment.” This companion contract does not override `/emr` as the primary product and clinical source of truth.
 
 The activation path is one outcome-first sequence:
 
@@ -254,12 +254,12 @@ The paid-value hypothesis is a single plan around KRW 6,900 per month, aligned w
 
 Generated imagery owns atmosphere, empathy, and the landing focal scene. HTML and SVG own every interactive, measurable, or medical fact.
 
-- Hero: an original editorial image of one person with abstract record layers and VitaGraph-colored signals. No baked-in text, numbers, organs, diagnosis marks, charts, badges, logos, or imitation product UI.
+- Hero: an original editorial image of one person with abstract record layers and PolicyCompass-colored signals. No baked-in text, numbers, organs, diagnosis marks, charts, badges, logos, or imitation product UI.
 - Product proof: real HTML-rendered Visit Brief and health-map surfaces, not a generated dashboard screenshot.
 - Body atlas: the existing generated mannequin remains a neutral navigation base; all user state is semantic overlay content.
 - Controls, forms, pricing, trust statements, charts, focus states, and responsive behavior remain native UI.
 
-Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. VitaGraph keeps its own forest-green foundation and restrained cyan/lime/violet evidence system and does not copy brand imagery, layouts, or claims.
+Image-first restraint follows Apple’s focal-object and whitespace grammar, PicnicHealth’s human-plus-record orbit, and Parsley Health’s calm clinical editorial tone. PolicyCompass keeps its own forest-green foundation and restrained cyan/lime/violet evidence system and does not copy brand imagery, layouts, or claims.
 
 ## 11. Patient Landing Narrative
 
@@ -297,7 +297,7 @@ Research date: 2026-07-17.
 
 - Status: Active
 - Last refreshed: 2026-07-20
-- Primary product surface: `/emr`, a physician-centered local outpatient EMR workspace. `/patient` and its feature routes are the separate personal VitaGraph companion; `/` is the stateless role gateway.
+- Primary product surface: `/emr`, a physician-centered local outpatient EMR workspace. `/patient` and its feature routes are the separate personal PolicyCompass companion; `/` is the stateless role gateway.
 - Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/patient-transfer.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
 
 ### Brand
@@ -310,9 +310,9 @@ Research date: 2026-07-17.
 
 - Let a clinician complete one outpatient visit in order: find or register the patient, start an Encounter, document SOAP, add KCD diagnoses, record prescriptions and orders, review safety and billing evidence, finish, and locally sign the chart.
 - Capture usable patient demographics: chart number, name, date of birth with calculated age, sex, phone, address, insurance details, and emergency contact. Age is derived from date of birth and the relevant reference date (today or the Encounter date) rather than stored as an independent fact.
-- Give clinicians and billing coordinators one encounter-linked view of VitaGraph relationships, longitudinal Journey, source-linked assistance, and pre-claim eligibility/evidence checks.
+- Give clinicians and billing coordinators one encounter-linked view of PolicyCompass relationships, longitudinal Journey, source-linked assistance, and pre-claim eligibility/evidence checks.
 - Reduce preventable claim adjustments by surfacing interval, count, evidence, and documentation gaps before submission, without promising reimbursement or adjustment prevention.
-- Preserve the existing VitaGraph consumer experience and reuse its relationship, provenance, Journey, and visit-preparation concepts.
+- Preserve the existing PolicyCompass consumer experience and reuse its relationship, provenance, Journey, and visit-preparation concepts.
 - Non-goals: certified production EMR, legal electronic-prescription transmission, live HIRA submission, PACS/OCS integration, qualified electronic signature, medical-device diagnosis, autonomous treatment decisions, guaranteed zero adjustments, cloud accounts, multi-user synchronization, or storing real identifiers without an institution-approved security deployment.
 - Success signals: complete a labelled demo visit in under five minutes; demographics and visit records survive local reload; every rule result explains evidence and rule version; all data can be exported and wiped; no AI draft enters signed chart state automatically.
 
@@ -324,13 +324,13 @@ Research date: 2026-07-17.
 
 ### Information architecture
 
-- Primary navigation inside `/emr`: 진료, 과거기록, VitaGraph, 급여 점검, Journey, 데이터.
+- Primary navigation inside `/emr`: 진료, 과거기록, PolicyCompass, 급여 점검, Journey, 데이터.
 - The default screen is not an analytics dashboard. It is a work queue and active Encounter workspace.
 - Desktop hierarchy:
   1. Left rail: today's waiting/in-progress/completed queue, patient search, and new-patient entry.
   2. Center: active Encounter header, SOAP, diagnoses, prescriptions, orders, draft save, finish, and local sign.
   3. Right rail: demographics summary, allergies/current medications, source-linked assistance, and encounter-specific pre-claim checks.
-- Secondary screens retain the selected patient and Encounter context. VitaGraph, Journey, assistance, and reimbursement tasks never become disconnected copies of clinical facts.
+- Secondary screens retain the selected patient and Encounter context. PolicyCompass, Journey, assistance, and reimbursement tasks never become disconnected copies of clinical facts.
 - The institution-wide reimbursement board remains available for billing review, while the active visit always exposes its unresolved risk count and a direct path to the relevant cards.
 
 ### Core clinical workflow
@@ -343,10 +343,10 @@ Research date: 2026-07-17.
 6. Add one or more KCD diagnoses with code, display, primary/secondary role, and clinical status.
 7. Add prescriptions with medication/code, dose and unit, route, frequency, duration, quantity, and directions. The record is a local clinical draft, not a transmitted legal prescription.
 8. Add laboratory, imaging, procedure, or referral orders with code, priority, status, and instructions.
-9. Review allergy/current-medication context, encounter-linked VitaGraph/AI support, and pre-claim eligibility/evidence warnings.
+9. Review allergy/current-medication context, encounter-linked PolicyCompass/AI support, and pre-claim eligibility/evidence warnings.
 10. Finish the visit, then locally sign it. A signed Encounter is immutable. Only a completed but unsigned Encounter can be reopened, with the transition captured in the audit trail.
 
-The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures, observations, Journey entries, VitaGraph nodes, assistance citations, and reimbursement evidence reference the same Encounter ID. Derived views must not silently fork or overwrite signed source records.
+The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures, observations, Journey entries, PolicyCompass nodes, assistance citations, and reimbursement evidence reference the same Encounter ID. Derived views must not silently fork or overwrite signed source records.
 
 ### Design principles
 
@@ -447,7 +447,7 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - Browser refresh or page exit requests confirmation whenever patient edits, Encounter/SOAP changes, unsubmitted clinical items, or manual history input remain unsaved.
 - An unsigned JSON backup restores every clinical event as external/unverified, blocks promotion or local signing of restored drafts, retains the currently installed institution rules, discards the supplied audit trail, and adds one fresh local restore audit event.
 - Finishing and locally signing an Encounter records timestamps and audit actions. Signed content cannot be silently edited.
-- Selected patient and Encounter show diagnoses, medications, allergies, observations, procedures, VitaGraph, Journey, assistance, and source provenance without duplicating the source record.
+- Selected patient and Encounter show diagnoses, medications, allergies, observations, procedures, PolicyCompass, Journey, assistance, and source provenance without duplicating the source record.
 - Encounter-side checks and the full reimbursement board calculate interval/count/evidence states from effective-dated deterministic rules and expose patient plus institution views.
 - Reimbursement wording consistently says pre-claim eligibility/evidence review and never implies FHIR determines coverage or the product guarantees adjustment prevention.
 - Copilot output is source-linked, labelled as actual model or deterministic fallback, and cannot mutate confirmed records.

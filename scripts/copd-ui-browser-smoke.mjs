@@ -5,11 +5,11 @@ import { assert, runBrowserSmoke } from "./browser-smoke-harness.mjs";
 
 const appUrl = process.env.EMR_URL ?? "http://127.0.0.1:4173";
 const debugPort = Number.parseInt(process.env.QUALITY_UI_DEBUG_PORT ?? process.env.COPD_UI_DEBUG_PORT ?? "9242", 10);
-const pneumoniaPath = process.env.QUALITY_UI_PNEUMONIA_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/pneumonia-quality-1440.png";
-const mixedPath = process.env.QUALITY_UI_MIXED_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-toggle-1440.png";
-const reductionPath = process.env.QUALITY_UI_REDUCTION_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/claim-reduction-1440.png";
-const mobilePath = process.env.QUALITY_UI_MOBILE_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/disease-quality-390.png";
-const detailPath = process.env.QUALITY_UI_DETAIL_SCREENSHOT ?? "/tmp/vitagraph-quality-screens/pneumonia-detail-1440.png";
+const pneumoniaPath = process.env.QUALITY_UI_PNEUMONIA_SCREENSHOT ?? "/tmp/policycompass-quality-screens/pneumonia-quality-1440.png";
+const mixedPath = process.env.QUALITY_UI_MIXED_SCREENSHOT ?? "/tmp/policycompass-quality-screens/disease-toggle-1440.png";
+const reductionPath = process.env.QUALITY_UI_REDUCTION_SCREENSHOT ?? "/tmp/policycompass-quality-screens/claim-reduction-1440.png";
+const mobilePath = process.env.QUALITY_UI_MOBILE_SCREENSHOT ?? "/tmp/policycompass-quality-screens/disease-quality-390.png";
+const detailPath = process.env.QUALITY_UI_DETAIL_SCREENSHOT ?? "/tmp/policycompass-quality-screens/pneumonia-detail-1440.png";
 
 async function capture(client, path) {
   const screenshot = await client.call("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
@@ -20,7 +20,7 @@ async function capture(client, path) {
 await runBrowserSmoke({
   appUrl,
   debugPort,
-  profilePrefix: "vitagraph-quality-ui-",
+  profilePrefix: "policycompass-quality-ui-",
   initialViewport: { width: 1440, height: 1200, mobile: false },
 }, async ({ client, evaluate, navigate, setViewport, tabTo, waitFor }) => {
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");

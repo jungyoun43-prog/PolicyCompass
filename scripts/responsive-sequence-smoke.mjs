@@ -78,8 +78,8 @@ export async function initializeBrowserProfile(api, profileId) {
   await api.evaluate(`(() => {
     localStorage.clear();
     sessionStorage.clear();
-    localStorage.setItem("vitagraph-release-profile", ${JSON.stringify(profileId)});
-    return localStorage.getItem("vitagraph-release-profile");
+    localStorage.setItem("policycompass-release-profile", ${JSON.stringify(profileId)});
+    return localStorage.getItem("policycompass-release-profile");
   })()`);
 }
 
@@ -107,7 +107,7 @@ async function prepareRoute(api, route) {
       "document.getElementById('conditionCount')?.textContent !== '0개'",
     );
     await api.waitFor(
-      "sessionStorage.getItem('vitagraph-scene') === null",
+      "sessionStorage.getItem('policycompass-scene') === null",
       "The patient sample scene crossed into real session storage.",
     );
     if (route !== "/map") {
@@ -174,7 +174,7 @@ export async function observeResponsiveRoute(api, {
         ? [{ label: element.id || element.textContent.trim().slice(0, 40), left: rect.left, right: rect.right }]
         : [];
     });
-    const marker = localStorage.getItem('vitagraph-release-profile');
+    const marker = localStorage.getItem('policycompass-release-profile');
     const routeText = document.querySelector('[data-route-context]')?.textContent ?? '';
     const relationshipText = document.querySelector('[data-relationship-meaning]')?.textContent ?? '';
     const orderedElements = elements.filter(Boolean);
@@ -196,20 +196,20 @@ export async function observeResponsiveRoute(api, {
         && /추론|가능/.test(relationshipText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
         && new URLSearchParams(location.search).get('sample') === '1'
-        && sessionStorage.getItem('vitagraph-scene') === null;
+        && sessionStorage.getItem('policycompass-scene') === null;
     } else if (route === '/connections') {
       product['connection-evidence-understood'] = /문헌|근거|기록/.test(relationshipText)
         && /추론|사실 아님/.test(relationshipText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
         && new URLSearchParams(location.search).get('sample') === '1'
-        && sessionStorage.getItem('vitagraph-scene') === null;
+        && sessionStorage.getItem('policycompass-scene') === null;
     } else if (route === '/insights') {
       const detailText = [...document.querySelectorAll('.question-detail')].map((item) => item.textContent).join(' ');
       product['insight-source-understood'] = document.querySelectorAll('#questions [data-question-id]').length > 0
         && /근거/.test(detailText);
       product['patient-context-preserved'] = marker === ${JSON.stringify(profileId)}
         && new URLSearchParams(location.search).get('sample') === '1'
-        && sessionStorage.getItem('vitagraph-scene') === null;
+        && sessionStorage.getItem('policycompass-scene') === null;
     } else if (route === '/journey') {
       product['journey-change-understood'] = Boolean(document.querySelector('[data-story-section="changed"]'))
         && Boolean(document.querySelector('[data-story-section="context"]'))
@@ -217,7 +217,7 @@ export async function observeResponsiveRoute(api, {
       product['journey-data-preserved'] = marker === ${JSON.stringify(profileId)}
         && new URLSearchParams(location.search).get('sample') === '1'
         && Boolean(document.querySelector('#journeyStorageNote'))
-        && localStorage.getItem('vitagraph-journey') === null;
+        && localStorage.getItem('policycompass-journey') === null;
     } else if (route === '/emr') {
       const patientName = document.getElementById('selectedPatientName')?.textContent.trim() ?? '';
       const patientMeta = document.getElementById('selectedPatientMeta')?.textContent ?? '';
@@ -316,7 +316,7 @@ export async function runResponsiveSequence({
     await runBrowserSmoke({
       appUrl: server.appUrl,
       debugPort: 0,
-      profilePrefix: "vitagraph-responsive-sequence-",
+      profilePrefix: "policycompass-responsive-sequence-",
       initialViewport: RESPONSIVE_VIEWPORTS[0],
       cdpTimeoutMs: Math.min(stepTimeoutMs, 8_000),
       stepTimeoutMs,

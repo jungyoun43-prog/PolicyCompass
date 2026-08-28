@@ -209,8 +209,8 @@ function sweepThreads(now = Date.now()) {
 
 function reviewOptions(environment, fetchImpl, timeoutMs) {
   return {
-    model: cleanText(environment.VITAGRAPH_OLLAMA_MODEL ?? "", 160),
-    endpoint: environment.VITAGRAPH_OLLAMA_URL ?? "http://127.0.0.1:11434",
+    model: cleanText(environment.POLICYCOMPASS_OLLAMA_MODEL ?? "", 160),
+    endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
     fetchImpl,
     timeoutMs,
   };

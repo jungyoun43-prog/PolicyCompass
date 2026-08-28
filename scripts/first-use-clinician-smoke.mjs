@@ -20,7 +20,7 @@ const viewportResults = [];
 await runBrowserSmoke({
   appUrl,
   debugPort,
-  profilePrefix: "vitagraph-first-use-clinician-",
+  profilePrefix: "policycompass-first-use-clinician-",
   initialViewport: viewports[0],
 }, async ({ evaluate, navigate, press, setViewport, waitFor }) => {
   for (const viewport of viewports) {

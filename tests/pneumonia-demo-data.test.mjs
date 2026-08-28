@@ -60,7 +60,7 @@ test("김비타·최민아·정수진 예시 환자에게만 의사용 합성 �
   );
 
   for (const profile of profiles()) {
-    assert.equal(profile.schema, "vitagraph-pneumonia-demo-profile");
+    assert.equal(profile.schema, "policycompass-pneumonia-demo-profile");
     assert.equal(profile.physicianOnly, true);
     assert.equal(profile.synthetic, true);
     assert.match(profile.syntheticNotice, /예시 환자/);

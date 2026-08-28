@@ -285,7 +285,7 @@ async function runFreshAttempt(options) {
   await runBrowserSmoke({
     appUrl: options.appUrl,
     debugPort: 0,
-    profilePrefix: "vitagraph-release-fresh-",
+    profilePrefix: "policycompass-release-fresh-",
     initialViewport: viewportByName.get(options.viewport),
     cdpTimeoutMs: Math.min(options.stepTimeoutMs, 8_000),
     stepTimeoutMs: options.stepTimeoutMs,
@@ -322,7 +322,7 @@ async function runSharedRepetition(options) {
     await runBrowserSmoke({
       appUrl: options.appUrl,
       debugPort: 0,
-      profilePrefix: `vitagraph-release-shared-${options.repetition}-`,
+      profilePrefix: `policycompass-release-shared-${options.repetition}-`,
       initialViewport: RESPONSIVE_VIEWPORTS[0],
       cdpTimeoutMs: Math.min(options.stepTimeoutMs, 8_000),
       stepTimeoutMs: options.stepTimeoutMs,

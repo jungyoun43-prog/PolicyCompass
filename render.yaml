@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: vitagraph-health-map
-    runtime: node
-    buildCommand: npm run build
-    startCommand: node scripts/render-server.mjs
-    autoDeployTrigger: commit

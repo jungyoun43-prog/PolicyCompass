@@ -6,7 +6,7 @@
     <meta name="description" content="서명된 환자용 정제 파일 내보내기와 규칙 기반 질문 준비, 신체 기록 지도와 급여 보드를 결합한 임상 EMR 워크스페이스" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#e8f5e9" />
-    <title>VitaGraph Clinical | 임상 기록 워크스페이스</title>
+    <title>PolicyCompass Clinical | 임상 기록 워크스페이스</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23e8f5e9%27/%3E%3Cpath d=%27M12 40 31 19 52 37%27 fill=%27none%27 stroke=%27%231b5e20%27 stroke-width=%276%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2712%27 cy=%2740%27 r=%277%27 fill=%27%231b5e20%27/%3E%3Ccircle cx=%2731%27 cy=%2719%27 r=%277%27 fill=%27%2366bb6a%27/%3E%3Ccircle cx=%2752%27 cy=%2737%27 r=%277%27 fill=%27%23a5d6a7%27/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/foundation.css" />
     <link rel="stylesheet" href="/brand-signals.css" />
@@ -23,9 +23,9 @@
 
     <header class="app-header clinical-header">
       <div class="app-header__inner">
-        <a class="app-brand" href="/emr" aria-label="VitaGraph Clinical EMR 홈으로 이동">
+        <a class="app-brand" href="/emr" aria-label="PolicyCompass Clinical EMR 홈으로 이동">
           <span class="app-brand__mark" aria-hidden="true"></span>
-          <span>VitaGraph <b>Clinical</b></span>
+          <span>PolicyCompass <b>Clinical</b></span>
         </a>
       </div>
     </header>
@@ -327,21 +327,73 @@
                     </summary>
                     <div class="workflow-disclosure__body">
                       <p class="entry-boundary">의료진이 결정한 처방을 기록하는 로컬 초안입니다. 의약품 추천이나 전자처방전 전송 기능이 아니며, 용량·알레르기·상호작용·임신·신장/간 기능을 자동 검증하지 않습니다.</p>
-                      <form class="inline-clinical-form" id="prescriptionForm" novalidate autocomplete="off" spellcheck="false">
-                        <div class="prescription-form-grid">
-                          <label>약품 코드<input id="medicationCode" name="code" maxlength="80" placeholder="EDI 또는 기관 코드" /></label>
-                          <label class="clinical-system-field">코드 시스템<input id="medicationSystem" name="system" maxlength="300" placeholder="EDI 또는 기관 코드체계 URI" /></label>
-                          <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
-                          <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
-                          <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
-                          <label>투여 경로<input id="medicationRoute" name="route" maxlength="60" placeholder="예: 경구" /></label>
-                          <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
-                          <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
-                          <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
-                          <label class="clinical-instructions-field">복약 안내<input id="medicationInstructions" name="instructions" maxlength="500" placeholder="식전·식후, 주의사항 등 의료진 지시" /></label>
-                          <button class="clinical-button clinical-button--primary" type="submit">처방 추가</button>
+                      <div class="prescription-launcher">
+                        <button class="clinical-button clinical-button--primary" type="button" id="openPrescriptionDialog" aria-haspopup="dialog">약 처방하기</button>
+                        <p class="prescription-launcher__hint">약을 검색하고 <b>AI 검토</b>로 이 환자 기록과 등록된 예시 급여기준을 대조한 뒤 이번 진료에 담습니다.</p>
+                      </div>
+
+                      <dialog class="rx-dialog" id="prescriptionDialog" aria-labelledby="rxDialogTitle">
+                        <div class="rx-dialog__panel">
+                          <header class="rx-dialog__header">
+                            <span class="rx-dialog__heading">
+                              <span class="rail-eyebrow">PRESCRIPTION SEARCH</span>
+                              <span class="rx-dialog__title" id="rxDialogTitle" role="heading" aria-level="3">약 처방하기</span>
+                              <span class="rx-dialog__context" id="rxDialogContext">환자를 먼저 선택하세요.</span>
+                            </span>
+                            <button class="text-action" type="button" id="closePrescriptionDialog">닫기</button>
+                          </header>
+
+                          <p class="entry-boundary" id="rxDialogBoundary">내부 검토용 예시 약품·급여기준 목록입니다.</p>
+
+                          <form class="rx-search" id="medicationSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
+                            <label class="rx-search__field" for="medicationSearchInput">약품 검색<input id="medicationSearchInput" name="query" type="search" maxlength="120" placeholder="약품명·성분명·계열·상병코드 (예: 암로디핀, 흡입제, J44)" /></label>
+                            <button class="clinical-button clinical-button--primary" type="submit">검색</button>
+                          </form>
+
+                          <label class="rx-consent" id="rxConsentField" hidden><input type="checkbox" id="medicationFrontierConsent" /><span>이 기관 밖의 프론티어 모델로 비식별 대조 결과를 전송하는 데 동의합니다. 동의하지 않으면 규칙 기반 사전점검만 사용합니다.</span></label>
+
+                          <div class="rx-dialog__columns">
+                            <section class="rx-results" aria-labelledby="rxResultsTitle">
+                              <h4 class="rx-section-title" id="rxResultsTitle">검색 결과 <span class="rx-count" id="medicationResultCount">0건</span></h4>
+                              <ul class="rx-result-list" id="medicationResultList" aria-label="약품 검색 결과" aria-live="polite"></ul>
+                            </section>
+
+                            <section class="rx-review" aria-labelledby="rxReviewTitle">
+                              <h4 class="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span class="rx-count" id="medicationReviewMode">규칙 기반</span></h4>
+                              <p class="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 환자의 기록과 등록된 예시 급여기준을 항목별로 대조해 삭감 위험을 ○·△·✕로 보여 줍니다.</p>
+                              <div class="rx-review__body" id="medicationReviewBody" aria-live="polite" hidden>
+                                <div class="rx-verdict" id="medicationReviewVerdict"></div>
+                                <section class="rx-review__section">
+                                  <h5 class="rx-review__heading">근거</h5>
+                                  <ul class="rx-rationale-list" id="medicationReviewRationale"></ul>
+                                </section>
+                                <section class="rx-review__section">
+                                  <h5 class="rx-review__heading">출처 · 삭감 근거와 환자 정보 대조</h5>
+                                  <ul class="rx-source-list" id="medicationReviewSources"></ul>
+                                </section>
+                                <p class="rx-review__boundary" id="medicationReviewBoundary"></p>
+                              </div>
+                            </section>
+                          </div>
+
+                          <form class="inline-clinical-form rx-form" id="prescriptionForm" novalidate autocomplete="off" spellcheck="false">
+                            <p class="rx-form__selected" id="medicationSelectedSummary">검색 결과에서 약을 선택하면 기본 용법이 채워집니다. 용법은 의료진이 직접 확인하고 수정하세요.</p>
+                            <div class="prescription-form-grid">
+                              <label>약품 코드<input id="medicationCode" name="code" maxlength="80" placeholder="EDI 또는 기관 코드" /></label>
+                              <label class="clinical-system-field">코드 시스템<input id="medicationSystem" name="system" maxlength="300" placeholder="EDI 또는 기관 코드체계 URI" /></label>
+                              <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
+                              <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
+                              <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
+                              <label>투여 경로<input id="medicationRoute" name="route" maxlength="60" placeholder="예: 경구" /></label>
+                              <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
+                              <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
+                              <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
+                              <label class="clinical-instructions-field">복약 안내<input id="medicationInstructions" name="instructions" maxlength="500" placeholder="식전·식후, 주의사항 등 의료진 지시" /></label>
+                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 처방 추가</button>
+                            </div>
+                          </form>
                         </div>
-                      </form>
+                      </dialog>
                       <ul class="clinical-entry-list" id="prescriptionList" aria-label="이번 진료 처방 목록" aria-live="polite"></ul>
                     </div>
                   </details>
@@ -927,7 +979,7 @@
     </main>
 
     <footer class="app-footer clinical-footer">
-      <span>VitaGraph Clinical</span>
+      <span>PolicyCompass Clinical</span>
       <span>확정 기록과 보조 초안을 분리합니다.</span>
     </footer>
   </body>

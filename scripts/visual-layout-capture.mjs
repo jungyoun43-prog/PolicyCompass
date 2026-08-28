@@ -6,7 +6,7 @@ import {
   startManagedAppServer,
 } from "./browser-smoke-harness.mjs";
 
-const captureRoot = process.env.VISUAL_CAPTURE_ROOT ?? "/tmp/vitagraph-visual-layout";
+const captureRoot = process.env.VISUAL_CAPTURE_ROOT ?? "/tmp/policycompass-visual-layout";
 const reportPath = join(captureRoot, "report.json");
 const maxFullPageHeight = Number.parseInt(process.env.VISUAL_CAPTURE_MAX_HEIGHT ?? "6000", 10);
 const focusedOnly = process.env.VISUAL_CAPTURE_FOCUSED_ONLY === "1";
@@ -91,7 +91,7 @@ try {
   for (const route of routes) {
     await runBrowserSmoke({
       appUrl: app.appUrl,
-      profilePrefix: `vitagraph-visual-${route.name}-`,
+      profilePrefix: `policycompass-visual-${route.name}-`,
       initialViewport: viewports[0],
       cdpTimeoutMs: 30_000,
       stepTimeoutMs: 20_000,

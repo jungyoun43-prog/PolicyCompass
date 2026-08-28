@@ -363,7 +363,7 @@ function clinicalCopilotGraph() {
               kind: item.kind,
               label: item.kind === "question" ? `환자 질문 · ${item.text}` : `환자 보고 · ${item.text}`,
               observedOn: item.observedOn,
-              sourceLabel: "환자용 VitaGraph 로컬 브리프",
+              sourceLabel: "환자용 PolicyCompass 로컬 브리프",
             })),
         },
       };
@@ -381,13 +381,13 @@ function clinicalCopilotGraph() {
 }
 
 export async function runClinicalCopilot(payload, {
-  endpoint = process.env.VITAGRAPH_OLLAMA_URL ?? "http://127.0.0.1:11434",
-  model = process.env.VITAGRAPH_OLLAMA_MODEL ?? "",
+  endpoint = process.env.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
+  model = process.env.POLICYCOMPASS_OLLAMA_MODEL ?? "",
   fetchImpl = globalThis.fetch,
   timeoutMs = 45_000,
   maxAttempts = 2,
 } = {}) {
-  if (!cleanText(model)) throw new Error("VITAGRAPH_OLLAMA_MODEL이 설정되지 않았습니다.");
+  if (!cleanText(model)) throw new Error("POLICYCOMPASS_OLLAMA_MODEL이 설정되지 않았습니다.");
   const baseUrl = loopbackEndpoint(endpoint);
   const request = buildClinicalCopilotRequest(payload, model);
   const events = safeEvents(payload?.patient);

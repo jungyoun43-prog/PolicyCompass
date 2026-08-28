@@ -1,10 +1,10 @@
-# VitaGraph
+# PolicyCompass
 
-VitaGraph는 의료진 EMR과 환자용 VitaGraph Personal이 각자의 진료 전 질문을 준비하는 로컬 평가용 웹앱입니다. `/`는 데이터를 다루지 않는 역할 선택 화면입니다.
+PolicyCompass는 의료진 EMR과 환자용 PolicyCompass Personal이 각자의 진료 전 질문을 준비하는 로컬 평가용 웹앱입니다. `/`는 데이터를 다루지 않는 역할 선택 화면입니다.
 
 - 의료진 EMR(주 제품): 오늘 대기열, 환자 인구정보, Encounter, SOAP, KCD 진단, 처방, 검사·영상·처치 오더, 환자별 신체·진료과 지도, 청구 전 적합성 칸반, 감사 이력
-- 개인 VitaGraph: 직접 입력한 신호와 명시적으로 가져온 최소 건강정보를 이용한 건강 지도, 관계 근거, 진료 질문 정리, Journey. EMR 운영 기능이나 전체 임상 차트는 노출하지 않음
-- 명시적 환자 전달: 의료진이 현재 환자를 다시 확인한 뒤 `vitagraph-patient-transfer` v1 JSON을 내려받고, 환자가 별도로 전달받은 128비트 확인 코드와 파일을 직접 선택해야 Personal 지도가 교체됨
+- 개인 PolicyCompass: 직접 입력한 신호와 명시적으로 가져온 최소 건강정보를 이용한 건강 지도, 관계 근거, 진료 질문 정리, Journey. EMR 운영 기능이나 전체 임상 차트는 노출하지 않음
+- 명시적 환자 전달: 의료진이 현재 환자를 다시 확인한 뒤 `policycompass-patient-transfer` v1 JSON을 내려받고, 환자가 별도로 전달받은 128비트 확인 코드와 파일을 직접 선택해야 Personal 지도가 교체됨
 - 데이터 격리: EMR과 Personal은 서로의 브라우저 저장소나 `BroadcastChannel`을 읽지 않으며, 예시 화면은 가져온 기록·Journey·내보내기·모델 요청과 완전히 분리됨
 - 질문 지원: 규칙 기반 질문 정리가 항상 작동하며, 실제 모델 기능이 구성된 경우에만 로컬 또는 외부 모델을 명시적으로 선택할 수 있음. 외부 모델은 표시된 전송 범위 확인과 매 실행 동의가 필요함
 
@@ -19,10 +19,10 @@ npm run dev
 
 - 역할 선택(무상태): http://127.0.0.1:4173/
 - 임상 EMR: http://127.0.0.1:4173/emr
-- 개인용 VitaGraph: http://127.0.0.1:4173/patient
+- 개인용 PolicyCompass: http://127.0.0.1:4173/patient
 - 저장되지 않는 가상 환자 데모: http://127.0.0.1:4173/emr?demo=1
 
-기본 진료 흐름은 `오늘 대기열 → 환자 선택/등록 → Encounter 시작 → SOAP → KCD 진단 → 처방 → 검사·영상·처치 오더 → 완료 → 로컬 서명 → 현재 환자 재확인 → 환자 전달 파일 내보내기`입니다. 환자 기록에는 차트번호, 이름, 생년월일과 진료일 기준 계산 나이(생년월일 미상 시 만 나이 직접 입력), 성별, 연락처, 주소, 보험 정보, 비상연락처를 입력할 수 있습니다. EMR의 신체·진료과 지도, 모델/규칙 기반 지원, Journey, 청구 전 적합성 칸반은 같은 선택 환자와 Encounter를 보조합니다.
+기본 진료 흐름은 `오늘 대기열 → 환자 선택/등록 → Encounter 시작 → SOAP → KCD 진단 → 처방(약 처방하기 팝업에서 검색·AI 삭감 사전검토) → 검사·영상·처치 오더 → 완료 → 로컬 서명 → 현재 환자 재확인 → 환자 전달 파일 내보내기`입니다. 환자 기록에는 차트번호, 이름, 생년월일과 진료일 기준 계산 나이(생년월일 미상 시 만 나이 직접 입력), 성별, 연락처, 주소, 보험 정보, 비상연락처를 입력할 수 있습니다. EMR의 신체·진료과 지도, 모델/규칙 기반 지원, Journey, 청구 전 적합성 칸반은 같은 선택 환자와 Encounter를 보조합니다.
 
 ## 두 앱의 데이터 경계
 
@@ -34,24 +34,24 @@ Personal은 파일과 코드를 모두 검증한 뒤 현재 저장 전 지도를
 
 ## 질문 정리 지원
 
-AI를 설정하지 않아도 근거가 연결된 규칙 기반 질문이 작동합니다. 로컬 Ollama를 사용할 때는 아래처럼 모델을 지정합니다. `VITAGRAPH_OLLAMA_MODEL`은 의료진 코파일럿과 환자 질문 도우미의 공통 기본값입니다.
+AI를 설정하지 않아도 근거가 연결된 규칙 기반 질문이 작동합니다. 로컬 Ollama를 사용할 때는 아래처럼 모델을 지정합니다. `POLICYCOMPASS_OLLAMA_MODEL`은 의료진 코파일럿과 환자 질문 도우미의 공통 기본값입니다.
 
 ```bash
-VITAGRAPH_OLLAMA_MODEL=your-local-model npm run dev
+POLICYCOMPASS_OLLAMA_MODEL=your-local-model npm run dev
 ```
 
-환자용 모델과 주소를 따로 지정하려면 `VITAGRAPH_PATIENT_OLLAMA_MODEL`과 `VITAGRAPH_PATIENT_OLLAMA_URL`을 사용합니다. 공통 주소는 `VITAGRAPH_OLLAMA_URL`입니다. 보안을 위해 로컬 AI 주소는 `localhost`, `127.0.0.1`, `::1`의 HTTP만 허용하고 HTTP 리다이렉트를 따르지 않습니다.
+환자용 모델과 주소를 따로 지정하려면 `POLICYCOMPASS_PATIENT_OLLAMA_MODEL`과 `POLICYCOMPASS_PATIENT_OLLAMA_URL`을 사용합니다. 공통 주소는 `POLICYCOMPASS_OLLAMA_URL`입니다. 보안을 위해 로컬 AI 주소는 `localhost`, `127.0.0.1`, `::1`의 HTTP만 허용하고 HTTP 리다이렉트를 따르지 않습니다.
 
 환자 화면에서 프론티어 모델 선택지를 활성화하려면 서버 환경변수에 API 키를 설정합니다. 키는 브라우저로 전달되지 않습니다.
 
 ```bash
 OPENAI_API_KEY=your-server-side-key \
-VITAGRAPH_FRONTIER_ENABLED=true \
-VITAGRAPH_FRONTIER_MODEL=gpt-5.6-sol \
+POLICYCOMPASS_FRONTIER_ENABLED=true \
+POLICYCOMPASS_FRONTIER_MODEL=gpt-5.6-sol \
 npm run dev
 ```
 
-프론티어 요청은 서버 키만 있다고 자동 활성화되지 않으며 `VITAGRAPH_FRONTIER_ENABLED=true`를 함께 설정해야 합니다. 실제 공개 운영에서는 인증·사용자별 할당량·비용 경계를 먼저 구성하세요. 환자가 해당 실행의 전송 범위를 확인하고 동의해야 하며 `store: false`로 전송합니다. 명시적으로 가져온 질환 항목·최종 측정값과 환자가 직접 적은 최근 변화만 사용하고, 처방과 EMR의 이름·등록번호·원문은 제외합니다. 최근 변화 입력에 환자가 직접 적은 이름·주소는 자동 탐지가 완전하지 않으므로 화면에서 삭제를 안내하고, 흔한 등록번호·연락처·이메일·주소 형식은 클라이언트와 서버에서 다시 제거합니다. Personal에서 정리한 질문은 자동으로 EMR에 보내지지 않으며, 환자가 복사하거나 화면으로 직접 보여 주어야 합니다. 의료진 로컬 AI는 선택 환자의 확정된 구조화 차트만 사용해 확인 질문과 예상 환자 질문을 제안합니다.
+프론티어 요청은 서버 키만 있다고 자동 활성화되지 않으며 `POLICYCOMPASS_FRONTIER_ENABLED=true`를 함께 설정해야 합니다. 실제 공개 운영에서는 인증·사용자별 할당량·비용 경계를 먼저 구성하세요. 환자가 해당 실행의 전송 범위를 확인하고 동의해야 하며 `store: false`로 전송합니다. 명시적으로 가져온 질환 항목·최종 측정값과 환자가 직접 적은 최근 변화만 사용하고, 처방과 EMR의 이름·등록번호·원문은 제외합니다. 최근 변화 입력에 환자가 직접 적은 이름·주소는 자동 탐지가 완전하지 않으므로 화면에서 삭제를 안내하고, 흔한 등록번호·연락처·이메일·주소 형식은 클라이언트와 서버에서 다시 제거합니다. Personal에서 정리한 질문은 자동으로 EMR에 보내지지 않으며, 환자가 복사하거나 화면으로 직접 보여 주어야 합니다. 의료진 로컬 AI는 선택 환자의 확정된 구조화 차트만 사용해 확인 질문과 예상 환자 질문을 제안합니다.
 
 모델 요청은 현재 Encounter의 미서명 SOAP·처방 지시를 사용하지 않습니다. 이벤트 ID는 요청별 별칭으로 바꾸고 반박된 진단이나 lifecycle이 모순된 약물도 제외합니다. 모든 AI 결과는 환자 또는 의료진이 직접 검토해야 하는 질문 초안이며 진단, 처방 변경, 응급도 판단을 하지 않습니다.
 
@@ -63,13 +63,14 @@ npm run dev
 - 의료진 코파일럿(`/api/clinical-copilot`): 생성 → 검증 → 근거 대조(provenance) 노드로 분리되고, 근거 조작·비JSON 초안은 거부 사유를 피드백으로 한 번 재생성한 뒤에만 502로 실패합니다.
 - 관계 근거(`POST /api/connection-insights`): 정제 스냅샷에서 약물·질환·측정·자기보고 후보 쌍을 규칙으로 만들고, 모델이 설정된 경우 후보마다 병렬(Send)로 관련성을 검증합니다. 모델이 없으면 외부 호출 없이 시간 관계 기반 규칙 설명만 반환합니다(`mode: "rule-based"`). 인과관계를 단정하는 문장은 거부합니다.
 - 청구 전 검토(`POST /api/claim-review/start` → `/api/claim-review/resume`, 로컬 개발 서버 전용): 규칙 평가에 대한 보완 설명 초안을 만들고 `interrupt`로 일시정지합니다. 의료진이 `approve`/`revise`(의견 필수)/`discard`로 재개하며, revise는 의견을 반영한 새 초안으로 같은 스레드에서 다시 멈춥니다. 초안은 급여 상태를 바꾸지 않습니다.
+- 약제 삭감 사전검토(`POST /api/medication-claim-review`): 브라우저가 먼저 결정론적 규칙으로 등록 기준과 이 환자 기록을 항목별로 대조한 뒤, 그 비식별 대조 결과만 그래프에 넘깁니다. 모델은 판정을 규칙보다 관대하게 바꾸지 못하고 입력에 있는 기준 항목만 인용할 수 있으며, 검증에 실패하면 규칙 판정으로 되돌아갑니다. 모델 미설정 시 외부 호출 없이 규칙 판정만 사용합니다.
 - 질문 다듬기(`POST /api/patient-question-assistant/refine`): 체크포인터 기반 멀티턴으로, 첫 요청에서 받은 정제 컨텍스트와 질문을 `threadId`로 유지해 이후에는 지시문만 보내면 됩니다. 안전 규칙을 어기는 다듬기는 재시도 후에도 실패하면 기존 질문을 유지하고 `applied: false`로 알립니다. AI 미설정 시 503을 반환합니다.
 
 검토·다듬기 스레드는 서버 메모리에만 있으며 2시간 후 만료됩니다. 모든 그래프는 기존 PII 제거·근거 ID 화이트리스트·위험 문장 거부 검증을 그대로 통과해야 결과를 반환합니다.
 
 ## FHIR 교환과 청구 전 점검
 
-EMR 가져오기는 `type`이 명시된 `collection` 또는 `document` FHIR R4 Bundle 중, 정확히 한 명의 Patient가 들어 있고 각 임상 리소스가 그 Patient를 명시적으로 참조하는 파일을 최대 1,000개 항목까지 읽습니다. 절대·URN 참조는 Patient `fullUrl`과 정확히 같아야 하고, 상대 `Patient/{id}` 참조는 해당 임상 entry의 `fullUrl`이 가리키는 FHIR 서버 기준으로만 해석합니다. Patient 등록번호는 MR 유형 또는 VitaGraph MRN 시스템으로 표시된 identifier만 사용해 보험번호 오인식을 막습니다. Condition의 의증·잠정 기록은 출처와 함께 보존하지만 확정 임상 사실·모델·급여 근거에서는 제외합니다. AllergyIntolerance는 활성·확정 상태, MedicationRequest는 활성 주문 계열 intent이며 `doNotPerform`이 아닌 경우만 현재 차트 사실로 가져옵니다. 지원 LOINC 숫자 측정의 내보내기에는 표시 단위와 UCUM `system`·`code`를 함께 기록합니다. 해석하지 못하는 `modifierExtension`·`implicitRules`, 비활성·사망·대체 연결 Patient, 형식이 잘못된 modifier 필드는 fail-closed 처리합니다. 제외 항목과 사유는 가져오기 보고서에 남습니다. 가져온 기록의 출처 인증·전자서명은 검증하지 않으므로 의료진 대조 확인이 필요합니다.
+EMR 가져오기는 `type`이 명시된 `collection` 또는 `document` FHIR R4 Bundle 중, 정확히 한 명의 Patient가 들어 있고 각 임상 리소스가 그 Patient를 명시적으로 참조하는 파일을 최대 1,000개 항목까지 읽습니다. 절대·URN 참조는 Patient `fullUrl`과 정확히 같아야 하고, 상대 `Patient/{id}` 참조는 해당 임상 entry의 `fullUrl`이 가리키는 FHIR 서버 기준으로만 해석합니다. Patient 등록번호는 MR 유형 또는 PolicyCompass MRN 시스템으로 표시된 identifier만 사용해 보험번호 오인식을 막습니다. Condition의 의증·잠정 기록은 출처와 함께 보존하지만 확정 임상 사실·모델·급여 근거에서는 제외합니다. AllergyIntolerance는 활성·확정 상태, MedicationRequest는 활성 주문 계열 intent이며 `doNotPerform`이 아닌 경우만 현재 차트 사실로 가져옵니다. 지원 LOINC 숫자 측정의 내보내기에는 표시 단위와 UCUM `system`·`code`를 함께 기록합니다. 해석하지 못하는 `modifierExtension`·`implicitRules`, 비활성·사망·대체 연결 Patient, 형식이 잘못된 modifier 필드는 fail-closed 처리합니다. 제외 항목과 사유는 가져오기 보고서에 남습니다. 가져온 기록의 출처 인증·전자서명은 검증하지 않으므로 의료진 대조 확인이 필요합니다.
 
 - Patient
 - Condition
@@ -86,6 +87,36 @@ EMR 가져오기는 `type`이 명시된 `collection` 또는 `document` FHIR R4 B
 한국의 급여 심사는 FHIR 자체가 아니라 심평원 청구명세와 시행 시점의 급여·심사기준을 바탕으로 이루어집니다. FHIR R4는 이 앱에서 임상정보를 가져오고 내보내기 위한 교환 projection입니다. 보드는 청구 전에 기간·횟수·진단·근거 누락을 확인하도록 돕지만 급여 인정이나 삭감 방지를 보장하지 않습니다.
 
 EMR의 신체·진료과 지도는 Encounter의 진료과 필드 또는 진료명에 명시된 과를 기준으로 진료를 모읍니다. 약물은 같은 `encounterId`로 연결된 경우에만 해당 과의 처방으로 표시하며, 연결 정보가 없는 약물은 임의로 귀속하지 않습니다. 확정 활성 문제에서 파생한 신체 영역은 탐색용 분류로 따로 표시하며 진료과 배정이나 의뢰 판단으로 취급하지 않습니다.
+
+## 약 처방과 삭감 사전검토
+
+EMR의 `처방 기록`에서 **약 처방하기**를 누르면 처방 팝업이 열립니다. 팝업에서 약품명·성분명·계열·상병코드로 예시 약품 목록을 검색하고, 각 결과의 **AI 검토**를 누르면 현재 선택 환자의 기록과 그 약에 등록된 예시 급여기준을 항목별로 대조합니다.
+
+결과는 세 단으로 제시합니다.
+
+1. 판정: 삭감 위험을 `○`(등록 기준과 기록이 일치) · `△`(추가 근거 확인 필요) · `✕`(요구 근거가 기록에 없음)로 표시합니다. 전체 판정은 가장 신중한 항목을 따릅니다.
+2. 근거: 어떤 기준이 어떤 기록과 맞거나 어긋났는지를 문장으로 적습니다.
+3. 출처: 항목마다 `삭감 근거`(기준 내용)와 `환자 정보`(대조된 차트 기록, 코드·날짜·확정 여부 포함)를 나란히 놓고, 그 기준이 나온 출처 문서·문서번호·버전·시행일을 함께 적습니다.
+
+대조하는 항목은 급여 인정 상병, 필수 선행 근거(예: 흡입제의 폐기능검사, 골다공증 약의 골밀도검사), 동일 효능군 중복 처방, 알레르기 성분, 금기 상병, 1회 처방 인정 일수, 연령 기준입니다. 검토를 마친 뒤 **처방 담기**로 기본 용법을 채우고 용법을 확인·수정해 이번 진료에 추가합니다.
+
+`src/medication-catalog.js`의 약품과 급여기준은 UI 검증용 내부 예시이며 실제 약제 급여기준 고시나 의약품 데이터베이스가 아닙니다. 실제 사용 전에는 기관 담당자가 공식 고시와 약제 목록을 검증해 출처·문서번호·시행일과 함께 등록해야 합니다. 이 검토는 청구 전 사전점검이며 급여 인정·삭감을 확정하지 않고 처방 결정을 대신하지 않습니다.
+
+## 배포
+
+Vercel에 배포합니다. `vercel.json`이 `npm run build`로 워커 번들을 만든 뒤 모든 경로를 `api/index.js` Serverless Function으로 rewrite하며, 그 함수는 로컬 Node 서버(`npm start` → `scripts/server.mjs`)와 같은 `scripts/app-server.mjs` 핸들러를 씁니다. 따라서 CSP·HSTS·같은 출처 API 규칙이 두 실행 환경에서 동일합니다.
+
+- `public/`는 정적으로 그대로 제공되는 파일만 담습니다. 나머지 경로는 모두 함수가 응답합니다.
+- 임상 자료를 다루는 `/api/clinical-copilot`은 로컬 개발 서버에서만 열립니다.
+- `/api/medication-claim-review`는 같은 출처 요청만 받습니다. 모델은 서버 환경변수로만 켜집니다.
+
+| 환경변수 | 용도 |
+| --- | --- |
+| `POLICYCOMPASS_OLLAMA_MODEL` / `POLICYCOMPASS_OLLAMA_URL` | 루프백 Ollama 로컬 모델(개발 환경) |
+| `OPENAI_API_KEY` + `POLICYCOMPASS_FRONTIER_ENABLED=true` | 외부 프론티어 모델. 매 요청 사용자 동의가 필요합니다 |
+| `POLICYCOMPASS_FRONTIER_MODEL` | 프론티어 모델 이름(기본 `gpt-5.6-sol`) |
+
+환경변수를 설정하지 않으면 모든 AI 기능은 외부 호출 없이 규칙 기반으로 동작합니다.
 
 ## 검증
 

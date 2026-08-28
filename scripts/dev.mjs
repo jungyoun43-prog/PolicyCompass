@@ -4,6 +4,10 @@ import worker from "../dist/server/index.js";
 import { runClinicalCopilot } from "./clinical-copilot.mjs";
 import { resumeClaimReview, startClaimReview } from "./graphs/claim-review-graph.mjs";
 import { runConnectionInsights } from "./graphs/connection-insights-graph.mjs";
+import {
+  medicationClaimReviewStatus,
+  runMedicationClaimReview,
+} from "./graphs/medication-claim-review-graph.mjs";
 import { runQuestionRefine } from "./graphs/question-refine-graph.mjs";
 import {
   patientQuestionAssistantStatus,
@@ -91,14 +95,15 @@ const server = http.createServer((request, response) => {
     const isApi = url.pathname.startsWith("/api/clinical-copilot")
       || url.pathname.startsWith("/api/patient-question-assistant")
       || url.pathname.startsWith("/api/connection-insights")
-      || url.pathname.startsWith("/api/claim-review");
+      || url.pathname.startsWith("/api/claim-review")
+      || url.pathname.startsWith("/api/medication-claim-review");
     if (isApi) assertLocalApiRequest(request);
 
     if (url.pathname === "/api/clinical-copilot/status" && request.method === "GET") {
       sendJson(response, 200, {
-        configured: Boolean(process.env.VITAGRAPH_OLLAMA_MODEL),
-        mode: process.env.VITAGRAPH_OLLAMA_MODEL ? "local-model" : "rule-based",
-        model: process.env.VITAGRAPH_OLLAMA_MODEL ?? "",
+        configured: Boolean(process.env.POLICYCOMPASS_OLLAMA_MODEL),
+        mode: process.env.POLICYCOMPASS_OLLAMA_MODEL ? "local-model" : "rule-based",
+        model: process.env.POLICYCOMPASS_OLLAMA_MODEL ?? "",
       });
       return;
     }
@@ -107,7 +112,7 @@ const server = http.createServer((request, response) => {
       if (!payload || typeof payload !== "object" || Array.isArray(payload) || !payload.patient || !Array.isArray(payload.patient.events)) {
         throw new ApiError(400, "INVALID_PAYLOAD", "구조화 환자 이벤트가 필요합니다.");
       }
-      if (!process.env.VITAGRAPH_OLLAMA_MODEL) {
+      if (!process.env.POLICYCOMPASS_OLLAMA_MODEL) {
         sendJson(response, 503, { code: "AI_NOT_CONFIGURED", message: "규칙 기반 요약을 사용합니다." });
         return;
       }
@@ -158,6 +163,35 @@ const server = http.createServer((request, response) => {
       } catch (error) {
         if (error instanceof TypeError) throw new ApiError(400, "INVALID_PATIENT_CONTEXT", error.message);
         throw new ApiError(502, "CONNECTION_INSIGHTS_FAILED", "관계 근거를 생성하지 못했습니다.");
+      }
+      return;
+    }
+    if (url.pathname === "/api/medication-claim-review/status" && request.method === "GET") {
+      sendJson(response, 200, medicationClaimReviewStatus());
+      return;
+    }
+    if (url.pathname === "/api/medication-claim-review" && request.method === "POST") {
+      const payload = await readJson(request);
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new ApiError(400, "INVALID_PAYLOAD", "약제 급여 사전점검 비교 결과가 필요합니다.");
+      }
+      const provider = payload.provider === "frontier" ? "frontier" : "local";
+      if (provider === "frontier" && payload.consent !== true) {
+        throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
+      }
+      const status = medicationClaimReviewStatus();
+      if (!status[provider].configured) {
+        sendJson(response, 503, {
+          code: provider === "frontier" ? "FRONTIER_NOT_CONFIGURED" : "LOCAL_AI_NOT_CONFIGURED",
+          message: "AI 검토가 설정되지 않아 규칙 기반 사전점검을 사용합니다.",
+        });
+        return;
+      }
+      try {
+        sendJson(response, 200, await runMedicationClaimReview(payload));
+      } catch (error) {
+        if (error instanceof TypeError) throw new ApiError(400, "INVALID_MEDICATION_REVIEW", error.message);
+        throw new ApiError(502, "MEDICATION_REVIEW_FAILED", "약제 급여 사전점검 초안을 만들지 못했습니다.");
       }
       return;
     }

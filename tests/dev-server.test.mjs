@@ -110,7 +110,7 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
     const jsonHeaders = { "content-type": "application/json", origin: baseUrl };
     const snapshotPayload = {
       clinicalSnapshot: {
-        schema: "vitagraph-clinical-snapshot",
+        schema: "policycompass-clinical-snapshot",
         version: 1,
         healthMap: {
           conditions: [{ id: "hypertension", label: "고혈압", recordedOn: "2026-07-01" }],
@@ -203,8 +203,8 @@ test("로컬 개발 서버는 유효한 Ollama 초안만 전달하고 실패를 
   });
   await new Promise((resolve, reject) => ollama.listen(ollamaPort, "127.0.0.1", resolve).once("error", reject));
   const { baseUrl, child } = await startDevServer({
-    VITAGRAPH_OLLAMA_MODEL: "test-local-model",
-    VITAGRAPH_OLLAMA_URL: `http://127.0.0.1:${ollamaPort}`,
+    POLICYCOMPASS_OLLAMA_MODEL: "test-local-model",
+    POLICYCOMPASS_OLLAMA_URL: `http://127.0.0.1:${ollamaPort}`,
   });
   const payload = JSON.stringify({
     asOf: "2026-07-19",

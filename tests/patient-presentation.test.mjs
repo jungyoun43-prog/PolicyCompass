@@ -21,7 +21,7 @@ test("환자 진입 화면은 공유 지원형 프레젠테이션 모듈을 사�
 test("역할 선택은 의료진 우선 순서와 두 공간의 안전 경계를 유지한다", async () => {
   const html = await readFile("src/gateway.html", "utf8");
   const clinicalAction = html.indexOf("의료진 EMR 열기");
-  const patientAction = html.indexOf("개인 VitaGraph 열기");
+  const patientAction = html.indexOf("개인 PolicyCompass 열기");
 
   assert.ok(clinicalAction >= 0 && patientAction > clinicalAction);
   assert.match(html, /로컬 평가용 샌드박스 · 인증된 운영 EMR 아님/);
@@ -32,7 +32,7 @@ test("역할 선택은 의료진 우선 순서와 두 공간의 안전 경계를
 test("개인 홈은 역할·데이터 경계 안내 뒤에 직접 가져오기와 예시 시작 행동을 둔다", async () => {
   const html = await readFile("src/landing.html", "utf8");
   const hero = html.match(/<section class="landing-hero[\s\S]*?<\/section>/)?.[0] ?? "";
-  const identity = hero.indexOf("VITAGRAPH PERSONAL · 내 기록 공간");
+  const identity = hero.indexOf("POLICYCOMPASS PERSONAL · 내 기록 공간");
   const localCopy = hero.indexOf("환자용 기록을 직접 가져와 건강 지도와 다음 진료 질문으로 정리합니다");
   const startAction = hero.indexOf("환자용 기록 가져오기");
   const sampleAction = hero.indexOf("예시로 보기");

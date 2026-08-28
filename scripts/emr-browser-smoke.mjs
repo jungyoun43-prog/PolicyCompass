@@ -11,7 +11,7 @@ const [viewportWidth, viewportHeight] = (process.env.CHROME_WINDOW_SIZE ?? "1440
   .split(",")
   .map((value) => Number.parseInt(value, 10));
 const koreaToday = new Date(Date.now() + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
-const profile = await mkdtemp(join(tmpdir(), "vitagraph-emr-smoke-"));
+const profile = await mkdtemp(join(tmpdir(), "policycompass-emr-smoke-"));
 const reportPath = process.env.EMR_SMOKE_REPORT ?? join("artifacts", "smoke", "emr-smoke-report.json");
 const browser = spawn(chrome, [
   "--headless",
@@ -468,7 +468,7 @@ try {
   await evaluate(importFhir);
   await waitFor("document.getElementById('workspaceStatus')?.textContent.includes('이미 있습니다')", "Duplicate FHIR identity was not rejected.");
   assert(await evaluate("document.getElementById('workspaceStatus').textContent.includes('이미 있습니다')"), "Duplicate FHIR identity was not rejected.");
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.length === 1"), "Duplicate FHIR import added another patient.");
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.length === 1"), "Duplicate FHIR import added another patient.");
 
   await evaluate([
     "document.getElementById('patientMrn').value = 'SMOKE-001'",
@@ -487,9 +487,9 @@ try {
   ].join(";"));
   await delay(250);
   assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'"), "New patient did not become active.");
-  assert(await evaluate("localStorage.getItem('vitagraph-emr-v2').includes('SMOKE-001')"), "Patient did not persist to localStorage.");
+  assert(await evaluate("localStorage.getItem('policycompass-emr-v2').includes('SMOKE-001')"), "Patient did not persist to localStorage.");
   assert(await evaluate(`(() => {
-    const patient = JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.find(({ mrn }) => mrn === 'SMOKE-001');
+    const patient = JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.find(({ mrn }) => mrn === 'SMOKE-001');
     return patient.birthDate === '1990-01-02'
       && patient.sex === 'female'
       && patient.phone === '010-1234-5678'
@@ -551,14 +551,14 @@ try {
   })()`);
   await waitFor("document.getElementById('selectedPatientName')?.textContent === 'FHIR 추가 환자'", "FHIR import did not finish while a SOAP draft was unsaved.");
   assert(await evaluate(`(() => {
-    const state = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const state = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const patient = state.patients.find(({ mrn }) => mrn === 'SMOKE-001');
     const encounter = patient.events.find(({ type, status }) => type === 'encounter' && status === 'in-progress');
     return encounter?.soap?.plan === '약물치료와 혈액검사 후 30일 뒤 추적';
   })()`), "FHIR import discarded the unsaved SOAP draft instead of preserving it atomically.");
   await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click()");
   await waitFor("document.getElementById('selectedPatientName')?.textContent === '브라우저 테스트 환자' && document.getElementById('soapPlan').value.includes('30일 뒤 추적')", "Preserved SOAP draft did not restore after returning from the FHIR patient.");
-  await evaluate("document.getElementById('soapPlan').value += ' · 저장 이벤트 직전 수정'; window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2' }))");
+  await evaluate("document.getElementById('soapPlan').value += ' · 저장 이벤트 직전 수정'; window.dispatchEvent(new StorageEvent('storage', { key: 'policycompass-emr-v2' }))");
   assert(await evaluate("document.getElementById('soapPlan').value.includes('저장 이벤트 직전 수정') && document.getElementById('workspaceStatus').textContent.includes('미저장 입력을 보존')"), "Cross-tab storage event discarded an unsaved encounter draft.");
   await evaluate([
     "document.getElementById('encounterForm').requestSubmit()",
@@ -574,7 +574,7 @@ try {
   await evaluate([
     "document.getElementById('vitalValue').value = '149/93'",
     "document.getElementById('vitalNote').value = '환자 전환 전 미추가 값'",
-    "window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))",
+    "window.dispatchEvent(new StorageEvent('storage', { key: 'policycompass-emr-v2', newValue: localStorage.getItem('policycompass-emr-v2') }))",
   ].join(";"));
   assert(await evaluate("document.getElementById('vitalValue').value === '149/93' && document.getElementById('workspaceStatus').textContent.includes('미저장 입력을 보존')"), "A storage event discarded the pending clinical-item composer.");
   await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('FHIR 추가 환자')).click()");
@@ -620,7 +620,7 @@ try {
   ].join(";"));
   await waitFor("document.getElementById('vitalList').textContent.includes('150/95 mmHg')", "Encounter observation did not render.");
   assert(await evaluate(`(() => {
-    const state = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const state = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const patient = state.patients.find(({ mrn }) => mrn === 'SMOKE-001');
     const observation = patient.events.find(({ type, code }) => type === 'observation' && code === '85354-9');
     return observation?.system === 'http://loinc.org'
@@ -644,7 +644,7 @@ try {
 
   await evaluate([
     "document.getElementById('medicationCode').value = 'SMOKE-MED-001'",
-    "document.getElementById('medicationSystem').value = 'urn:vitagraph:smoke:medication'",
+    "document.getElementById('medicationSystem').value = 'urn:policycompass:smoke:medication'",
     "document.getElementById('medicationName').value = '스모크정 5mg'",
     "document.getElementById('medicationDose').value = '1'",
     "document.getElementById('medicationDoseUnit').value = '정'",
@@ -660,7 +660,7 @@ try {
   await evaluate([
     "document.getElementById('orderKind').value = 'laboratory'",
     "document.getElementById('orderCode').value = 'SMOKE-LAB-001'",
-    "document.getElementById('orderSystem').value = 'urn:vitagraph:smoke:order'",
+    "document.getElementById('orderSystem').value = 'urn:policycompass:smoke:order'",
     "document.getElementById('orderLabel').value = '기본 혈액검사'",
     "document.getElementById('orderPriority').value = 'routine'",
     "document.getElementById('orderInstructions').value = '고혈압 초진 평가'",
@@ -709,8 +709,8 @@ try {
     changed = model.confirmPatientEvent(changed, patientId, 'review-fingerprint-allergy', confirmedAt);
     await model.saveEmrState(changed, undefined, current.revision);
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'vitagraph-emr-v2',
-      newValue: localStorage.getItem('vitagraph-emr-v2'),
+      key: 'policycompass-emr-v2',
+      newValue: localStorage.getItem('policycompass-emr-v2'),
     }));
   })()`);
   await waitFor(`!document.getElementById('encounterSignReviewAcknowledged').checked
@@ -726,7 +726,7 @@ try {
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
   assert(await evaluate("document.activeElement === document.getElementById('encounterStatus')"), "Signature did not restore focus to the updated encounter status.");
   assert(await evaluate(`(() => {
-    const state = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const state = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const patient = state.patients.find(({ mrn }) => mrn === 'SMOKE-001');
     const encounter = patient.events.find(({ type }) => type === 'encounter');
     const children = patient.events.filter(({ encounterId }) => encounterId === encounter.id);
@@ -749,7 +749,7 @@ try {
   await delay(250);
   assert(await evaluate("document.getElementById('eventTimeline').textContent.includes('스모크 혈압')"), "Chart event did not render.");
   assert(await evaluate(`(() => {
-    const actions = JSON.parse(localStorage.getItem('vitagraph-emr-v2')).audit.map(({ action }) => action);
+    const actions = JSON.parse(localStorage.getItem('policycompass-emr-v2')).audit.map(({ action }) => action);
     return ['fhir.imported', 'patient.created', 'encounter.checked-in', 'encounter.started', 'observation.added', 'encounter.signed', 'patient.event.added']
       .every((action) => actions.includes(action));
   })()`), "Audit trail missed a required patient, encounter, FHIR, or chart action.");
@@ -767,7 +767,7 @@ try {
     "document.getElementById('patientForm').requestSubmit()",
   ].join(";"));
   await delay(100);
-  assert(await evaluate(`!JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.some(({ mrn }) => mrn === '../SMOKE-XSS')
+  assert(await evaluate(`!JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.some(({ mrn }) => mrn === '../SMOKE-XSS')
     && document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'
     && document.getElementById('eventLabel').value.includes('미추가 과거기록')
     && document.getElementById('patientFormMessage').textContent.includes('미등록 임상 입력')`), "New-patient creation discarded or reattributed a pending historical-event form.");
@@ -778,19 +778,19 @@ try {
     formMessage: document.getElementById('patientFormMessage').textContent,
     workspaceStatus: document.getElementById('workspaceStatus').textContent,
     formValid: document.getElementById('patientForm').checkValidity(),
-    patients: JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.map(({ mrn, name }) => ({ mrn, name })),
+    patients: JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.map(({ mrn, name }) => ({ mrn, name })),
   })`);
   assert(await evaluate("window.__xssExecuted === 0 && document.getElementById('selectedPatientName').querySelector('img') === null"), "Hostile patient text executed as markup.");
   assert(await evaluate("document.getElementById('selectedPatientName').textContent.includes('<img')"), `Hostile patient text was not preserved as inert text: ${hostilePatientDebug}`);
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.some(({ mrn, birthDate, ageYears, sex }) => mrn === '../SMOKE-XSS' && !birthDate && ageYears === 47 && sex === 'male')"), "Direct age or sex did not persist when birth date was unknown.");
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.some(({ mrn, birthDate, ageYears, sex }) => mrn === '../SMOKE-XSS' && !birthDate && ageYears === 47 && sex === 'male')"), "Direct age or sex did not persist when birth date was unknown.");
   await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click(); window.__patientTransitionWasInert = document.getElementById('mainContent').inert");
   await waitFor("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'", "Could not return to the smoke patient after hostile input test.");
   assert(await evaluate("window.__patientTransitionWasInert === true && document.getElementById('mainContent').inert === false"), "Async patient transition did not lock patient-bound inputs for its full save window.");
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).audit.filter(({ action }) => action === 'patient.created').length >= 2"), "Hostile-text patient creation was not audited.");
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).audit.filter(({ action }) => action === 'patient.created').length >= 2"), "Hostile-text patient creation was not audited.");
 
-  const stateBeforeFailure = await evaluate("localStorage.getItem('vitagraph-emr-v2')");
+  const stateBeforeFailure = await evaluate("localStorage.getItem('policycompass-emr-v2')");
   const recoveryBackup = JSON.stringify({
-    schema: "vitagraph-emr-backup",
+    schema: "policycompass-emr-backup",
     version: 2,
     exportedAt: "2026-07-19T10:00:00.000Z",
     data: JSON.parse(stateBeforeFailure),
@@ -805,7 +805,7 @@ try {
   await delay(100);
   assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'"), "Failed storage mutation changed visible patient state.");
   assert(await evaluate("document.getElementById('patientFormMessage').textContent.includes('quota smoke')"), "Storage failure was not shown to the user.");
-  assert(await evaluate("localStorage.getItem('vitagraph-emr-v2')") === stateBeforeFailure, "Failed storage mutation changed persisted state.");
+  assert(await evaluate("localStorage.getItem('policycompass-emr-v2')") === stateBeforeFailure, "Failed storage mutation changed persisted state.");
   await evaluate("Storage.prototype.setItem = window.__storageSetItem");
 
   const lowRevisionBackup = JSON.parse(recoveryBackup);
@@ -834,7 +834,7 @@ try {
   })()`);
   assert(blockedBackupExport.downloads === 0 && blockedBackupExport.status.includes("미저장") && blockedBackupExport.value === "147/91", "Backup export discarded or omitted a pending clinical item.");
 
-  const revisionBeforeBlockedRestore = await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision");
+  const revisionBeforeBlockedRestore = await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).revision");
   await evaluate(`(() => {
     window.confirm = () => true;
     const input = document.getElementById('importEmr');
@@ -846,7 +846,7 @@ try {
   await delay(100);
   assert(await evaluate(`document.getElementById('workspaceStatus').textContent.includes('미저장')
     && document.getElementById('vitalValue').value === '147/91'
-    && JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision === ${revisionBeforeBlockedRestore}`), "Backup restore discarded a pending clinical item or changed persisted state.");
+    && JSON.parse(localStorage.getItem('policycompass-emr-v2')).revision === ${revisionBeforeBlockedRestore}`), "Backup restore discarded a pending clinical item or changed persisted state.");
   await evaluate("document.getElementById('vitalValue').value = ''; document.getElementById('cancelPatientEdit').click()");
   await evaluate(`(() => {
     window.confirm = () => true;
@@ -857,9 +857,9 @@ try {
     input.dispatchEvent(new Event('change'));
   })()`);
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('출처 미검증 상태로 복원')", "Normal backup restore did not finish.");
-  assert(await evaluate(`JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision === ${JSON.parse(stateBeforeFailure).revision + 1}`), "Backup restore reused its historical revision and left an ABA window.");
+  assert(await evaluate(`JSON.parse(localStorage.getItem('policycompass-emr-v2')).revision === ${JSON.parse(stateBeforeFailure).revision + 1}`), "Backup restore reused its historical revision and left an ABA window.");
   assert(await evaluate(`(() => {
-    const restored = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const restored = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     const restoredRecords = restored.patients.flatMap(({ events }) => events);
     return restored.audit.length === 1
       && restored.audit[0].action === 'backup.restored'
@@ -894,11 +894,11 @@ try {
     return result;
   })()`);
   assert(staleBackupExport.downloads === 0 && staleBackupExport.status.includes("다른 탭의 최신 변경"), "Backup export emitted a stale cross-tab revision.");
-  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))");
+  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'policycompass-emr-v2', newValue: localStorage.getItem('policycompass-emr-v2') }))");
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('다른 탭의 로컬 기록 변경')", "Primary tab did not adopt the backup-guard CAS change.");
 
   const corruptRaw = "{corrupt-smoke";
-  await evaluate(`localStorage.setItem('vitagraph-emr-v2', ${JSON.stringify(corruptRaw)})`);
+  await evaluate(`localStorage.setItem('policycompass-emr-v2', ${JSON.stringify(corruptRaw)})`);
   await client.call("Page.navigate", { url: appUrl + "/emr" });
   await waitFor("document.getElementById('dataFacts')?.textContent.includes('복구 필요')", "Corrupt storage recovery state did not render.");
   assert(await evaluate("document.getElementById('dataFacts').textContent.includes('복구 필요')"), "Corrupt storage recovery state did not render.");
@@ -917,7 +917,7 @@ try {
     return { value: window.__recoveryParts.join(''), name: window.__recoveryName };
   })()`);
   assert(recovered.value === corruptRaw, "Recovery export did not preserve the exact corrupt source.");
-  assert(/^vitagraph-emr-recovery-raw-/.test(recovered.name), "Recovery export filename was not explicit.");
+  assert(/^policycompass-emr-recovery-raw-/.test(recovered.name), "Recovery export filename was not explicit.");
 
   await evaluate(`(() => {
     window.confirm = () => true;
@@ -929,7 +929,7 @@ try {
   })()`);
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('출처 미검증 상태로 복원')", "Backup could not replace the exact corrupt storage source.");
   assert(await evaluate("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'"), "Recovered backup did not restore the selected patient.");
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).revision > 1000000000000000"), "Corrupt-storage restore did not rotate the revision away from stale tabs.");
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).revision > 1000000000000000"), "Corrupt-storage restore did not rotate the revision away from stale tabs.");
 
   const concurrentWrite = await evaluate(`(async () => {
     const model = await import('/emr-model.js');
@@ -952,7 +952,7 @@ try {
   assert(concurrentWrite.errors.some((message) => /다른 탭.*변경/.test(message)), "Concurrent browser write rejection did not explain the revision conflict.");
   assert(concurrentWrite.persistedIds.filter((id) => ["cas-first", "cas-second"].includes(id)).length === 1, "Concurrent browser writes lost both records or accepted both stale candidates.");
 
-  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))");
+  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'policycompass-emr-v2', newValue: localStorage.getItem('policycompass-emr-v2') }))");
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('다른 탭의 로컬 기록 변경')", "Primary tab did not adopt the concurrent-write winner.");
   await evaluate("[...document.querySelectorAll('[data-patient-id]')].find((button) => button.textContent.includes('브라우저 테스트 환자')).click()");
   await waitFor("document.getElementById('selectedPatientName').textContent === '브라우저 테스트 환자'", "Primary tab did not return to the smoke patient before the cross-tab wipe.");
@@ -964,13 +964,13 @@ try {
     "document.getElementById('soapSubjective').value = 'CROSS-TAB-DIRTY-SOAP-S'",
     "document.getElementById('soapPlan').value = 'CROSS-TAB-DIRTY-SOAP-P'",
     "document.getElementById('vitalValue').value = '121/81'",
-    "window.__staleEmrBeforeWipe = JSON.parse(localStorage.getItem('vitagraph-emr-v2'))",
+    "window.__staleEmrBeforeWipe = JSON.parse(localStorage.getItem('policycompass-emr-v2'))",
     "window.__wipeDownloads = []",
     "window.__wipeOriginalBlob = window.Blob",
     "window.Blob = class extends window.__wipeOriginalBlob { constructor(parts, options) { super(parts, options); window.__wipeDownloads.push(parts.map(String).join('')); } }",
     "HTMLAnchorElement.prototype.click = function () {}",
   ].join(";"));
-  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'vitagraph-emr-v2', newValue: localStorage.getItem('vitagraph-emr-v2') }))");
+  await evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'policycompass-emr-v2', newValue: localStorage.getItem('policycompass-emr-v2') }))");
   assert(await evaluate("document.getElementById('soapPlan').value === 'CROSS-TAB-DIRTY-SOAP-P' && document.getElementById('workspaceStatus').textContent.includes('미저장 입력을 보존')"), "The ordinary cross-tab dirty-form guard was not active before the tombstone override test.");
   if (aiConnected) {
     await evaluate([
@@ -1041,12 +1041,12 @@ try {
   assert(await evaluate("document.getElementById('fhirImportReport').hidden && document.getElementById('fhirImportReportSummary').textContent === ''", wipeClient), "Full wipe retained FHIR import metadata.");
   assert(await evaluate("document.getElementById('fhirImportIssues').textContent === ''", wipeClient), "Full wipe retained FHIR resource identifiers in the DOM.");
   assert(await evaluate(`(() => {
-    const tombstone = JSON.parse(localStorage.getItem('vitagraph-emr-v2'));
+    const tombstone = JSON.parse(localStorage.getItem('policycompass-emr-v2'));
     return tombstone.patients.length === 0
       && tombstone.audit.length === 0
       && tombstone.rules.every(({ sample }) => sample === true)
       && tombstone.revision > 1000000000000000
-      && localStorage.getItem('vitagraph-emr-v1') === null;
+      && localStorage.getItem('policycompass-emr-v1') === null;
   })()`), "Full wipe retained clinical data or failed to preserve its anti-resurrection tombstone.");
 
   const primaryExportsAfterWipe = await evaluate(`(() => {
@@ -1094,7 +1094,7 @@ try {
     }
   })()`);
   assert(/다른 탭.*변경/.test(staleWriteAfterWipe), "A stale browser tab revived patient data after full wipe.");
-  assert(await evaluate("JSON.parse(localStorage.getItem('vitagraph-emr-v2')).patients.length === 0"), "Rejected stale write changed the full-wipe tombstone.");
+  assert(await evaluate("JSON.parse(localStorage.getItem('policycompass-emr-v2')).patients.length === 0"), "Rejected stale write changed the full-wipe tombstone.");
 
   const result = {
     demoPatient: "김비타",

@@ -279,15 +279,15 @@ function assertRejected(payload) {
   );
 }
 
-test("환자 안전 전송 파일은 확정 VitaGraph 정보만 내보내고 앱 입력으로 왕복한다", () => {
+test("환자 안전 전송 파일은 확정 PolicyCompass 정보만 내보내고 앱 입력으로 왕복한다", () => {
   const transfer = createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE);
   const parsed = parsePatientTransferPackage(clone(transfer));
 
-  assert.equal(transfer.schema, "vitagraph-patient-transfer");
+  assert.equal(transfer.schema, "policycompass-patient-transfer");
   assert.equal(transfer.version, 1);
   assert.equal(transfer.exportedAt, EXPORTED_AT);
   assert.equal(transfer.transferCode, TRANSFER_CODE);
-  assert.equal(transfer.scope, "patient-vita-graph");
+  assert.equal(transfer.scope, "patient-policy-compass");
   assert.equal(transfer.trust, "unsigned-local-export");
   assert.deepEqual(transfer.healthMap.conditions.map(({ id }) => id).sort(), ["copd", "diabetes", "hypertension"]);
   assert.deepEqual(
@@ -626,8 +626,8 @@ test("전달 확인 코드는 환자 식별자에서 파생하지 않고 매 내
 });
 
 test("파일명은 환자 전달물임과 내보내기 날짜를 고정한다", () => {
-  assert.equal(patientTransferFilename(EXPORTED_AT), "vitagraph-patient-transfer-2026-07-20.json");
-  assert.equal(patientTransferFilename("2026-07-19T16:05:00.000Z"), "vitagraph-patient-transfer-2026-07-20.json");
+  assert.equal(patientTransferFilename(EXPORTED_AT), "policycompass-patient-transfer-2026-07-20.json");
+  assert.equal(patientTransferFilename("2026-07-19T16:05:00.000Z"), "policycompass-patient-transfer-2026-07-20.json");
 });
 
 test("한국 자정 직후 전달은 현지 진료일을 미래 기록으로 오인하지 않는다", () => {
@@ -658,7 +658,7 @@ test("파서는 schema·version·scope·trust와 모든 중첩 키를 exact-key�
   const base = createPatientTransferPackage(buildTransferPatient(), EXPORTED_AT, TRANSFER_CODE);
   const variants = [
     { ...clone(base), unknown: true },
-    { ...clone(base), schema: "vitagraph-emr-backup" },
+    { ...clone(base), schema: "policycompass-emr-backup" },
     { ...clone(base), version: 2 },
     { ...clone(base), scope: "full-emr" },
     { ...clone(base), trust: "cryptographically-signed" },

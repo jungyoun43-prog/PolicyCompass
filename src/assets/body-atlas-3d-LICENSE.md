@@ -1,4 +1,4 @@
-# VitaGraph 3D body assets
+# PolicyCompass 3D body assets
 
 ## `body-atlas-3d-v4.glb`
 
@@ -17,7 +17,7 @@ Only the closed `g body` surface is included. The source's `helper-genital`,
 `helper-tights`, `helper-skirt`, eyes, teeth, eyelashes, hair, tongue, joint
 markers, and every other helper group are excluded from the GLB.
 
-VitaGraph v3 base modifications:
+PolicyCompass v3 base modifications:
 
 - extracted and remapped the core body surface into a single render mesh;
 - applied the official CC0 shaping target above at `0.40` weight, then gently
@@ -28,7 +28,7 @@ VitaGraph v3 base modifications:
 - gently softened hip and pelvic proportions into a continuous, sex-neutral
   clinical-mannequin surface without a separate garment or modesty mesh;
 - preserved `+Y` as up, oriented the front toward `+Z`, scaled the body to
-  exactly 1.80 m, placed the feet at `y=0`, and aligned depth with VitaGraph's
+  exactly 1.80 m, placed the feet at `y=0`, and aligned depth with PolicyCompass's
   body-map hotspots;
 - applied a neutral gray, texture-free translucent clinical shell material;
 - added original procedural navigation meshes for the brain, left and right
@@ -38,7 +38,7 @@ VitaGraph v3 base modifications:
 - omitted textures, UVs, rigs, animations, external buffers, and external
   resources.
 
-VitaGraph v4 additionally scales and translates each organ mesh within the
+PolicyCompass v4 additionally scales and translates each organ mesh within the
 closed body shell so the navigation anatomy stays visually contained from
 front, side, and rear views. Every transformed organ vertex is checked against
 the shell during regression testing. The reproducible containment pass is in

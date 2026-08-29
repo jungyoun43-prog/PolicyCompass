@@ -72,11 +72,30 @@ function HighlightedText({ text, highlights = [], pairs = new Map() }) {
   return <>{nodes}</>;
 }
 
+const INTERNAL_RECORD_TERMS = new Set(["코드 시스템", "기록 ID", "연결 진료 ID", "기록 출처"]);
+
+/**
+ * Clinician-facing code: keep clinical codes (KCD, LOINC), drop the internal
+ * namespace prefix and hide synthetic internal identifiers entirely.
+ */
+function displayRecordCode(code) {
+  const bare = String(code ?? "").split("|").pop().trim();
+  if (!bare || /^(PC-|DEMO-)/i.test(bare)) return "";
+  return bare;
+}
+
+function clinicianRecordRows(rows) {
+  return rows.filter(([term, value]) => {
+    if (INTERNAL_RECORD_TERMS.has(term)) return false;
+    if (term === "코드" && !displayRecordCode(value)) return false;
+    return true;
+  });
+}
+
 function medicationDetailRows(medication) {
   return [
     ["계열", medication.classLabel],
     ["적응증", medication.indication || "등록된 적응증 없음"],
-    ["약품 코드", `${medication.system} | ${medication.code}`],
     ["급여 인정 상병", medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ") || "등록된 인정 상병 없음"],
     ["기본 용법", `1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일 · 총 ${medication.dosing.quantity}`],
     ["복약 안내", medication.dosing.instructions || "등록된 복약 안내 없음"],
@@ -87,7 +106,7 @@ function medicationDetailRows(medication) {
 function medicationReviewTransmission(review) {
   const findings = review.checks.reduce((total, item) => total + item.chart.findings.filter(({ eventId }) => eventId).length, 0);
   return [
-    ["약품", `${review.medication.label} · ${review.medication.ingredient} · ${review.medication.code}`],
+    ["약품", `${review.medication.label} · ${review.medication.ingredient}`],
     ["이번 처방", [
       review.prescription.dose ? `1회 ${review.prescription.dose}${review.prescription.doseUnit}` : "",
       review.prescription.route,
@@ -429,7 +448,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                                 {check.chart.findings.length === 0 ? <li className="rx-source__findings-empty">대조된 환자 기록 없음</li> : check.chart.findings.map((record, index) => (
                                   <li key={index}>
                                     <b>{record.label}</b>
-                                    <span>{[record.code, record.date ? displayDate(record.date) : "", record.provenance, record.detail].filter(Boolean).join(" · ")}</span>
+                                    <span>{[displayRecordCode(record.code), record.date ? displayDate(record.date) : "", record.provenance, record.detail].filter(Boolean).join(" · ")}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -453,7 +472,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                                       <Fragment key={index}>
                                         <p className="rx-source__article">{item.label}{item.provenance ? ` · ${item.provenance}` : ""}</p>
                                         <dl className="rx-detail-list rx-source__record">
-                                          {item.record.map(([term, value]) => (
+                                          {clinicianRecordRows(item.record).map(([term, value]) => (
                                             <Fragment key={term}>
                                               <dt>{term}</dt>
                                               <dd><HighlightedText text={value} highlights={item.highlights} pairs={pairs} /></dd>

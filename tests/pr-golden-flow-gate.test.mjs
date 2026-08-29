@@ -38,7 +38,7 @@ test("explicit and managed app URLs are both health checked", () => {
   assert.match(gate, /startManagedAppServer\(\{ appUrl, healthPath: "\/patient" \}\)/);
   assert.match(harness, /if \(appUrl\) \{[\s\S]*?await waitForAppHealth\(normalized/);
   assert.match(harness, /const port = await reserveTcpPort\(\)/);
-  assert.match(harness, /spawn\(process\.execPath, \["scripts\/dev\.mjs"\]/);
+  assert.match(harness, /spawn\("npx", \["next", "start", "-p", String\(port\)\]/);
   assert.match(harness, /server\.stdout\.on\("data"/);
   assert.match(harness, /server\.stderr\.on\("data"/);
   assert.match(gate, /finally \{[\s\S]*?await server\?\.stop\(\)/);

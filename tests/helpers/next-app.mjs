@@ -45,10 +45,13 @@ async function ensureBuild() {
 export async function startNextServer(environment = {}) {
   await ensureBuild();
   const port = await freePort();
+  // detached: the npx wrapper spawns next-server as a grandchild; killing the
+  // whole process group is the only way the runner's stdio pipes ever close.
   const child = spawn("npx", ["next", "start", "-p", String(port)], {
     cwd: new URL("../..", import.meta.url),
     env: { ...process.env, ...AI_ENV_BLANKS, ...environment },
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
   let output = "";
   child.stdout.on("data", (chunk) => { output += chunk; });
@@ -68,14 +71,20 @@ export async function startNextServer(environment = {}) {
   throw new Error(`Next 서버 시작 시간 초과: ${output}`);
 }
 
+function killGroup(child, signal) {
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    try { child.kill(signal); } catch { /* already gone */ }
+  }
+}
+
 export async function stopNextServer(child) {
   if (!child || child.exitCode !== null) return;
-  child.kill("SIGTERM");
+  killGroup(child, "SIGTERM");
   await Promise.race([
     new Promise((resolve) => child.once("exit", resolve)),
-    new Promise((resolve) => setTimeout(() => {
-      if (child.exitCode === null) child.kill("SIGKILL");
-      resolve();
-    }, 3_000)),
+    new Promise((resolve) => setTimeout(resolve, 3_000)),
   ]);
+  killGroup(child, "SIGKILL");
 }

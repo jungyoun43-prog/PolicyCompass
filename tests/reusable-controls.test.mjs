@@ -17,14 +17,14 @@ const controlClasses = [
 ];
 
 const routeStyles = ["landing.css", "gateway.css", "insights.css", "emr.css"];
-const pages = [
-  "gateway.html",
-  "landing.html",
-  "index.html",
-  "connections.html",
-  "insights.html",
-  "journey.html",
-  "emr.html",
+const layouts = [
+  "app/(gateway)/layout.jsx",
+  "app/(landing)/layout.jsx",
+  "app/(map)/layout.jsx",
+  "app/(connections)/layout.jsx",
+  "app/(insights)/layout.jsx",
+  "app/(journey)/layout.jsx",
+  "app/(emr)/layout.jsx",
 ];
 
 test("공통 컨트롤 모듈이 hover, keyboard focus, active, disabled 피드백을 모두 소유한다", async () => {
@@ -38,9 +38,9 @@ test("공통 컨트롤 모듈이 hover, keyboard focus, active, disabled 피드�
   assert.match(css, /outline: 3px solid/);
 });
 test("모든 화면은 공통 컨트롤 모듈을 소비한다", async () => {
-  for (const page of pages) {
-    const html = await readFile(`src/${page}`, "utf8");
-    assert.match(html, /href="\/controls\.css"/, page);
+  for (const layout of layouts) {
+    const source = await readFile(layout, "utf8");
+    assert.match(source, /import "[^"]*\/controls\.css"/, layout);
   }
 });
 

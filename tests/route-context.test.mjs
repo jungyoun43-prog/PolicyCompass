@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { componentMarkup, pageMarkup } from "./helpers/markup.mjs";
+
 const routes = new Map([
-  ["/", ["gateway.html", /데이터 입력 없음/]],
-  ["/patient", ["landing.html", /개인용 · 이 브라우저에 저장 · 서버 자동 전송 없음 · 진단이나 처방 아님/]],
-  ["/map", ["index.html", /진단 결과가 아닌 대화 준비용 지도/]],
-  ["/connections", ["connections.html", /0개 질환/]],
-  ["/insights", ["insights.html", /현재 브리프/]],
-  ["/journey", ["journey.html", /현재 브라우저의 이 기기에만 저장/]],
-  ["/emr", ["emr.html", /평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음/]],
+  ["/", [() => pageMarkup("/"), /데이터 입력 없음/]],
+  ["/patient", [() => pageMarkup("/patient"), /개인용 · 이 브라우저에 저장 · 서버 자동 전송 없음 · 진단이나 처방 아님/]],
+  ["/map", [() => pageMarkup("/map"), /진단 결과가 아닌 대화 준비용 지도/]],
+  ["/connections", [() => pageMarkup("/connections"), /0개 질환/]],
+  ["/insights", [() => pageMarkup("/insights"), /현재 브리프/]],
+  ["/journey", [() => pageMarkup("/journey"), /현재 브라우저의 이 기기에만 저장/]],
+  ["/emr", [() => componentMarkup("components/emr/chrome.jsx"), /평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음/]],
 ]);
 
 function assertExposedRouteContext(html, route, expected) {
@@ -28,9 +29,8 @@ function assertExposedRouteContext(html, route, expected) {
 }
 
 test("모든 경로는 공개된 안전 또는 상태 맥락을 하나씩 제공한다", async () => {
-  for (const [route, [file, expected]] of routes) {
-    const html = await readFile(new URL(`../src/${file}`, import.meta.url), "utf8");
-    assertExposedRouteContext(html, route, expected);
+  for (const [route, [load, expected]] of routes) {
+    assertExposedRouteContext(await load(), route, expected);
   }
 });
 

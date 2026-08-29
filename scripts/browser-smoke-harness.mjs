@@ -359,9 +359,11 @@ export async function startManagedAppServer({
   const port = await reserveTcpPort();
   const localUrl = `http://127.0.0.1:${port}`;
   let output = "";
+  // detached so the whole npx → next-server group can be stopped together.
   const server = spawn("npx", ["next", "start", "-p", String(port)], {
     env: { ...process.env },
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
   server.stdout.on("data", (chunk) => {
     output = appendBoundedLog(output, chunk);
@@ -393,7 +395,7 @@ export async function startManagedAppServer({
     managed: true,
     output: () => output,
     server,
-    stop: () => stopChildProcess(server),
+    stop: () => stopChildProcess(server, { processGroup: true }),
   };
 }
 

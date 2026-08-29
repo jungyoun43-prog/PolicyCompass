@@ -179,7 +179,12 @@ test("배포 구성은 Next 기본 감지에 맡기고 이전 커스텀 서버�
   assert.equal(packageConfig.scripts.start, "next start");
   assert.equal(packageConfig.scripts.dev, "next dev");
 
-  for (const stale of ["vercel.json", "render.yaml", "api/index.js", "scripts/server.mjs", "scripts/app-server.mjs", "scripts/build.mjs", "scripts/dev.mjs"]) {
+  const vercelConfig = JSON.parse(await readFile("vercel.json", "utf8"));
+  assert.equal(vercelConfig.framework, "nextjs");
+  assert.equal(vercelConfig.buildCommand, null);
+  assert.equal(vercelConfig.outputDirectory, null);
+
+  for (const stale of ["render.yaml", "api/index.js", "scripts/server.mjs", "scripts/app-server.mjs", "scripts/build.mjs", "scripts/dev.mjs"]) {
     const missing = await readFile(stale, "utf8").then(() => false, () => true);
     assert.equal(missing, true, `${stale}은 제거되어야 합니다`);
   }

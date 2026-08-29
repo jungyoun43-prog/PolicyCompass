@@ -1,6 +1,6 @@
 "use client";
 
-import { displayDate, displayTimestamp, INSURANCE_LABELS, patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
+import { displayTimestamp, patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
 import { confirmedActiveConditions, finalizedPatient } from "../../lib/emr/selectors.js";
 
 /**
@@ -18,16 +18,16 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
     <section className="rail-selected-patient" data-safety-persistent aria-label="선택 환자 요약">
       <div className="patient-identity">
         <p className="rail-eyebrow">SELECTED PATIENT</p>
-        <div>
-          <h2 id="selectedPatientName">{patient.name}</h2>
-          <span id="selectedPatientMeta">{[
-            patient.mrn || "등록번호 없음",
-            patient.birthDate ? displayDate(patient.birthDate) : "생년월일 미상",
-            patientAgeLabel(patient),
-            SEX_LABELS[patient.sex],
-            patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "혈액형 미상",
-            INSURANCE_LABELS[patient.insuranceType],
-          ].filter(Boolean).join(" · ")}</span>
+        <div className="patient-identity__row">
+          <span className="patient-avatar" aria-hidden="true">{(patient.name || "?").charAt(0)}</span>
+          <div>
+            <h2 id="selectedPatientName">{patient.name}</h2>
+            <span id="selectedPatientMeta">{[
+              patientAgeLabel(patient),
+              SEX_LABELS[patient.sex],
+              patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "",
+            ].filter(Boolean).join(" · ")}</span>
+          </div>
         </div>
         <div className="patient-condition-summary" aria-label="확정 활성 질환">
           <span className="patient-condition-summary__label">현재 질환</span>

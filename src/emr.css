@@ -807,10 +807,7 @@ body.emr-page {
 .patient-workspace-navigation {
   position: sticky;
   z-index: 18;
-  top: var(--header-height);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--ink) 7%, transparent);
-  backdrop-filter: blur(14px);
+  top: calc(var(--header-height) + var(--space-2));
 }
 
 .patient-safety-header {
@@ -9448,4 +9445,94 @@ model-viewer::part(default-progress-mask) {
   border-bottom: 0;
   background: transparent;
   padding: 0 var(--space-2);
+}
+
+
+/* --- Floating tab bar + rail identity card ---------------------------------- */
+
+.patient-workspace-navigation {
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow:
+    0 12px 30px color-mix(in srgb, var(--ink) 14%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ink) 6%, transparent);
+  margin-bottom: var(--space-3);
+}
+
+.patient-avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 88%, var(--data-cyan)), color-mix(in srgb, var(--accent) 70%, var(--ink)));
+  color: var(--on-inverse, #fff);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.patient-avatar--mini {
+  width: 26px;
+  height: 26px;
+  align-self: center;
+  font-size: 0.78rem;
+}
+
+.workspace-tabs__context {
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Rail identity card: branded, left-aligned, essentials only. */
+.rail-selected-patient {
+  position: relative;
+  justify-items: start;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 9rem),
+    var(--surface-raised);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.rail-selected-patient::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--data-cyan)));
+}
+
+.patient-identity__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rail-selected-patient .patient-identity__row h2 {
+  font-size: 1.15rem;
+}
+
+.rail-selected-patient #selectedPatientMeta {
+  font-size: 0.74rem;
+}
+
+.rail-selected-patient .safety-alerts,
+.rail-selected-patient .patient-condition-summary {
+  justify-content: flex-start;
+}
+
+.rail-selected-patient .patient-header-actions {
+  width: 100%;
+}
+
+
+/* The avatar glyph must beat the muted identity-span rule. */
+.rail-selected-patient .patient-avatar,
+.workspace-tabs__context .patient-avatar,
+.patient-identity > div > .patient-avatar {
+  color: var(--on-inverse);
 }

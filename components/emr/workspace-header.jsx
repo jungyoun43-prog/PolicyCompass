@@ -37,6 +37,7 @@ export function WorkspaceHeader({ patient, activeTab, onSelectTab }) {
   return (
     <div className="patient-workspace-navigation">
       <span className="workspace-tabs__context" aria-hidden="true">
+        <span className="patient-avatar patient-avatar--mini">{(patient.name || "?").charAt(0)}</span>
         <b>{patient.name}</b>
         <span>{[patientAgeLabel(patient), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")}</span>
         {firstAllergy ? <em className="workspace-tabs__allergy">알레르기</em> : null}

@@ -124,6 +124,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [form, setForm] = useState(EMPTY_RX_FORM);
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
   const [review, setReview] = useState(null);
+  const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
   const [expandedDetails, setExpandedDetails] = useState(() => new Set());
@@ -164,6 +165,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       return;
     }
     setReview(null);
+    setPendingReview(null);
     setExpandedSources(new Set());
     setActiveDialog("prescription");
   };
@@ -210,11 +212,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       return;
     }
     setExpandedSources(new Set());
-    setReview({ medicationId, ...base });
     if (!provider) {
+      setReview({ medicationId, ...base });
       setStatus("등록 기준과 이 환자 기록을 대조한 규칙 기반 사전점검입니다. AI 모델이 설정되지 않아 환자 자료를 전송하지 않았습니다.");
       return;
     }
+    // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
+    setReview(null);
+    setPendingReview({ medicationId, name: medication.label });
     setReviewBusyId(medicationId);
     try {
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
@@ -228,8 +233,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       setReview({ medicationId, ...merged });
       setStatus("AI 검토 초안을 만들었습니다. 급여 인정·삭감을 확정하지 않습니다.", "success");
     } catch (error) {
+      setReview({ medicationId, ...base });
       setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
     } finally {
+      setPendingReview(null);
       setReviewBusyId("");
     }
   };
@@ -357,7 +364,28 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
           <section className="rx-review" aria-labelledby="rxReviewTitle">
             <h4 className="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
-            {!review ? (
+            {pendingReview ? (
+              <div className="rx-review__progress" id="medicationReviewProgress" role="status" aria-live="polite">
+                <span className="rx-review__spinner" aria-hidden="true"></span>
+                <div className="rx-review__progress-text">
+                  <b>AI 검토 중 · {pendingReview.name}</b>
+                  <span>{cloudLabel}이 기준 문구와 환자 기록을 다시 대조하고 있습니다. 검토가 끝나면 판정과 근거를 함께 보여 드립니다.</span>
+                  <ol className="rx-pipeline rx-pipeline--progress">
+                    {[
+                      ["1", "규칙 대조 완료", "done"],
+                      ["2", "대조 결과 전송", "done"],
+                      ["3", "모델 재검토 중", "active"],
+                      ["4", "판정·근거 반환", "waiting"],
+                    ].map(([index, title, state]) => (
+                      <li className="rx-pipeline__step" data-state={state} key={index}>
+                        <span className="rx-pipeline__index">{state === "done" ? "✓" : index}</span>
+                        <span className="rx-pipeline__text"><b>{title}</b></span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            ) : !review ? (
               <p className="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 환자의 기록과 등록된 급여기준을 항목별로 대조해 삭감 위험을 ○·△·✕로 보여 줍니다.</p>
             ) : (
               <div className="rx-review__body" id="medicationReviewBody" aria-live="polite">

@@ -8484,6 +8484,88 @@ button.claim-attention-item__summary:focus-visible {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--rx-pair) 55%, transparent);
 }
 
+.rx-review__progress {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface-raised) 88%, var(--accent) 12%);
+  padding: var(--space-3) var(--space-4);
+}
+
+.rx-review__spinner {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: rx-review-spin 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx-review__spinner {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--accent) 28%, transparent);
+    border-inline-start-color: var(--accent);
+  }
+}
+
+@keyframes rx-review-spin {
+  to { transform: rotate(360deg); }
+}
+
+.rx-review__progress-text {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-caption);
+  color: var(--muted);
+}
+
+.rx-review__progress-text > b {
+  color: var(--ink);
+  font-size: var(--font-size-body);
+}
+
+.rx-pipeline--progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.rx-pipeline--progress .rx-pipeline__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.rx-pipeline--progress .rx-pipeline__step[data-state="active"] .rx-pipeline__index {
+  animation: rx-step-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx-pipeline--progress .rx-pipeline__step[data-state="active"] .rx-pipeline__index {
+    animation: none;
+  }
+}
+
+@keyframes rx-step-pulse {
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+}
+
+.rx-pipeline--progress .rx-pipeline__step[data-state="waiting"] {
+  opacity: 0.55;
+}
+
+.rx-pipeline--progress .rx-pipeline__text b {
+  font-weight: 600;
+  color: inherit;
+}
+
 .rx-review__empty,
 .rx-review__boundary {
   margin: 0;

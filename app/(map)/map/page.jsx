@@ -232,7 +232,6 @@ export default function Page() {
                   aria-describedby="mapInstructions mapRelationshipMeaning bodyKeyText"
                   data-body-3d
                   data-body-model="/assets/body-atlas-3d-v4.glb"
-                  data-body-viewer-module="/vendor/model-viewer-4.3.1.min.js"
                   data-body-context="patient"
                   data-body-alt="회색 신체 외피와 내부 장기를 함께 확인하는 회전 가능한 3D 건강 지도"
                 >

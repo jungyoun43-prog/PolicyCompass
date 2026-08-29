@@ -1,5 +1,6 @@
 "use client";
 
+import { useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
 import { displayDate, displayTimestamp, INSURANCE_LABELS, patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
 import { confirmedActiveConditions, finalizedPatient } from "../../lib/emr/selectors.js";
 
@@ -14,6 +15,7 @@ const TABS = [
 ];
 
 export function WorkspaceHeader({ patient, demo, updatedAt, activeTab, onSelectTab, onEditPatient }) {
+  const tabListRef = useHorizontalScrollPosition();
   const conditions = confirmedActiveConditions(patient);
   const chart = finalizedPatient(patient);
   const allergies = chart.events.filter((event) => event.type === "allergy");
@@ -86,7 +88,7 @@ export function WorkspaceHeader({ patient, demo, updatedAt, activeTab, onSelectT
         </div>
       </header>
 
-      <div className="workspace-tabs" role="tablist" aria-label="선택 환자 화면" aria-orientation="horizontal" onKeyDown={onTabKeyDown}>
+      <div className="workspace-tabs" role="tablist" aria-label="선택 환자 화면" aria-orientation="horizontal" onKeyDown={onTabKeyDown} ref={tabListRef}>
         {TABS.map(([key, label]) => (
           <button
             key={key}

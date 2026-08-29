@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 test("Journey 변화는 저장 데이터를 수정하지 않는 하나의 명시적 기본 동작으로 연다", async () => {
   const [html, client, css] = await Promise.all([
-    readFile(new URL("../src/journey.html", import.meta.url), "utf8"),
+    pageMarkup("/journey"),
     readFile(new URL("../src/journey.js", import.meta.url), "utf8"),
     readFile(new URL("../src/journey.css", import.meta.url), "utf8"),
   ]);

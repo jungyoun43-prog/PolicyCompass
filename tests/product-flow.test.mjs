@@ -1,14 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
+
+import { pageMarkup } from "./helpers/markup.mjs";
+
+const SOURCE_ROUTES = {
+  "/journey": () => pageMarkup("/journey"),
+  "/map": () => pageMarkup("/map"),
+  "/journey.css": () => readFile("src/journey.css", "utf8"),
+  "/journey.js": () => readFile("src/journey.js", "utf8"),
+  "/journey-model.js": () => readFile("src/journey-model.js", "utf8"),
+  "/patient-transfer.js": () => readFile("src/patient-transfer.js", "utf8"),
+  "/care-bridge.js": () => readFile("src/care-bridge.js", "utf8"),
+  "/sample-navigation.js": () => readFile("src/sample-navigation.js", "utf8"),
+  "/patient-question-assistant.js": () => readFile("src/patient-question-assistant.js", "utf8"),
+  "/app.js": () => readFile("src/app.js", "utf8"),
+  "/connections.js": () => readFile("src/connections.js", "utf8"),
+  "/insights.js": () => readFile("src/insights.js", "utf8"),
+};
 
 async function deployedText(route) {
-  const { default: worker } = await import("../dist/server/index.js");
-  const response = await worker.fetch(new Request(`https://example.com${route}`));
-  assert.equal(response.status, 200, route);
-  return response.text();
+  const loader = SOURCE_ROUTES[route];
+  assert.ok(loader, `번들에 포함되어야 하는 자산: ${route}`);
+  return loader();
 }
 
-test("배포 Worker가 Journey와 명시적 환자 전달 자산을 제공한다", async () => {
+test("Journey와 명시적 환자 전달 모듈이 번들 소스로 유지된다", async () => {
   for (const route of [
     "/journey",
     "/journey.css",

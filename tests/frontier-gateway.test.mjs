@@ -233,14 +233,12 @@ test("설정 상태는 어떤 환경변수가 서버에 도달했는지 이름�
 
 test("모델이 설정되지 않으면 화면이 규칙 기반임을 밝히고 전송하지 않는다", async () => {
   // Given
-  const [js, html] = await Promise.all([
-    readFile("src/emr.js", "utf8"),
-    readFile("src/emr.html", "utf8"),
-  ]);
+  const { componentMarkup } = await import("./helpers/markup.mjs");
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When / Then
-  assert.match(js, /"규칙 기반 · 모델 미설정"/);
-  assert.match(js, /환자 자료를 전송하지 않고 규칙 판정만 표시합니다/);
-  assert.doesNotMatch(js, /medicationFrontierConsent/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
-  assert.doesNotMatch(html, /rxConsentField/);
+  assert.match(rx, /"규칙 기반 · 모델 미설정"/);
+  assert.match(rx, /환자 자료를 전송하지 않고 규칙 판정만 표시합니다/);
+  assert.doesNotMatch(rx, /medicationFrontierConsent/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
+  assert.doesNotMatch(rx, /rxConsentField/);
 });

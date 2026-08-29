@@ -6,13 +6,14 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "npm run build && node scripts/dev.mjs",
-    "build": "node scripts/build.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "smoke:emr": "node scripts/emr-browser-smoke.mjs",
     "smoke:handoff": "node scripts/two-app-browser-smoke.mjs",
     "smoke:route-identity": "node scripts/route-identity-smoke.mjs",
     "smoke:responsive-primary": "node scripts/responsive-primary-smoke.mjs",
-    "smoke:responsive-sequence": "npm run build && node scripts/responsive-sequence-smoke.mjs",
+    "smoke:responsive-sequence": "node scripts/responsive-sequence-smoke.mjs",
     "smoke:primary-actions": "node scripts/primary-action-smoke.mjs",
     "smoke:route-context": "node scripts/route-context-smoke.mjs",
     "smoke:a11y": "node scripts/accessibility-smoke.mjs",
@@ -22,12 +23,11 @@
     "smoke:claims": "node scripts/claim-board-drag-smoke.mjs",
     "smoke:quality-ui": "node scripts/copd-ui-browser-smoke.mjs",
     "smoke:copd-ui": "npm run smoke:quality-ui",
-    "smoke:body-3d": "npm run build && node scripts/body-3d-browser-smoke.mjs",
-    "capture:visual": "npm run build && node scripts/visual-layout-capture.mjs",
-    "gate:pr": "npm run build && node scripts/pr-golden-flow-gate.mjs",
-    "gate:release": "npm run build && node scripts/release-gate.mjs",
-    "start": "node scripts/server.mjs",
-    "test": "npm run build && node --test tests/*.test.mjs"
+    "smoke:body-3d": "node scripts/body-3d-browser-smoke.mjs",
+    "capture:visual": "node scripts/visual-layout-capture.mjs",
+    "gate:pr": "node scripts/pr-golden-flow-gate.mjs",
+    "gate:release": "node scripts/release-gate.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "type": "module",
   "dependencies": {

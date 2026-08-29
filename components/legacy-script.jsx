@@ -10,7 +10,7 @@ import { useEffect } from "react";
  */
 const LOADERS = {
   landing: () => import("../src/landing.js"),
-  map: () => Promise.all([import("../src/app.js"), import("../src/body-3d.js")]),
+  map: () => Promise.all([import("@google/model-viewer"), import("../src/app.js"), import("../src/body-3d.js")]),
   connections: () => import("../src/connections.js"),
   insights: () => import("../src/insights.js"),
   journey: () => import("../src/journey.js"),

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+
 const script = await readFile(new URL("../scripts/primary-action-smoke.mjs", import.meta.url), "utf8");
 
 test("primary-action browser contract activates every originating route", () => {
@@ -30,7 +32,7 @@ test("primary-action browser contract activates every originating route", () => 
 
 test("Insights 질문은 하나의 명시적 선택 동작과 복원 가능한 상태를 제공한다", async () => {
   const [html, client, css] = await Promise.all([
-    readFile(new URL("../src/insights.html", import.meta.url), "utf8"),
+    pageMarkup("/insights"),
     readFile(new URL("../src/insights.js", import.meta.url), "utf8"),
     readFile(new URL("../src/insights.css", import.meta.url), "utf8"),
   ]);
@@ -50,7 +52,7 @@ test("Insights 질문은 하나의 명시적 선택 동작과 복원 가능한 �
 
 test("건강 지도 입력은 선택 가능한 질환 뒤에 제출 동작을 제공한다", async () => {
   const [html, css] = await Promise.all([
-    readFile(new URL("../src/index.html", import.meta.url), "utf8"),
+    pageMarkup("/map"),
     readFile(new URL("../src/controls.css", import.meta.url), "utf8"),
   ]);
   assert.ok(
@@ -68,7 +70,7 @@ test("건강 지도 입력은 선택 가능한 질환 뒤에 제출 동작을 �
 });
 
 test("빈 EMR은 하나의 명시적 예시 환자 동작만 제공한다", async () => {
-  const html = await readFile(new URL("../src/emr.html", import.meta.url), "utf8");
+  const html = await emrMarkup();
   assert.equal((html.match(/id="loadDemo"/g) ?? []).length, 1);
   assert.equal((html.match(/예시 환자 불러오기/g) ?? []).length, 1);
 });

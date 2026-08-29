@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 import { createJourneyNarrative, createJourneySnapshot } from "../src/journey-model.js";
 
 const execFileAsync = promisify(execFile);
@@ -72,8 +74,8 @@ test("가능한 맥락은 근거 링크와 비인과 가드레일을 항상 함�
 
 test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리프에 집중한다", async () => {
   const [insights, journey] = await Promise.all([
-    readFile(new URL("../src/insights.html", import.meta.url), "utf8"),
-    readFile(new URL("../src/journey.html", import.meta.url), "utf8"),
+    pageMarkup("/insights"),
+    pageMarkup("/journey"),
   ]);
 
   assert.doesNotMatch(insights, /visit-story|data-story-section/);

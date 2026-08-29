@@ -90,7 +90,7 @@ function ReviewDetail({ state, evaluation, review, stage, requestedStage, store,
         ),
         `${evaluation.title}의 담당자 검토 단계를 '${nextLabel}' 단계로 옮겼습니다. 규칙 판정 '${computedLabel}'은 유지됩니다.`,
       );
-      onMoved?.();
+      onMoved?.(`${evaluation.title}: '${currentLabel}'에서 '${nextLabel}' 단계로 기록했습니다. 자동 규칙 판정 '${computedLabel}'과 보험자 심사결과는 변경되지 않았습니다.`);
     } catch (error) {
       const text = error instanceof Error ? error.message : "담당자 검토 단계를 옮기지 못했습니다.";
       setMessage(text);
@@ -382,7 +382,10 @@ export function ClaimWorkbench({ state, store, evaluations, boardScope, setBoard
                 requestedStage={requestedStage}
                 store={store}
                 onClose={() => setActiveDetailId("")}
-                onMoved={() => setRequestedStage("")}
+                onMoved={(announcement) => {
+                  setRequestedStage("");
+                  if (announcement) setLiveMessage(announcement);
+                }}
               />
             )}
           </aside>

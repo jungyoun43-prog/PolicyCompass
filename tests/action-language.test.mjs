@@ -2,20 +2,22 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+
 const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey, journeyCss, landing, gateway, gatewayCss, shellCss, emr, emrCss] = await Promise.all([
   readFile("src/controls.css", "utf8"),
-  readFile("src/index.html", "utf8"),
+  pageMarkup("/map"),
   readFile("src/app.js", "utf8"),
-  readFile("src/connections.html", "utf8"),
-  readFile("src/insights.html", "utf8"),
+  pageMarkup("/connections"),
+  pageMarkup("/insights"),
   readFile("src/insights.css", "utf8"),
-  readFile("src/journey.html", "utf8"),
+  pageMarkup("/journey"),
   readFile("src/journey.css", "utf8"),
-  readFile("src/landing.html", "utf8"),
-  readFile("src/gateway.html", "utf8"),
+  pageMarkup("/patient"),
+  pageMarkup("/"),
   readFile("src/gateway.css", "utf8"),
   readFile("src/shell.css", "utf8"),
-  readFile("src/emr.html", "utf8"),
+  emrMarkup(),
   readFile("src/emr.css", "utf8"),
 ]);
 

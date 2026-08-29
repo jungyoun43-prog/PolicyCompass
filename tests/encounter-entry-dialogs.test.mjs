@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { componentMarkup } from "./helpers/markup.mjs";
+
 import {
   findOrderInCatalog,
   ORDER_CATALOG,
@@ -87,8 +89,10 @@ test("모든 대조 항목은 확인할 수 있는 기준 원문과 강조 구�
 
 test("측정·진단·처방·오더는 모두 팝업에서 입력한다", async () => {
   // Given
-  const html = await readFile("src/emr.html", "utf8");
-  const build = await readFile("scripts/build.mjs", "utf8");
+  const dialogs = [
+    await componentMarkup("components/emr/entry-dialogs.jsx"),
+    await componentMarkup("components/emr/prescription-dialog.jsx"),
+  ].join("\n");
 
   // When / Then
   for (const [step, launcher, dialog, form] of [
@@ -97,57 +101,50 @@ test("측정·진단·처방·오더는 모두 팝업에서 입력한다", async
     ["prescriptions", "openPrescriptionDialog", "prescriptionDialog", "prescriptionForm"],
     ["orders", "openOrderDialog", "orderDialog", "orderForm"],
   ]) {
-    const disclosure = html.match(new RegExp(`data-workflow-disclosure="${step}"[\\s\\S]*?</details>`))?.[0] ?? "";
-    assert.match(disclosure, new RegExp(`<button[^>]*id="${launcher}"`), step);
-    assert.match(disclosure, new RegExp(`<dialog[^>]*id="${dialog}"`), step);
-    assert.ok(disclosure.includes(`id="${form}"`), `${step} 입력 폼은 팝업 안에 있다`);
-    assert.ok(disclosure.indexOf(`id="${launcher}"`) < disclosure.indexOf(`id="${dialog}"`), step);
+    assert.match(dialogs, new RegExp(`<button[^>]*id="${launcher}"`), step);
+    assert.match(dialogs, new RegExp(`id="${dialog}"`), step);
+    assert.ok(dialogs.includes(`id="${form}"`), `${step} 입력 폼은 팝업 안에 있다`);
+    assert.ok(dialogs.indexOf(`id="${launcher}"`) < dialogs.indexOf(`id="${dialog}"`), step);
   }
-  assert.match(build, /"\/order-catalog\.js"/);
+  assert.match(dialogs, /from "\.\.\/\.\.\/src\/order-catalog\.js"/);
 });
 
 test("약품·오더 코드는 선택으로 채워지고 직접 입력란으로 노출하지 않는다", async () => {
   // Given
-  const html = await readFile("src/emr.html", "utf8");
+  const dialogs = [
+    await componentMarkup("components/emr/entry-dialogs.jsx"),
+    await componentMarkup("components/emr/prescription-dialog.jsx"),
+  ].join("\n");
 
-  // When / Then
-  for (const id of ["medicationCode", "medicationSystem", "orderCode", "orderSystem"]) {
-    assert.match(html, new RegExp(`<input type="hidden" id="${id}"`), id);
-  }
-  assert.doesNotMatch(html, /<label>약품 코드</);
-  assert.doesNotMatch(html, /<label>오더 코드</);
+  // When / Then — 코드는 카탈로그 선택으로 폼 상태에만 담기고 입력란이 없다.
+  assert.doesNotMatch(dialogs, /<label>약품 코드</);
+  assert.doesNotMatch(dialogs, /<label>오더 코드</);
+  assert.doesNotMatch(dialogs, /<input[^>]*id="(?:medicationCode|medicationSystem|orderCode|orderSystem)"/);
 });
 
 test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 배지는 검토한 약에만 붙는다", async () => {
   // Given
-  const [html, js] = await Promise.all([
-    readFile("src/emr.html", "utf8"),
-    readFile("src/emr.js", "utf8"),
-  ]);
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
+  const kit = await componentMarkup("components/emr/dialog-kit.jsx");
 
   // When / Then
-  assert.match(html, /<button class="rx-process__summary"[^>]*id="medicationReviewProcessSummary"[^>]*>검토 과정 확인하기<\/button>/);
-  assert.match(html, /id="medicationReviewPipeline"/);
-  assert.ok(html.indexOf('id="medicationReviewProcess"') < html.indexOf('id="medicationReviewVerdict"'), "검토 과정은 판정보다 위에 있다");
-  assert.doesNotMatch(html.match(/data-workflow-disclosure="prescriptions"[\s\S]*?id="prescriptionList"/)?.[0] ?? "", /<details/, "팝업 안에 정적 details를 중첩하지 않는다");
-  assert.match(js, /function attachHoverPopover\(host, trigger, panel\)/);
-  assert.match(js, /host\.addEventListener\("mouseenter"/);
-  assert.match(js, /\[data-rx-popover\]/);
-  assert.match(js, /function renderMedicationReviewPipeline\(review\)/);
-  assert.match(js, /function medicationReviewTransmission\(review\)/);
-  assert.match(js, /\["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"\]/);
-  assert.match(js, /const review = medication\.id === activeMedicationReviewId \? medicationReviewById\.get\(medication\.id\) : null;/);
-  assert.match(js, /medicationReviewById\.clear\(\);\n\s*expandedSourceIds\.clear\(\);/);
-  assert.match(js, /function appendHighlightedText\(node, text, highlights = \[\], pairs = new Map\(\)\)/);
-  assert.match(js, /function buildHighlightPairs\(check, counter\)/);
-  assert.match(js, /data-source-origin/);
+  assert.match(rx, /trigger="검토 과정 확인하기" triggerClassName="rx-process__summary" triggerId="medicationReviewProcessSummary"/);
+  assert.match(rx, /panelId="medicationReviewPipeline"/);
+  assert.ok(rx.indexOf('id="medicationReviewProcessSummary"') < rx.indexOf("리뷰 판정") || rx.indexOf("medicationReviewProcessSummary") < rx.indexOf("rx-verdict"), "검토 과정은 판정보다 위에 있다");
+  assert.match(kit, /onMouseEnter/);
+  assert.match(kit, /onMouseLeave/);
+  assert.match(rx, /function medicationReviewTransmission\(review\)/);
+  assert.match(rx, /\["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"\]/);
+  assert.match(rx, /function HighlightedText\(/);
+  assert.match(rx, /function buildHighlightPairs\(check, counter\)/);
+  assert.match(rx, /data-source-origin/);
 });
 
 test("같은 사실을 가리키는 기준 문구와 차트 값은 한 쌍으로 묶인다", async () => {
   // Given
-  const js = await readFile("src/emr.js", "utf8");
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
   const css = await readFile("src/emr.css", "utf8");
-  const builder = js.match(/function buildHighlightPairs\(check, counter\)[\s\S]*?\n}/)?.[0] ?? "";
+  const builder = rx.match(/function buildHighlightPairs\(check, counter\)[\s\S]*?\n}/)?.[0] ?? "";
 
   // When
   const usesEnginePairs = builder.includes("check.source.pairs");

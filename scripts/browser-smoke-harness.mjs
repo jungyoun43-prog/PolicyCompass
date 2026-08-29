@@ -320,6 +320,25 @@ export async function waitForAppHealth(appUrl, {
   );
 }
 
+/**
+ * Smoke runs target the production server, so a Next build must exist. Reuse
+ * the current .next output when present; build once when it is missing.
+ */
+export async function ensureNextBuild() {
+  const { access } = await import("node:fs/promises");
+  try {
+    await access(".next/BUILD_ID");
+    return;
+  } catch {
+    // fall through to a fresh build
+  }
+  await new Promise((resolve, reject) => {
+    const build = spawn("npx", ["next", "build"], { stdio: ["ignore", "inherit", "inherit"] });
+    build.once("error", reject);
+    build.once("exit", (code) => (code === 0 ? resolve() : reject(new Error(`next build exited with ${code}`))));
+  });
+}
+
 export async function startManagedAppServer({
   appUrl = process.env.APP_URL?.trim() || "",
   healthPath = "/patient",
@@ -336,11 +355,12 @@ export async function startManagedAppServer({
     };
   }
 
+  await ensureNextBuild();
   const port = await reserveTcpPort();
   const localUrl = `http://127.0.0.1:${port}`;
   let output = "";
-  const server = spawn(process.execPath, ["scripts/dev.mjs"], {
-    env: { ...process.env, PORT: String(port) },
+  const server = spawn("npx", ["next", "start", "-p", String(port)], {
+    env: { ...process.env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   server.stdout.on("data", (chunk) => {

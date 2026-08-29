@@ -471,7 +471,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         {completed && review ? (
           <section className="clinical-card sign-review" id="encounterSignReview" aria-labelledby="encounterSignReviewTitle">
             <div className="card-heading">
-              <div><p className="rail-eyebrow">SIGN-OFF REVIEW</p><h3 id="encounterSignReviewTitle" tabIndex={-1}>서명 전 최종 검토</h3></div>
+              <div><p className="rail-eyebrow">SIGN-OFF REVIEW</p><h3 id="encounterSignReviewTitle" tabIndex={-1}>서명 전 전체 기록 검토</h3></div>
               <span className="source-badge">서명 차단 조건</span>
             </div>
             <div id="encounterSignReviewContent">
@@ -534,19 +534,27 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           </section>
         ) : null}
 
-        <section className="clinical-card encounter-save-bar" aria-labelledby="encounterSignoffTitle">
+        <section className="clinical-card encounter-mobile-claim" aria-labelledby="encounterMobileClaimTitle">
+          <div className="card-heading">
+            <div><p className="rail-eyebrow">CLAIM READINESS</p><h3 id="encounterMobileClaimTitle">서명 전 급여 점검</h3></div>
+            <span className="source-badge">예비 점검</span>
+          </div>
+          <p className="context-guidance">현재 진료 초안을 가상 반영해 기간·횟수·근거 누락을 먼저 확인합니다.</p>
+          <div className="context-summary" id="encounterMobileClaimSummary" aria-live="polite"><ClaimMiniSummary evaluations={preflightEvaluations} attention={attention} /></div>
+          <button className="clinical-button context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 보드 열기</button>
+        </section>
+
+        <section className="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
           <h3 className="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
-          <p className="encounter-signoff-summary" id="encounterSignoffSummary" data-tone={attention.length ? "attention" : "ready"}>
-            {attention.length
-              ? `서명 전 확인 ${attention.length}건 · 급여 점검에서 기간·횟수·근거를 검토하세요.`
-              : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요."}
-          </p>
-          <details className="encounter-mobile-claim" id="encounterMobileClaim">
-            <summary>급여 사전점검 요약</summary>
-            <div className="context-summary" id="encounterMobileClaimSummary"><ClaimMiniSummary evaluations={preflightEvaluations} attention={attention} /></div>
-          </details>
-          <p className="form-message" id="encounterFormMessage" role="alert">{formMessageText}</p>
-          <div className="encounter-actions">
+          <div className="encounter-save-context">
+            <p className="encounter-signoff-summary" id="encounterSignoffSummary" data-tone={attention.length ? "attention" : "ready"}>
+              {attention.length
+                ? `서명 전 확인 ${attention.length}건 · 급여 점검에서 기간·횟수·근거를 검토하세요.`
+                : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요."}
+            </p>
+            <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
+          </div>
+          <div className="encounter-save-actions">
             <button className="clinical-button clinical-button--danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</button>
             <button className="clinical-button" id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</button>
             <button className="clinical-button" id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</button>

@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-const [patientHtml, emrHtml, adapterSource, buildSource, packageJson] = await Promise.all([
-  readFile(new URL("../src/index.html", import.meta.url), "utf8"),
-  readFile(new URL("../src/emr.html", import.meta.url), "utf8"),
+import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+
+const [patientHtml, emrHtml, adapterSource, loaderSource, middlewareSource, packageJson] = await Promise.all([
+  pageMarkup("/map"),
+  emrMarkup(),
   readFile(new URL("../src/body-3d.js", import.meta.url), "utf8"),
-  readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8"),
+  readFile(new URL("../components/legacy-script.jsx", import.meta.url), "utf8"),
+  readFile(new URL("../middleware.js", import.meta.url), "utf8"),
   readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
 ]);
 const {
@@ -53,15 +56,16 @@ test("환자 지도와 EMR은 같은 자체 호스팅 3D 전신 뷰어를 사용
   for (const [html, context] of [[patientHtml, "patient"], [emrHtml, "emr"]]) {
     assert.match(html, /data-body-3d/);
     assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v4\.glb"/);
-    assert.match(html, /data-body-viewer-module="\/vendor\/model-viewer-4\.3\.1\.min\.js"/);
     assert.match(html, new RegExp(`data-body-context="${context}"`));
     assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
-    assert.match(html, /<script type="module" src="\/body-3d\.js"><\/script>/);
   }
+  // 런타임은 CDN이 아니라 번들에서 로드한다.
+  assert.match(loaderSource, /import\("@google\/model-viewer"\)/);
+  assert.match(loaderSource, /import\("\.\.\/src\/body-3d\.js"\)/);
+  assert.match(emrHtml, /import\("@google\/model-viewer"\)/);
   assert.equal(packageJson.dependencies["@google/model-viewer"], "4.3.1");
-  assert.match(buildSource, /type: "model\/gltf-binary"/);
-  assert.match(buildSource, /max-age=31536000, immutable/);
-  assert.match(buildSource, /script-src 'self' 'wasm-unsafe-eval'/);
+  assert.match(middlewareSource, /wasm-unsafe-eval/);
+  assert.match(middlewareSource, /\["\/emr", "\/map"\]/);
 });
 
 test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보존한다", () => {
@@ -118,7 +122,7 @@ test("3D 진료과 표식은 대표 신체 부위의 실제 외피 표면에 붙
   assert.ok(coordinates.dermatology[0] > 0.4 && coordinates.dermatology[0] < 0.48
     && coordinates.dermatology[1] > 1, "피부 표식은 아래팔 표면에 있어야 합니다.");
 
-  const buffer = await readFile(new URL("../src/assets/body-atlas-3d-v4.glb", import.meta.url));
+  const buffer = await readFile(new URL("../public/assets/body-atlas-3d-v4.glb", import.meta.url));
   const jsonLength = buffer.readUInt32LE(12);
   const document = JSON.parse(buffer.subarray(20, 20 + jsonLength).toString("utf8").trim());
   const accessor = document.accessors[
@@ -171,7 +175,7 @@ test("v4 임상 노드 매핑은 외피와 9개 내부 장기 재질을 분리�
 });
 
 test("v4의 모든 장기 정점은 닫힌 신체 외피 안에 충분한 여유를 두고 들어간다", async () => {
-  const buffer = await readFile(new URL("../src/assets/body-atlas-3d-v4.glb", import.meta.url));
+  const buffer = await readFile(new URL("../public/assets/body-atlas-3d-v4.glb", import.meta.url));
   const { document, readAccessor } = parseBinaryGltf(buffer);
   const bodyPrimitive = document.meshes[0].primitives[0];
   const bodyPositions = readAccessor(bodyPrimitive.attributes.POSITION);
@@ -264,7 +268,7 @@ test("v4의 모든 장기 정점은 닫힌 신체 외피 안에 충분한 여유
 });
 
 test("배포하는 GLB는 유효한 바이너리 glTF이며 웹용 크기를 유지한다", async () => {
-  const modelUrl = new URL("../src/assets/body-atlas-3d-v4.glb", import.meta.url);
+  const modelUrl = new URL("../public/assets/body-atlas-3d-v4.glb", import.meta.url);
   const [buffer, metadata] = await Promise.all([readFile(modelUrl), stat(modelUrl)]);
   assert.equal(buffer.subarray(0, 4).toString("ascii"), "glTF");
   assert.equal(buffer.readUInt32LE(4), 2);

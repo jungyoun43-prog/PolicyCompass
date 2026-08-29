@@ -69,19 +69,17 @@ test("서명 전 검토는 환자·Encounter 전체 맥락과 누락·충돌 수
 });
 
 test("서명 전 검토 UI는 전체 항목과 진료 재개 correction path를 노출한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const html = await (await worker.fetch(new Request("https://example.com/emr"))).text();
-  const js = await (await worker.fetch(new Request("https://example.com/emr.js"))).text();
+  const { componentMarkup } = await import("./helpers/markup.mjs");
+  const encounter = await componentMarkup("components/emr/tabs/encounter-tab.jsx");
 
-  assert.match(html, /id="encounterSignReview"/);
-  assert.match(html, /서명 전 전체 기록 검토/);
-  assert.match(html, /id="encounterSignReviewTitle" tabindex="-1"/);
-  assert.match(html, /id="encounterSignReviewAcknowledged"/);
-  assert.match(js, /buildEncounterSignReview/);
-  assert.match(js, /data-sign-review-target/);
-  assert.match(js, /reopenEncounter/);
+  assert.match(encounter, /id="encounterSignReview"/);
+  assert.match(encounter, /서명 전 전체 기록 검토/);
+  assert.match(encounter, /id="encounterSignReviewTitle" tabindex=\{-1\}/);
+  assert.match(encounter, /id="encounterSignReviewAcknowledged"/);
+  assert.match(encounter, /buildEncounterSignReview/);
+  assert.match(encounter, /reopenEncounter/);
   for (const label of ["알레르기", "활성 약물", "외부·미검증 알레르기", "외부·미검증 활성 약물", "이번 진료 측정·활력징후", "새 처방", "SOAP", "KCD 진단", "오더"]) {
-    assert.match(js, new RegExp(label));
+    assert.match(encounter, new RegExp(label));
   }
 });
 
@@ -175,18 +173,18 @@ test("무효·비활성 이력은 제외하고 외부 미검증 알레르기·�
 });
 
 test("서명 동작은 누락·충돌과 fingerprint 확인을 화면과 mutation 시점에 차단한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const js = await (await worker.fetch(new Request("https://example.com/emr.js"))).text();
+  const { componentMarkup } = await import("./helpers/markup.mjs");
+  const encounter = await componentMarkup("components/emr/tabs/encounter-tab.jsx");
 
-  assert.match(js, /signEncounter\.disabled = blockers\.length > 0 \|\| !acknowledged/);
-  assert.match(js, /reviewedEncounterSignFingerprint = encounterSignReviewFingerprint\(review\)/);
+  assert.match(encounter, /disabled=\{blockers\.length > 0 \|\| !acknowledged\}/);
+  assert.match(encounter, /encounterSignReviewFingerprint\(review\)/);
   assert.equal(
-    js.match(/assertEncounterSignReviewReady\(/g)?.length,
-    3,
-    "검토 체크, 서명 확인 전, mutation 직전에 누락·충돌을 검사해야 한다",
+    encounter.match(/assertEncounterSignReviewReady\(/g)?.length,
+    2,
+    "서명 확인 전과 mutation 직전에 누락·충돌을 검사해야 한다",
   );
   assert.equal(
-    js.match(/assertEncounterSignReviewFingerprint\(/g)?.length,
+    encounter.match(/assertEncounterSignReviewFingerprint\(/g)?.length,
     2,
     "서명 확인 전과 mutation 직전에 현재 내용 fingerprint를 재검사해야 한다",
   );

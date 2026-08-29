@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 test("개인 홈은 핵심 제목을 두 의미 단위로 고정하고 첫 화면 높이를 제한한다", async () => {
   const [html, css] = await Promise.all([
-    readFile("src/landing.html", "utf8"),
+    pageMarkup("/patient"),
     readFile("src/landing.css", "utf8"),
   ]);
 
@@ -28,7 +30,7 @@ test("첫 사용 안내는 데스크톱에서 압축된 세 열, 모바일에서
 
 test("개인 홈은 중복 개인 보관 안내 없이 진료 준비 CTA로 바로 이어진다", async () => {
   const [html, css] = await Promise.all([
-    readFile("src/landing.html", "utf8"),
+    pageMarkup("/patient"),
     readFile("src/landing.css", "utf8"),
   ]);
 
@@ -55,21 +57,21 @@ test("다음 진료 CTA는 제목과 분리된 균형 잡힌 열에서 반응형
 });
 
 test("개인 홈의 아래 섹션은 동작 줄이기를 존중하는 스크롤 리빌을 사용한다", async () => {
-  const [html, css, script, build] = await Promise.all([
-    readFile("src/landing.html", "utf8"),
+  const [html, css, script, loader] = await Promise.all([
+    pageMarkup("/patient"),
     readFile("src/landing.css", "utf8"),
     readFile("src/landing.js", "utf8"),
-    readFile("scripts/build.mjs", "utf8"),
+    readFile("components/legacy-script.jsx", "utf8"),
   ]);
 
   assert.equal((html.match(/\sdata-reveal(?:\s|>)/g) ?? []).length, 4);
-  assert.match(html, /<script type="module" src="\/landing\.js"><\/script>/);
+  assert.match(html, /<LegacyScript page=.landing./);
   assert.match(css, /\.reveal-ready \[data-reveal\]/);
   assert.match(css, /prefers-reduced-motion:\s*reduce[\s\S]*?\[data-reveal\]/);
   assert.match(script, /IntersectionObserver/);
   assert.match(script, /observer\.unobserve\(entry\.target\)/);
   assert.match(script, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
-  assert.match(build, /route:\s*"\/landing\.js",\s*file:\s*"src\/landing\.js"/);
+  assert.match(loader, /landing: \(\) => import\("\.\.\/src\/landing\.js"\)/);
 });
 
 test("역할 선택 카드는 데스크톱에서 같은 열 너비와 같은 세로 리듬을 사용한다", async () => {
@@ -86,7 +88,7 @@ test("역할 선택 카드는 데스크톱에서 같은 열 너비와 같은 세
 
 test("Journey 첫 기록 안내는 핵심 행동을 먼저 두고 사용법·데이터 도구를 접어 둔다", async () => {
   const [html, css] = await Promise.all([
-    readFile("src/journey.html", "utf8"),
+    pageMarkup("/journey"),
     readFile("src/journey.css", "utf8"),
   ]);
 
@@ -102,7 +104,7 @@ test("Journey 첫 기록 안내는 핵심 행동을 먼저 두고 사용법·데
 
 test("Journey 변화 비교는 제목을 전체 너비 상단에 두고 세부 내용을 아래에 펼친다", async () => {
   const [html, css] = await Promise.all([
-    readFile("src/journey.html", "utf8"),
+    pageMarkup("/journey"),
     readFile("src/journey.css", "utf8"),
   ]);
 

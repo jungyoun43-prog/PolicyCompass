@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+import { componentMarkup } from "./helpers/markup.mjs";
 
 import {
   DIAGNOSIS_CATALOG,
@@ -58,42 +59,33 @@ test("코드 시스템과 주·부상병 구분은 선택지로 제공된다", (
 
 test("진단 입력은 팝업에서 검색·코드 선택·주상병 구분을 거친다", async () => {
   // Given
-  const [html, js, build] = await Promise.all([
-    readFile("src/emr.html", "utf8"),
-    readFile("src/emr.js", "utf8"),
-    readFile("scripts/build.mjs", "utf8"),
-  ]);
-  const disclosure = html.match(/data-workflow-disclosure="diagnoses"[\s\S]*?<\/details>/)?.[0] ?? "";
+  const dialogs = await componentMarkup("components/emr/entry-dialogs.jsx");
 
   // When
-  const launcherFirst = disclosure.indexOf('id="openDiagnosisDialog"') < disclosure.indexOf('id="diagnosisDialog"');
-  const searchBeforeCodes = disclosure.indexOf('id="diagnosisSearchInput"') < disclosure.indexOf('id="diagnosisCodeOptions"');
+  const launcherFirst = dialogs.indexOf('id="openDiagnosisDialog"') < dialogs.indexOf('id="diagnosisDialog"');
+  const searchBeforeCodes = dialogs.indexOf('id="diagnosisSearchInput"') < dialogs.indexOf('id="diagnosisCodeOptions"');
 
   // Then
-  assert.match(disclosure, /<button[^>]*id="openDiagnosisDialog"[^>]*>진단 추가<\/button>/);
-  assert.match(disclosure, /<dialog[^>]*id="diagnosisDialog"/);
-  assert.ok(disclosure.includes('id="diagnosisForm"'), "진단 입력 폼은 팝업 안에 있다");
+  assert.match(dialogs, /<button[^>]*id="openDiagnosisDialog"[^>]*>진단 추가<\/button>/);
+  assert.match(dialogs, /id="diagnosisDialog"/);
+  assert.ok(dialogs.includes('id="diagnosisForm"'), "진단 입력 폼은 팝업 안에 있다");
   assert.equal(launcherFirst, true);
   assert.equal(searchBeforeCodes, true);
-  assert.match(disclosure, /<select id="diagnosisRole"[\s\S]*?주상병[\s\S]*?부상병[\s\S]*?<\/select>/);
-  assert.match(disclosure, /<select id="diagnosisSystem"[\s\S]*?urn:kr:kcd[\s\S]*?<\/select>/);
-  assert.match(js, /data-pick-diagnosis/);
-  assert.match(js, /data-diagnosis-code-choice/);
-  assert.match(build, /"\/diagnosis-catalog\.js"/);
+  assert.match(dialogs, /id="diagnosisRole"[\s\S]*?주상병[\s\S]*?부상병[\s\S]*?<\/select>/);
+  assert.match(dialogs, /id="diagnosisSystem"[\s\S]*?urn:kr:kcd[\s\S]*?<\/select>/);
+  assert.match(dialogs, /from "\.\.\/\.\.\/src\/diagnosis-catalog\.js"/);
 });
 
 test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 접어 둔다", async () => {
   // Given
-  const js = await readFile("src/emr.js", "utf8");
-  const renderer = js.match(/function renderMedicationResults\(\)[\s\S]*?\n}/)?.[0] ?? "";
+  const dialog = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When
-  const showsIngredient = renderer.includes('element("span", "rx-result__ingredient", medication.ingredient)');
+  const showsIngredient = dialog.includes('class="rx-result__ingredient"');
 
   // Then
   assert.equal(showsIngredient, true);
-  assert.doesNotMatch(renderer, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
-  assert.match(renderer, /element\("summary", "rx-result__details-summary", "자세히 보기"\)/);
-  assert.match(js, /function medicationDetailRows\(medication\)/);
-  assert.match(js, /expandedMedicationIds/);
+  assert.doesNotMatch(dialog, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
+  assert.match(dialog, /class="rx-result__details-summary">자세히 보기/);
+  assert.match(dialog, /function medicationDetailRows\(medication\)/);
 });

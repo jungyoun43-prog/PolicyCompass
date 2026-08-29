@@ -2,13 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
-const pages = [
-  ["src/landing.html", "/patient"],
-  ["src/index.html", "/map"],
-  ["src/connections.html", "/connections"],
-  ["src/insights.html", "/insights"],
-  ["src/journey.html", "/journey"],
-];
+import { componentMarkup, pageMarkup } from "./helpers/markup.mjs";
+
+const pages = ["/patient", "/map", "/connections", "/insights", "/journey"];
 
 const navigation = [
   ["/patient", "시작"],
@@ -19,8 +15,9 @@ const navigation = [
 ];
 
 test("모든 화면은 같은 PolicyCompass 앱 헤더 계약을 사용한다", async () => {
-  for (const [file, activeRoute] of pages) {
-    const html = await readFile(file, "utf8");
+  for (const activeRoute of pages) {
+    const html = await pageMarkup(activeRoute);
+    const file = activeRoute;
     const header = html.match(/<header class="app-header">([\s\S]*?)<\/header>/)?.[0] ?? "";
 
     assert.match(header, /class="app-header__inner"/, file);
@@ -41,7 +38,7 @@ test("모든 화면은 같은 PolicyCompass 앱 헤더 계약을 사용한다", 
 });
 
 test("게이트웨이는 의료진 EMR과 개인 PolicyCompass 진입점을 분리한다", async () => {
-  const html = await readFile("src/gateway.html", "utf8");
+  const html = await pageMarkup("/");
 
   assert.match(html, /class="app-brand" href="\/"/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
@@ -54,7 +51,7 @@ test("게이트웨이는 의료진 EMR과 개인 PolicyCompass 진입점을 분�
 });
 
 test("EMR 헤더는 환자 화면 탭과 환자 추가 전역 작업을 중복하지 않는다", async () => {
-  const html = await readFile("src/emr.html", "utf8");
+  const html = await componentMarkup("components/emr/chrome.jsx");
   const header = html.match(/<header class="app-header clinical-header">([\s\S]*?)<\/header>/)?.[0] ?? "";
   const hrefs = [...header.matchAll(/\bhref="([^"]+)"/g)].map(([, href]) => href);
 
@@ -69,21 +66,18 @@ test("EMR 헤더는 환자 화면 탭과 환자 추가 전역 작업을 중복�
 });
 
 test("EMR 환자 화면은 한 개의 탭 목록과 일관된 명칭을 사용한다", async () => {
-  const html = await readFile("src/emr.html", "utf8");
-  const tablists = [...html.matchAll(/<div class="workspace-tabs" role="tablist"[\s\S]*?<\/div>/g)];
+  const source = await componentMarkup("components/emr/workspace-header.jsx");
+  const tablists = [...source.matchAll(/role="tablist"/g)];
 
   assert.equal(tablists.length, 1);
-  const tablist = tablists[0][0];
-  assert.equal((tablist.match(/role="tab"/g) ?? []).length, 7);
-  for (const label of ["오늘 진료", "환자 요약", "과거 기록", "신체 지도", "급여 보드", "Journey", "감사·데이터"]) {
-    assert.match(tablist, new RegExp(`>${label}<\\/button>`));
-  }
-  assert.doesNotMatch(tablist, />차트<\/button>|>급여 칸반<\/button>/);
+  const tabRows = [...source.matchAll(/^\s*\["([a-z]+)", "([^"]+)"\],\s*$/gm)].map(([, , label]) => label);
+  assert.deepEqual(tabRows, ["오늘 진료", "환자 요약", "과거 기록", "신체 지도", "급여 보드", "Journey", "감사·데이터"]);
+  assert.doesNotMatch(source, /"차트"|"급여 칸반"/);
 });
 
 test("페이지 타이틀은 강제 줄바꿈 없이 반응형으로 흐른다", async () => {
-  for (const [file] of pages) {
-    const html = await readFile(file, "utf8");
-    assert.doesNotMatch(html, /<br\s*\/?\s*>/i, file);
+  for (const route of pages) {
+    const html = await pageMarkup(route);
+    assert.doesNotMatch(html, /<br\s*\/?\s*>/i, route);
   }
 });

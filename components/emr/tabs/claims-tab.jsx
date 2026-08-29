@@ -7,6 +7,7 @@ import { searchClaimIndex } from "../../../src/claim-search.js";
 import {
   evaluateDiseaseAssessment,
   getCombinedDiseaseClaimProfile,
+  getDiseaseAssessmentOptions,
 } from "../../../src/disease-assessment.js";
 import {
   buildClaimSearchIndex,
@@ -28,7 +29,15 @@ export function ClaimsTab({ state, patient, store }) {
   const [query, setQuery] = useState("");
   const [activeDetailId, setActiveDetailId] = useState("");
   const [requestedStage, setRequestedStage] = useState("");
-  const [selectedDiseaseId, setSelectedDiseaseId] = useState("");
+  // 질환 평가 선택은 이전 컨트롤러처럼 환자별로 세션 메모리에만 유지한다.
+  const [selectedDiseaseByPatientId, setSelectedDiseaseByPatientId] = useState(() => new Map());
+  const [diseaseLiveMessage, setDiseaseLiveMessage] = useState("");
+  const selectedDiseaseId = selectedDiseaseByPatientId.get(patient.id) ?? "";
+  const onSelectDisease = (diseaseId) => {
+    setSelectedDiseaseByPatientId((current) => new Map(current).set(patient.id, diseaseId));
+    const label = getDiseaseAssessmentOptions(patient).find(({ id }) => id === diseaseId)?.label ?? "질환";
+    setDiseaseLiveMessage(`${label} 적정성·진단 근거를 표시했습니다. 왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다.`);
+  };
 
   const patients = boardScope === "all" ? state.patients : [patient];
   const evaluations = useMemo(() => claimReviewEvaluationsForPatients(state, patients), [state, patients]);
@@ -256,7 +265,8 @@ export function ClaimsTab({ state, patient, store }) {
           </section>
         </section>
 
-        <DiseaseAssessmentCard state={state} patient={patient} selectedDiseaseId={selectedDiseaseId} onSelectDisease={setSelectedDiseaseId} />
+        <p className="visually-hidden" id="claimBoardLive" role="status" aria-live="polite">{diseaseLiveMessage}</p>
+        <DiseaseAssessmentCard state={state} patient={patient} selectedDiseaseId={selectedDiseaseId} onSelectDisease={onSelectDisease} />
       </div>
 
       <ClaimWorkbench

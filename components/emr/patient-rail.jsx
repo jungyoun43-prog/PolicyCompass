@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { centerSelectedPatientCard, useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
+
 import { patientAgeLabel, QUEUE_LABELS, SEX_LABELS, ageFromBirthDate } from "../../lib/emr/format.js";
 import { encounterQueueStatus, todayEncounterForPatient } from "../../lib/emr/selectors.js";
 
@@ -42,6 +44,11 @@ export function PatientRail({
   const [mode, setMode] = useState("create");
   const [form, setForm] = useState(EMPTY_FORM);
   const [message, setMessage] = useState("");
+
+  const patientListRef = useHorizontalScrollPosition();
+  useEffect(() => {
+    centerSelectedPatientCard(patientListRef.current, selectedPatientId);
+  }, [patientListRef, selectedPatientId]);
 
   // 환자 정보 편집 buttons elsewhere in the workspace hand the patient here.
   useEffect(() => {
@@ -204,7 +211,7 @@ export function PatientRail({
         </form>
       </details>
 
-      <ul className="patient-list" id="patientList" aria-label="환자 목록">
+      <ul className="patient-list" id="patientList" aria-label="환자 목록" ref={patientListRef}>
         {visible.map((patient) => {
           const queueStatus = encounterQueueStatus(todayEncounterForPatient(patient));
           return (

@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 const [mapHtml, connectionsHtml, mapCss, explorerCss, connectionsJs, appJs, brandCss] = await Promise.all([
-  readFile("src/index.html", "utf8"),
-  readFile("src/connections.html", "utf8"),
+  pageMarkup("/map"),
+  pageMarkup("/connections"),
   readFile("src/body-map.css", "utf8"),
   readFile("src/explorer.css", "utf8"),
   readFile("src/connections.js", "utf8"),
@@ -115,7 +117,7 @@ test("Connections는 개인 기록 근거와 문헌 기반 추론 관계를 시�
 
 test("연결된 생명 신호 모티프는 두 그래프 화면이 공유하는 코드 기반 브랜드 문법이다", () => {
   for (const html of [mapHtml, connectionsHtml]) {
-    assert.match(html, /href="\/brand-signals\.css"/);
+    assert.match(html, /import "[^"]*brand-signals\.css"/);
     assert.match(html, /class="signal-thread"/);
     assert.match(html, /signal-thread__line--inferred/);
     assert.match(html, /signal-thread__node--recorded/);

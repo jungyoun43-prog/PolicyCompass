@@ -203,44 +203,35 @@ test("서버는 브라우저가 보낸 비교 결과만 받아들인다", () => 
 
 test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조표를 보여 준다", async () => {
   // Given
-  const [html, js, build] = await Promise.all([
-    readFile("src/emr.html", "utf8"),
-    readFile("src/emr.js", "utf8"),
-    readFile("scripts/build.mjs", "utf8"),
-  ]);
-  const disclosure = html.match(/data-workflow-disclosure="prescriptions"[\s\S]*?<\/details>/)?.[0] ?? "";
+  const { componentMarkup } = await import("./helpers/markup.mjs");
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When
-  const launcherFirst = disclosure.indexOf('id="openPrescriptionDialog"') < disclosure.indexOf('id="prescriptionDialog"');
-  const verdictBeforeSources = disclosure.indexOf('id="medicationReviewVerdict"') < disclosure.indexOf('id="medicationReviewSources"');
+  const launcherFirst = rx.indexOf('id="openPrescriptionDialog"') < rx.indexOf('id="prescriptionDialog"');
+  const verdictBeforeSources = rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"');
 
   // Then
-  assert.match(disclosure, /<button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/button>/);
-  assert.match(disclosure, /<dialog[^>]*id="prescriptionDialog"/);
-  assert.match(disclosure, /id="medicationSearchInput"/);
-  assert.ok(disclosure.includes('id="prescriptionForm"'), "처방 입력 폼은 팝업 안에 있다");
+  assert.match(rx, /<button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/button>/);
+  assert.match(rx, /id="prescriptionDialog"/);
+  assert.match(rx, /inputId="medicationSearchInput"/);
+  assert.ok(rx.includes('id="prescriptionForm"'), "처방 입력 폼은 팝업 안에 있다");
   assert.equal(launcherFirst, true);
   assert.equal(verdictBeforeSources, true);
-  assert.match(disclosure, /판정 근거 · 삭감 근거와 환자 정보 대조/);
-  assert.doesNotMatch(disclosure, /medicationReviewRationale/, "판정 근거 대조표가 있으므로 줄글 근거는 중복이다");
-  assert.match(js, /data-review-medication/);
-  assert.match(js, /"\/api\/medication-claim-review"/);
-  assert.match(build, /"\/medication-catalog\.js"/);
-  assert.match(build, /"\/medication-claim-review\.js"/);
+  assert.match(rx, /판정 근거 · 삭감 근거와 환자 정보 대조/);
+  assert.doesNotMatch(rx, /medicationReviewRationale/, "판정 근거 대조표가 있으므로 줄글 근거는 중복이다");
+  assert.match(rx, /"\/api\/medication-claim-review"/);
+  assert.match(rx, /from "\.\.\/\.\.\/src\/medication-catalog\.js"/);
+  assert.match(rx, /from "\.\.\/\.\.\/src\/medication-claim-review\.js"/);
 });
 
 test("배포 서버는 약제 AI 검토 경로를 같은 출처로만 열어 둔다", async () => {
   // Given
-  const [appServer, devServer] = await Promise.all([
-    readFile("scripts/app-server.mjs", "utf8"),
-    readFile("scripts/dev.mjs", "utf8"),
+  const [route, api] = await Promise.all([
+    readFile("app/api/medication-claim-review/route.js", "utf8"),
+    readFile("lib/api.js", "utf8"),
   ]);
 
-  // When
-  const guardsOrigin = appServer.includes('if (url.pathname.startsWith("/api/medication-claim-review")) {\n      assertSameOrigin(request);');
-
-  // Then
-  assert.equal(guardsOrigin, true);
-  assert.match(appServer, /FRONTIER_CONSENT_REQUIRED/);
-  assert.match(devServer, /\/api\/medication-claim-review/);
+  // When / Then
+  assert.match(route, /assertSameOrigin\(request\)/);
+  assert.match(api, /ORIGIN_NOT_ALLOWED/);
 });

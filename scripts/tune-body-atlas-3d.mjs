@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const sourceUrl = new URL("../src/assets/body-atlas-3d-v3.glb", import.meta.url);
-const outputUrl = new URL("../src/assets/body-atlas-3d-v4.glb", import.meta.url);
+const sourceUrl = new URL("../public/assets/body-atlas-3d-v3.glb", import.meta.url);
+const outputUrl = new URL("../public/assets/body-atlas-3d-v4.glb", import.meta.url);
 
 const ORGAN_TUNING = Object.freeze({
   Organ_Brain: Object.freeze({ scale: [0.86, 0.9, 0.86], translation: [0, 1.69, 0.006] }),

@@ -1,11 +1,13 @@
+export const maxDuration = 60;
+
 import { ApiError, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
-  if (process.env.NODE_ENV === "production" || !process.env.POLICYCOMPASS_OLLAMA_MODEL) {
+  const payload = await readJson(request);
+  if (!process.env.POLICYCOMPASS_OLLAMA_MODEL) {
     return jsonResponse(503, { code: "AI_NOT_CONFIGURED", message: "규칙 기반 요약을 사용합니다." });
   }
-  const payload = await readJson(request);
   if (!payload.patient || !Array.isArray(payload.patient?.events)) {
     throw new ApiError(400, "INVALID_PAYLOAD", "구조화 환자 이벤트가 필요합니다.");
   }

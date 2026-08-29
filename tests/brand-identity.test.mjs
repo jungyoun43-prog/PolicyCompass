@@ -2,27 +2,41 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const pages = [
-  "gateway.html",
-  "landing.html",
-  "index.html",
-  "connections.html",
-  "insights.html",
-  "journey.html",
-  "emr.html",
-];
+import { componentMarkup, emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+
+const routes = ["/", "/patient", "/map", "/connections", "/insights", "/journey"];
+const layouts = {
+  "/": "app/(gateway)/layout.jsx",
+  "/patient": "app/(landing)/layout.jsx",
+  "/map": "app/(map)/layout.jsx",
+  "/connections": "app/(connections)/layout.jsx",
+  "/insights": "app/(insights)/layout.jsx",
+  "/journey": "app/(journey)/layout.jsx",
+  "/emr": "app/(emr)/layout.jsx",
+};
 
 test("all product routes share the connected-life-signals identity", async () => {
-  for (const page of pages) {
-    const html = await readFile(new URL(`../src/${page}`, import.meta.url), "utf8");
+  const icon = await readFile("app/icon.svg", "utf8");
+  assert.match(icon, /M12 40 31 19 52 37/, "the shared connected-node favicon");
+  assert.match(icon, /#e8f5e9[\s\S]*#1b5e20[\s\S]*#66bb6a[\s\S]*#a5d6a7/, "favicon must use the brand palette");
+  assert.doesNotMatch(icon, /#fbfaf7|#0b6663/, "must not retain the retired favicon colors");
 
-    assert.match(html, /href="\/brand-signals\.css"/, `${page} must load the shared motif`);
-    assert.match(html, /class="app-brand__mark"/, `${page} must expose the shared product mark`);
-    assert.match(html, /class="[^"]*signal-kicker/, `${page} must use the motif in a meaningful heading`);
-    assert.match(html, /M12 40 31 19 52 37/, `${page} must use the shared connected-node favicon`);
-    assert.match(html, /name="theme-color" content="#e8f5e9"/, `${page} must expose the green browser theme`);
-    assert.match(html, /%23e8f5e9[\s\S]*%231b5e20[\s\S]*%2366bb6a[\s\S]*%23a5d6a7/, `${page} favicon must use the brand palette`);
-    assert.doesNotMatch(html, /%23fbfaf7|%230b6663/, `${page} must not retain the retired favicon colors`);
+  for (const route of routes) {
+    const html = await pageMarkup(route);
+    assert.match(html, /import "[^"]*brand-signals\.css"/, `${route} must load the shared motif`);
+    assert.match(html, /class="app-brand__mark"|SignalKicker|signal-kicker/, `${route} must expose the shared product mark`);
+    assert.match(html, /signal-kicker|SignalKicker/, `${route} must use the motif in a meaningful heading`);
+  }
+
+  const emr = await emrMarkup();
+  const chrome = await componentMarkup("components/emr/chrome.jsx");
+  assert.match(emr, /class="app-brand__mark"/, "emr must expose the shared product mark");
+  assert.match(chrome, /signal-kicker|SignalKicker/, "emr must use the motif in a meaningful heading");
+
+  for (const [route, layout] of Object.entries(layouts)) {
+    const source = await readFile(layout, "utf8");
+    assert.match(source, /themeColor: ["']#e8f5e9["']/, `${route} must expose the green browser theme`);
+    assert.match(source, /brand-signals\.css/, `${route} must load the shared motif stylesheet`);
   }
 });
 

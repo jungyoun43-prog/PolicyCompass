@@ -8,6 +8,10 @@ PolicyCompass는 의료진 EMR과 환자용 PolicyCompass Personal이 각자의 
 - 데이터 격리: EMR과 Personal은 서로의 브라우저 저장소나 `BroadcastChannel`을 읽지 않으며, 예시 화면은 가져온 기록·Journey·내보내기·모델 요청과 완전히 분리됨
 - 질문 지원: 규칙 기반 질문 정리가 항상 작동하며, 실제 모델 기능이 구성된 경우에만 로컬 또는 외부 모델을 명시적으로 선택할 수 있음. 외부 모델은 표시된 전송 범위 확인과 매 실행 동의가 필요함
 
+## 기술 구조
+
+UI는 React 19 + Next.js 15(App Router)로 렌더링합니다. 의료진 EMR은 React 컴포넌트로 완전히 재구성했고, 다섯 개인 화면(`/patient` `/map` `/connections` `/insights` `/journey`)은 서버 렌더링된 마크업 위에서 기존에 검증된 바닐라 컨트롤러(`src/*.js`)를 그대로 실행합니다. 규칙 엔진·FHIR 처리·카탈로그·LangGraph 파이프라인 등 순수 로직(`src/*.js`, `scripts/graphs/`)은 프레임워크와 무관하게 유지되어 React 컴포넌트가 그대로 import합니다.
+
 ## 로컬 실행
 
 Node.js 22.13 이상이 필요합니다.
@@ -17,10 +21,12 @@ npm install
 npm run dev
 ```
 
-- 역할 선택(무상태): http://127.0.0.1:4173/
-- 임상 EMR: http://127.0.0.1:4173/emr
-- 개인용 PolicyCompass: http://127.0.0.1:4173/patient
-- 저장되지 않는 가상 환자 데모: http://127.0.0.1:4173/emr?demo=1
+- 역할 선택(무상태): http://localhost:3000/
+- 임상 EMR: http://localhost:3000/emr
+- 개인용 PolicyCompass: http://localhost:3000/patient
+- 저장되지 않는 가상 환자 데모: http://localhost:3000/emr?demo=1
+
+프로덕션 실행은 `npm run build && npm start`입니다.
 
 기본 진료 흐름은 `오늘 대기열 → 환자 선택/등록 → Encounter 시작 → SOAP → KCD 진단 → 처방(약 처방하기 팝업에서 검색·AI 삭감 사전검토) → 검사·영상·처치 오더 → 완료 → 로컬 서명 → 현재 환자 재확인 → 환자 전달 파일 내보내기`입니다. 환자 기록에는 차트번호, 이름, 생년월일과 진료일 기준 계산 나이(생년월일 미상 시 만 나이 직접 입력), 성별, 연락처, 주소, 보험 정보, 비상연락처를 입력할 수 있습니다. EMR의 신체·진료과 지도, 모델/규칙 기반 지원, Journey, 청구 전 적합성 칸반은 같은 선택 환자와 Encounter를 보조합니다.
 
@@ -126,10 +132,10 @@ EMR의 신체·진료과 지도는 Encounter의 진료과 필드 또는 진료�
 
 ## 배포
 
-Vercel에 배포합니다. `vercel.json`이 `npm run build`로 워커 번들을 만든 뒤 모든 경로를 `api/index.js` Serverless Function으로 rewrite하며, 그 함수는 로컬 Node 서버(`npm start` → `scripts/server.mjs`)와 같은 `scripts/app-server.mjs` 핸들러를 씁니다. 따라서 CSP·HSTS·같은 출처 API 규칙이 두 실행 환경에서 동일합니다.
+Vercel에 배포합니다. Next.js 프로젝트로 자동 감지되므로 별도의 `vercel.json` 없이 `next build` 결과가 그대로 배포됩니다. API는 `app/api/**/route.js` Route Handler이고, 페이지·API 모두에서 CSP(nonce + strict-dynamic)·HSTS·같은 출처 규칙이 로컬 `npm start`와 동일하게 적용됩니다(`middleware.js`, `next.config.mjs`).
 
-- `public/`는 정적으로 그대로 제공되는 파일만 담습니다. 나머지 경로는 모두 함수가 응답합니다.
-- 임상 자료를 다루는 `/api/clinical-copilot`은 로컬 개발 서버에서만 열립니다.
+- `public/`는 정적으로 그대로 제공되는 파일(3D 모델·이미지 등)만 담습니다.
+- 임상 자료를 다루는 `/api/clinical-copilot`은 루프백 Ollama 환경변수가 설정된 환경에서만 열립니다.
 - `/api/medication-claim-review`는 같은 출처 요청만 받습니다. 모델은 서버 환경변수로만 켜집니다.
 
 | 환경변수 | 용도 |
@@ -183,7 +189,7 @@ npm run smoke:graph-discovery
 npm run smoke:claims
 ```
 
-- `npm test`: 빌드, 모델, FHIR, 급여 규칙, 백업, 라우트, 보안 헤더 검증
+- `npm test`: 모델, FHIR, 급여 규칙, 백업, 라우트, 보안 헤더 검증. 서버 계약 테스트는 `.next` 빌드가 없으면 자동으로 `next build`를 먼저 실행합니다
 - `npm run smoke:emr`: 실행 중인 로컬 서버와 Chrome을 사용해 데모, 환자 인구정보, Encounter 진료기록, 신체·진료과 지도, 칸반, 동시 저장 충돌·복구를 실제 브라우저에서 검증
 - `npm run smoke:handoff`: EMR 환자 전달 파일 생성, 별도 코드 확인, 명시적 Personal 교체와 두 앱 저장소 격리를 실제 브라우저에서 검증
 - `npm run smoke:first-use-patient`: 개인 첫 화면부터 Map, Connections, Insights, Journey까지 키보드·세션 유지·앱 경계를 네 가지 화면 크기로 검증
@@ -191,7 +197,7 @@ npm run smoke:claims
 - `npm run smoke:graph-discovery`: Map과 Connections의 범례, 사용 안내, 선택 상태, 기록·추론 구분, 다음 행동을 검증
 - `npm run smoke:claims`: 자동 규칙 판정을 유지한 채 담당자 검토 카드를 드래그·키보드로 이동하고, 감사 이력·재로딩 지속성·네 가지 화면 크기를 검증
 
-Chrome 경로가 다르면 `CHROME_BIN`을 지정할 수 있습니다. 스모크 테스트 기본 URL은 `http://127.0.0.1:4173`이며 `EMR_URL`로 바꿀 수 있습니다.
+Chrome 경로가 다르면 `CHROME_BIN`을 지정할 수 있습니다. 스모크 테스트는 기본적으로 `next start`를 임시 포트로 직접 띄우며, 이미 실행 중인 서버를 쓰려면 `APP_URL`을 지정합니다.
 
 자동 검증이 확인할 수 없는 이해도·신뢰·실제 업무 효율은 [USABILITY.md](USABILITY.md)의 개인 사용자·의료진 과업으로 별도 확인합니다. 실제 환자정보 대신 가상 기록만 사용합니다.
 

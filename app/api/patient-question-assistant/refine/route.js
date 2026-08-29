@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 import { patientQuestionAssistantStatus } from "../../../../scripts/patient-question-assistant.mjs";
 import { runQuestionRefine } from "../../../../scripts/graphs/question-refine-graph.mjs";
 import { ApiError, assertFrontierRequestAllowed, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../../lib/api.js";

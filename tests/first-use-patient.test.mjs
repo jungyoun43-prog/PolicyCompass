@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 test("개인 앱 진입 화면은 직접 가져오기와 선택적 외부 모델 경계 뒤에 기록·예시 행동을 제공한다", async () => {
-  const html = await readFile("src/landing.html", "utf8");
+  const html = await pageMarkup("/patient");
   const entry = html.match(/<section class="landing-hero[\s\S]*?<\/section>/)?.[0] ?? "";
 
   assert.match(entry, /data-entry-experience="patient"/);
@@ -19,7 +21,7 @@ test("개인 앱 진입 화면은 직접 가져오기와 선택적 외부 모델
 });
 
 test("개인 첫 사용 화면은 가져오기부터 진료 질문까지 세 단계로 요약한다", async () => {
-  const html = await readFile("src/landing.html", "utf8");
+  const html = await pageMarkup("/patient");
   const firstUse = html.match(/<section class="patient-start-path"[\s\S]*?<\/section>/)?.[0] ?? "";
 
   assert.match(firstUse, /data-first-use="patient"/);
@@ -38,8 +40,8 @@ test("개인 첫 사용 화면은 가져오기부터 진료 질문까지 세 단
 
 test("Connections와 fresh Journey는 핵심 진입을 보조 안내·백업보다 먼저 둔다", async () => {
   const [connections, journey] = await Promise.all([
-    readFile("src/connections.html", "utf8"),
-    readFile("src/journey.html", "utf8"),
+    pageMarkup("/connections"),
+    pageMarkup("/journey"),
   ]);
 
   assert.ok(connections.indexOf('id="connectionsPrimaryEntry"') < connections.indexOf('class="explorer-first-use '));

@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 import { runConnectionInsights } from "../../../scripts/graphs/connection-insights-graph.mjs";
 import { ApiError, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
 

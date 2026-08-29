@@ -355,8 +355,9 @@ test("자기보고 정리는 길이와 흔한 직접식별자 마스킹 경계�
 });
 
 test("진료 준비 화면은 명시적으로 가져온 기록·모델 동의·로컬 질문 복사 흐름만 노출한다", async () => {
+  const { pageMarkup } = await import("./helpers/markup.mjs");
   const [html, client, css] = await Promise.all([
-    readFile(new URL("../src/insights.html", import.meta.url), "utf8"),
+    pageMarkup("/insights"),
     readFile(new URL("../src/insights.js", import.meta.url), "utf8"),
     readFile(new URL("../src/insights.css", import.meta.url), "utf8"),
   ]);

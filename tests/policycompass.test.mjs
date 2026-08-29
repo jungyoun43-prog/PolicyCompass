@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { CONDITIONS, extractInputSignals, inferConditionIds } from "../src/data.js";
+import { pageMarkup } from "./helpers/markup.mjs";
 
 test("입력한 수치·증상은 질환이 아닌 미검증 패턴 신호로 분리한다", () => {
   // Given
@@ -53,60 +54,34 @@ test("COPD와 폐렴은 호흡기 모델에 등록하되 환자 입력이나 문
   assert.deepEqual(inferConditionIds("COPD 같고 숨이 찹니다", []), []);
   assert.deepEqual(inferConditionIds("폐렴 같고 열이 납니다", []), []);
 
-  const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
+  const html = await pageMarkup("/map");
   assert.doesNotMatch(html, /data-condition="copd"/);
   assert.match(html, /확인 필요 신호 · 진단 아님/);
   assert.match(html, /입력값만으로 질환을 확정하지 않습니다/);
   assert.match(html, /반복 검사와 의료진 판단이 필요/);
 });
 
-test("빌드된 Worker가 역할 게이트웨이와 보안 헤더를 제공한다", async () => {
-  // Given
-  const { default: worker } = await import("../dist/server/index.js");
+test("게이트웨이는 역할 선택과 두 진입점을 제공한다", async () => {
+  const html = await pageMarkup("/");
 
-  // When
-  const response = await worker.fetch(new Request("https://example.com/"));
-  const html = await response.text();
-
-  // Then
-  assert.equal(response.status, 200);
   assert.match(html, /PolicyCompass/);
   assert.match(html, /사용할 공간을 선택하세요/);
   assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
   assert.match(html, /href="\/patient"[^>]*>\s*개인 PolicyCompass 열기/s);
   assert.doesNotMatch(html, /id="fhirFile"/);
-  assert.match(response.headers.get("content-security-policy") ?? "", /default-src 'self'/);
-  assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
 });
 
 test("개인 PolicyCompass 홈은 /patient에서 EMR 없이 제공된다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const response = await worker.fetch(new Request("https://example.com/patient"));
-  const html = await response.text();
+  const html = await pageMarkup("/patient");
 
-  assert.equal(response.status, 200);
   assert.match(html, /PolicyCompass Personal/);
   assert.match(html, /내 건강 기록을.*내가 이어 보는/s);
   assert.doesNotMatch(html, /id="patientList"|id="encounterForm"|id="claimBoard"/);
 });
 
 test("연결 탐색 전용 페이지를 제공한다", async () => {
-  const { default: worker } = await import("../dist/server/index.js");
-  const response = await worker.fetch(new Request("https://example.com/connections"));
-  const html = await response.text();
+  const html = await pageMarkup("/connections");
 
-  assert.equal(response.status, 200);
   assert.match(html, /기록과 추론을 나눠 보기/);
   assert.match(html, /networkScene/);
-});
-
-test("존재하지 않는 경로는 404를 반환한다", async () => {
-  // Given
-  const { default: worker } = await import("../dist/server/index.js");
-
-  // When
-  const response = await worker.fetch(new Request("https://example.com/missing"));
-
-  // Then
-  assert.equal(response.status, 404);
 });

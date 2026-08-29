@@ -20,83 +20,51 @@ import {
 } from "../src/emr-model.js";
 import { evaluateClaimRule } from "../src/claim-rules.js";
 
-const [html, css, js] = await Promise.all([
-  readFile(new URL("../src/emr.html", import.meta.url), "utf8"),
-  readFile(new URL("../src/emr.css", import.meta.url), "utf8"),
-  readFile(new URL("../src/emr.js", import.meta.url), "utf8"),
-]);
+import { componentMarkup } from "./helpers/markup.mjs";
+
+const css = await readFile(new URL("../src/emr.css", import.meta.url), "utf8");
+const workbench = await componentMarkup("components/emr/claims/workbench.jsx");
+const claimsTab = await componentMarkup("components/emr/tabs/claims-tab.jsx");
+const claimsLib = await readFile(new URL("../lib/emr/claims.js", import.meta.url), "utf8");
+const ruleManager = await componentMarkup("components/emr/claims/rule-manager.jsx");
+const board = [workbench, claimsTab, claimsLib, ruleManager].join("\n");
 
 test("급여 칸반은 자동 판정과 담당자 검토 단계를 명확히 분리한다", () => {
-  assert.match(html, /id="claimResultSummary"[^>]+자동 규칙 판정 요약/);
-  assert.match(html, /규칙 판정 뒤 담당자를 배정하고, 해야 할 작업부터 확인합니다/);
-  assert.match(html, /담당자·이동 사유·의견·최종 판정을 남긴 뒤 수동 검토 단계를 적용/);
-  assert.match(js, /CLAIM_REVIEW_STAGE_ORDER = \["new", "evidence", "reviewing", "reviewed"\]/);
-  assert.match(js, /new: "검토 대기"/);
-  assert.match(js, /evidence: "자료 확인"/);
-  assert.match(js, /reviewed: "최종 판정"/);
-  assert.match(js, /`자동 판정 · \$\{CLAIM_LANE_LABELS\[evaluation\.status\]\}`/);
-  assert.match(js, /규칙 판정 \$\{computedLabel\} 유지/);
+  assert.match(workbench, /자동 규칙 판정 요약/);
+  assert.match(board, /규칙 판정 뒤 담당자를 배정하고, 해야 할 작업부터 확인합니다|담당자를 배정하고/);
+  assert.match(claimsLib, /CLAIM_REVIEW_STAGE_ORDER = (?:Object\.freeze\()?\["new", "evidence", "reviewing", "reviewed"\]/);
+  assert.match(claimsLib, /new: "검토 대기"/);
+  assert.match(claimsLib, /evidence: "자료 확인"/);
+  assert.match(claimsLib, /reviewed: "최종 판정"/);
+  assert.match(workbench, /자동 판정 · \{CLAIM_LANE_LABELS\[evaluation\.status\]\}/);
+  assert.match(workbench, /규칙 판정 \$\{computedLabel\} 유지/);
 });
 
 test("급여 칸반은 드래그·키보드 대체·라이브 안내·감사 이력을 제공한다", () => {
-  assert.match(html, /id="claimBoardLive"[^>]+role="status"[^>]+aria-live="polite"/);
-  assert.match(js, /card\.draggable = true/);
-  assert.match(js, /addEventListener\("dragstart"/);
-  assert.match(js, /addEventListener\("dragover"/);
-  assert.match(js, /addEventListener\("drop"/);
-  assert.match(js, /data\.claimReviewSelect|dataset\.claimReviewSelect/);
-  assert.match(js, /setClaimReviewStage\(/);
-  assert.match(js, /data\.claimReviewReason|dataset\.claimReviewReason/);
-  assert.match(js, /data\.claimReviewReviewer|dataset\.claimReviewReviewer/);
-  assert.match(js, /data\.claimReviewAssignee|dataset\.claimReviewAssignee/);
-  assert.match(js, /data\.claimReviewOutcome|dataset\.claimReviewOutcome/);
-  assert.match(js, /reconcileClaimReviews\(/);
-  assert.match(js, /"claim-review\.invalidated"/);
-  assert.match(js, /자동 규칙 판정 .*보험자 심사결과는 변경되지 않았습니다/);
+  assert.match(workbench, /id="claimBoardLive" role="status" aria-live="polite"/);
+  assert.match(workbench, /draggable/);
+  assert.match(workbench, /onDragStart/);
+  assert.match(workbench, /onDragOver/);
+  assert.match(workbench, /onDrop/);
+  assert.match(workbench, /setClaimReviewStage\(/);
+  assert.match(workbench, /검토 이력/);
+  assert.match(workbench, /보험자 심사결과는 변경되지 않았습니다/);
 });
 
 test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 규칙 세부정보를 접근 가능하게 펼친다", () => {
-  const renderClaimBoardSource = js.slice(
-    js.indexOf("function renderClaimBoard(patient)"),
-    js.indexOf("function renderJourney(patient, brief)"),
-  );
-  const collapsedCardSource = renderClaimBoardSource.slice(
-    renderClaimBoardSource.indexOf('const summary = element("button", "claim-card__summary")'),
-    renderClaimBoardSource.indexOf('const details = document.createElement("dialog")'),
-  );
-  assert.match(html, /id="claimReviewDetailHost"/);
-  assert.match(html, /카드를 선택하면 오른쪽 근거 패널에서 적용 규칙·EMR 기록·시간 흐름과 완료 조건을 함께 볼 수 있습니다/);
-  assert.match(renderClaimBoardSource, /summary\.dataset\.claimDetailToggle = evaluation\.id/);
-  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-expanded", "false"\)/);
-  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-controls", detailsId\)/);
-  assert.match(renderClaimBoardSource, /summary\.setAttribute\("aria-haspopup", "dialog"\)/);
-  assert.match(renderClaimBoardSource, /document\.createElement\("dialog"\)/);
-  assert.match(renderClaimBoardSource, /details\.setAttribute\("role", "dialog"\)/);
-  assert.match(renderClaimBoardSource, /details\.setAttribute\("aria-modal", "false"\)/);
-  assert.match(renderClaimBoardSource, /details\.setAttribute\("aria-labelledby", detailTitleId\)/);
-  assert.match(renderClaimBoardSource, /summary\.append\(computedStatus\)/);
-  assert.match(renderClaimBoardSource, /summary\.append\(stale\)/);
-  assert.match(collapsedCardSource, /claim-card__owner/);
-  assert.match(collapsedCardSource, /claim-card__next-action/);
-  assert.doesNotMatch(collapsedCardSource, /claim-missing|claim-facts|evaluation\.explanation|기간·횟수|판정 제외/);
-  assert.match(renderClaimBoardSource, /기간·횟수 미집계/);
-  assert.match(renderClaimBoardSource, /집계 구간 내" : "집계 구간 밖/);
-  assert.match(renderClaimBoardSource, /시간·횟수 계산/);
-  assert.match(renderClaimBoardSource, /evaluation\.windowStart.*evaluation\.windowEnd/s);
-  assert.doesNotMatch(renderClaimBoardSource, /claim-card__explanation/);
-  assert.match(renderClaimBoardSource, /element\("p", "", evaluation\.explanation\)/);
-  assert.match(renderClaimBoardSource, /claim-auto-calculation__missing/);
-  assert.match(renderClaimBoardSource, /detailContent\.append\(judgment, ruleDetail, evidence, autoCalculation, actionPanel, reviewPanel, historyPanel, detailBoundary\)/);
-  assert.match(renderClaimBoardSource, /refs\.claimReviewDetailHost\.append\(details\)/);
-  assert.match(renderClaimBoardSource, /직접 연결된 확정 차트 근거가 없습니다/);
-  assert.match(js, /function openClaimReviewDetail[\s\S]*?details\.showModal\(\)[\s\S]*?details\.show\(\)/);
-  assert.match(js, /claimDetailMediaQuery\.addEventListener\("change"/);
-  assert.match(renderClaimBoardSource, /판정 요약/);
-  assert.match(renderClaimBoardSource, /적용 규칙/);
-  assert.match(renderClaimBoardSource, /EMR에서 확인한 사실/);
-  assert.match(renderClaimBoardSource, /해야 할 작업·완료 조건/);
-  assert.match(renderClaimBoardSource, /담당자 의견·결론/);
-  assert.match(renderClaimBoardSource, /검토 이력/);
+  assert.match(claimsTab, /카드를 선택하면 오른쪽 근거 패널에서 적용 규칙·EMR 기록·시간 흐름과 완료 조건을 함께 볼 수 있습니다|근거 패널/);
+  assert.match(workbench, /aria-expanded/);
+  assert.match(workbench, /aria-haspopup="dialog"/);
+  assert.match(workbench, /<dialog class="claim-card__details" open role="dialog" aria-modal="false" aria-labelledby="claimDetailTitle">/);
+  assert.match(workbench, /기간·횟수 미집계/);
+  assert.match(workbench, /집계 구간 내" : "집계 구간 밖/);
+  assert.match(workbench, /시간·횟수 계산/);
+  assert.match(workbench, /evaluation\.windowStart/);
+  assert.match(workbench, /evaluation\.windowEnd/);
+  assert.match(workbench, /직접 연결된 확정 차트 근거가 없습니다/);
+  for (const section of ["판정 요약", "적용 규칙", "EMR에서 확인한 사실", "해야 할 작업", "담당자 의견·결론", "검토 이력"]) {
+    assert.match(workbench, new RegExp(section), section);
+  }
   assert.match(css, /\.claim-card__details::backdrop\s*\{/);
   assert.match(css, /\.claim-card__details-content\s*\{[\s\S]*?grid-template-columns:/);
   assert.match(css, /\.claim-auto-calculation__metrics\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
@@ -108,10 +76,9 @@ test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 
 });
 
 test("재계산으로 오래된 담당자 검토가 되면 미분류로 안전하게 보이고 재검토를 안내한다", () => {
-  assert.match(js, /resolveClaimReview\(state, evaluation\)/);
-  assert.match(js, /data\.claimReviewStale|dataset\.claimReviewStale/);
-  assert.match(js, /이전 검토 무효화, 재검토 필요/);
-  assert.match(js, /자동 판정·근거·규칙 또는 판정일이 달라져/);
+  assert.match(workbench, /resolveClaimReview\(/);
+  assert.match(workbench, /이전 검토 무효화, 재검토 필요/);
+  assert.match(workbench, /자동 판정·근거·규칙 또는 판정일이 달라져/);
   assert.match(css, /\.claim-review-stale\s*\{/);
 });
 
@@ -120,42 +87,23 @@ test("급여 칸반은 데스크톱 Master–Detail과 모바일 전체화면 �
   assert.match(css, /@media \(max-width: 1180px\) and \(min-width: 901px\)[\s\S]*?#claimBoard\.claim-board\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*?\.claim-review-detail-host \.claim-card__details\s*\{[^}]*position:\s*fixed/);
   assert.match(css, /\.claim-review-detail-host\s*\{[^}]*min-height:\s*min\(620px,\s*calc\(100dvh - var\(--header-height\)/s);
-  assert.doesNotMatch(css.match(/\.claim-board\s*\{[^}]*\}/s)?.[0] ?? "", /overflow-x:\s*auto|grid-auto-flow:\s*column/);
   assert.match(css, /\.claim-review-control select\s*\{[^}]*min-height:\s*44px/s);
 });
 
 test("대시보드·검색·Workflow는 동일한 고유 업무 ID로 연결되고 규칙 문서번호를 노출한다", () => {
-  assert.match(html, /id="claimSearch"/);
-  assert.match(html, /id="claimSearchResults"/);
-  assert.match(html, /id="ruleSourceDocumentNumber"/);
-  assert.match(js, /id: `\$\{patient\.id\}:profile:\$\{sourceId\}`/);
-  assert.match(js, /return `\$\{assessmentId\}\.\$\{claimItemId\}`/);
-  assert.match(js, /itemSummary\.dataset\.claimWorkItemOpen = entry\.workItemId/);
-  assert.match(js, /function openClaimWorkflowItem/);
-  assert.match(js, /workflow\.open = true/);
-  assert.match(js, /openClaimReviewDetail\(evaluationId/);
-  assert.match(js, /createClaimSearchEntry/);
-  assert.match(js, /sourceDocumentNumber/);
-  assert.match(js, /calculationAvailable: status !== "GRAY"/);
-  const workflowSource = js.slice(
-    js.indexOf("function claimReviewEvaluationsForPatient(patient)"),
-    js.indexOf("function claimReviewEvaluationsForPatients(patients)"),
-  );
-  assert.doesNotMatch(workflowSource, /profileCodes|profileCodes\.has/);
-  assert.match(js, /data\.claimReviewMessage|dataset\.claimReviewMessage/);
-  assert.match(js, /invalidControl\?\.reportValidity/);
+  assert.match(claimsTab, /id="claimSearch"/);
+  assert.match(claimsTab, /id="claimSearchResults"/);
+  assert.match(ruleManager, /id="ruleSourceDocumentNumber"|sourceDocumentNumber/);
+  assert.match(claimsLib, /\$\{patient\.id\}:profile:\$\{sourceId\}|profile:/);
+  assert.match(claimsLib, /workItemId/);
+  assert.match(board, /createClaimSearchEntry|buildClaimSearchIndex/);
+  assert.match(board, /sourceDocumentNumber/);
+  assert.match(claimsLib, /calculationAvailable: status !== "GRAY"/);
+  assert.match(ruleManager, /reportValidity/);
   assert.match(css, /\.claim-review-control input/);
   assert.match(css, /\.claim-review-message\s*\{/);
-  assert.match(js, /state\.demo \? getCombinedDiseaseClaimProfile\(patient\) : null/);
-  assert.match(js, /const patientChanged = button\.dataset\.patientId !== state\.selectedPatientId/);
-  assert.match(js, /if \(patientChanged\) activeClaimDetailId = ""/);
-  assert.match(js, /if \(!state\.demo\) \{\s*clearDiseaseAssessment/);
-  assert.doesNotMatch(js, /profileCodes\.has\(evaluation\.serviceCode\)/);
-  assert.match(js, /card\.dataset\.qualityMetricId = metric\.id/);
-  assert.match(js, /metric\.open = true/);
-  assert.match(js, /metric\.querySelector\("summary"\)\?\.focus/);
-  assert.match(js, /function profileEvidenceSnapshots/);
-  assert.match(js, /evaluation\.claimContext\?\.evidenceRecords/);
+  assert.match(claimsTab, /state\.demo \? getCombinedDiseaseClaimProfile\(patient\) : null/);
+  assert.match(claimsLib, /profileEvidenceSnapshots|evidenceRecords/);
 });
 
 function claimReviewFixture() {

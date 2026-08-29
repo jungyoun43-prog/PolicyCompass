@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 function findElementEnd(source, start, tagName) {
   const tags = new RegExp(`<\\/?${tagName}\\b[^>]*>`, "g");
   tags.lastIndex = start;
@@ -17,7 +19,7 @@ function findElementEnd(source, start, tagName) {
 }
 
 test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", async () => {
-  const html = await readFile("src/landing.html", "utf8");
+  const html = await pageMarkup("/patient");
   const preview = html.match(/<article class="brief-preview"[\s\S]*?<\/article>/)?.[0] ?? "";
 
   assert.match(preview, /예시 데이터/);
@@ -28,7 +30,7 @@ test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", a
 });
 
 test("메인 히어로는 생성 이미지와 의미 있는 대체 텍스트를 사용한다", async () => {
-  const html = await readFile("src/landing.html", "utf8");
+  const html = await pageMarkup("/patient");
   const hero = html.match(/<figure class="landing-hero__visual"[\s\S]*?<\/figure>/)?.[0] ?? "";
 
   assert.match(hero, /src="\/assets\/visit-prep-hero\.png"/);
@@ -38,7 +40,7 @@ test("메인 히어로는 생성 이미지와 의미 있는 대체 텍스트를 
 });
 
 test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", async () => {
-  const html = await readFile("src/connections.html", "utf8");
+  const html = await pageMarkup("/connections");
 
   assert.match(html, /id="explorerDetailChecks"/);
   assert.match(html, /id="explorerDetailNutrition"/);
@@ -47,7 +49,7 @@ test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", as
 });
 
 test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분한다", async () => {
-  const html = await readFile("src/index.html", "utf8");
+  const html = await pageMarkup("/map");
 
   assert.match(html, /class="human-figure__image"/);
   assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
@@ -66,7 +68,7 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
 
 test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 분리되고 반응형 폭을 넘지 않는다", async () => {
   const [html, bodyMapCss, controlsCss, responsiveCss] = await Promise.all([
-    readFile("src/index.html", "utf8"),
+    pageMarkup("/map"),
     readFile("src/body-map.css", "utf8"),
     readFile("src/controls.css", "utf8"),
     readFile("src/responsive.css", "utf8"),

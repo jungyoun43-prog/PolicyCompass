@@ -2,20 +2,22 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { pageMarkup } from "./helpers/markup.mjs";
+
 const [shell, controls, gateway, landing, insights, insightsCss, insightsScript, mapHtml, mapCss, hierarchyCss, connections, explorerCss, journey, journeyCss, captureScript] = await Promise.all([
   readFile("src/shell.css", "utf8"),
   readFile("src/controls.css", "utf8"),
   readFile("src/gateway.css", "utf8"),
   readFile("src/landing.css", "utf8"),
-  readFile("src/insights.html", "utf8"),
+  pageMarkup("/insights"),
   readFile("src/insights.css", "utf8"),
   readFile("src/insights.js", "utf8"),
-  readFile("src/index.html", "utf8"),
+  pageMarkup("/map"),
   readFile("src/body-map.css", "utf8"),
   readFile("src/clinician-hierarchy.css", "utf8"),
-  readFile("src/connections.html", "utf8"),
+  pageMarkup("/connections"),
   readFile("src/explorer.css", "utf8"),
-  readFile("src/journey.html", "utf8"),
+  pageMarkup("/journey"),
   readFile("src/journey.css", "utf8"),
   readFile("scripts/visual-layout-capture.mjs", "utf8"),
 ]);

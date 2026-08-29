@@ -87,6 +87,12 @@ import {
 } from "./disease-assessment.js";
 import { createClaimSearchEntry, searchClaimIndex } from "./claim-search.js";
 import {
+  findOrderInCatalog,
+  ORDER_CATALOG_BOUNDARY,
+  orderKindLabel,
+  searchOrderCatalog,
+} from "./order-catalog.js";
+import {
   findMedicationInCatalog,
   MEDICATION_CATALOG_BOUNDARY,
   searchMedicationCatalog,
@@ -302,6 +308,15 @@ const refs = {
   vitalUnit: byId("vitalUnit"),
   vitalNote: byId("vitalNote"),
   vitalList: byId("vitalList"),
+  openVitalDialog: byId("openVitalDialog"),
+  closeVitalDialog: byId("closeVitalDialog"),
+  vitalDialog: byId("vitalDialog"),
+  vitalDialogContext: byId("vitalDialogContext"),
+  vitalSearchForm: byId("vitalSearchForm"),
+  vitalSearchInput: byId("vitalSearchInput"),
+  vitalResultList: byId("vitalResultList"),
+  vitalResultCount: byId("vitalResultCount"),
+  vitalSelectedSummary: byId("vitalSelectedSummary"),
   diagnosisForm: byId("diagnosisForm"),
   diagnosisRole: byId("diagnosisRole"),
   diagnosisCode: byId("diagnosisCode"),
@@ -349,6 +364,7 @@ const refs = {
   medicationReviewEmpty: byId("medicationReviewEmpty"),
   medicationReviewBody: byId("medicationReviewBody"),
   medicationReviewVerdict: byId("medicationReviewVerdict"),
+  medicationReviewPipeline: byId("medicationReviewPipeline"),
   medicationReviewRationale: byId("medicationReviewRationale"),
   medicationReviewSources: byId("medicationReviewSources"),
   medicationReviewBoundary: byId("medicationReviewBoundary"),
@@ -360,6 +376,16 @@ const refs = {
   orderPriority: byId("orderPriority"),
   orderInstructions: byId("orderInstructions"),
   orderList: byId("orderList"),
+  openOrderDialog: byId("openOrderDialog"),
+  closeOrderDialog: byId("closeOrderDialog"),
+  orderDialog: byId("orderDialog"),
+  orderDialogContext: byId("orderDialogContext"),
+  orderDialogBoundary: byId("orderDialogBoundary"),
+  orderSearchForm: byId("orderSearchForm"),
+  orderSearchInput: byId("orderSearchInput"),
+  orderResultList: byId("orderResultList"),
+  orderResultCount: byId("orderResultCount"),
+  orderSelectedSummary: byId("orderSelectedSummary"),
   encounterClaimSummary: byId("encounterClaimSummary"),
   encounterMobileClaimSummary: byId("encounterMobileClaimSummary"),
   encounterSignoffSummary: byId("encounterSignoffSummary"),
@@ -504,8 +530,13 @@ let selectedCatalogMedicationId = "";
 const medicationReviewById = new Map();
 const medicationReviewBusyIds = new Set();
 const expandedMedicationIds = new Set();
+const expandedSourceIds = new Set();
 let diagnosisSearchResults = [];
 let selectedCatalogDiagnosisId = "";
+let vitalSearchResults = [];
+let orderSearchResults = [];
+let selectedCatalogOrderId = "";
+let activeMedicationReviewId = "";
 let lastFhirReport = null;
 let draggedClaimReviewId = "";
 let claimEvaluationById = new Map();
@@ -3544,15 +3575,19 @@ function renderEncounter(patient, evaluations) {
           : "";
 
   setFormControlsDisabled(refs.vitalForm, !editable);
+  refs.openVitalDialog.disabled = !editable;
   setFormControlsDisabled(refs.diagnosisForm, !editable);
   refs.openDiagnosisDialog.disabled = !editable;
   setFormControlsDisabled(refs.prescriptionForm, !editable);
   refs.openPrescriptionDialog.disabled = !editable;
+  setFormControlsDisabled(refs.orderForm, !editable);
+  refs.openOrderDialog.disabled = !editable;
   if (!editable) {
+    closeVitalDialog();
     closeDiagnosisDialog();
     closePrescriptionDialog();
+    closeOrderDialog();
   }
-  setFormControlsDisabled(refs.orderForm, !editable);
   clear(refs.vitalList);
   clear(refs.diagnosisList);
   clear(refs.prescriptionList);
@@ -3670,6 +3705,8 @@ function clearPatientWorkspaceUi() {
   refs.runCopilot.disabled = true;
   for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = true;
   setFormControlsDisabled(refs.vitalForm, true);
+  refs.openVitalDialog.disabled = true;
+  closeVitalDialog();
   setFormControlsDisabled(refs.diagnosisForm, true);
   refs.openDiagnosisDialog.disabled = true;
   closeDiagnosisDialog();
@@ -3677,6 +3714,8 @@ function clearPatientWorkspaceUi() {
   refs.openPrescriptionDialog.disabled = true;
   closePrescriptionDialog();
   setFormControlsDisabled(refs.orderForm, true);
+  refs.openOrderDialog.disabled = true;
+  closeOrderDialog();
   for (const node of [
     refs.safetyAlerts,
     refs.patientMetrics,
@@ -4380,6 +4419,175 @@ refs.cancelEncounter.addEventListener("click", async () => {
   }
 });
 
+function renderVitalResults() {
+  clear(refs.vitalResultList);
+  refs.vitalResultCount.textContent = `${vitalSearchResults.length}건`;
+  if (!vitalSearchResults.length) {
+    refs.vitalResultList.append(element("li", "rx-result-empty", "검색어와 맞는 측정 항목이 없습니다."));
+    return;
+  }
+  for (const preset of vitalSearchResults) {
+    const item = element("li", "rx-result");
+    if (preset.code === refs.vitalPreset.value) item.classList.add("is-selected");
+    const heading = element("div", "rx-result__heading");
+    heading.append(element("b", "rx-result__label", preset.label));
+    item.append(heading, element("span", "rx-result__ingredient", `LOINC ${preset.code} · ${preset.unit}`));
+    const actions = element("div", "rx-result__actions");
+    const pickButton = element("button", "clinical-button", "이 항목 선택");
+    pickButton.type = "button";
+    pickButton.dataset.pickVital = preset.code;
+    actions.append(pickButton);
+    item.append(actions);
+    refs.vitalResultList.append(item);
+  }
+}
+
+function searchVitalPresets(query) {
+  const normalized = String(query ?? "").trim().toLowerCase();
+  if (!normalized) return [...ENCOUNTER_OBSERVATION_PRESETS];
+  return ENCOUNTER_OBSERVATION_PRESETS.filter((preset) => (
+    [preset.label, preset.code, preset.unit, preset.key].join(" ").toLowerCase().includes(normalized)
+  ));
+}
+
+function pickVitalPreset(code) {
+  const preset = ENCOUNTER_OBSERVATION_PRESETS.find((item) => item.code === code);
+  if (!preset) return;
+  refs.vitalPreset.value = preset.code;
+  syncVitalPreset();
+  refs.vitalSelectedSummary.textContent = `${preset.label} · LOINC ${preset.code} · 단위 ${preset.unit}. 결과값을 입력하세요.`;
+  renderVitalResults();
+  refs.vitalValue.focus();
+}
+
+function openVitalDialog() {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounter.recordStatus !== "draft" || encounter.status !== "in-progress") {
+    setStatus("진료를 시작한 뒤 측정을 담을 수 있습니다.", "error");
+    return;
+  }
+  refs.vitalDialog.closest("details")?.setAttribute("open", "");
+  refs.vitalDialogContext.textContent = encounterDialogContext(patient, encounter);
+  vitalSearchResults = searchVitalPresets(refs.vitalSearchInput.value);
+  renderVitalResults();
+  if (!refs.vitalDialog.open) refs.vitalDialog.showModal();
+  refs.vitalSearchInput.focus();
+}
+
+function closeVitalDialog() {
+  if (refs.vitalDialog.open) refs.vitalDialog.close();
+}
+
+refs.openVitalDialog.addEventListener("click", openVitalDialog);
+refs.closeVitalDialog.addEventListener("click", closeVitalDialog);
+
+refs.vitalSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  vitalSearchResults = searchVitalPresets(refs.vitalSearchInput.value);
+  renderVitalResults();
+});
+
+refs.vitalSearchInput.addEventListener("input", () => {
+  vitalSearchResults = searchVitalPresets(refs.vitalSearchInput.value);
+  renderVitalResults();
+});
+
+refs.vitalResultList.addEventListener("click", (event) => {
+  const pickButton = event.target.closest("[data-pick-vital]");
+  if (pickButton) pickVitalPreset(pickButton.dataset.pickVital);
+});
+
+// ---------- order dialog ----------
+
+function renderOrderResults() {
+  clear(refs.orderResultList);
+  refs.orderResultCount.textContent = `${orderSearchResults.length}건`;
+  if (!orderSearchResults.length) {
+    refs.orderResultList.append(element(
+      "li",
+      "rx-result-empty",
+      refs.orderSearchInput.value.trim()
+        ? "검색어와 맞는 예시 오더가 없습니다. 오더명이나 유형으로 다시 검색하세요."
+        : "오더명·유형·코드로 검색하세요.",
+    ));
+    return;
+  }
+  for (const entry of orderSearchResults) {
+    const item = element("li", "rx-result");
+    if (entry.id === selectedCatalogOrderId) item.classList.add("is-selected");
+    const heading = element("div", "rx-result__heading");
+    heading.append(element("b", "rx-result__label", entry.label));
+    heading.append(element("span", "dx-result__category", orderKindLabel(entry.kind)));
+    item.append(heading, element("span", "rx-result__ingredient", displayCoding(entry) || "기관 예시 코드"));
+    const actions = element("div", "rx-result__actions");
+    const pickButton = element("button", "clinical-button", "이 오더 선택");
+    pickButton.type = "button";
+    pickButton.dataset.pickOrder = entry.id;
+    actions.append(pickButton);
+    item.append(actions);
+    refs.orderResultList.append(item);
+  }
+}
+
+function pickCatalogOrder(orderId) {
+  const entry = findOrderInCatalog(orderId);
+  if (!entry) return;
+  selectedCatalogOrderId = entry.id;
+  refs.orderKind.value = entry.kind;
+  refs.orderCode.value = entry.code;
+  refs.orderSystem.value = entry.system;
+  refs.orderLabel.value = entry.label;
+  refs.orderPriority.value = entry.priority;
+  refs.orderInstructions.value = entry.instructions;
+  refs.orderSelectedSummary.textContent = `${entry.label} · ${orderKindLabel(entry.kind)} · ${entry.system} | ${entry.code}. 우선순위와 요청사항을 확인하세요.`;
+  renderOrderResults();
+  refs.orderPriority.focus();
+}
+
+function resetOrderSelection() {
+  selectedCatalogOrderId = "";
+  refs.orderSelectedSummary.textContent = "검색 결과에서 오더를 선택하면 유형과 코드가 채워집니다.";
+}
+
+function openOrderDialog() {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounter.recordStatus !== "draft" || encounter.status !== "in-progress") {
+    setStatus("진료를 시작한 뒤 오더를 담을 수 있습니다.", "error");
+    return;
+  }
+  refs.orderDialog.closest("details")?.setAttribute("open", "");
+  refs.orderDialogBoundary.textContent = ORDER_CATALOG_BOUNDARY;
+  refs.orderDialogContext.textContent = encounterDialogContext(patient, encounter);
+  renderOrderResults();
+  if (!refs.orderDialog.open) refs.orderDialog.showModal();
+  refs.orderSearchInput.focus();
+}
+
+function closeOrderDialog() {
+  if (refs.orderDialog.open) refs.orderDialog.close();
+}
+
+refs.openOrderDialog.addEventListener("click", openOrderDialog);
+refs.closeOrderDialog.addEventListener("click", closeOrderDialog);
+
+refs.orderSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  orderSearchResults = searchOrderCatalog(refs.orderSearchInput.value, 8);
+  renderOrderResults();
+});
+
+refs.orderSearchInput.addEventListener("input", () => {
+  orderSearchResults = searchOrderCatalog(refs.orderSearchInput.value, 8);
+  renderOrderResults();
+});
+
+refs.orderResultList.addEventListener("click", (event) => {
+  const pickButton = event.target.closest("[data-pick-order]");
+  if (pickButton) pickCatalogOrder(pickButton.dataset.pickOrder);
+});
+
 refs.vitalPreset.addEventListener("change", syncVitalPreset);
 
 refs.vitalForm.addEventListener("submit", async (event) => {
@@ -4396,7 +4604,7 @@ refs.vitalForm.addEventListener("submit", async (event) => {
     }), "진료 측정 초안을 추가했습니다.");
     refs.vitalForm.reset();
     syncVitalPreset();
-    refs.vitalValue.focus();
+    closeVitalDialog();
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진료 측정을 추가하지 못했습니다.";
   }
@@ -4485,6 +4693,15 @@ function resetDiagnosisSelection() {
   refs.diagnosisSelectedSummary.textContent = "검색 결과에서 진단명을 선택하면 코드 후보가 표시됩니다.";
 }
 
+function encounterDialogContext(patient, encounter) {
+  return [
+    patient.name,
+    patientAgeLabel(patient),
+    INSURANCE_LABELS[patient.insuranceType] ?? INSURANCE_LABELS.unknown,
+    `진료일 ${displayDate(encounter.date)}`,
+  ].filter(Boolean).join(" · ");
+}
+
 function openDiagnosisDialog() {
   const patient = selectedPatient();
   const encounter = currentEncounter(patient);
@@ -4494,12 +4711,7 @@ function openDiagnosisDialog() {
   }
   refs.diagnosisDialog.closest("details")?.setAttribute("open", "");
   refs.dxDialogBoundary.textContent = DIAGNOSIS_CATALOG_BOUNDARY;
-  refs.dxDialogContext.textContent = [
-    patient.name,
-    patientAgeLabel(patient),
-    INSURANCE_LABELS[patient.insuranceType] ?? INSURANCE_LABELS.unknown,
-    `진료일 ${displayDate(encounter.date)}`,
-  ].filter(Boolean).join(" · ");
+  refs.dxDialogContext.textContent = encounterDialogContext(patient, encounter);
   renderDiagnosisResults();
   if (!refs.diagnosisDialog.open) refs.diagnosisDialog.showModal();
   refs.diagnosisSearchInput.focus();
@@ -4620,7 +4832,7 @@ function pickCatalogMedication(medicationId) {
   refs.medicationDurationDays.value = String(medication.dosing.durationDays);
   refs.medicationQuantity.value = String(medication.dosing.quantity);
   refs.medicationInstructions.value = medication.dosing.instructions;
-  refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient} · ${medication.classLabel} 기본 용법을 채웠습니다. 용법과 총 수량은 의료진이 직접 확인하고 수정하세요.`;
+  refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient} · ${medication.classLabel} · ${medication.system} | ${medication.code}. 약품 코드와 코드 시스템은 선택한 약품에서 자동으로 채워지며, 용법과 총 수량은 의료진이 확인하고 수정하세요.`;
   renderMedicationResults();
 }
 
@@ -4655,7 +4867,7 @@ function renderMedicationResults() {
   for (const medication of medicationSearchResults) {
     const item = element("li", "rx-result");
     if (medication.id === selectedCatalogMedicationId) item.classList.add("is-selected");
-    const review = medicationReviewById.get(medication.id);
+    const review = medication.id === activeMedicationReviewId ? medicationReviewById.get(medication.id) : null;
     const heading = element("div", "rx-result__heading");
     heading.append(element("b", "rx-result__label", medication.label));
     if (review) {
@@ -4689,6 +4901,98 @@ function renderMedicationResults() {
     item.append(details);
 
     refs.medicationResultList.append(item);
+  }
+}
+
+/**
+ * Marks the decisive phrases inside the rule text without building HTML from
+ * strings, so a clinician can read the criterion wording itself, not a paraphrase.
+ */
+function appendHighlightedText(node, text, highlights = []) {
+  const phrases = [...new Set(highlights.filter(Boolean))];
+  let rest = String(text ?? "");
+  while (rest) {
+    let bestIndex = -1;
+    let bestPhrase = "";
+    for (const phrase of phrases) {
+      const index = rest.indexOf(phrase);
+      if (index !== -1 && (bestIndex === -1 || index < bestIndex || (index === bestIndex && phrase.length > bestPhrase.length))) {
+        bestIndex = index;
+        bestPhrase = phrase;
+      }
+    }
+    if (bestIndex === -1) {
+      node.append(rest);
+      return;
+    }
+    if (bestIndex > 0) node.append(rest.slice(0, bestIndex));
+    node.append(element("mark", "rx-source__mark-text", bestPhrase));
+    rest = rest.slice(bestIndex + bestPhrase.length);
+  }
+}
+
+function medicationReviewTransmission(review) {
+  const findings = review.checks.reduce((total, item) => total + item.chart.findings.filter(({ eventId }) => eventId).length, 0);
+  return [
+    ["약품", `${review.medication.label} · ${review.medication.ingredient} · ${review.medication.code}`],
+    ["이번 처방", [
+      review.prescription.dose ? `1회 ${review.prescription.dose}${review.prescription.doseUnit}` : "",
+      review.prescription.route,
+      review.prescription.frequency,
+      review.prescription.durationDays ? `${review.prescription.durationDays}일` : "",
+    ].filter(Boolean).join(" · ") || "용법 미입력"],
+    ["환자 컨텍스트", [
+      Number.isInteger(review.patient.ageYears) ? `만 ${review.patient.ageYears}세` : "나이 미상",
+      SEX_LABELS[review.patient.sex] ?? "성별 미상",
+      INSURANCE_LABELS[review.patient.insuranceType] ?? INSURANCE_LABELS.unknown,
+      `확인 상병 ${review.patient.conditionCount}건`,
+    ].join(" · ")],
+    ["대조 자료", `등록 기준 ${review.checks.length}개 · 연결된 차트 기록 ${findings}건`],
+    ["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"],
+  ];
+}
+
+function renderMedicationReviewPipeline(review) {
+  clear(refs.medicationReviewPipeline);
+  const provider = medicationReviewProvider();
+  const cloudLabel = provider === "frontier"
+    ? "클라우드 LLM 규칙 재검토 · 프론티어 모델"
+    : provider === "local"
+      ? "LLM 규칙 재검토 · 이 기기의 로컬 모델"
+      : "클라우드 LLM 규칙 재검토 · 모델 미설정";
+  const steps = [
+    ["1", "이 브라우저에서 규칙 대조", "선택 환자의 확정 차트와 등록된 급여기준을 항목별로 맞춥니다."],
+    ["2", "대조 결과 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
+    ["3", cloudLabel, "기준 문구와 환자 기록을 다시 대조해 판정과 근거 문장을 작성합니다."],
+    ["4", "판정·근거·출처 반환", "규칙 판정보다 관대한 답과 없는 근거 인용은 서버가 되돌립니다."],
+  ];
+  const list = element("ol", "rx-pipeline");
+  for (const [index, title, detail] of steps) {
+    const item = element("li", "rx-pipeline__step");
+    item.append(
+      element("span", "rx-pipeline__index", index),
+      (() => {
+        const text = element("span", "rx-pipeline__text");
+        text.append(element("b", "", title), element("span", "", detail));
+        return text;
+      })(),
+    );
+    list.append(item);
+  }
+  const payload = element("details", "rx-pipeline__payload");
+  payload.append(element("summary", "rx-result__details-summary", "전송 내역 보기"));
+  const rows = element("dl", "rx-detail-list");
+  for (const [term, value] of medicationReviewTransmission(review)) {
+    rows.append(element("dt", "", term), element("dd", "", value));
+  }
+  payload.append(rows);
+  refs.medicationReviewPipeline.append(list, payload);
+  if (!provider) {
+    refs.medicationReviewPipeline.append(element(
+      "p",
+      "rx-review__boundary",
+      "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
+    ));
   }
 }
 
@@ -4733,16 +5037,26 @@ function renderMedicationReviewSources(review) {
     }
     chart.append(findings);
     grid.append(criterion, chart);
-    item.append(
-      title,
-      grid,
-      element("p", "rx-source__document", [
-        check.source.label,
-        check.source.documentNumber,
-        check.source.version ? `v${check.source.version}` : "",
-        check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
-      ].filter(Boolean).join(" · ")),
-    );
+    item.append(title, grid);
+
+    if (check.source.excerpt) {
+      const origin = element("details", "rx-source__origin");
+      origin.open = expandedSourceIds.has(check.id);
+      origin.dataset.sourceOrigin = check.id;
+      origin.append(element("summary", "rx-result__details-summary", "근거 원문 확인"));
+      if (check.source.article) origin.append(element("p", "rx-source__article", check.source.article));
+      const excerpt = element("blockquote", "rx-source__excerpt");
+      appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights);
+      origin.append(excerpt);
+      item.append(origin);
+    }
+
+    item.append(element("p", "rx-source__document", [
+      check.source.label,
+      check.source.documentNumber,
+      check.source.version ? `v${check.source.version}` : "",
+      check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
+    ].filter(Boolean).join(" · ")));
     refs.medicationReviewSources.append(item);
   }
 }
@@ -4756,6 +5070,7 @@ function renderMedicationReview(review) {
   text.append(element("b", "", review.verdictLabel), element("span", "", review.summary));
   refs.medicationReviewVerdict.append(element("span", "rx-verdict__symbol", review.verdictSymbol), text);
   renderMedicationReviewMode(review);
+  renderMedicationReviewPipeline(review);
   clear(refs.medicationReviewRationale);
   for (const line of review.rationale) refs.medicationReviewRationale.append(element("li", "", line));
   if (review.note) refs.medicationReviewRationale.append(element("li", "rx-rationale-note", review.note));
@@ -4767,9 +5082,12 @@ function resetMedicationReviewPanel() {
   refs.medicationReviewEmpty.hidden = false;
   refs.medicationReviewBody.hidden = true;
   clear(refs.medicationReviewVerdict);
+  clear(refs.medicationReviewPipeline);
   clear(refs.medicationReviewRationale);
   clear(refs.medicationReviewSources);
   refs.medicationReviewBoundary.textContent = "";
+  activeMedicationReviewId = "";
+  expandedSourceIds.clear();
   renderMedicationReviewMode();
 }
 
@@ -4791,7 +5109,10 @@ async function runMedicationReview(medicationId) {
     setStatus(error instanceof Error ? error.message : "약제 사전점검을 만들지 못했습니다.", "error");
     return;
   }
+  medicationReviewById.clear();
+  expandedSourceIds.clear();
   medicationReviewById.set(medicationId, review);
+  activeMedicationReviewId = medicationId;
   renderMedicationResults();
   renderMedicationReview(review);
   const provider = medicationReviewProvider();
@@ -4831,12 +5152,7 @@ function openPrescriptionDialog() {
   }
   refs.prescriptionDialog.closest("details")?.setAttribute("open", "");
   refs.rxDialogBoundary.textContent = MEDICATION_CATALOG_BOUNDARY;
-  refs.rxDialogContext.textContent = [
-    patient.name,
-    patientAgeLabel(patient),
-    INSURANCE_LABELS[patient.insuranceType] ?? INSURANCE_LABELS.unknown,
-    `진료일 ${displayDate(encounter.date)}`,
-  ].filter(Boolean).join(" · ");
+  refs.rxDialogContext.textContent = encounterDialogContext(patient, encounter);
   medicationReviewById.clear();
   resetMedicationReviewPanel();
   renderMedicationResults();
@@ -4861,6 +5177,20 @@ refs.medicationSearchForm.addEventListener("submit", (event) => {
 refs.medicationSearchInput.addEventListener("input", () => {
   medicationSearchResults = searchMedicationCatalog(refs.medicationSearchInput.value, 8);
   renderMedicationResults();
+});
+
+refs.medicationReviewSources.addEventListener("toggle", (event) => {
+  const origin = event.target.closest("[data-source-origin]");
+  if (!origin) return;
+  const id = origin.dataset.sourceOrigin;
+  if (origin.open) expandedSourceIds.add(id);
+  else expandedSourceIds.delete(id);
+}, true);
+
+refs.medicationReviewSources.addEventListener("click", (event) => {
+  if (event.target.closest("[data-source-origin]")) return;
+  const origin = event.target.closest(".rx-source")?.querySelector("[data-source-origin]");
+  if (origin) origin.open = !origin.open;
 });
 
 refs.medicationResultList.addEventListener("toggle", (event) => {
@@ -4925,6 +5255,8 @@ refs.orderForm.addEventListener("submit", async (event) => {
       instructions: refs.orderInstructions.value,
     }), "오더 초안을 추가했습니다.");
     refs.orderForm.reset();
+    resetOrderSelection();
+    closeOrderDialog();
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "오더를 추가하지 못했습니다.";
   }

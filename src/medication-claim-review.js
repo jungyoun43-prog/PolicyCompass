@@ -80,7 +80,7 @@ function codeMatches(eventCode, criterionCode) {
   return left === right || left.startsWith(`${right}.`) || left.startsWith(right);
 }
 
-function check({ id, kind, title, verdict, matched, requirement, criterionDetail, chartDetail, findings = [], source }) {
+function check({ id, kind, title, verdict, matched, requirement, criterionDetail, chartDetail, findings = [], source, article = "", excerpt = "", highlights = [] }) {
   return {
     id,
     kind,
@@ -89,7 +89,45 @@ function check({ id, kind, title, verdict, matched, requirement, criterionDetail
     matched,
     criterion: { requirement, detail: criterionDetail },
     chart: { status: matched ? "기록 확인" : "기록 미확인", detail: chartDetail, findings },
-    source,
+    source: {
+      ...source,
+      article: cleanText(article, 160),
+      excerpt: cleanText(excerpt, 600),
+      highlights: highlights.map((value) => cleanText(value, 120)).filter(Boolean).slice(0, 6),
+    },
+  };
+}
+
+/**
+ * Each check carries the criterion wording it was matched against, so a clinician
+ * can re-read the rule text beside the chart record rather than trusting a summary.
+ */
+function indicationOrigin(medication) {
+  const codes = medication.coverage.indications.map(({ code, label }) => `${code} ${label}`);
+  return {
+    article: "제3장 제1절 · 급여 인정 상병",
+    excerpt: codes.length
+      ? `「${medication.label}」은(는) 다음 상병이 확인된 경우에 한하여 요양급여를 인정한다: ${codes.join(", ")}. 인정 상병이 진료기록에서 확인되지 않은 청구분은 조정 대상이 된다.`
+      : `「${medication.label}」에 대한 급여 인정 상병이 등록되어 있지 않아 자동 대조를 수행하지 않는다.`,
+    highlights: codes.length
+      ? [...medication.coverage.indications.map(({ code }) => code), "인정 상병이 진료기록에서 확인되지 않은 청구분은 조정 대상"]
+      : ["자동 대조를 수행하지 않는다"],
+  };
+}
+
+function durationOrigin(medication, maximum) {
+  return {
+    article: "제3장 제3절 · 1회 처방 인정 일수",
+    excerpt: `「${medication.label}」은(는) 1회 처방 시 ${maximum}일분까지 인정한다. 이를 초과하여 처방한 분량은 조정 대상이 된다.`,
+    highlights: [`${maximum}일분까지 인정`, "초과하여 처방한 분량은 조정 대상"],
+  };
+}
+
+function ageOrigin(medication, requirement) {
+  return {
+    article: "제3장 제4절 · 연령 인정 범위",
+    excerpt: `「${medication.label}」은(는) ${requirement.replace("연령 인정 범위: ", "")} 환자에게 투여하는 경우 인정한다. 범위를 벗어난 투여는 그 사유를 진료기록부에 기재한다.`,
+    highlights: [requirement.replace("연령 인정 범위: ", ""), "사유를 진료기록부에 기재"],
   };
 }
 
@@ -106,6 +144,7 @@ function indicationCheck(medication, conditions, encounterId) {
   const requirement = `급여 인정 상병: ${medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ")}`;
   if (!medication.coverage.indications.length) {
     return check({
+      ...indicationOrigin(medication),
       id: "indication",
       kind: "indication",
       title: "급여 인정 상병",
@@ -132,6 +171,7 @@ function indicationCheck(medication, conditions, encounterId) {
       chartDetail: `이 환자 기록에서 인정 상병 ${confirmed.length}건을 확인했습니다.`,
       findings,
       source,
+      ...indicationOrigin(medication),
     });
   }
   if (matches.length) {
@@ -146,6 +186,7 @@ function indicationCheck(medication, conditions, encounterId) {
       chartDetail: "인정 상병 범위의 기록이 있으나 의증·잠정 단계로만 남아 있어 확정 근거로 보기 어렵습니다.",
       findings,
       source,
+      ...indicationOrigin(medication),
     });
   }
   return check({
@@ -161,6 +202,7 @@ function indicationCheck(medication, conditions, encounterId) {
       : "이 환자에게 대조할 확인 상병 기록이 없습니다.",
     findings: conditions.slice(0, 4).map((event) => finding(event, encounterId, "인정 상병과 불일치")),
     source,
+    ...indicationOrigin(medication),
   });
 }
 
@@ -195,6 +237,9 @@ function evidenceChecks(medication, events, encounterId, asOf) {
         return finding(event, encounterId, elapsed === null ? "" : `처방일 기준 ${elapsed}일 전`);
       }),
       source,
+      article: "제2장 제4절 · 선행 검사·기록 요건",
+      excerpt: `「${medication.label}」의 투여는 ${criterion.label}이(가) ${cutoffDays ? `처방일 기준 최근 ${cutoffDays}일 이내에 ` : ""}진료기록에서 확인되는 경우에 인정한다. 선행 근거가 확인되지 않은 청구분은 조정 대상이 된다.`,
+      highlights: [criterion.label, cutoffDays ? `최근 ${cutoffDays}일 이내` : "", "선행 근거가 확인되지 않은 청구분은 조정 대상"].filter(Boolean),
     });
   });
 }
@@ -214,6 +259,9 @@ function duplicateCheck(medication, events, encounterId, asOf) {
       criterionDetail: "이 약품에는 대조할 중복 효능군 기준이 등록되어 있지 않습니다.",
       chartDetail: "중복 대조를 수행하지 않았습니다.",
       source,
+      article: "제4장 제1절 · 동일 효능군 중복 투여",
+      excerpt: "동일 효능군 중복 투여 기준이 등록되지 않은 약제는 자동 대조 대상에서 제외한다.",
+      highlights: ["자동 대조 대상에서 제외"],
     });
   }
   const active = events.filter((event) => usableEvent(event)
@@ -236,6 +284,9 @@ function duplicateCheck(medication, events, encounterId, asOf) {
       : `이 환자에게 같은 효능군의 활성 처방이 없습니다. (활성 약물 ${active.length}건 대조)`,
     findings: duplicates.slice(0, 4).map((event) => finding(event, encounterId, `${chartMedicationClass(event).classLabel} · 활성 처방`)),
     source,
+    article: "제4장 제1절 · 동일 효능군 중복 투여",
+    excerpt: `동일 효능군(${medication.coverage.duplicateClassLabel || medication.classLabel})에 속하는 약제를 같은 기간에 함께 투여한 경우, 중복 투여분은 인정하지 아니한다. 병용이 임상적으로 필요한 경우 그 사유를 진료기록부에 기재한다.`,
+    highlights: [medication.coverage.duplicateClassLabel || medication.classLabel, "중복 투여분은 인정하지 아니한다"],
   });
 }
 
@@ -263,6 +314,9 @@ function allergyCheck(medication, events, encounterId) {
         : "이 환자에게 등록된 활성 알레르기 기록이 없습니다.",
       findings: allergies.slice(0, 4).map((event) => finding(event, encounterId, "자동 대조 대상 아님")),
       source,
+      article: "제5장 제2절 · 투여 전 알레르기 확인",
+      excerpt: "성분명 자동 대조 대상으로 등록되지 않은 약제는 의료진이 환자의 약물 알레르기 기록을 직접 대조한다.",
+      highlights: ["의료진이 환자의 약물 알레르기 기록을 직접 대조한다"],
     });
   }
   const matches = allergies.filter((event) => {
@@ -282,6 +336,9 @@ function allergyCheck(medication, events, encounterId) {
       : `이 환자의 활성 알레르기 ${allergies.length}건과 이름이 일치하지 않습니다.`,
     findings: (matches.length ? matches : allergies).slice(0, 4).map((event) => finding(event, encounterId, matches.length ? "성분명 일치" : "성분명 불일치")),
     source,
+    article: "제5장 제2절 · 투여 전 알레르기 확인",
+    excerpt: `투여 전 환자의 약물 알레르기 기록을 확인한다. 기록된 알레르기와 투여 약제의 성분명(${ingredients.slice(0, 3).join(", ")})이 일치하는 경우, 임상적 관련성과 대체 약제 검토 결과를 진료기록부에 기재한다.`,
+    highlights: [...ingredients.slice(0, 3), "임상적 관련성과 대체 약제 검토 결과를 진료기록부에 기재"],
   });
 }
 
@@ -303,6 +360,9 @@ function contraindicationCheck(medication, conditions, encounterId) {
       : "이 환자 기록에서 금기 상병이 확인되지 않습니다.",
     findings: matches.slice(0, 4).map((event) => finding(event, encounterId, "금기 상병 일치")),
     source,
+    article: "제5장 제1절 · 금기·신중투여",
+    excerpt: `다음 상병이 확인된 환자에게 「${medication.label}」을(를) 투여하는 경우는 금기 또는 신중투여에 해당한다: ${codes.map(({ code, label }) => `${code} ${label}`).join(", ")}. 투여가 필요한 경우 그 사유를 진료기록부에 기재하며, 사유가 확인되지 않은 청구분은 조정 대상이 된다.`,
+    highlights: [...codes.map(({ code }) => code), "사유가 확인되지 않은 청구분은 조정 대상"],
   });
 }
 
@@ -323,6 +383,7 @@ function durationCheck(medication, prescription) {
       criterionDetail: "인정 일수를 넘는 처방분은 조정될 수 있습니다.",
       chartDetail: "처방 일수를 입력하지 않아 인정 일수와 대조하지 못했습니다.",
       source,
+      ...durationOrigin(medication, maximum),
     });
   }
   return check({
@@ -338,6 +399,7 @@ function durationCheck(medication, prescription) {
       : `이번 처방 ${requested}일은 인정 일수 안에 있습니다.`,
     findings: [{ eventId: "", label: "이번 처방 입력", code: "", date: "", provenance: "이번 진료 초안", detail: `${requested}일` }],
     source,
+    ...durationOrigin(medication, maximum),
   });
 }
 
@@ -358,6 +420,7 @@ function ageCheck(medication, patientAge) {
       criterionDetail: "연령 범위를 벗어난 처방은 별도 사유 없이는 조정될 수 있습니다.",
       chartDetail: "환자 생년월일이나 나이가 없어 연령 기준과 대조하지 못했습니다.",
       source,
+      ...ageOrigin(medication, requirement),
     });
   }
   const withinRange = (!minimum || patientAge >= minimum) && (!maximum || patientAge <= maximum);
@@ -372,6 +435,7 @@ function ageCheck(medication, patientAge) {
     chartDetail: `이 환자는 만 ${patientAge}세로 ${withinRange ? "연령 기준 안에 있습니다." : "연령 기준을 벗어납니다."}`,
     findings: [{ eventId: "", label: "환자 나이", code: "", date: "", provenance: "환자 기본정보", detail: `만 ${patientAge}세` }],
     source,
+    ...ageOrigin(medication, requirement),
   });
 }
 

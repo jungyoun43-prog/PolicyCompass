@@ -287,15 +287,46 @@
                     </summary>
                     <div class="workflow-disclosure__body">
                       <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
-                      <form class="inline-clinical-form" id="vitalForm" novalidate autocomplete="off" spellcheck="false">
-                        <div class="vital-form-grid">
-                          <label>측정 항목<select id="vitalPreset" name="preset" required></select></label>
-                          <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
-                          <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
-                          <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
-                          <button class="clinical-button clinical-button--primary" type="submit">측정 추가</button>
+                      <div class="prescription-launcher">
+                        <button class="clinical-button clinical-button--primary" type="button" id="openVitalDialog" aria-haspopup="dialog">측정 추가</button>
+                        <p class="prescription-launcher__hint">측정 항목을 검색해 고르면 LOINC 코드와 단위가 고정되고, 결과값만 입력하면 됩니다.</p>
+                      </div>
+
+                      <dialog class="rx-dialog" id="vitalDialog" aria-labelledby="vitalDialogTitle">
+                        <div class="rx-dialog__panel">
+                          <header class="rx-dialog__header">
+                            <span class="rx-dialog__heading">
+                              <span class="rail-eyebrow">MEASUREMENT SEARCH</span>
+                              <span class="rx-dialog__title" id="vitalDialogTitle" role="heading" aria-level="3">측정 추가</span>
+                              <span class="rx-dialog__context" id="vitalDialogContext">환자를 먼저 선택하세요.</span>
+                            </span>
+                            <button class="text-action" type="button" id="closeVitalDialog">닫기</button>
+                          </header>
+
+                          <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
+
+                          <form class="rx-search" id="vitalSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
+                            <label class="rx-search__field" for="vitalSearchInput">측정 항목 검색<input id="vitalSearchInput" name="query" type="search" maxlength="120" placeholder="항목명·단위·LOINC 코드 (예: 혈압, 당화, 8867-4)" /></label>
+                            <button class="clinical-button clinical-button--primary" type="submit">검색</button>
+                          </form>
+
+                          <section class="dx-results" aria-labelledby="vitalResultsTitle">
+                            <h4 class="rx-section-title" id="vitalResultsTitle">측정 항목 <span class="rx-count" id="vitalResultCount">0건</span></h4>
+                            <ul class="rx-result-list" id="vitalResultList" aria-label="측정 항목 검색 결과" aria-live="polite"></ul>
+                          </section>
+
+                          <form class="inline-clinical-form rx-form" id="vitalForm" novalidate autocomplete="off" spellcheck="false">
+                            <p class="rx-form__selected" id="vitalSelectedSummary">측정 항목을 선택하면 코드와 단위가 고정됩니다.</p>
+                            <select class="visually-hidden" id="vitalPreset" name="preset" required tabindex="-1" aria-hidden="true"></select>
+                            <div class="vital-form-grid">
+                              <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
+                              <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
+                              <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
+                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 측정 추가</button>
+                            </div>
+                          </form>
                         </div>
-                      </form>
+                      </dialog>
                       <ul class="clinical-entry-list" id="vitalList" aria-label="이번 진료 측정 목록" aria-live="polite"></ul>
                     </div>
                   </details>
@@ -401,11 +432,16 @@
                               <div class="rx-review__body" id="medicationReviewBody" aria-live="polite" hidden>
                                 <div class="rx-verdict" id="medicationReviewVerdict"></div>
                                 <section class="rx-review__section">
+                                  <h5 class="rx-review__heading">AI 검토 과정</h5>
+                                  <div id="medicationReviewPipeline"></div>
+                                </section>
+                                <section class="rx-review__section">
                                   <h5 class="rx-review__heading">근거</h5>
                                   <ul class="rx-rationale-list" id="medicationReviewRationale"></ul>
                                 </section>
                                 <section class="rx-review__section">
                                   <h5 class="rx-review__heading">출처 · 삭감 근거와 환자 정보 대조</h5>
+                                  <p class="rx-review__hint">각 항목을 누르면 그 기준의 원문이 열리고, 판정을 가른 문구가 강조됩니다.</p>
                                   <ul class="rx-source-list" id="medicationReviewSources"></ul>
                                 </section>
                                 <p class="rx-review__boundary" id="medicationReviewBoundary"></p>
@@ -416,8 +452,8 @@
                           <form class="inline-clinical-form rx-form" id="prescriptionForm" novalidate autocomplete="off" spellcheck="false">
                             <p class="rx-form__selected" id="medicationSelectedSummary">검색 결과에서 약을 선택하면 기본 용법이 채워집니다. 용법은 의료진이 직접 확인하고 수정하세요.</p>
                             <div class="prescription-form-grid">
-                              <label>약품 코드<input id="medicationCode" name="code" maxlength="80" placeholder="EDI 또는 기관 코드" /></label>
-                              <label class="clinical-system-field">코드 시스템<input id="medicationSystem" name="system" maxlength="300" placeholder="EDI 또는 기관 코드체계 URI" /></label>
+                              <input type="hidden" id="medicationCode" name="code" maxlength="80" />
+                              <input type="hidden" id="medicationSystem" name="system" maxlength="300" />
                               <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
                               <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
                               <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
@@ -441,17 +477,50 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="orders">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <form class="inline-clinical-form" id="orderForm" novalidate autocomplete="off" spellcheck="false">
-                        <div class="order-form-grid">
-                          <label>오더 유형<select id="orderKind" name="kind"><option value="laboratory">검사</option><option value="imaging">영상</option><option value="procedure">처치</option><option value="referral">의뢰</option></select></label>
-                          <label>오더 코드<input id="orderCode" name="code" maxlength="80" placeholder="EDI·LOINC·기관 코드" /></label>
-                          <label class="clinical-system-field">코드 시스템<input id="orderSystem" name="system" maxlength="300" placeholder="표준 또는 기관 코드체계 URI" /></label>
-                          <label class="clinical-label-field">오더명<input id="orderLabel" name="label" maxlength="160" required placeholder="예: 흉부 X-ray" /></label>
-                          <label>우선순위<select id="orderPriority" name="priority"><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
-                          <label class="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxlength="500" placeholder="검사 목적·부위·주의사항" /></label>
-                          <button class="clinical-button clinical-button--primary" type="submit">오더 추가</button>
+                      <p class="entry-boundary">의료진이 결정한 검사·영상·처치·의뢰 오더를 기록하는 로컬 초안입니다. 오더 필요성을 자동으로 판단하지 않으며 실제 오더 전송 기능이 아닙니다.</p>
+                      <div class="prescription-launcher">
+                        <button class="clinical-button clinical-button--primary" type="button" id="openOrderDialog" aria-haspopup="dialog">오더 추가</button>
+                        <p class="prescription-launcher__hint">오더명을 검색해 고르면 유형과 코드가 채워집니다. 우선순위와 요청사항을 확인해 이번 진료에 담습니다.</p>
+                      </div>
+
+                      <dialog class="rx-dialog" id="orderDialog" aria-labelledby="orderDialogTitle">
+                        <div class="rx-dialog__panel">
+                          <header class="rx-dialog__header">
+                            <span class="rx-dialog__heading">
+                              <span class="rail-eyebrow">ORDER SEARCH</span>
+                              <span class="rx-dialog__title" id="orderDialogTitle" role="heading" aria-level="3">오더 추가</span>
+                              <span class="rx-dialog__context" id="orderDialogContext">환자를 먼저 선택하세요.</span>
+                            </span>
+                            <button class="text-action" type="button" id="closeOrderDialog">닫기</button>
+                          </header>
+
+                          <p class="entry-boundary" id="orderDialogBoundary">내부 검토용 예시 오더 목록입니다.</p>
+
+                          <form class="rx-search" id="orderSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
+                            <label class="rx-search__field" for="orderSearchInput">오더 검색<input id="orderSearchInput" name="query" type="search" maxlength="120" placeholder="오더명·유형·코드 (예: 폐기능, 흉부, 의뢰)" /></label>
+                            <button class="clinical-button clinical-button--primary" type="submit">검색</button>
+                          </form>
+
+                          <section class="dx-results" aria-labelledby="orderResultsTitle">
+                            <h4 class="rx-section-title" id="orderResultsTitle">검색 결과 <span class="rx-count" id="orderResultCount">0건</span></h4>
+                            <ul class="rx-result-list" id="orderResultList" aria-label="오더 검색 결과" aria-live="polite"></ul>
+                          </section>
+
+                          <form class="inline-clinical-form rx-form" id="orderForm" novalidate autocomplete="off" spellcheck="false">
+                            <p class="rx-form__selected" id="orderSelectedSummary">검색 결과에서 오더를 선택하면 유형과 코드가 채워집니다.</p>
+                            <input type="hidden" id="orderCode" name="code" maxlength="80" />
+                            <input type="hidden" id="orderSystem" name="system" maxlength="300" />
+                            <div class="order-form-grid">
+                              <label>오더 유형<select id="orderKind" name="kind"><option value="laboratory">검사</option><option value="imaging">영상</option><option value="procedure">처치</option><option value="referral">의뢰</option></select></label>
+                              <label class="clinical-label-field">오더명<input id="orderLabel" name="label" maxlength="160" required placeholder="예: 흉부 X-ray" /></label>
+                              <label>우선순위<select id="orderPriority" name="priority"><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
+                              <label class="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxlength="500" placeholder="검사 목적·부위·주의사항" /></label>
+                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 오더 추가</button>
+                            </div>
+                          </form>
                         </div>
-                      </form>
+                      </dialog>
+
                       <ul class="clinical-entry-list" id="orderList" aria-label="이번 진료 오더 목록" aria-live="polite"></ul>
                     </div>
                   </details>

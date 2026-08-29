@@ -8142,6 +8142,103 @@ button.claim-attention-item__summary:focus-visible {
   color: var(--urgent);
 }
 
+.rx-pipeline {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.rx-pipeline__step {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+}
+
+.rx-pipeline__index {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-inverse);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.rx-pipeline__text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  font-size: var(--font-size-caption);
+  line-height: 1.55;
+}
+
+.rx-pipeline__text span {
+  color: var(--muted);
+}
+
+.rx-pipeline__payload {
+  border-top: var(--border-subtle);
+  padding-top: var(--space-2);
+}
+
+.rx-review__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.rx-source {
+  cursor: pointer;
+}
+
+.rx-source__origin {
+  border-top: 1px dashed var(--line-strong);
+  padding-top: var(--space-2);
+}
+
+.rx-source__article {
+  margin: var(--space-2) 0 var(--space-1);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.rx-source__excerpt {
+  margin: 0;
+  border-left: 2px solid var(--rx-source-tone);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: var(--font-size-caption);
+  line-height: 1.7;
+}
+
+.rx-source__mark-text {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--rx-source-tone) 22%, var(--surface-raised));
+  padding: 0 2px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Pointing at a criterion sharpens the phrase that decided it. */
+.rx-source:hover .rx-source__mark-text,
+.rx-source:focus-within .rx-source__mark-text {
+  background: color-mix(in srgb, var(--rx-source-tone) 42%, var(--surface-raised));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--rx-source-tone) 60%, transparent);
+}
+
 .rx-review__empty,
 .rx-review__boundary {
   margin: 0;

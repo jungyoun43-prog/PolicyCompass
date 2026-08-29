@@ -365,6 +365,8 @@ const refs = {
   medicationReviewBody: byId("medicationReviewBody"),
   medicationReviewVerdict: byId("medicationReviewVerdict"),
   medicationReviewPipeline: byId("medicationReviewPipeline"),
+  medicationReviewProcess: byId("medicationReviewProcess"),
+  medicationReviewProcessSummary: byId("medicationReviewProcessSummary"),
   medicationReviewRationale: byId("medicationReviewRationale"),
   medicationReviewSources: byId("medicationReviewSources"),
   medicationReviewBoundary: byId("medicationReviewBoundary"),
@@ -4954,6 +4956,9 @@ function medicationReviewTransmission(review) {
 
 function renderMedicationReviewPipeline(review) {
   clear(refs.medicationReviewPipeline);
+  refs.medicationReviewProcess.hidden = true;
+  reviewProcessPinned = false;
+  setReviewProcessOpen(false);
   const provider = medicationReviewProvider();
   const cloudLabel = provider === "frontier"
     ? "클라우드 LLM 규칙 재검토 · 프론티어 모델"
@@ -4994,6 +4999,58 @@ function renderMedicationReviewPipeline(review) {
       "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
     ));
   }
+}
+
+let reviewProcessPinned = false;
+
+function setReviewProcessOpen(open) {
+  refs.medicationReviewPipeline.hidden = !open;
+  refs.medicationReviewProcessSummary.setAttribute("aria-expanded", String(open));
+}
+
+refs.medicationReviewProcessSummary.addEventListener("click", () => {
+  reviewProcessPinned = !reviewProcessPinned;
+  setReviewProcessOpen(reviewProcessPinned);
+});
+
+refs.medicationReviewProcess.addEventListener("mouseenter", () => {
+  if (!reviewProcessPinned) setReviewProcessOpen(true);
+});
+
+refs.medicationReviewProcess.addEventListener("mouseleave", () => {
+  if (!reviewProcessPinned) setReviewProcessOpen(false);
+});
+
+refs.medicationReviewProcess.addEventListener("focusin", () => {
+  if (!reviewProcessPinned) setReviewProcessOpen(true);
+});
+
+refs.medicationReviewProcess.addEventListener("focusout", (event) => {
+  if (!reviewProcessPinned && !refs.medicationReviewProcess.contains(event.relatedTarget)) setReviewProcessOpen(false);
+});
+
+/**
+ * Both sides of a criterion get their own source text: the rule wording on the
+ * left, the stored chart row on the right, each with the deciding part marked.
+ */
+function chartRecordOrigin(check) {
+  const records = check.chart.findings.filter(({ record }) => Array.isArray(record) && record.length);
+  if (!records.length) return null;
+  const origin = element("details", "rx-source__origin");
+  origin.open = expandedSourceIds.has(check.id);
+  origin.dataset.sourceOrigin = `${check.id}:chart`;
+  origin.append(element("summary", "rx-result__details-summary", "환자 기록 원문 확인"));
+  for (const item of records.slice(0, 3)) {
+    origin.append(element("p", "rx-source__article", `${item.label}${item.provenance ? ` · ${item.provenance}` : ""}`));
+    const rows = element("dl", "rx-detail-list rx-source__record");
+    for (const [term, value] of item.record) {
+      const definition = element("dd", "");
+      appendHighlightedText(definition, value, item.highlights);
+      rows.append(element("dt", "", term), definition);
+    }
+    origin.append(rows);
+  }
+  return origin;
 }
 
 function renderMedicationReviewSources(review) {
@@ -5039,17 +5096,21 @@ function renderMedicationReviewSources(review) {
     grid.append(criterion, chart);
     item.append(title, grid);
 
+    const origins = element("div", "rx-source__origins");
     if (check.source.excerpt) {
-      const origin = element("details", "rx-source__origin");
-      origin.open = expandedSourceIds.has(check.id);
-      origin.dataset.sourceOrigin = check.id;
-      origin.append(element("summary", "rx-result__details-summary", "근거 원문 확인"));
-      if (check.source.article) origin.append(element("p", "rx-source__article", check.source.article));
+      const ruleOrigin = element("details", "rx-source__origin");
+      ruleOrigin.open = expandedSourceIds.has(check.id);
+      ruleOrigin.dataset.sourceOrigin = `${check.id}:rule`;
+      ruleOrigin.append(element("summary", "rx-result__details-summary", "근거 원문 확인"));
+      if (check.source.article) ruleOrigin.append(element("p", "rx-source__article", check.source.article));
       const excerpt = element("blockquote", "rx-source__excerpt");
       appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights);
-      origin.append(excerpt);
-      item.append(origin);
+      ruleOrigin.append(excerpt);
+      origins.append(ruleOrigin);
     }
+    const chartOrigin = chartRecordOrigin(check);
+    if (chartOrigin) origins.append(chartOrigin);
+    if (origins.childElementCount) item.append(origins);
 
     item.append(element("p", "rx-source__document", [
       check.source.label,
@@ -5071,6 +5132,7 @@ function renderMedicationReview(review) {
   refs.medicationReviewVerdict.append(element("span", "rx-verdict__symbol", review.verdictSymbol), text);
   renderMedicationReviewMode(review);
   renderMedicationReviewPipeline(review);
+  refs.medicationReviewProcess.hidden = false;
   clear(refs.medicationReviewRationale);
   for (const line of review.rationale) refs.medicationReviewRationale.append(element("li", "", line));
   if (review.note) refs.medicationReviewRationale.append(element("li", "rx-rationale-note", review.note));
@@ -5182,15 +5244,18 @@ refs.medicationSearchInput.addEventListener("input", () => {
 refs.medicationReviewSources.addEventListener("toggle", (event) => {
   const origin = event.target.closest("[data-source-origin]");
   if (!origin) return;
-  const id = origin.dataset.sourceOrigin;
-  if (origin.open) expandedSourceIds.add(id);
-  else expandedSourceIds.delete(id);
+  const [checkId] = origin.dataset.sourceOrigin.split(":");
+  if (origin.open) expandedSourceIds.add(checkId);
+  else if (!origin.closest(".rx-source")?.querySelector("[data-source-origin][open]")) expandedSourceIds.delete(checkId);
 }, true);
 
 refs.medicationReviewSources.addEventListener("click", (event) => {
   if (event.target.closest("[data-source-origin]")) return;
-  const origin = event.target.closest(".rx-source")?.querySelector("[data-source-origin]");
-  if (origin) origin.open = !origin.open;
+  const source = event.target.closest(".rx-source");
+  const origins = [...(source?.querySelectorAll("[data-source-origin]") ?? [])];
+  if (!origins.length) return;
+  const nextOpen = !origins.every(({ open }) => open);
+  for (const origin of origins) origin.open = nextOpen;
 });
 
 refs.medicationResultList.addEventListener("toggle", (event) => {

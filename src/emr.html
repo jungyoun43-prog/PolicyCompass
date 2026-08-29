@@ -427,21 +427,23 @@
                             </section>
 
                             <section class="rx-review" aria-labelledby="rxReviewTitle">
-                              <h4 class="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span class="rx-count" id="medicationReviewMode">규칙 기반</span></h4>
+                              <div class="rx-review__bar">
+                                <h4 class="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span class="rx-count" id="medicationReviewMode">규칙 기반</span></h4>
+                                <div class="rx-process" id="medicationReviewProcess" hidden>
+                                  <button class="rx-process__summary" type="button" id="medicationReviewProcessSummary" aria-expanded="false" aria-controls="medicationReviewPipeline">검토 과정 확인하기</button>
+                                  <div class="rx-process__body" id="medicationReviewPipeline" hidden></div>
+                                </div>
+                              </div>
                               <p class="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 환자의 기록과 등록된 예시 급여기준을 항목별로 대조해 삭감 위험을 ○·△·✕로 보여 줍니다.</p>
                               <div class="rx-review__body" id="medicationReviewBody" aria-live="polite" hidden>
                                 <div class="rx-verdict" id="medicationReviewVerdict"></div>
-                                <section class="rx-review__section">
-                                  <h5 class="rx-review__heading">AI 검토 과정</h5>
-                                  <div id="medicationReviewPipeline"></div>
-                                </section>
                                 <section class="rx-review__section">
                                   <h5 class="rx-review__heading">근거</h5>
                                   <ul class="rx-rationale-list" id="medicationReviewRationale"></ul>
                                 </section>
                                 <section class="rx-review__section">
                                   <h5 class="rx-review__heading">출처 · 삭감 근거와 환자 정보 대조</h5>
-                                  <p class="rx-review__hint">각 항목을 누르면 그 기준의 원문이 열리고, 판정을 가른 문구가 강조됩니다.</p>
+                                  <p class="rx-review__hint">각 항목을 누르면 기준 원문과 환자 기록 원문이 함께 열리고, 판정을 가른 문구와 값이 강조됩니다.</p>
                                   <ul class="rx-source-list" id="medicationReviewSources"></ul>
                                 </section>
                                 <p class="rx-review__boundary" id="medicationReviewBoundary"></p>

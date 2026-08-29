@@ -60,7 +60,44 @@ function eventProvenance(event, encounterId) {
   return encounterId && cleanText(event.encounterId, 160) === encounterId ? "이번 진료 초안" : "미확정 초안";
 }
 
-function finding(event, encounterId, extra = "") {
+const RECORD_TYPE_LABELS = {
+  condition: "상병",
+  observation: "검사·측정",
+  medication: "약물",
+  allergy: "알레르기",
+  procedure: "처치·검사 시행",
+  encounter: "내원",
+  "service-request": "오더",
+  symptom: "증상",
+};
+
+/**
+ * The stored chart row, field by field, so the criterion can be checked against
+ * the record itself rather than a rendered summary. Free-text notes stay out:
+ * this structure is what leaves the browser when a model reviews the comparison.
+ */
+function recordRows(event, encounterId) {
+  const value = event.value === undefined || event.value === null || event.value === ""
+    ? ""
+    : `${event.value}${cleanText(event.unit, 24) ? ` ${cleanText(event.unit, 24)}` : ""}`;
+  return [
+    ["기록 유형", RECORD_TYPE_LABELS[cleanText(event.type, 40)] ?? cleanText(event.type, 40)],
+    ["표시명", cleanText(event.label, 160)],
+    ["코드", cleanText(event.code, 80)],
+    ["코드 시스템", cleanText(event.system, 120)],
+    ["측정값", value],
+    ["기록일", validDate(event.date)],
+    ["임상 상태", cleanText(event.status, 40)],
+    ["확인 상태", cleanText(event.verificationStatus, 40)],
+    ["진단 확실성", cleanText(event.certainty, 40)],
+    ["기록 단계", cleanText(event.recordStatus, 40) === "final" ? "final · 확정" : cleanText(event.recordStatus, 40)],
+    ["연결 진료 ID", cleanText(event.encounterId, 160)],
+    ["기록 출처", cleanText(event.source?.kind, 40)],
+    ["기록 ID", cleanText(event.id, 160)],
+  ].filter(([, item]) => item);
+}
+
+function finding(event, encounterId, extra = "", highlights = []) {
   return {
     eventId: cleanText(event.id, 160),
     label: cleanText(event.label, 160) || cleanText(event.code, 80) || "기록",
@@ -70,6 +107,8 @@ function finding(event, encounterId, extra = "") {
     detail: cleanText([extra, event.value === undefined || event.value === null || event.value === ""
       ? ""
       : `${event.value}${cleanText(event.unit, 24) ? ` ${cleanText(event.unit, 24)}` : ""}`].filter(Boolean).join(" · "), 240),
+    record: recordRows(event, encounterId),
+    highlights: highlights.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 6),
   };
 }
 
@@ -158,7 +197,12 @@ function indicationCheck(medication, conditions, encounterId) {
   }
   const matches = conditions.filter((event) => medication.coverage.indications.some(({ code }) => codeMatches(event.code, code)));
   const confirmed = matches.filter((event) => cleanText(event.certainty, 40) !== "provisional");
-  const findings = matches.map((event) => finding(event, encounterId, cleanText(event.certainty, 40) === "provisional" ? "의증·잠정" : "확정 진단"));
+  const findings = matches.map((event) => finding(
+    event,
+    encounterId,
+    cleanText(event.certainty, 40) === "provisional" ? "의증·잠정" : "확정 진단",
+    [cleanText(event.code, 80), cleanText(event.status, 40), cleanText(event.certainty, 40) || "confirmed"],
+  ));
   if (confirmed.length) {
     return check({
       id: "indication",
@@ -200,7 +244,7 @@ function indicationCheck(medication, conditions, encounterId) {
     chartDetail: conditions.length
       ? `이 환자의 확인 상병 ${conditions.length}건 중 인정 상병과 일치하는 기록이 없습니다.`
       : "이 환자에게 대조할 확인 상병 기록이 없습니다.",
-    findings: conditions.slice(0, 4).map((event) => finding(event, encounterId, "인정 상병과 불일치")),
+    findings: conditions.slice(0, 4).map((event) => finding(event, encounterId, "인정 상병과 불일치", [cleanText(event.code, 80)])),
     source,
     ...indicationOrigin(medication),
   });
@@ -234,7 +278,12 @@ function evidenceChecks(medication, events, encounterId, asOf) {
         : "요구 기간 안에서 해당 기록을 찾지 못해 근거 없이 청구될 위험이 있습니다.",
       findings: matches.slice(0, 4).map((event) => {
         const elapsed = daysBetween(asOf, event.date);
-        return finding(event, encounterId, elapsed === null ? "" : `처방일 기준 ${elapsed}일 전`);
+        return finding(
+          event,
+          encounterId,
+          elapsed === null ? "" : `처방일 기준 ${elapsed}일 전`,
+          [cleanText(event.code, 80), validDate(event.date)],
+        );
       }),
       source,
       article: "제2장 제4절 · 선행 검사·기록 요건",
@@ -282,7 +331,12 @@ function duplicateCheck(medication, events, encounterId, asOf) {
     chartDetail: duplicates.length
       ? `이 환자에게 같은 효능군의 활성 처방 ${duplicates.length}건이 이미 있습니다.`
       : `이 환자에게 같은 효능군의 활성 처방이 없습니다. (활성 약물 ${active.length}건 대조)`,
-    findings: duplicates.slice(0, 4).map((event) => finding(event, encounterId, `${chartMedicationClass(event).classLabel} · 활성 처방`)),
+    findings: duplicates.slice(0, 4).map((event) => finding(
+      event,
+      encounterId,
+      `${chartMedicationClass(event).classLabel} · 활성 처방`,
+      [cleanText(event.code, 80), cleanText(event.status, 40) || "active"],
+    )),
     source,
     article: "제4장 제1절 · 동일 효능군 중복 투여",
     excerpt: `동일 효능군(${medication.coverage.duplicateClassLabel || medication.classLabel})에 속하는 약제를 같은 기간에 함께 투여한 경우, 중복 투여분은 인정하지 아니한다. 병용이 임상적으로 필요한 경우 그 사유를 진료기록부에 기재한다.`,
@@ -312,7 +366,7 @@ function allergyCheck(medication, events, encounterId) {
       chartDetail: allergies.length
         ? `이 환자에게 등록된 알레르기 ${allergies.length}건은 의료진이 직접 대조해야 합니다.`
         : "이 환자에게 등록된 활성 알레르기 기록이 없습니다.",
-      findings: allergies.slice(0, 4).map((event) => finding(event, encounterId, "자동 대조 대상 아님")),
+      findings: allergies.slice(0, 4).map((event) => finding(event, encounterId, "자동 대조 대상 아님", [cleanText(event.label, 160)])),
       source,
       article: "제5장 제2절 · 투여 전 알레르기 확인",
       excerpt: "성분명 자동 대조 대상으로 등록되지 않은 약제는 의료진이 환자의 약물 알레르기 기록을 직접 대조한다.",
@@ -334,7 +388,12 @@ function allergyCheck(medication, events, encounterId) {
     chartDetail: matches.length
       ? "이 환자의 알레르기 기록과 이름이 일치합니다."
       : `이 환자의 활성 알레르기 ${allergies.length}건과 이름이 일치하지 않습니다.`,
-    findings: (matches.length ? matches : allergies).slice(0, 4).map((event) => finding(event, encounterId, matches.length ? "성분명 일치" : "성분명 불일치")),
+    findings: (matches.length ? matches : allergies).slice(0, 4).map((event) => finding(
+      event,
+      encounterId,
+      matches.length ? "성분명 일치" : "성분명 불일치",
+      [cleanText(event.label, 160), cleanText(event.code, 80)],
+    )),
     source,
     article: "제5장 제2절 · 투여 전 알레르기 확인",
     excerpt: `투여 전 환자의 약물 알레르기 기록을 확인한다. 기록된 알레르기와 투여 약제의 성분명(${ingredients.slice(0, 3).join(", ")})이 일치하는 경우, 임상적 관련성과 대체 약제 검토 결과를 진료기록부에 기재한다.`,
@@ -358,7 +417,7 @@ function contraindicationCheck(medication, conditions, encounterId) {
     chartDetail: matches.length
       ? "이 환자 기록에서 금기 상병이 확인됩니다."
       : "이 환자 기록에서 금기 상병이 확인되지 않습니다.",
-    findings: matches.slice(0, 4).map((event) => finding(event, encounterId, "금기 상병 일치")),
+    findings: matches.slice(0, 4).map((event) => finding(event, encounterId, "금기 상병 일치", [cleanText(event.code, 80)])),
     source,
     article: "제5장 제1절 · 금기·신중투여",
     excerpt: `다음 상병이 확인된 환자에게 「${medication.label}」을(를) 투여하는 경우는 금기 또는 신중투여에 해당한다: ${codes.map(({ code, label }) => `${code} ${label}`).join(", ")}. 투여가 필요한 경우 그 사유를 진료기록부에 기재하며, 사유가 확인되지 않은 청구분은 조정 대상이 된다.`,
@@ -397,7 +456,16 @@ function durationCheck(medication, prescription) {
     chartDetail: requested > maximum
       ? `이번 처방 ${requested}일은 인정 일수를 ${requested - maximum}일 초과합니다.`
       : `이번 처방 ${requested}일은 인정 일수 안에 있습니다.`,
-    findings: [{ eventId: "", label: "이번 처방 입력", code: "", date: "", provenance: "이번 진료 초안", detail: `${requested}일` }],
+    findings: [{
+      eventId: "",
+      label: "이번 처방 입력",
+      code: "",
+      date: "",
+      provenance: "이번 진료 초안",
+      detail: `${requested}일`,
+      record: [["처방 일수", `${requested}일`], ["인정 일수", `${maximum}일`], ["입력 단계", "이번 진료 초안"]],
+      highlights: [`${requested}일`],
+    }],
     source,
     ...durationOrigin(medication, maximum),
   });
@@ -433,7 +501,16 @@ function ageCheck(medication, patientAge) {
     requirement,
     criterionDetail: "연령 범위를 벗어난 처방은 별도 사유 없이는 조정될 수 있습니다.",
     chartDetail: `이 환자는 만 ${patientAge}세로 ${withinRange ? "연령 기준 안에 있습니다." : "연령 기준을 벗어납니다."}`,
-    findings: [{ eventId: "", label: "환자 나이", code: "", date: "", provenance: "환자 기본정보", detail: `만 ${patientAge}세` }],
+    findings: [{
+      eventId: "",
+      label: "환자 나이",
+      code: "",
+      date: "",
+      provenance: "환자 기본정보",
+      detail: `만 ${patientAge}세`,
+      record: [["환자 나이", `만 ${patientAge}세`], ["판정 기준일", "처방일"], ["인정 범위", requirement.replace("연령 인정 범위: ", "")]],
+      highlights: [`만 ${patientAge}세`],
+    }],
     source,
     ...ageOrigin(medication, requirement),
   });

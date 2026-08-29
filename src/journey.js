@@ -1,4 +1,4 @@
-import { CONDITIONS } from "/data.js";
+import { CONDITIONS } from "./data.js";
 import {
   compareSnapshots,
   createJourneyBackup,
@@ -6,8 +6,8 @@ import {
   JOURNEY_TIME_ZONE,
   normalizeJourney,
   parseJourneyBackup,
-} from "/journey-model.js";
-import { preserveSampleNavigation } from "/sample-navigation.js";
+} from "./journey-model.js";
+import { preserveSampleNavigation } from "./sample-navigation.js";
 
 const storageKey = "policycompass-journey";
 const sampleMode = new URLSearchParams(window.location.search).get("sample") === "1";

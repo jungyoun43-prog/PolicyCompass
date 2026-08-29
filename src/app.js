@@ -1,19 +1,19 @@
-import { CONDITIONS, extractInputSignals } from "/data.js";
-import { createJourneySnapshot, normalizeJourney } from "/journey-model.js";
+import { CONDITIONS, extractInputSignals } from "./data.js";
+import { createJourneySnapshot, normalizeJourney } from "./journey-model.js";
 import {
   parsePatientTransferPackage,
   PatientTransferCodeError,
   verifyPatientTransferCode,
-} from "/patient-transfer.js";
+} from "./patient-transfer.js";
 import {
   retireLegacyCareBridge,
-} from "/care-bridge.js";
+} from "./care-bridge.js";
 import {
   createBodyModel,
   createDetailModel,
   normalizeActiveId,
   selectBodyArea,
-} from "/view-model.js";
+} from "./view-model.js";
 
 const toneClasses = ["tone-coral", "tone-cyan", "tone-lime", "tone-violet", "tone-amber"];
 const sessionKey = "policycompass-scene";

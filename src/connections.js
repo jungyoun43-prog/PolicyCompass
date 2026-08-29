@@ -1,9 +1,9 @@
-import { CONDITIONS, relationsFor } from "/data.js";
-import { retireLegacyCareBridge } from "/care-bridge.js";
-import { parsePatientTransferPackage } from "/patient-transfer.js";
-import { createExplorerScene, selectExplorerNode, settleExplorerScene } from "/explorer-model.js";
-import { createDetailModel } from "/view-model.js";
-import { preserveSampleNavigation } from "/sample-navigation.js";
+import { CONDITIONS, relationsFor } from "./data.js";
+import { retireLegacyCareBridge } from "./care-bridge.js";
+import { parsePatientTransferPackage } from "./patient-transfer.js";
+import { createExplorerScene, selectExplorerNode, settleExplorerScene } from "./explorer-model.js";
+import { createDetailModel } from "./view-model.js";
+import { preserveSampleNavigation } from "./sample-navigation.js";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
 const sessionKey = "policycompass-scene";

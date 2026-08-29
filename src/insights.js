@@ -1,14 +1,14 @@
-import { retireLegacyCareBridge } from "/care-bridge.js";
-import { CONDITIONS } from "/data.js";
-import { parsePatientTransferPackage } from "/patient-transfer.js";
-import { preserveSampleNavigation } from "/sample-navigation.js";
+import { retireLegacyCareBridge } from "./care-bridge.js";
+import { CONDITIONS } from "./data.js";
+import { parsePatientTransferPackage } from "./patient-transfer.js";
+import { preserveSampleNavigation } from "./sample-navigation.js";
 import {
   createModelPatientBrief,
   createPatientFallbackBrief,
   createPatientQuestionContext,
   createPatientQuestionRequest,
   patientQuestionContextFingerprint,
-} from "/patient-question-assistant.js";
+} from "./patient-question-assistant.js";
 
 const sessionKey = "policycompass-scene";
 const selectedQuestionKey = "policycompass-selected-visit-question";

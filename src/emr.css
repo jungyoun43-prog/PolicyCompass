@@ -9574,3 +9574,42 @@ model-viewer::part(default-progress-mask) {
   padding: 2px 8px;
   font-size: 0.64rem;
 }
+
+
+/* Final verdict-symbol treatment: no tinted circle, a big heavy glyph. */
+.rx-verdict .rx-verdict__symbol {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: var(--rx-tone);
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  -webkit-text-stroke: 1.6px currentColor;
+  paint-order: stroke fill;
+}
+
+.rx-source__mark {
+  font-weight: 900;
+  -webkit-text-stroke: 1.1px currentColor;
+  paint-order: stroke fill;
+}
+
+/* The row you just acted on is unmistakably the active one. */
+.rx-result.is-selected,
+.rx-result.is-reviewing {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.rx-result.is-selected::before,
+.rx-result.is-reviewing::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+}

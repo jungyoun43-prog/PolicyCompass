@@ -350,7 +350,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               ) : results.map((medication) => {
                 const rowReview = review?.medicationId === medication.id ? review : null;
                 return (
-                  <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}`} key={medication.id}>
+                  <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}${rowReview || reviewBusyId === medication.id ? " is-reviewing" : ""}`} key={medication.id}>
                     <div className="rx-result__heading">
                       <b className="rx-result__label">{medication.label}</b>
                       {rowReview ? <span className="rx-verdict-chip" data-tone={rowReview.verdictTone}>{rowReview.verdictSymbol} {rowReview.verdictLabel}</span> : null}

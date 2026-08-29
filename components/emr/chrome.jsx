@@ -41,25 +41,14 @@ export function CommandBar({ demo, onExitDemo, utilities }) {
   );
 }
 
-export function TrustStrip({ ai, demo }) {
+export function TrustStrip({ ai }) {
   return (
-    <section className="trust-strip" aria-label="임상 안전 상태">
-      <div>
-        <span className="trust-dot trust-dot--local" aria-hidden="true"></span>
-        <b>로컬 저장</b>
-        <span>이 브라우저만</span>
-      </div>
-      <div>
+    <section className="trust-strip" aria-label="AI 검토 상태">
+      <div data-route-context>
         <span className={`trust-dot${ai.configured ? " is-ready" : ""}`} id="aiStatusDot" aria-hidden="true"></span>
         <b id="aiStatusLabel">{ai.label}</b>
         <span id="aiStatusDetail">{ai.detail}</span>
       </div>
-      <div className="demo-banner" id="demoBanner" hidden={!demo}>
-        <span className="trust-dot trust-dot--demo" aria-hidden="true"></span>
-        <b>예시</b>
-        <span>실제 환자 아님 · 미저장</span>
-      </div>
-      <p data-route-context>평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음</p>
     </section>
   );
 }

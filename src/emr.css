@@ -7951,7 +7951,9 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-dialog__columns {
   display: grid;
-  grid-template-columns: minmax(280px, 2fr) minmax(320px, 3fr);
+  /* min 0 on the review column: its content may be wide, but it must never
+     squeeze the results column and reflow the rows mid-review. */
+  grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
   gap: var(--space-4);
   align-items: start;
 }
@@ -9684,4 +9686,28 @@ model-viewer::part(default-progress-mask) {
   padding: 0 7px;
   font-size: 0.62rem;
   line-height: 16px;
+}
+
+
+/* Review button keeps one width in both states — no row reflow. */
+.rx-result__review {
+  min-width: 84px;
+  justify-content: center;
+}
+
+/* A reviewed row wears its verdict across the whole card. */
+.rx-result[data-review-tone] {
+  --rx-row-tone: var(--line-strong);
+  border-color: color-mix(in srgb, var(--rx-row-tone) 55%, var(--line));
+  background: color-mix(in srgb, var(--rx-row-tone) 9%, var(--surface));
+}
+
+.rx-result[data-review-tone="green"] { --rx-row-tone: var(--status-success-text); }
+.rx-result[data-review-tone="amber"] { --rx-row-tone: var(--data-amber); }
+.rx-result[data-review-tone="red"] { --rx-row-tone: var(--urgent); }
+
+
+/* Reserve the scrollbar gutter so appearing content never reflows the rows. */
+.rx-dialog__panel {
+  scrollbar-gutter: stable;
 }

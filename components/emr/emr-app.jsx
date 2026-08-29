@@ -37,16 +37,20 @@ export function EmrApp() {
     (async () => {
       const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname);
       try {
-        const response = await fetch("/api/clinical-copilot/status", { headers: { accept: "application/json" } });
-        if (!response.ok) throw new Error("status");
-        const result = await response.json();
+        const [copilotResult, reviewResult] = await Promise.all([
+          fetch("/api/clinical-copilot/status", { headers: { accept: "application/json" } }).then((res) => (res.ok ? res.json() : {})).catch(() => ({})),
+          fetch("/api/medication-claim-review/status", { headers: { accept: "application/json" } }).then((res) => (res.ok ? res.json() : {})).catch(() => ({})),
+        ]);
         if (cancelled) return;
-        const configured = loopback && result.configured === true;
-        setAi(configured
-          ? { checked: true, configured, label: "로컬 AI 연결", detail: `${result.model} · 질문 초안 · 외부 전송 없음` }
-          : { checked: true, configured: false, label: "규칙 기반 모드", detail: "모델 미연결 · 규칙 기능 사용" });
+        const localConfigured = loopback && copilotResult.configured === true;
+        const frontierConfigured = reviewResult.frontier?.configured === true;
+        setAi(frontierConfigured
+          ? { checked: true, configured: true, label: "AI 검토 모델 연결", detail: reviewResult.frontier.model }
+          : localConfigured
+            ? { checked: true, configured: true, label: "로컬 AI 연결", detail: copilotResult.model }
+            : { checked: true, configured: false, label: "규칙 기반 모드", detail: "모델 미연결" });
       } catch {
-        if (!cancelled) setAi({ checked: true, configured: false, label: "규칙 기반 모드", detail: "환자 데이터 전송 안 함" });
+        if (!cancelled) setAi({ checked: true, configured: false, label: "규칙 기반 모드", detail: "모델 미연결" });
       }
     })();
     return () => { cancelled = true; };
@@ -193,7 +197,7 @@ export function EmrApp() {
           </details>
         ) : null}
 
-        <TrustStrip ai={ai} demo={state.demo} />
+        <TrustStrip ai={ai} />
 
         <p className={`workspace-status${status.tone ? " is-" + status.tone : ""}`} id="workspaceStatus" role="status" aria-live="polite">{status.message}</p>
 

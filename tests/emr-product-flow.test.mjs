@@ -26,7 +26,6 @@ test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 
   assert.match(html, /현재 기록만 교체되고 기존 Journey는 바뀌지 않습니다/);
   assert.doesNotMatch(html, /자동 연결|서명 처방.*Personal/);
   assert.match(html, /의료진 검토 전 확정 기록 아님/);
-  assert.match(html, /삭감 방지 보장/);
 
   assert.match(script, /2 \* 1024 \* 1024/);
   assert.match(script, /오래된 로컬 AI 초안을 폐기/);

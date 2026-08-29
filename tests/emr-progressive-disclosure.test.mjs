@@ -75,9 +75,8 @@ test("EMR 첫 화면은 핵심 안전 상태만 짧게 유지하고 반복 영�
     readFile("src/emr.css", "utf8"),
   ]);
 
-  assert.match(chrome, /<b>로컬 저장<\/b>\s*<span>이 브라우저만<\/span>/);
-  assert.match(chrome, /실제 환자 아님 · 미저장/);
-  assert.match(chrome, /평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음/);
+  assert.match(chrome, /id="aiStatusLabel"/);
+  assert.doesNotMatch(chrome, /실제 환자 아님 · 미저장|평가용 · 인증된 EMR/);
   assert.match(css, /\.emr-page \.rail-eyebrow:not\(#diseaseProgramEyebrow\):not\(#diseaseDiagnosticEyebrow\)\s*\{\s*display: none;/);
   assert.match(assessment, /class="rail-eyebrow" id="diseaseProgramEyebrow"/);
   assert.match(assessment, /class="rail-eyebrow" id="diseaseDiagnosticEyebrow"/);

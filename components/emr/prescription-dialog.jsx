@@ -233,7 +233,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setExpandedSources(new Set());
     if (!provider) {
       setReview({ medicationId, ...base });
-      setStatus("등록 기준과 이 환자 기록을 대조한 규칙 기반 사전점검입니다. AI 모델이 설정되지 않아 환자 자료를 전송하지 않았습니다.");
+      setStatus("규칙 기반 사전점검을 완료했습니다.");
       return;
     }
     // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
@@ -250,7 +250,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
       const merged = applyMedicationReviewDraft(base, result.draft ?? {});
       setReview({ medicationId, ...merged });
-      setStatus("AI 검토 초안을 만들었습니다. 급여 인정·삭감을 확정하지 않습니다.", "success");
+      setStatus("AI 검토를 완료했습니다.", "success");
     } catch (error) {
       setReview({ medicationId, ...base });
       setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
@@ -350,7 +350,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               ) : results.map((medication) => {
                 const rowReview = review?.medicationId === medication.id ? review : null;
                 return (
-                  <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}${rowReview || reviewBusyId === medication.id ? " is-reviewing" : ""}`} key={medication.id}>
+                  <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}${reviewBusyId === medication.id ? " is-reviewing" : ""}`} data-review-tone={rowReview?.verdictTone || undefined} key={medication.id}>
                     <div className="rx-result__heading">
                       <b className="rx-result__label">{medication.label}</b>
                     </div>
@@ -359,7 +359,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                       <button className="clinical-button clinical-button--primary" type="button" onClick={() => pickMedication(medication)}>처방 담기</button>
                       <span className="rx-result__actions-divider"></span>
                       <button className="clinical-button rx-result__review" type="button" disabled={reviewBusyId === medication.id} onClick={() => runReview(medication.id)}>
-                        {reviewBusyId === medication.id ? "AI 검토 중…" : "AI 검토"}
+                        {reviewBusyId === medication.id ? "검토 중…" : "AI 검토"}
                       </button>
                     </div>
                     <details className="rx-result__details" open={expandedDetails.has(medication.id)} onToggle={(event) => {

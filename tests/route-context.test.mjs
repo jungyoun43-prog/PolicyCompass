@@ -10,7 +10,7 @@ const routes = new Map([
   ["/connections", [() => pageMarkup("/connections"), /0개 질환/]],
   ["/insights", [() => pageMarkup("/insights"), /현재 브리프/]],
   ["/journey", [() => pageMarkup("/journey"), /현재 브라우저의 이 기기에만 저장/]],
-  ["/emr", [() => componentMarkup("components/emr/chrome.jsx"), /평가용 · 인증된 EMR·청구 소프트웨어 아님 · 삭감 방지 보장 없음/]],
+  ["/emr", [() => componentMarkup("components/emr/chrome.jsx"), /aiStatusDot/]],
 ]);
 
 function assertExposedRouteContext(html, route, expected) {

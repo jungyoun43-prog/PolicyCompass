@@ -7989,10 +7989,118 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-2);
 }
 
-.rx-result__meta {
+.rx-result__meta,
+.rx-result__ingredient {
   color: var(--muted);
   font-size: var(--font-size-caption);
   overflow-wrap: anywhere;
+}
+
+.rx-result__details {
+  margin-top: var(--space-2);
+  border-top: var(--border-subtle);
+  padding-top: var(--space-2);
+}
+
+.rx-result__details-summary {
+  color: var(--accent);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rx-result__details-summary:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.rx-detail-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  line-height: 1.55;
+}
+
+.rx-detail-list dt {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rx-detail-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dx-result__category {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.dx-codes {
+  margin: 0 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  background: var(--surface);
+}
+
+.dx-codes__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* Outranks the workspace's `form label { display: grid }` so the radio sits inline. */
+.dx-codes .dx-code-option {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  color: var(--ink);
+  font-size: var(--font-size-caption);
+  font-weight: 400;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.dx-codes .dx-code-option:hover,
+.dx-codes .dx-code-option:has(input:checked) {
+  background: var(--accent-wash);
+}
+
+/* The workspace styles every input as a full-width field; choice controls opt out. */
+.dx-code-option input[type="radio"],
+.rx-consent input[type="checkbox"] {
+  width: 1.05rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  min-height: 0;
+  margin-top: 2px;
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  accent-color: var(--accent);
+}
+
+.dx-codes .dx-code-option__text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dx-codes .dx-code-option__text span {
+  color: var(--muted);
 }
 
 .rx-result__actions {
@@ -8200,6 +8308,13 @@ button.claim-attention-item__summary:focus-visible {
   color: var(--muted);
   font-size: var(--font-size-caption);
   line-height: 1.6;
+}
+
+/* The confirm action names the whole step, so it takes its own row. */
+.rx-form .diagnosis-form-grid > .clinical-button,
+.rx-form .prescription-form-grid > .clinical-button {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 @media (max-width: 900px) {

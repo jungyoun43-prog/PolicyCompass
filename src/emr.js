@@ -92,6 +92,13 @@ import {
   searchMedicationCatalog,
 } from "./medication-catalog.js";
 import {
+  DIAGNOSIS_CATALOG_BOUNDARY,
+  findDiagnosisInCatalog,
+  KCD_SYSTEM,
+  preferredDiagnosisCode,
+  searchDiagnosisCatalog,
+} from "./diagnosis-catalog.js";
+import {
   applyMedicationReviewDraft,
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
@@ -186,14 +193,26 @@ const CLAIM_REVIEW_STAGE_LABELS = {
   reviewing: "담당자 검토",
   reviewed: "최종 판정",
 };
+const ENCOUNTER_WORKFLOW_DISCLOSURES = Object.freeze([
+  "visit-context",
+  "soap",
+  "measurements",
+  "diagnoses",
+  "prescriptions",
+  "orders",
+]);
+/**
+ * The encounter tab opens every step so one visit reads as a single page.
+ * Collapsing a step still works and is remembered for the rest of the session.
+ */
 const WORKFLOW_DISCLOSURE_DEFAULTS = Object.freeze({
-  none: ["visit-context"],
-  waiting: ["visit-context"],
-  "in-progress": ["soap"],
-  completed: [],
-  signed: [],
-  legacy: [],
-  external: [],
+  none: ENCOUNTER_WORKFLOW_DISCLOSURES,
+  waiting: ENCOUNTER_WORKFLOW_DISCLOSURES,
+  "in-progress": ENCOUNTER_WORKFLOW_DISCLOSURES,
+  completed: ENCOUNTER_WORKFLOW_DISCLOSURES,
+  signed: ENCOUNTER_WORKFLOW_DISCLOSURES,
+  legacy: ENCOUNTER_WORKFLOW_DISCLOSURES,
+  external: ENCOUNTER_WORKFLOW_DISCLOSURES,
 });
 
 const today = () => localCalendarDate(new Date(), KOREA_TIMEZONE_OFFSET_MINUTES);
@@ -290,6 +309,18 @@ const refs = {
   diagnosisLabel: byId("diagnosisLabel"),
   diagnosisCertainty: byId("diagnosisCertainty"),
   diagnosisList: byId("diagnosisList"),
+  openDiagnosisDialog: byId("openDiagnosisDialog"),
+  closeDiagnosisDialog: byId("closeDiagnosisDialog"),
+  diagnosisDialog: byId("diagnosisDialog"),
+  dxDialogContext: byId("dxDialogContext"),
+  dxDialogBoundary: byId("dxDialogBoundary"),
+  diagnosisSearchForm: byId("diagnosisSearchForm"),
+  diagnosisSearchInput: byId("diagnosisSearchInput"),
+  diagnosisResultList: byId("diagnosisResultList"),
+  diagnosisResultCount: byId("diagnosisResultCount"),
+  diagnosisSelectedSummary: byId("diagnosisSelectedSummary"),
+  diagnosisCodeChoices: byId("diagnosisCodeChoices"),
+  diagnosisCodeOptions: byId("diagnosisCodeOptions"),
   prescriptionForm: byId("prescriptionForm"),
   medicationCode: byId("medicationCode"),
   medicationSystem: byId("medicationSystem"),
@@ -472,6 +503,9 @@ let medicationSearchResults = [];
 let selectedCatalogMedicationId = "";
 const medicationReviewById = new Map();
 const medicationReviewBusyIds = new Set();
+const expandedMedicationIds = new Set();
+let diagnosisSearchResults = [];
+let selectedCatalogDiagnosisId = "";
 let lastFhirReport = null;
 let draggedClaimReviewId = "";
 let claimEvaluationById = new Map();
@@ -3511,9 +3545,13 @@ function renderEncounter(patient, evaluations) {
 
   setFormControlsDisabled(refs.vitalForm, !editable);
   setFormControlsDisabled(refs.diagnosisForm, !editable);
+  refs.openDiagnosisDialog.disabled = !editable;
   setFormControlsDisabled(refs.prescriptionForm, !editable);
   refs.openPrescriptionDialog.disabled = !editable;
-  if (!editable) closePrescriptionDialog();
+  if (!editable) {
+    closeDiagnosisDialog();
+    closePrescriptionDialog();
+  }
   setFormControlsDisabled(refs.orderForm, !editable);
   clear(refs.vitalList);
   clear(refs.diagnosisList);
@@ -3633,6 +3671,8 @@ function clearPatientWorkspaceUi() {
   for (const control of refs.encounterForm.querySelectorAll("input, textarea, select")) control.disabled = true;
   setFormControlsDisabled(refs.vitalForm, true);
   setFormControlsDisabled(refs.diagnosisForm, true);
+  refs.openDiagnosisDialog.disabled = true;
+  closeDiagnosisDialog();
   setFormControlsDisabled(refs.prescriptionForm, true);
   refs.openPrescriptionDialog.disabled = true;
   closePrescriptionDialog();
@@ -4362,6 +4402,137 @@ refs.vitalForm.addEventListener("submit", async (event) => {
   }
 });
 
+function renderDiagnosisResults() {
+  clear(refs.diagnosisResultList);
+  refs.diagnosisResultCount.textContent = `${diagnosisSearchResults.length}건`;
+  if (!diagnosisSearchResults.length) {
+    refs.diagnosisResultList.append(element(
+      "li",
+      "rx-result-empty",
+      refs.diagnosisSearchInput.value.trim()
+        ? "검색어와 맞는 예시 상병이 없습니다. 다른 진단명이나 코드로 다시 검색하세요."
+        : "진단명·증상·코드로 검색하세요.",
+    ));
+    return;
+  }
+  for (const entry of diagnosisSearchResults) {
+    const item = element("li", "rx-result");
+    if (entry.id === selectedCatalogDiagnosisId) item.classList.add("is-selected");
+    const heading = element("div", "rx-result__heading");
+    heading.append(element("b", "rx-result__label", entry.label));
+    heading.append(element("span", "dx-result__category", entry.category));
+    const preferred = preferredDiagnosisCode(entry);
+    item.append(
+      heading,
+      element("span", "rx-result__ingredient", `${preferred?.code ?? ""} · 코드 후보 ${entry.codes.length}개`),
+    );
+    const actions = element("div", "rx-result__actions");
+    const pickButton = element("button", "clinical-button", "이 상병 선택");
+    pickButton.type = "button";
+    pickButton.dataset.pickDiagnosis = entry.id;
+    actions.append(pickButton);
+    item.append(actions);
+    refs.diagnosisResultList.append(item);
+  }
+}
+
+function renderDiagnosisCodeOptions(entry, selectedCode) {
+  clear(refs.diagnosisCodeOptions);
+  refs.diagnosisCodeChoices.hidden = false;
+  for (const candidate of entry.codes) {
+    const option = element("label", "dx-code-option");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "diagnosisCodeChoice";
+    input.value = candidate.code;
+    input.checked = candidate.code === selectedCode;
+    input.dataset.diagnosisCodeChoice = candidate.code;
+    const text = element("span", "dx-code-option__text");
+    text.append(
+      element("b", "", candidate.code),
+      element("span", "", candidate.label),
+    );
+    option.append(input, text);
+    refs.diagnosisCodeOptions.append(option);
+  }
+}
+
+function applyDiagnosisCode(code) {
+  const entry = findDiagnosisInCatalog(selectedCatalogDiagnosisId);
+  const candidate = entry?.codes.find((item) => item.code === code);
+  if (!entry || !candidate) return;
+  refs.diagnosisCode.value = candidate.code;
+  refs.diagnosisLabel.value = candidate.label;
+  renderDiagnosisCodeOptions(entry, candidate.code);
+  refs.diagnosisSelectedSummary.textContent = `${entry.label} · ${candidate.code} ${candidate.label}. 구분과 확실성을 확인한 뒤 추가하세요.`;
+}
+
+function pickCatalogDiagnosis(diagnosisId) {
+  const entry = findDiagnosisInCatalog(diagnosisId);
+  if (!entry) return;
+  selectedCatalogDiagnosisId = entry.id;
+  const preferred = preferredDiagnosisCode(entry);
+  refs.diagnosisSystem.value = KCD_SYSTEM;
+  applyDiagnosisCode(preferred.code);
+  renderDiagnosisResults();
+  refs.diagnosisRole.focus();
+}
+
+function resetDiagnosisSelection() {
+  selectedCatalogDiagnosisId = "";
+  refs.diagnosisCodeChoices.hidden = true;
+  clear(refs.diagnosisCodeOptions);
+  refs.diagnosisSelectedSummary.textContent = "검색 결과에서 진단명을 선택하면 코드 후보가 표시됩니다.";
+}
+
+function openDiagnosisDialog() {
+  const patient = selectedPatient();
+  const encounter = currentEncounter(patient);
+  if (!patient || !encounter || encounter.recordStatus !== "draft" || encounter.status !== "in-progress") {
+    setStatus("진료를 시작한 뒤 진단을 담을 수 있습니다.", "error");
+    return;
+  }
+  refs.diagnosisDialog.closest("details")?.setAttribute("open", "");
+  refs.dxDialogBoundary.textContent = DIAGNOSIS_CATALOG_BOUNDARY;
+  refs.dxDialogContext.textContent = [
+    patient.name,
+    patientAgeLabel(patient),
+    INSURANCE_LABELS[patient.insuranceType] ?? INSURANCE_LABELS.unknown,
+    `진료일 ${displayDate(encounter.date)}`,
+  ].filter(Boolean).join(" · ");
+  renderDiagnosisResults();
+  if (!refs.diagnosisDialog.open) refs.diagnosisDialog.showModal();
+  refs.diagnosisSearchInput.focus();
+}
+
+function closeDiagnosisDialog() {
+  if (refs.diagnosisDialog.open) refs.diagnosisDialog.close();
+}
+
+refs.openDiagnosisDialog.addEventListener("click", openDiagnosisDialog);
+refs.closeDiagnosisDialog.addEventListener("click", closeDiagnosisDialog);
+
+refs.diagnosisSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  diagnosisSearchResults = searchDiagnosisCatalog(refs.diagnosisSearchInput.value, 8);
+  renderDiagnosisResults();
+});
+
+refs.diagnosisSearchInput.addEventListener("input", () => {
+  diagnosisSearchResults = searchDiagnosisCatalog(refs.diagnosisSearchInput.value, 8);
+  renderDiagnosisResults();
+});
+
+refs.diagnosisResultList.addEventListener("click", (event) => {
+  const pickButton = event.target.closest("[data-pick-diagnosis]");
+  if (pickButton) pickCatalogDiagnosis(pickButton.dataset.pickDiagnosis);
+});
+
+refs.diagnosisCodeOptions.addEventListener("change", (event) => {
+  const choice = event.target.closest("[data-diagnosis-code-choice]");
+  if (choice) applyDiagnosisCode(choice.dataset.diagnosisCodeChoice);
+});
+
 refs.diagnosisForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!reportFormValidity(refs.diagnosisForm)) return;
@@ -4378,6 +4549,8 @@ refs.diagnosisForm.addEventListener("submit", async (event) => {
     }), "진단 초안을 추가했습니다.");
     refs.diagnosisForm.reset();
     refs.diagnosisSystem.value = "urn:kr:kcd";
+    resetDiagnosisSelection();
+    closeDiagnosisDialog();
   } catch (error) {
     refs.encounterFormMessage.textContent = error instanceof Error ? error.message : "진단을 추가하지 못했습니다.";
   }
@@ -4451,6 +4624,21 @@ function pickCatalogMedication(medicationId) {
   renderMedicationResults();
 }
 
+function medicationDetailRows(medication) {
+  return [
+    ["계열", medication.classLabel],
+    ["약품 코드", `${medication.system} | ${medication.code}`],
+    ["인정 상병", medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ") || "등록된 인정 상병 없음"],
+    ["기본 용법", `1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일 · 총 ${medication.dosing.quantity}`],
+    ["복약 안내", medication.dosing.instructions || "등록된 복약 안내 없음"],
+    ["인정 일수", medication.coverage.maxDurationDays ? `1회 최대 ${medication.coverage.maxDurationDays}일` : "등록된 인정 일수 없음"],
+  ];
+}
+
+/**
+ * A result row carries only the two things a clinician scans by: the product
+ * name and its ingredient. Coding, dosing and coverage detail stay one click away.
+ */
 function renderMedicationResults() {
   clear(refs.medicationResultList);
   refs.medicationResultCount.textContent = `${medicationSearchResults.length}건`;
@@ -4475,12 +4663,8 @@ function renderMedicationResults() {
       chip.dataset.tone = review.verdictTone;
       heading.append(chip);
     }
-    item.append(
-      heading,
-      element("span", "rx-result__meta", [medication.ingredient, medication.classLabel].filter(Boolean).join(" · ")),
-      element("span", "rx-result__meta", `${medication.system} | ${medication.code} · 인정 상병 ${medication.coverage.indications.map(({ code }) => code).join(", ") || "미등록"}`),
-      element("span", "rx-result__meta", `기본 용법 1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일`),
-    );
+    item.append(heading, element("span", "rx-result__ingredient", medication.ingredient));
+
     const actions = element("div", "rx-result__actions");
     const busy = medicationReviewBusyIds.has(medication.id);
     const reviewButton = element("button", "clinical-button rx-result__review", busy ? "AI 검토 중…" : "AI 검토");
@@ -4492,6 +4676,18 @@ function renderMedicationResults() {
     pickButton.dataset.pickMedication = medication.id;
     actions.append(reviewButton, pickButton);
     item.append(actions);
+
+    const details = element("details", "rx-result__details");
+    details.open = expandedMedicationIds.has(medication.id);
+    details.dataset.medicationDetails = medication.id;
+    details.append(element("summary", "rx-result__details-summary", "자세히 보기"));
+    const list = element("dl", "rx-detail-list");
+    for (const [term, value] of medicationDetailRows(medication)) {
+      list.append(element("dt", "", term), element("dd", "", value));
+    }
+    details.append(list);
+    item.append(details);
+
     refs.medicationResultList.append(item);
   }
 }
@@ -4666,6 +4862,14 @@ refs.medicationSearchInput.addEventListener("input", () => {
   medicationSearchResults = searchMedicationCatalog(refs.medicationSearchInput.value, 8);
   renderMedicationResults();
 });
+
+refs.medicationResultList.addEventListener("toggle", (event) => {
+  const details = event.target.closest("[data-medication-details]");
+  if (!details) return;
+  const id = details.dataset.medicationDetails;
+  if (details.open) expandedMedicationIds.add(id);
+  else expandedMedicationIds.delete(id);
+}, true);
 
 refs.medicationResultList.addEventListener("click", (event) => {
   const reviewButton = event.target.closest("[data-review-medication]");

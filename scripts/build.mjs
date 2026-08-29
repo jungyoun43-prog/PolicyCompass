@@ -69,6 +69,7 @@ const sourceAssets = [
   { route: "/clinical-observations.js", file: "src/clinical-observations.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-rules.js", file: "src/claim-rules.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-search.js", file: "src/claim-search.js", type: "text/javascript; charset=utf-8" },
+  { route: "/diagnosis-catalog.js", file: "src/diagnosis-catalog.js", type: "text/javascript; charset=utf-8" },
   { route: "/medication-catalog.js", file: "src/medication-catalog.js", type: "text/javascript; charset=utf-8" },
   { route: "/medication-claim-review.js", file: "src/medication-claim-review.js", type: "text/javascript; charset=utf-8" },
   { route: "/claim-presentation.js", file: "src/claim-presentation.js", type: "text/javascript; charset=utf-8" },

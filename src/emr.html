@@ -306,16 +306,53 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">KCD · MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="diagnoses">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <form class="inline-clinical-form" id="diagnosisForm" novalidate autocomplete="off" spellcheck="false">
-                        <div class="diagnosis-form-grid">
-                          <label>구분<select id="diagnosisRole" name="role"><option value="primary">주상병</option><option value="secondary">부상병</option></select></label>
-                          <label>진단 코드<input id="diagnosisCode" name="code" maxlength="80" placeholder="예: I10" required /></label>
-                          <label class="clinical-system-field">코드 시스템<input id="diagnosisSystem" name="system" maxlength="300" value="urn:kr:kcd" placeholder="KCD 또는 기관 코드체계 URI" /></label>
-                          <label class="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxlength="160" placeholder="예: 본태성 고혈압" required /></label>
-                          <label>확실성<select id="diagnosisCertainty" name="certainty"><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
-                          <button class="clinical-button clinical-button--primary" type="submit">진단 추가</button>
+                      <p class="entry-boundary">의료진이 확인한 상병을 기록하는 로컬 초안입니다. 자동 코딩이나 진단 판단이 아니며, 최종 상병과 코드는 의료진이 선택해야 합니다.</p>
+                      <div class="prescription-launcher">
+                        <button class="clinical-button clinical-button--primary" type="button" id="openDiagnosisDialog" aria-haspopup="dialog">진단 추가</button>
+                        <p class="prescription-launcher__hint">진단명을 검색해 상병을 고르고, 진단 코드·코드 시스템·주상병 여부를 확인해 이번 진료에 담습니다.</p>
+                      </div>
+
+                      <dialog class="rx-dialog" id="diagnosisDialog" aria-labelledby="dxDialogTitle">
+                        <div class="rx-dialog__panel">
+                          <header class="rx-dialog__header">
+                            <span class="rx-dialog__heading">
+                              <span class="rail-eyebrow">DIAGNOSIS SEARCH</span>
+                              <span class="rx-dialog__title" id="dxDialogTitle" role="heading" aria-level="3">진단 추가</span>
+                              <span class="rx-dialog__context" id="dxDialogContext">환자를 먼저 선택하세요.</span>
+                            </span>
+                            <button class="text-action" type="button" id="closeDiagnosisDialog">닫기</button>
+                          </header>
+
+                          <p class="entry-boundary" id="dxDialogBoundary">내부 검토용 예시 상병 목록입니다.</p>
+
+                          <form class="rx-search" id="diagnosisSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
+                            <label class="rx-search__field" for="diagnosisSearchInput">진단명 검색<input id="diagnosisSearchInput" name="query" type="search" maxlength="120" placeholder="진단명·증상·코드 (예: 고혈압, 당뇨, J44)" /></label>
+                            <button class="clinical-button clinical-button--primary" type="submit">검색</button>
+                          </form>
+
+                          <section class="dx-results" aria-labelledby="dxResultsTitle">
+                            <h4 class="rx-section-title" id="dxResultsTitle">검색 결과 <span class="rx-count" id="diagnosisResultCount">0건</span></h4>
+                            <ul class="rx-result-list" id="diagnosisResultList" aria-label="진단명 검색 결과" aria-live="polite"></ul>
+                          </section>
+
+                          <form class="inline-clinical-form rx-form" id="diagnosisForm" novalidate autocomplete="off" spellcheck="false">
+                            <p class="rx-form__selected" id="diagnosisSelectedSummary">검색 결과에서 진단명을 선택하면 코드 후보가 표시됩니다.</p>
+                            <fieldset class="dx-codes" id="diagnosisCodeChoices" hidden>
+                              <legend class="rx-review__heading">진단 코드 선택</legend>
+                              <div class="dx-codes__options" id="diagnosisCodeOptions"></div>
+                            </fieldset>
+                            <div class="diagnosis-form-grid">
+                              <label>구분<select id="diagnosisRole" name="role"><option value="primary">주상병</option><option value="secondary">부상병</option></select></label>
+                              <label>진단 코드<input id="diagnosisCode" name="code" maxlength="80" placeholder="예: I10" required /></label>
+                              <label class="clinical-system-field">코드 시스템<select id="diagnosisSystem" name="system"><option value="urn:kr:kcd">KCD-8 · 한국표준질병사인분류</option><option value="http://hl7.org/fhir/sid/icd-10">ICD-10 · WHO 국제질병분류</option></select></label>
+                              <label class="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxlength="160" placeholder="예: 본태성 고혈압" required /></label>
+                              <label>확실성<select id="diagnosisCertainty" name="certainty"><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
+                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 진단 추가</button>
+                            </div>
+                          </form>
                         </div>
-                      </form>
+                      </dialog>
+
                       <ul class="clinical-entry-list" id="diagnosisList" aria-label="이번 진료 진단 목록" aria-live="polite"></ul>
                     </div>
                   </details>

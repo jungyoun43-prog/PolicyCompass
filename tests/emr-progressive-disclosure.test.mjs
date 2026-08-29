@@ -59,13 +59,17 @@ test("처방 입력은 자동 검증하지 않는 임상 안전 범위를 가까
   assert.ok(prescription.indexOf("자동 검증하지 않습니다") < prescription.indexOf('id="prescriptionForm"'));
 });
 
-test("disclosure 기본값은 진료 단계에 맞고 사용자 선택은 메모리에만 유지된다", async () => {
+test("오늘 진료는 모든 단계를 펼친 채 열리고 사용자 선택은 메모리에만 유지된다", async () => {
   const script = await readFile("src/emr.js", "utf8");
+  const steps = script.match(/const ENCOUNTER_WORKFLOW_DISCLOSURES = Object\.freeze\(\[([\s\S]*?)\]\)/)?.[1] ?? "";
+  const defaults = script.match(/const WORKFLOW_DISCLOSURE_DEFAULTS = Object\.freeze\(\{([\s\S]*?)\}\)/)?.[1] ?? "";
 
-  assert.match(script, /none:\s*\["visit-context"\]/);
-  assert.match(script, /waiting:\s*\["visit-context"\]/);
-  assert.match(script, /"in-progress":\s*\["soap"\]/);
-  assert.match(script, /completed:\s*\[\]/);
+  for (const step of ["visit-context", "soap", "measurements", "diagnoses", "prescriptions", "orders"]) {
+    assert.match(steps, new RegExp(`"${step}"`), step);
+  }
+  for (const status of ["none", "waiting", '"in-progress"', "completed", "signed", "legacy", "external"]) {
+    assert.match(defaults, new RegExp(`${status}:\\s*ENCOUNTER_WORKFLOW_DISCLOSURES`), status);
+  }
   assert.match(script, /const workflowDisclosureSessionState = new Map\(\)/);
   assert.match(script, /querySelectorAll\("details\[data-workflow-disclosure\]"\)[\s\S]*?disclosure\.addEventListener\("toggle"/);
   assert.match(script, /workflowDisclosureSessionState\.set\(/);

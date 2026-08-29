@@ -22,7 +22,7 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
           <div>
             <h2 id="selectedPatientName">{patient.name}</h2>
             <span id="selectedPatientMeta">{[
-              patientAgeLabel(patient),
+              patientAgeLabel(patient).replace(/^만\s*/, ""),
               SEX_LABELS[patient.sex],
               patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "",
             ].filter(Boolean).join(" · ")}</span>

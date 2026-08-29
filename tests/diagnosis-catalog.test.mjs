@@ -86,6 +86,6 @@ test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 
   // Then
   assert.equal(showsIngredient, true);
   assert.doesNotMatch(dialog, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
-  assert.match(dialog, /class="rx-result__details-summary">자세히 보기/);
+  assert.match(dialog, /class="rx-result__details-summary">\s*자세히 보기/);
   assert.match(dialog, /function medicationDetailRows\(medication\)/);
 });

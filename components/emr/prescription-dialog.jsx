@@ -353,7 +353,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}${rowReview || reviewBusyId === medication.id ? " is-reviewing" : ""}`} key={medication.id}>
                     <div className="rx-result__heading">
                       <b className="rx-result__label">{medication.label}</b>
-                      {rowReview ? <span className="rx-verdict-chip" data-tone={rowReview.verdictTone}>{rowReview.verdictSymbol} {rowReview.verdictLabel}</span> : null}
                     </div>
                     <span className="rx-result__ingredient">{medication.ingredient}</span>
                     <div className="rx-result__actions">
@@ -372,7 +371,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                         return next;
                       });
                     }}>
-                      <summary className="rx-result__details-summary">자세히 보기</summary>
+                      <summary className="rx-result__details-summary">
+                        자세히 보기
+                        {rowReview ? <span className="rx-verdict-chip" data-tone={rowReview.verdictTone} onClick={(event) => event.preventDefault()}>{rowReview.verdictSymbol} {rowReview.verdictLabel}</span> : null}
+                      </summary>
                       <DetailList rows={medicationDetailRows(medication)} />
                     </details>
                   </li>

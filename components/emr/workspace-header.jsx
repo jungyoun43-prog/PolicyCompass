@@ -38,7 +38,7 @@ export function WorkspaceHeader({ patient, activeTab, onSelectTab }) {
     <div className="patient-workspace-navigation">
       <span className="workspace-tabs__context" aria-hidden="true">
         <b>{patient.name}</b>
-        <span>{[patientAgeLabel(patient), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")}</span>
+        <span>{[patientAgeLabel(patient).replace(/^만\s*/, ""), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")}</span>
         {firstAllergy ? <em className="workspace-tabs__allergy">알레르기</em> : null}
       </span>
       <div className="workspace-tabs" role="tablist" aria-label="선택 환자 화면" aria-orientation="horizontal" onKeyDown={onTabKeyDown} ref={tabListRef}>

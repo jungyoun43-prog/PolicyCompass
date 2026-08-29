@@ -9121,3 +9121,47 @@ model-viewer::part(default-progress-mask) {
 .rx-result-list {
   gap: var(--space-2);
 }
+
+
+/* --- Follow-up polish: chart layout, timeline meta, danger spacing ---------- */
+
+/* Timeline owns the full width; the entry card sits above as a compact bar. */
+.chart-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.event-composer {
+  position: static;
+}
+
+.event-composer .workflow-disclosure__body form {
+  max-width: 760px;
+}
+
+/* Dates never wrap; repeated provenance reads as a caption, not a headline. */
+.event-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.event-row > time {
+  min-width: 96px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.event-source {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* The destructive action stands apart from routine exports. */
+.data-actions #wipeEmr {
+  margin-left: auto;
+}
+
+/* 예시 · 미저장 tucks under the edit button, right-aligned. */
+.patient-header-actions {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}

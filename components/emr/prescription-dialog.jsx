@@ -486,11 +486,13 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                               </div>
                             </>
                           ) : null}
-                          <p className="rx-source__document">{[
-                            check.source.documentNumber,
-                            check.source.version ? `v${check.source.version}` : "",
-                            check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
-                          ].filter(Boolean).join(" · ")}</p>
+                          {sourceOpen ? (
+                            <p className="rx-source__document">{[
+                              check.source.documentNumber,
+                              check.source.version ? `v${check.source.version}` : "",
+                              check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
+                            ].filter(Boolean).join(" · ")}</p>
+                          ) : null}
                         </li>
                       );
                     })}

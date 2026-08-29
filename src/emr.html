@@ -300,7 +300,7 @@
                               <span class="rx-dialog__title" id="vitalDialogTitle" role="heading" aria-level="3">측정 추가</span>
                               <span class="rx-dialog__context" id="vitalDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="text-action" type="button" id="closeVitalDialog">닫기</button>
+                            <button class="clinical-button rx-dialog__close" type="button" id="closeVitalDialog">닫기</button>
                           </header>
 
                           <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
@@ -322,7 +322,7 @@
                               <label>결과<input id="vitalValue" name="value" maxlength="40" required inputmode="decimal" /></label>
                               <label>단위<input id="vitalUnit" name="unit" readonly tabindex="-1" /></label>
                               <label class="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxlength="500" placeholder="예: 좌측 상완, 공복" /></label>
-                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 측정 추가</button>
+                              <button class="clinical-button clinical-button--primary rx-form__submit" type="submit">측정 추가</button>
                             </div>
                           </form>
                         </div>
@@ -351,7 +351,7 @@
                               <span class="rx-dialog__title" id="dxDialogTitle" role="heading" aria-level="3">진단 추가</span>
                               <span class="rx-dialog__context" id="dxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="text-action" type="button" id="closeDiagnosisDialog">닫기</button>
+                            <button class="clinical-button rx-dialog__close" type="button" id="closeDiagnosisDialog">닫기</button>
                           </header>
 
                           <p class="entry-boundary" id="dxDialogBoundary">내부 검토용 예시 상병 목록입니다.</p>
@@ -378,7 +378,7 @@
                               <label class="clinical-system-field">코드 시스템<select id="diagnosisSystem" name="system"><option value="urn:kr:kcd">KCD-8 · 한국표준질병사인분류</option><option value="http://hl7.org/fhir/sid/icd-10">ICD-10 · WHO 국제질병분류</option></select></label>
                               <label class="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxlength="160" placeholder="예: 본태성 고혈압" required /></label>
                               <label>확실성<select id="diagnosisCertainty" name="certainty"><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
-                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 진단 추가</button>
+                              <button class="clinical-button clinical-button--primary rx-form__submit" type="submit">진단 추가</button>
                             </div>
                           </form>
                         </div>
@@ -408,7 +408,7 @@
                               <span class="rx-dialog__title" id="rxDialogTitle" role="heading" aria-level="3">약 처방하기</span>
                               <span class="rx-dialog__context" id="rxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="text-action" type="button" id="closePrescriptionDialog">닫기</button>
+                            <button class="clinical-button rx-dialog__close" type="button" id="closePrescriptionDialog">닫기</button>
                           </header>
 
                           <p class="entry-boundary" id="rxDialogBoundary">내부 검토용 예시 약품·급여기준 목록입니다.</p>
@@ -463,8 +463,8 @@
                               <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
                               <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
                               <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
-                              <label class="clinical-instructions-field">복약 안내<input id="medicationInstructions" name="instructions" maxlength="500" placeholder="식전·식후, 주의사항 등 의료진 지시" /></label>
-                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 처방 추가</button>
+                              <label class="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxlength="500" rows="3" placeholder="식전·식후, 주의사항 등 의료진 지시"></textarea></label>
+                              <button class="clinical-button clinical-button--primary rx-form__submit" type="submit">처방 추가</button>
                             </div>
                           </form>
                         </div>
@@ -493,7 +493,7 @@
                               <span class="rx-dialog__title" id="orderDialogTitle" role="heading" aria-level="3">오더 추가</span>
                               <span class="rx-dialog__context" id="orderDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="text-action" type="button" id="closeOrderDialog">닫기</button>
+                            <button class="clinical-button rx-dialog__close" type="button" id="closeOrderDialog">닫기</button>
                           </header>
 
                           <p class="entry-boundary" id="orderDialogBoundary">내부 검토용 예시 오더 목록입니다.</p>
@@ -517,7 +517,7 @@
                               <label class="clinical-label-field">오더명<input id="orderLabel" name="label" maxlength="160" required placeholder="예: 흉부 X-ray" /></label>
                               <label>우선순위<select id="orderPriority" name="priority"><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
                               <label class="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxlength="500" placeholder="검사 목적·부위·주의사항" /></label>
-                              <button class="clinical-button clinical-button--primary" type="submit">이번 진료에 오더 추가</button>
+                              <button class="clinical-button clinical-button--primary rx-form__submit" type="submit">오더 추가</button>
                             </div>
                           </form>
                         </div>

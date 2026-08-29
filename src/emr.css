@@ -7887,6 +7887,27 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-1);
 }
 
+/* The way out of a modal should read as a control, not as fine print. */
+.rx-dialog__close {
+  flex: none;
+  border-color: var(--line-strong);
+  background: var(--surface-soft);
+  font-weight: 700;
+}
+
+.rx-dialog__close::before {
+  content: "✕";
+  margin-right: var(--space-2);
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.rx-dialog__close:hover,
+.rx-dialog__close:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
 .rx-dialog__title {
   font-size: 1.125rem;
   font-weight: 700;
@@ -8112,8 +8133,32 @@ button.claim-attention-item__summary:focus-visible {
 .rx-result__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* 처방 담기 is the decision; AI 검토 is a check beside it, not a peer. */
+.rx-result__actions-divider {
+  width: 1px;
+  height: 22px;
+  flex: none;
+  background: var(--line);
+}
+
+.rx-result__review {
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.rx-result__review:not(:disabled):hover,
+.rx-result__review:not(:disabled):focus-visible {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
 }
 
 .rx-result-empty,
@@ -8131,21 +8176,18 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-verdict-chip[data-tone="green"],
-.rx-verdict[data-tone="green"] {
-  border-color: var(--status-success-text);
-  color: var(--status-success-text);
-}
+.rx-verdict[data-tone="green"] { --rx-tone: var(--status-success-text); }
 
 .rx-verdict-chip[data-tone="amber"],
-.rx-verdict[data-tone="amber"] {
-  border-color: var(--data-amber);
-  color: var(--data-amber);
-}
+.rx-verdict[data-tone="amber"] { --rx-tone: var(--data-amber); }
 
 .rx-verdict-chip[data-tone="red"],
-.rx-verdict[data-tone="red"] {
-  border-color: var(--urgent);
-  color: var(--urgent);
+.rx-verdict[data-tone="red"] { --rx-tone: var(--urgent); }
+
+.rx-verdict-chip[data-tone],
+.rx-verdict[data-tone] {
+  border-color: var(--rx-tone);
+  color: var(--rx-tone);
 }
 
 .rx-review__bar {
@@ -8267,6 +8309,12 @@ button.claim-attention-item__summary:focus-visible {
   min-width: 0;
 }
 
+.rx-source__origins,
+.rx-source__origin .rx-result__details-summary {
+  border-top-color: color-mix(in srgb, var(--rx-source-tone) 40%, var(--line));
+  color: var(--rx-source-tone);
+}
+
 .rx-source__record {
   margin-top: var(--space-1);
   border-left: 2px solid var(--rx-source-tone);
@@ -8327,13 +8375,19 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-verdict {
+  --rx-tone: var(--line-strong);
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--rx-tone);
   border-radius: var(--radius-control);
-  background: var(--surface);
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--rx-tone) 12%, var(--surface)) 0%,
+    color-mix(in srgb, var(--rx-tone) 4%, var(--surface)) 62%,
+    var(--surface) 100%
+  );
 }
 
 .rx-verdict__symbol {
@@ -8405,6 +8459,7 @@ button.claim-attention-item__summary:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  color: var(--rx-source-tone);
   font-size: var(--font-size-caption);
 }
 
@@ -8424,7 +8479,7 @@ button.claim-attention-item__summary:focus-visible {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 32%, var(--line));
   border-radius: var(--radius-control);
   background: var(--surface-raised);
   font-size: var(--font-size-caption);
@@ -8480,11 +8535,40 @@ button.claim-attention-item__summary:focus-visible {
   line-height: 1.6;
 }
 
-/* The confirm action names the whole step, so it takes its own row. */
-.rx-form .diagnosis-form-grid > .clinical-button,
-.rx-form .prescription-form-grid > .clinical-button {
+/* The confirm action closes the step, so it takes its own row on the right. */
+.rx-form__submit {
   grid-column: 1 / -1;
-  justify-self: start;
+  justify-self: end;
+  min-height: 52px;
+  padding-inline: var(--space-8);
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+/* An explicit track count so 총 수량 lands on the right edge instead of leaving
+   a stray auto-fit column at the end of the row. */
+.rx-form .prescription-form-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.rx-form .prescription-form-grid .clinical-label-field {
+  grid-column: span 2;
+}
+
+/* Dosing guidance is free prose, so it gets the full row and room to write. */
+.rx-form .clinical-instructions-field {
+  grid-column: 1 / -1;
+}
+
+.rx-form .clinical-instructions-field textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+@media (max-width: 1100px) {
+  .rx-form .prescription-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -8500,6 +8584,18 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 @media (max-width: 620px) {
+  .rx-form .prescription-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rx-form .prescription-form-grid .clinical-label-field {
+    grid-column: 1 / -1;
+  }
+
+  .rx-form__submit {
+    justify-self: stretch;
+  }
+
   .rx-search__field {
     flex-basis: 100%;
   }

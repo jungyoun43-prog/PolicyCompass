@@ -4435,7 +4435,7 @@ function renderVitalResults() {
     heading.append(element("b", "rx-result__label", preset.label));
     item.append(heading, element("span", "rx-result__ingredient", `LOINC ${preset.code} · ${preset.unit}`));
     const actions = element("div", "rx-result__actions");
-    const pickButton = element("button", "clinical-button", "이 항목 선택");
+    const pickButton = element("button", "clinical-button clinical-button--primary", "이 항목 선택");
     pickButton.type = "button";
     pickButton.dataset.pickVital = preset.code;
     actions.append(pickButton);
@@ -4523,7 +4523,7 @@ function renderOrderResults() {
     heading.append(element("span", "dx-result__category", orderKindLabel(entry.kind)));
     item.append(heading, element("span", "rx-result__ingredient", displayCoding(entry) || "기관 예시 코드"));
     const actions = element("div", "rx-result__actions");
-    const pickButton = element("button", "clinical-button", "이 오더 선택");
+    const pickButton = element("button", "clinical-button clinical-button--primary", "이 오더 선택");
     pickButton.type = "button";
     pickButton.dataset.pickOrder = entry.id;
     actions.append(pickButton);
@@ -4637,7 +4637,7 @@ function renderDiagnosisResults() {
       element("span", "rx-result__ingredient", `${preferred?.code ?? ""} · 코드 후보 ${entry.codes.length}개`),
     );
     const actions = element("div", "rx-result__actions");
-    const pickButton = element("button", "clinical-button", "이 상병 선택");
+    const pickButton = element("button", "clinical-button clinical-button--primary", "이 상병 선택");
     pickButton.type = "button";
     pickButton.dataset.pickDiagnosis = entry.id;
     actions.append(pickButton);
@@ -4895,14 +4895,14 @@ function renderMedicationResults() {
 
     const actions = element("div", "rx-result__actions");
     const busy = medicationReviewBusyIds.has(medication.id);
+    const pickButton = element("button", "clinical-button clinical-button--primary", "처방 담기");
+    pickButton.type = "button";
+    pickButton.dataset.pickMedication = medication.id;
     const reviewButton = element("button", "clinical-button rx-result__review", busy ? "AI 검토 중…" : "AI 검토");
     reviewButton.type = "button";
     reviewButton.dataset.reviewMedication = medication.id;
     reviewButton.disabled = busy;
-    const pickButton = element("button", "clinical-button", "처방 담기");
-    pickButton.type = "button";
-    pickButton.dataset.pickMedication = medication.id;
-    actions.append(reviewButton, pickButton);
+    actions.append(pickButton, element("span", "rx-result__actions-divider"), reviewButton);
     item.append(actions);
 
     const details = element("details", "rx-result__details");

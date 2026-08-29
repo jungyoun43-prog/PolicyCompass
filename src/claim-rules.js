@@ -50,7 +50,7 @@ export const CLAIM_LANE_LABELS = {
 export const DEFAULT_CLAIM_RULES = [
   {
     id: "demo-bp-follow-up",
-    ruleSetId: "VG-2026-01",
+    ruleSetId: "PC-2026-01",
     version: "2026.1",
     title: "고혈압 추적검사",
     serviceCode: "DEMO-BP-FOLLOWUP",
@@ -65,12 +65,12 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
-    sourceDocumentNumber: "기관 규칙 VG-2026-01",
+    sourceDocumentNumber: "기관 규칙 PC-2026-01",
     sample: true,
   },
   {
     id: "demo-diabetes-monitoring",
-    ruleSetId: "VG-2026-02",
+    ruleSetId: "PC-2026-02",
     version: "2026.1",
     title: "당뇨 추적검사",
     serviceCode: "DEMO-A1C-FOLLOWUP",
@@ -85,12 +85,12 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
-    sourceDocumentNumber: "기관 규칙 VG-2026-02",
+    sourceDocumentNumber: "기관 규칙 PC-2026-02",
     sample: true,
   },
   {
     id: "demo-bone-density",
-    ruleSetId: "VG-2026-03",
+    ruleSetId: "PC-2026-03",
     version: "2026.1",
     title: "골밀도검사",
     serviceCode: "DEMO-BMD",
@@ -105,7 +105,7 @@ export const DEFAULT_CLAIM_RULES = [
     effectiveFrom: "2026-01-01",
     sourceLabel: "내부 검토용 예시 규칙 · 실제 급여기준 아님",
     sourceUrl: "",
-    sourceDocumentNumber: "기관 규칙 VG-2026-03",
+    sourceDocumentNumber: "기관 규칙 PC-2026-03",
     sample: true,
   },
 ];

@@ -55,7 +55,7 @@ test("고시·문서번호는 선택 필드로 보존하고 내장 샘플은 공
     sourceDocumentNumber: "보험급여과-1234",
   });
   assert.equal(withDocumentNumber.sourceDocumentNumber, "보험급여과-1234");
-  assert.ok(DEFAULT_CLAIM_RULES.every(({ sourceDocumentNumber }) => /^기관 규칙 VG-2026-\d{2}$/.test(sourceDocumentNumber)));
+  assert.ok(DEFAULT_CLAIM_RULES.every(({ sourceDocumentNumber }) => /^기관 규칙 PC-2026-\d{2}$/.test(sourceDocumentNumber)));
   assert.ok(DEFAULT_CLAIM_RULES.every(({ sourceDocumentNumber }) => !/고시|심평원/.test(sourceDocumentNumber)));
   assert.ok(DEFAULT_CLAIM_RULES.every(({ ruleSetId, version }) => !/demo/i.test(`${ruleSetId} ${version}`)));
 });

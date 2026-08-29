@@ -111,6 +111,8 @@
 .map-legend__items span {
   display: grid;
   min-width: 0;
+  text-wrap: pretty;
+  word-break: keep-all;
 }
 
 .map-legend__items strong {

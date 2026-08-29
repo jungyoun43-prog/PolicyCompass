@@ -37,7 +37,7 @@ try {
           .filter((link) => ['/patient','/map','/connections','/insights','/journey'].includes(new URL(link.href).pathname)).length
       })`);
       assert(context.patient === "김비타", "Clinician golden flow lost patient identity.");
-      assert(context.mrn.includes("VG-1001"), "Clinician golden flow omitted MRN context.");
+      assert(context.mrn.includes("PC-1001"), "Clinician golden flow omitted MRN context.");
       assert(context.patientRouteLinks === 0, "Clinician flow crossed into patient navigation.");
     });
 

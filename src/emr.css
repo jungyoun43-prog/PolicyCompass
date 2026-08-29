@@ -7842,7 +7842,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-dialog {
-  width: min(100vw - var(--space-6), 1080px);
+  width: min(100% - var(--space-6), 1080px);
   max-width: 100%;
   max-height: min(92vh, 900px);
   padding: 0;
@@ -7858,6 +7858,9 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-dialog__panel {
+  text-wrap: pretty;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -7871,6 +7874,11 @@ button.claim-attention-item__summary:focus-visible {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+}
+
+.rx-dialog__header .text-action {
+  flex: none;
+  white-space: nowrap;
 }
 
 .rx-dialog__heading {
@@ -7984,6 +7992,7 @@ button.claim-attention-item__summary:focus-visible {
 .rx-result__meta {
   color: var(--muted);
   font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
 }
 
 .rx-result__actions {
@@ -8201,5 +8210,21 @@ button.claim-attention-item__summary:focus-visible {
 
   .rx-dialog__panel {
     padding: var(--space-4);
+  }
+}
+
+@media (max-width: 620px) {
+  .rx-search__field {
+    flex-basis: 100%;
+  }
+
+  .rx-search > .clinical-button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .rx-result__actions .clinical-button {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }

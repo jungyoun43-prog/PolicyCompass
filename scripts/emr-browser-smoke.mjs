@@ -176,7 +176,7 @@ try {
   if (aiConnected) {
     aiMode = "local-model";
     assert(clinicalPosts.length === 1, "Configured local AI did not receive exactly one request.");
-    assert(!/김비타|VG-1001|혈압과 당화혈색소 추적/.test(clinicalPosts[0]), "AI request exposed direct identifiers or a free note.");
+    assert(!/김비타|PC-1001|혈압과 당화혈색소 추적/.test(clinicalPosts[0]), "AI request exposed direct identifiers or a free note.");
     assert(/event-1/.test(clinicalPosts[0]), "AI request did not pseudonymize event identifiers.");
 
     await evaluate([
@@ -1065,7 +1065,7 @@ try {
   })()`, demoClient);
   for (const downloads of [primaryExportsAfterWipe, demoExportsAfterWipe]) {
     assert(downloads.length === 1, "A cleared tab exported a stale patient FHIR bundle.");
-    assert(!/브라우저 테스트 환자|SMOKE-001|CROSS-TAB-DIRTY-SOAP|김비타|VG-1001/.test(downloads[0]), "A cleared tab exported stale patient data in its JSON backup.");
+    assert(!/브라우저 테스트 환자|SMOKE-001|CROSS-TAB-DIRTY-SOAP|김비타|PC-1001/.test(downloads[0]), "A cleared tab exported stale patient data in its JSON backup.");
     const backup = JSON.parse(downloads[0]);
     assert(backup.data.patients.length === 0 && backup.data.audit.length === 0 && backup.data.rules.every(({ sample }) => sample === true), "A cleared tab's JSON backup was not the PHI-free tombstone.");
   }

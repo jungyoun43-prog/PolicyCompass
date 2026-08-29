@@ -223,7 +223,7 @@ export async function observeResponsiveRoute(api, {
       const patientMeta = document.getElementById('selectedPatientMeta')?.textContent ?? '';
       const encounter = document.getElementById('encounterStatusText')?.textContent.trim() ?? '';
       product['patient-encounter-context-preserved'] = patientName === '김비타'
-        && /VG-1001/.test(patientMeta) && encounter.length > 0;
+        && /PC-1001/.test(patientMeta) && encounter.length > 0;
       product['sign-review-complete'] = Boolean(document.getElementById('encounterSignoffSummary')?.textContent.trim())
         && Boolean(document.querySelector('.patient-workspace-navigation'));
     }

@@ -70,7 +70,7 @@ test("환자와 임상 이벤트를 정규화해 감사 이력과 함께 추가�
   const initial = createEmptyEmrState("2026-07-19T10:00:00.000Z");
   const patient = createPatient({
     id: "patient-1",
-    mrn: "VG-1001",
+    mrn: "PC-1001",
     name: "김비타",
     birthDate: "1974-04-12",
     sex: "female",

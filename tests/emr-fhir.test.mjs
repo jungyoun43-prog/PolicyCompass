@@ -360,7 +360,7 @@ test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존
     resourceType: "Bundle", type: "collection",
     timestamp: "2026-07-19T09:00:00Z",
     entry: [
-      { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", identifier: [{ type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number" }] }, value: "VG-1001" }], name: [{ text: "김비타" }], birthDate: "1974-04-12", gender: "female" } },
+      { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", identifier: [{ type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number" }] }, value: "PC-1001" }], name: [{ text: "김비타" }], birthDate: "1974-04-12", gender: "female" } },
       { fullUrl: "Condition/c1", resource: { resourceType: "Condition", id: "c1", subject: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("I10", "고혈압"), recordedDate: "2026-01-01" } },
       { fullUrl: "Observation/o1", resource: { resourceType: "Observation", id: "o1", subject: { reference: "Patient/p1" }, status: "final", code: coding("4548-4", "당화혈색소"), valueQuantity: { value: 6.8, unit: "%" }, effectiveDateTime: "2026-07-10" } },
       { fullUrl: "MedicationRequest/m1", resource: { resourceType: "MedicationRequest", id: "m1", subject: { reference: "Patient/p1" }, status: "active", intent: "order", medicationCodeableConcept: coding("MED-1", "예시 혈압약"), authoredOn: "2026-07-01" } },
@@ -371,7 +371,7 @@ test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존
   });
 
   assert.equal(result.patient.name, "김비타");
-  assert.equal(result.patient.mrn, "VG-1001");
+  assert.equal(result.patient.mrn, "PC-1001");
   assert.deepEqual(
     result.patient.events.map(({ type }) => type).sort(),
     ["condition", "observation", "medication", "allergy", "procedure", "encounter"].sort(),

@@ -1642,7 +1642,7 @@ function profileClaimRule(item) {
   const serviceCode = String(item?.code || "UNLINKED").trim();
   return {
     id: `profile-${assessmentId}-${sourceId}`,
-    ruleSetId: `VG-PROFILE-${assessmentId.toUpperCase()}`,
+    ruleSetId: `PC-PROFILE-${assessmentId.toUpperCase()}`,
     version: "2026.1",
     title: `${item?.label || "청구 항목"} 사전점검`,
     serviceCode,

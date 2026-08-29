@@ -141,7 +141,7 @@ test("검토 결과에는 직접식별자가 들어가지 않는다", () => {
 
   // Then
   assert.doesNotMatch(serialized, /김비타/);
-  assert.doesNotMatch(serialized, /VG-1001/);
+  assert.doesNotMatch(serialized, /PC-1001/);
   assert.equal(Object.hasOwn(JSON.parse(serialized).patient, "name"), false);
 });
 

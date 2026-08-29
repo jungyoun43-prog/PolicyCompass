@@ -1456,7 +1456,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
   const startedAt = new Date(new Date(timestamp).valueOf() - 7 * 60_000).toISOString();
   const first = createPatient({
     id: "demo-patient-kim",
-    mrn: "VG-1001",
+    mrn: "PC-1001",
     name: "김비타",
     birthDate: "1974-04-12",
     sex: "female",
@@ -1544,7 +1544,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
   }, timestamp);
   const second = createPatient({
     id: "demo-patient-park",
-    mrn: "VG-1002",
+    mrn: "PC-1002",
     name: "박여정",
     birthDate: "1958-11-03",
     sex: "male",
@@ -1599,7 +1599,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
   }, timestamp);
   const third = createPatient({
     id: "demo-patient-lee",
-    mrn: "VG-1003",
+    mrn: "PC-1003",
     name: "이준호",
     birthDate: "1959-02-18",
     sex: "male",
@@ -1670,7 +1670,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
   }, timestamp);
   const fourth = createPatient({
     id: "demo-patient-choi",
-    mrn: "VG-1004",
+    mrn: "PC-1004",
     name: "최민아",
     birthDate: "1985-09-27",
     sex: "female",
@@ -1730,7 +1730,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
   }, timestamp);
   const fifth = createPatient({
     id: "demo-patient-jung",
-    mrn: "VG-1005",
+    mrn: "PC-1005",
     name: "정수진",
     birthDate: "1959-06-08",
     sex: "female",

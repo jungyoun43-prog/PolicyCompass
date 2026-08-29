@@ -203,6 +203,8 @@ body.insights-page {
 .app-brand {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   gap: var(--space-2);
   align-items: center;
@@ -213,6 +215,13 @@ body.insights-page {
   letter-spacing: -0.03em;
   text-decoration: none;
   white-space: nowrap;
+}
+
+/* The wordmark must give way to the header action instead of sliding under it. */
+.app-brand > span:not(.app-brand__mark) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-brand__mark {
@@ -457,6 +466,7 @@ body.insights-page {
   .app-brand {
     grid-column: 1;
     grid-row: 1;
+    font-size: 0.875rem;
   }
 
   .app-header__action {

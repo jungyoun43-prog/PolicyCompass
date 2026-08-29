@@ -408,7 +408,13 @@
                               <span class="rx-dialog__title" id="rxDialogTitle" role="heading" aria-level="3">약 처방하기</span>
                               <span class="rx-dialog__context" id="rxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="clinical-button rx-dialog__close" type="button" id="closePrescriptionDialog">닫기</button>
+                            <span class="rx-dialog__header-actions">
+                              <span class="rx-process" id="medicationReviewProcess" hidden>
+                                <button class="rx-process__summary" type="button" id="medicationReviewProcessSummary" aria-expanded="false" aria-controls="medicationReviewPipeline">검토 과정 확인하기</button>
+                                <span class="rx-process__body" id="medicationReviewPipeline" hidden></span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closePrescriptionDialog">닫기</button>
+                            </span>
                           </header>
 
                           <p class="entry-boundary" id="rxDialogBoundary">내부 검토용 예시 약품·급여기준 목록입니다.</p>
@@ -427,13 +433,7 @@
                             </section>
 
                             <section class="rx-review" aria-labelledby="rxReviewTitle">
-                              <div class="rx-review__bar">
-                                <h4 class="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span class="rx-count" id="medicationReviewMode">규칙 기반</span></h4>
-                                <div class="rx-process" id="medicationReviewProcess" hidden>
-                                  <button class="rx-process__summary" type="button" id="medicationReviewProcessSummary" aria-expanded="false" aria-controls="medicationReviewPipeline">검토 과정 확인하기</button>
-                                  <div class="rx-process__body" id="medicationReviewPipeline" hidden></div>
-                                </div>
-                              </div>
+                              <h4 class="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span class="rx-count" id="medicationReviewMode">규칙 기반</span></h4>
                               <p class="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 환자의 기록과 등록된 예시 급여기준을 항목별로 대조해 삭감 위험을 ○·△·✕로 보여 줍니다.</p>
                               <div class="rx-review__body" id="medicationReviewBody" aria-live="polite" hidden>
                                 <div class="rx-verdict" id="medicationReviewVerdict"></div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { centerSelectedPatientCard, useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
+import { PatientSummaryCard } from "./patient-summary.jsx";
 
 import { patientAgeLabel, QUEUE_LABELS, SEX_LABELS, ageFromBirthDate } from "../../lib/emr/format.js";
 import { encounterQueueStatus, todayEncounterForPatient } from "../../lib/emr/selectors.js";
@@ -31,13 +32,16 @@ export function PatientRail({
   patients,
   selectedPatientId,
   demo,
+  updatedAt,
   onSelectPatient,
   onLoadDemo,
   onSavePatient,
+  onEditPatient,
   editRequest,
   onEditConsumed,
   onFormStateChange,
 }) {
+  const selectedPatient = patients.find(({ id }) => id === selectedPatientId) ?? null;
   const [query, setQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState("all");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -142,6 +146,9 @@ export function PatientRail({
 
   return (
     <aside className="patient-rail" aria-labelledby="patientRailTitle">
+      {selectedPatient ? (
+        <PatientSummaryCard patient={selectedPatient} demo={demo} updatedAt={updatedAt} onEditPatient={onEditPatient} />
+      ) : null}
       <div className="rail-heading">
         <div>
           <p className="rail-eyebrow">TODAY&apos;S WORKLIST</p>

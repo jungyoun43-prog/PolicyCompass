@@ -1,8 +1,8 @@
 "use client";
 
 import { useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
-import { displayDate, displayTimestamp, INSURANCE_LABELS, patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
-import { confirmedActiveConditions, finalizedPatient } from "../../lib/emr/selectors.js";
+import { patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
+import { finalizedPatient } from "../../lib/emr/selectors.js";
 
 const TABS = [
   ["encounter", "오늘 진료"],
@@ -14,12 +14,15 @@ const TABS = [
   ["data", "감사·데이터"],
 ];
 
-export function WorkspaceHeader({ patient, demo, updatedAt, activeTab, onSelectTab, onEditPatient }) {
+/**
+ * A slim sticky bar: the tab list plus just enough identity to know whose
+ * chart is open while scrolled. The full identity and safety context lives
+ * in the patient rail's summary card.
+ */
+export function WorkspaceHeader({ patient, activeTab, onSelectTab }) {
   const tabListRef = useHorizontalScrollPosition();
-  const conditions = confirmedActiveConditions(patient);
   const chart = finalizedPatient(patient);
-  const allergies = chart.events.filter((event) => event.type === "allergy");
-  const activeMedications = chart.events.filter((event) => event.type === "medication" && !["stopped", "cancelled"].includes(event.status));
+  const firstAllergy = chart.events.find((event) => event.type === "allergy");
 
   const onTabKeyDown = (event) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -32,62 +35,12 @@ export function WorkspaceHeader({ patient, demo, updatedAt, activeTab, onSelectT
   };
 
   return (
-    <div className="patient-workspace-navigation" data-safety-persistent>
-      <header className="patient-safety-header">
-        <div className="patient-identity">
-          <p className="rail-eyebrow">SELECTED PATIENT</p>
-          <div>
-            <h2 id="selectedPatientName">{patient.name}</h2>
-            <span id="selectedPatientMeta">{[
-              patient.mrn || "등록번호 없음",
-              patient.birthDate ? displayDate(patient.birthDate) : "생년월일 미상",
-              patientAgeLabel(patient),
-              SEX_LABELS[patient.sex],
-              patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "혈액형 미상",
-              INSURANCE_LABELS[patient.insuranceType],
-            ].filter(Boolean).join(" · ")}</span>
-          </div>
-          <div className="patient-condition-summary" aria-label="확정 활성 질환">
-            <span className="patient-condition-summary__label">현재 질환</span>
-            <div
-              className="patient-condition-summary__list"
-              id="selectedPatientConditions"
-              role="list"
-              aria-live="polite"
-              aria-label={conditions.length ? `확정 활성 질환: ${conditions.map(({ label }) => label).join(", ")}` : "확정 활성 질환 없음"}
-            >
-              {conditions.length === 0 ? (
-                <span className="patient-condition-summary__empty" role="listitem">확정 활성 질환 없음</span>
-              ) : (
-                <>
-                  {conditions.slice(0, 2).map((condition) => (
-                    <span className="patient-condition-chip" role="listitem" key={condition.id}>
-                      <strong>{condition.label}</strong>
-                      {condition.code ? <small>{condition.code}</small> : null}
-                    </span>
-                  ))}
-                  {conditions.length > 2 ? (
-                    <span className="patient-condition-summary__more" role="listitem">외 {conditions.length - 2}개</span>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="safety-alerts" id="safetyAlerts" aria-label="환자 안전 알림">
-          {allergies.length
-            ? allergies.slice(0, 3).map((allergy) => (
-              <span className="safety-chip safety-chip--allergy" key={allergy.id}>알레르기 · {allergy.label}</span>
-            ))
-            : <span className="safety-chip">알레르기 확인 필요</span>}
-          <span className="safety-chip">활성 약물 {activeMedications.length}건</span>
-        </div>
-        <div className="patient-header-actions">
-          <button className="clinical-button" id="editPatient" type="button" onClick={onEditPatient}>환자 정보 편집</button>
-          <span id="lastSavedAt">{demo ? "예시 · 미저장" : "저장 " + displayTimestamp(updatedAt)}</span>
-        </div>
-      </header>
-
+    <div className="patient-workspace-navigation">
+      <span className="workspace-tabs__context" aria-hidden="true">
+        <b>{patient.name}</b>
+        <span>{[patientAgeLabel(patient), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")}</span>
+        {firstAllergy ? <em className="workspace-tabs__allergy">알레르기</em> : null}
+      </span>
       <div className="workspace-tabs" role="tablist" aria-label="선택 환자 화면" aria-orientation="horizontal" onKeyDown={onTabKeyDown} ref={tabListRef}>
         {TABS.map(([key, label]) => (
           <button

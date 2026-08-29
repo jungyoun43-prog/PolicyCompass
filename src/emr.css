@@ -1,6 +1,6 @@
 body.emr-page {
   --header-height: 56px;
-  --patient-navigation-height: 156px;
+  --patient-navigation-height: 52px;
   background:
     radial-gradient(circle at 94% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 32rem),
     radial-gradient(circle at -8% 92%, color-mix(in srgb, var(--data-cyan) 8%, transparent), transparent 34rem),
@@ -9332,4 +9332,98 @@ model-viewer::part(default-progress-mask) {
 
 .rx-form textarea {
   min-height: 56px;
+}
+
+
+/* --- Patient context moves to the rail; the sticky bar is tabs only --------- */
+
+.patient-workspace-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--patient-navigation-height);
+  padding-block: var(--space-1);
+}
+
+.workspace-tabs__context {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: var(--space-2);
+  max-width: 220px;
+  overflow: hidden;
+  padding-inline: var(--space-2) var(--space-3);
+  border-right: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.workspace-tabs__context b {
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.workspace-tabs__context > span {
+  color: var(--muted);
+  font-size: 0.71rem;
+}
+
+.workspace-tabs__allergy {
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--urgent) 12%, var(--surface));
+  padding: 1px 7px;
+  color: var(--urgent);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Selected-patient summary card at the top of the rail. */
+.rail-selected-patient {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: var(--space-3);
+}
+
+.rail-selected-patient h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.rail-selected-patient #selectedPatientMeta {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.rail-selected-patient .patient-identity {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rail-selected-patient .patient-condition-summary {
+  align-items: flex-start;
+}
+
+.rail-selected-patient .safety-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.rail-selected-patient .patient-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  justify-items: stretch;
+}
+
+.rail-selected-patient .patient-header-actions > span {
+  text-align: right;
 }

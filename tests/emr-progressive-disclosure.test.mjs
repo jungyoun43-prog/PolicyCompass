@@ -10,14 +10,16 @@ function isInsideDetails(html, index) {
 }
 
 test("EMR 안전 맥락과 최종 서명은 점진적 공개 밖에 남는다", async () => {
+  const summary = await componentMarkup("components/emr/patient-summary.jsx");
   const header = await componentMarkup("components/emr/workspace-header.jsx");
   const encounter = await componentMarkup("components/emr/tabs/encounter-tab.jsx");
-  const persistent = header.indexOf("data-safety-persistent");
+  const persistent = summary.indexOf("data-safety-persistent");
 
   assert.ok(persistent > -1);
-  for (const marker of ['id="selectedPatientName"', 'id="safetyAlerts"', 'role="tablist"']) {
-    assert.ok(header.indexOf(marker, persistent) > persistent, marker);
+  for (const marker of ['id="selectedPatientName"', 'id="safetyAlerts"']) {
+    assert.ok(summary.indexOf(marker, persistent) > persistent, marker);
   }
+  assert.match(header, /role="tablist"/);
 
   for (const marker of ['class="encounter-save-bar"', 'class="encounter-context-rail"']) {
     const index = encounter.indexOf(marker);

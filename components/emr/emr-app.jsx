@@ -202,6 +202,8 @@ export function EmrApp() {
             patients={state.patients}
             selectedPatientId={state.selectedPatientId}
             demo={state.demo}
+            updatedAt={state.updatedAt}
+            onEditPatient={() => patient && setEditRequest(patient)}
             onSelectPatient={handleSelectPatient}
             onLoadDemo={handleLoadDemo}
             onSavePatient={handleSavePatient}
@@ -221,11 +223,8 @@ export function EmrApp() {
               <div id="workspaceContent">
                 <WorkspaceHeader
                   patient={patient}
-                  demo={state.demo}
-                  updatedAt={state.updatedAt}
                   activeTab={activeTab}
                   onSelectTab={selectTab}
-                  onEditPatient={() => setEditRequest(patient)}
                 />
                 <section className="workspace-panel encounter-panel" id="panel-encounter" role="tabpanel" aria-labelledby="tab-encounter" data-panel="encounter" hidden={activeTab !== "encounter"}>
                   <EncounterTab {...tabProps} />

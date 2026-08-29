@@ -7984,7 +7984,6 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-result-list,
-.rx-rationale-list,
 .rx-source-list {
   display: flex;
   flex-direction: column;
@@ -8130,12 +8129,19 @@ button.claim-attention-item__summary:focus-visible {
   color: var(--muted);
 }
 
+/* The decision takes the row's slack; the check keeps only its own label, so the
+   pair fills the card without reading as two equal choices. */
 .rx-result__actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+.rx-result__actions > .clinical-button:first-child {
+  width: 100%;
+  justify-content: center;
 }
 
 /* 처방 담기 is the decision; AI 검토 is a check beside it, not a peer. */
@@ -8307,6 +8313,10 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-source__origin {
   min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 26%, var(--line));
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised);
 }
 
 .rx-source__origins,
@@ -8422,17 +8432,10 @@ button.claim-attention-item__summary:focus-visible {
   color: var(--muted);
 }
 
-.rx-rationale-list li {
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--accent-soft);
-  color: var(--ink);
+.rx-verdict__note {
+  color: var(--data-amber);
   font-size: var(--font-size-caption);
-  line-height: 1.6;
-}
-
-.rx-rationale-note {
-  border-left-color: var(--data-amber);
-  color: var(--muted);
+  font-weight: 600;
 }
 
 .rx-source {
@@ -8605,8 +8608,16 @@ button.claim-attention-item__summary:focus-visible {
     justify-content: center;
   }
 
+  .rx-result__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rx-result__actions-divider {
+    display: none;
+  }
+
   .rx-result__actions .clinical-button {
-    flex: 1 1 auto;
+    width: 100%;
     justify-content: center;
   }
 }

@@ -367,7 +367,6 @@ const refs = {
   medicationReviewPipeline: byId("medicationReviewPipeline"),
   medicationReviewProcess: byId("medicationReviewProcess"),
   medicationReviewProcessSummary: byId("medicationReviewProcessSummary"),
-  medicationReviewRationale: byId("medicationReviewRationale"),
   medicationReviewSources: byId("medicationReviewSources"),
   medicationReviewBoundary: byId("medicationReviewBoundary"),
   orderForm: byId("orderForm"),
@@ -5152,9 +5151,7 @@ function renderMedicationReview(review) {
   renderMedicationReviewMode(review);
   renderMedicationReviewPipeline(review);
   refs.medicationReviewProcess.hidden = false;
-  clear(refs.medicationReviewRationale);
-  for (const line of review.rationale) refs.medicationReviewRationale.append(element("li", "", line));
-  if (review.note) refs.medicationReviewRationale.append(element("li", "rx-rationale-note", review.note));
+  if (review.note) text.append(element("span", "rx-verdict__note", review.note));
   renderMedicationReviewSources(review);
   refs.medicationReviewBoundary.textContent = review.boundary;
 }
@@ -5164,7 +5161,6 @@ function resetMedicationReviewPanel() {
   refs.medicationReviewBody.hidden = true;
   clear(refs.medicationReviewVerdict);
   clear(refs.medicationReviewPipeline);
-  clear(refs.medicationReviewRationale);
   clear(refs.medicationReviewSources);
   refs.medicationReviewBoundary.textContent = "";
   activeMedicationReviewId = "";
@@ -5263,21 +5259,37 @@ refs.medicationSearchInput.addEventListener("input", () => {
   renderMedicationResults();
 });
 
+let syncingSourceOrigins = false;
+
+/**
+ * The rule text and the chart row are one comparison, so they open and close as
+ * a pair however the reader got there - either summary, or the row itself.
+ */
+function syncSourceOrigins(origin) {
+  if (syncingSourceOrigins) return;
+  const source = origin.closest(".rx-source");
+  const [checkId] = origin.dataset.sourceOrigin.split(":");
+  syncingSourceOrigins = true;
+  try {
+    for (const sibling of source?.querySelectorAll("[data-source-origin]") ?? []) {
+      if (sibling !== origin) sibling.open = origin.open;
+    }
+  } finally {
+    syncingSourceOrigins = false;
+  }
+  if (origin.open) expandedSourceIds.add(checkId);
+  else expandedSourceIds.delete(checkId);
+}
+
 refs.medicationReviewSources.addEventListener("toggle", (event) => {
   const origin = event.target.closest("[data-source-origin]");
-  if (!origin) return;
-  const [checkId] = origin.dataset.sourceOrigin.split(":");
-  if (origin.open) expandedSourceIds.add(checkId);
-  else if (!origin.closest(".rx-source")?.querySelector("[data-source-origin][open]")) expandedSourceIds.delete(checkId);
+  if (origin) syncSourceOrigins(origin);
 }, true);
 
 refs.medicationReviewSources.addEventListener("click", (event) => {
   if (event.target.closest("[data-source-origin]")) return;
-  const source = event.target.closest(".rx-source");
-  const origins = [...(source?.querySelectorAll("[data-source-origin]") ?? [])];
-  if (!origins.length) return;
-  const nextOpen = !origins.every(({ open }) => open);
-  for (const origin of origins) origin.open = nextOpen;
+  const origin = event.target.closest(".rx-source")?.querySelector("[data-source-origin]");
+  if (origin) origin.open = !origin.open;
 });
 
 refs.medicationResultList.addEventListener("toggle", (event) => {

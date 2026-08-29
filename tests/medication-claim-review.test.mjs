@@ -201,7 +201,7 @@ test("서버는 브라우저가 보낸 비교 결과만 받아들인다", () => 
   assert.throws(() => sanitizeMedicationClaimComparison({ comparison: { ...comparison, verdict: "maybe" } }), /규칙 판정이 올바르지 않습니다/);
 });
 
-test("EMR 화면은 처방을 팝업에서 검색하고 판정·근거·출처 순서로 보여 준다", async () => {
+test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조표를 보여 준다", async () => {
   // Given
   const [html, js, build] = await Promise.all([
     readFile("src/emr.html", "utf8"),
@@ -212,8 +212,7 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정·근거·출처 �
 
   // When
   const launcherFirst = disclosure.indexOf('id="openPrescriptionDialog"') < disclosure.indexOf('id="prescriptionDialog"');
-  const verdictBeforeRationale = disclosure.indexOf('id="medicationReviewVerdict"') < disclosure.indexOf('id="medicationReviewRationale"');
-  const rationaleBeforeSources = disclosure.indexOf('id="medicationReviewRationale"') < disclosure.indexOf('id="medicationReviewSources"');
+  const verdictBeforeSources = disclosure.indexOf('id="medicationReviewVerdict"') < disclosure.indexOf('id="medicationReviewSources"');
 
   // Then
   assert.match(disclosure, /<button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/button>/);
@@ -221,9 +220,9 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정·근거·출처 �
   assert.match(disclosure, /id="medicationSearchInput"/);
   assert.ok(disclosure.includes('id="prescriptionForm"'), "처방 입력 폼은 팝업 안에 있다");
   assert.equal(launcherFirst, true);
-  assert.equal(verdictBeforeRationale, true);
-  assert.equal(rationaleBeforeSources, true);
-  assert.match(disclosure, /출처 · 삭감 근거와 환자 정보 대조/);
+  assert.equal(verdictBeforeSources, true);
+  assert.match(disclosure, /판정 근거 · 삭감 근거와 환자 정보 대조/);
+  assert.doesNotMatch(disclosure, /medicationReviewRationale/, "판정 근거 대조표가 있으므로 줄글 근거는 중복이다");
   assert.match(js, /data-review-medication/);
   assert.match(js, /"\/api\/medication-claim-review"/);
   assert.match(build, /"\/medication-catalog\.js"/);

@@ -8530,17 +8530,27 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-pipeline--progress {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  /* Always two by two — a 3+1 wrap reads as broken. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
   margin: var(--space-2) 0 0;
   padding: 0;
+  max-width: 460px;
 }
 
 .rx-pipeline--progress .rx-pipeline__step {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rx-pipeline--progress .rx-pipeline__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rx-pipeline--progress .rx-pipeline__step[data-state="active"] .rx-pipeline__index {

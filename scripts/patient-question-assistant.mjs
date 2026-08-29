@@ -182,6 +182,37 @@ export function ollamaEndpoint(value) {
 }
 
 const OPENAI_RESPONSES_BASE = "https://api.openai.com/v1";
+const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
+
+/**
+ * An OPENROUTER_API_KEY is enough on its own: it names the gateway, its API
+ * shape and the operator's intent to enable frontier calls. Everything stays
+ * overridable for other OpenAI-compatible gateways.
+ */
+export function frontierCredentials(environment = process.env) {
+  const openRouterKey = cleanText(environment.OPENROUTER_API_KEY ?? "", 500);
+  const openAiKey = cleanText(environment.OPENAI_API_KEY ?? "", 500);
+  const apiKey = openRouterKey || openAiKey;
+  const enabled = openRouterKey
+    ? environment.POLICYCOMPASS_FRONTIER_ENABLED !== "false"
+    : environment.POLICYCOMPASS_FRONTIER_ENABLED === "true";
+  const model = cleanText(environment.POLICYCOMPASS_FRONTIER_MODEL ?? "", 160)
+    || (openRouterKey ? "" : "gpt-5.6-sol");
+  const configured = Boolean(apiKey) && enabled && Boolean(model);
+  return {
+    apiKey,
+    viaOpenRouter: Boolean(openRouterKey),
+    configured,
+    model,
+    reason: configured
+      ? ""
+      : !apiKey
+        ? "API 키가 설정되지 않았습니다."
+        : !enabled
+          ? "POLICYCOMPASS_FRONTIER_ENABLED=true 설정이 필요합니다."
+          : "POLICYCOMPASS_FRONTIER_MODEL에 사용할 모델 ID를 설정하세요.",
+  };
+}
 
 /**
  * Where frontier requests go. Defaults to OpenAI; an operator can point this at
@@ -190,7 +221,8 @@ const OPENAI_RESPONSES_BASE = "https://api.openai.com/v1";
  * context never leaves over an unencrypted hop.
  */
 export function frontierBaseUrl(environment = process.env) {
-  const raw = cleanText(environment.POLICYCOMPASS_FRONTIER_BASE_URL ?? "", 300) || OPENAI_RESPONSES_BASE;
+  const fallback = frontierCredentials(environment).viaOpenRouter ? OPENROUTER_BASE : OPENAI_RESPONSES_BASE;
+  const raw = cleanText(environment.POLICYCOMPASS_FRONTIER_BASE_URL ?? "", 300) || fallback;
   let url;
   try {
     url = new URL(raw);
@@ -206,7 +238,9 @@ export function frontierBaseUrl(environment = process.env) {
  * shape that OpenRouter and most other gateways implement.
  */
 export function frontierApiStyle(environment = process.env) {
-  return cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase() === "chat" ? "chat" : "responses";
+  const declared = cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase();
+  if (declared === "chat" || declared === "responses") return declared;
+  return frontierCredentials(environment).viaOpenRouter ? "chat" : "responses";
 }
 
 function frontierHeaders(apiKey, environment) {
@@ -553,11 +587,7 @@ export function patientQuestionAssistantStatus(environment = process.env) {
       configured: Boolean(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL),
       model: environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
     },
-    frontier: {
-      configured: Boolean(environment.OPENAI_API_KEY)
-        && environment.POLICYCOMPASS_FRONTIER_ENABLED === "true",
-      model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
-    },
+    frontier: (({ configured, model, reason }) => ({ configured, model, ...(reason ? { reason } : {}) }))(frontierCredentials(environment)),
   };
 }
 
@@ -571,16 +601,16 @@ export async function runPatientQuestionAssistant(payload = {}, {
   if (provider === "frontier" && payload?.consent !== true) {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }
-  if (provider === "frontier"
-    && (!environment.OPENAI_API_KEY || environment.POLICYCOMPASS_FRONTIER_ENABLED !== "true")) {
-    throw new Error("프론티어 모델은 서버에서 명시적으로 활성화되지 않았습니다.");
+  const credentials = frontierCredentials(environment);
+  if (provider === "frontier" && !credentials.configured) {
+    throw new Error(`프론티어 모델은 서버에서 명시적으로 활성화되지 않았습니다. ${credentials.reason}`.trim());
   }
   const context = buildPatientQuestionContext(payload);
   const options = provider === "frontier"
     ? {
       provider,
-      apiKey: environment.OPENAI_API_KEY ?? "",
-      model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
+      apiKey: credentials.apiKey,
+      model: credentials.model,
       environment,
       fetchImpl,
       timeoutMs,

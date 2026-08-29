@@ -169,10 +169,13 @@ function jsonResponse(status, value) {
 function environmentFromBindings(env) {
   return {
     OPENAI_API_KEY: typeof env?.OPENAI_API_KEY === "string" ? env.OPENAI_API_KEY : "",
-    POLICYCOMPASS_FRONTIER_ENABLED: env?.POLICYCOMPASS_FRONTIER_ENABLED === "true" ? "true" : "false",
+    OPENROUTER_API_KEY: typeof env?.OPENROUTER_API_KEY === "string" ? env.OPENROUTER_API_KEY : "",
+    POLICYCOMPASS_FRONTIER_ENABLED: typeof env?.POLICYCOMPASS_FRONTIER_ENABLED === "string"
+      ? env.POLICYCOMPASS_FRONTIER_ENABLED
+      : "",
     POLICYCOMPASS_FRONTIER_MODEL: typeof env?.POLICYCOMPASS_FRONTIER_MODEL === "string"
       ? env.POLICYCOMPASS_FRONTIER_MODEL
-      : "gpt-5.6-sol",
+      : "",
     POLICYCOMPASS_FRONTIER_BASE_URL: typeof env?.POLICYCOMPASS_FRONTIER_BASE_URL === "string"
       ? env.POLICYCOMPASS_FRONTIER_BASE_URL
       : "",

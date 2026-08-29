@@ -13,6 +13,7 @@ import {
   buildRuleBasedPatientQuestions,
   callFrontierModel,
   cleanText,
+  frontierCredentials,
   ollamaEndpoint,
   safeGeneratedText,
   scrubDirectIdentifiers,
@@ -218,8 +219,8 @@ export async function runQuestionRefine(payload = {}, {
   const options = provider === "frontier"
     ? {
       provider,
-      apiKey: cleanText(environment.OPENAI_API_KEY ?? "", 500),
-      model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
+      apiKey: frontierCredentials(environment).apiKey,
+      model: frontierCredentials(environment).model,
       environment,
       fetchImpl,
       timeoutMs,

@@ -135,31 +135,31 @@ Vercel에 배포합니다. `vercel.json`이 `npm run build`로 워커 번들을 
 | 환경변수 | 용도 |
 | --- | --- |
 | `POLICYCOMPASS_OLLAMA_MODEL` / `POLICYCOMPASS_OLLAMA_URL` | 루프백 Ollama 로컬 모델(개발 환경) |
-| `OPENAI_API_KEY` + `POLICYCOMPASS_FRONTIER_ENABLED=true` | 외부 프론티어 모델. 매 요청 사용자 동의가 필요합니다 |
-| `POLICYCOMPASS_FRONTIER_MODEL` | 프론티어 모델 이름(기본 `gpt-5.6-sol`) |
-| `POLICYCOMPASS_FRONTIER_BASE_URL` | OpenAI 호환 게이트웨이 주소(기본 `https://api.openai.com/v1`). https만 허용합니다 |
-| `POLICYCOMPASS_FRONTIER_API` | `responses`(기본, OpenAI Responses API) 또는 `chat`(Chat Completions) |
+| `OPENROUTER_API_KEY` | OpenRouter 키. 이 하나로 게이트웨이 주소·API 형식·활성화가 함께 정해집니다 |
+| `POLICYCOMPASS_FRONTIER_MODEL` | 사용할 모델 ID. OpenRouter는 `제공자/모델` 형식 |
+| `OPENAI_API_KEY` + `POLICYCOMPASS_FRONTIER_ENABLED=true` | OpenAI 직접 연결(모델 기본값 `gpt-5.6-sol`) |
+| `POLICYCOMPASS_FRONTIER_BASE_URL` | 다른 OpenAI 호환 게이트웨이 주소. https만 허용합니다 |
+| `POLICYCOMPASS_FRONTIER_API` | `responses` 또는 `chat`. 보통 자동으로 정해지므로 설정할 필요가 없습니다 |
 | `POLICYCOMPASS_FRONTIER_SITE_URL` / `POLICYCOMPASS_FRONTIER_APP_NAME` | OpenRouter 트래픽 표기용 `HTTP-Referer` · `X-Title`. 선택 |
 
 환경변수를 설정하지 않으면 모든 AI 기능은 외부 호출 없이 규칙 기반으로 동작합니다.
 
 ### OpenRouter로 연결하기
 
-OpenRouter는 OpenAI Responses API(`/v1/responses`)가 아니라 Chat Completions(`/v1/chat/completions`)를 제공하므로 `POLICYCOMPASS_FRONTIER_API=chat`이 필요합니다.
+두 개만 넣으면 됩니다.
 
 ```
-OPENAI_API_KEY=sk-or-v1-...
-POLICYCOMPASS_FRONTIER_ENABLED=true
-POLICYCOMPASS_FRONTIER_BASE_URL=https://openrouter.ai/api/v1
-POLICYCOMPASS_FRONTIER_API=chat
-POLICYCOMPASS_FRONTIER_MODEL=openai/gpt-4.1-mini
-POLICYCOMPASS_FRONTIER_SITE_URL=https://<배포 도메인>
-POLICYCOMPASS_FRONTIER_APP_NAME=PolicyCompass
+OPENROUTER_API_KEY=sk-or-v1-...
+POLICYCOMPASS_FRONTIER_MODEL=openai/gpt-4o
 ```
 
-`POLICYCOMPASS_FRONTIER_MODEL`에는 OpenRouter의 모델 ID(`제공자/모델`)를 그대로 씁니다. 세 가지 프론티어 기능(환자 질문 도우미, 질문 다듬기, 약제 삭감 사전검토)이 모두 같은 설정을 따릅니다.
+`OPENROUTER_API_KEY`가 있으면 게이트웨이 주소는 `https://openrouter.ai/api/v1`, API 형식은 Chat Completions(`/chat/completions`), 프론티어 활성화는 켜짐으로 함께 정해집니다. OpenRouter에는 OpenAI Responses API(`/v1/responses`)가 없기 때문에 형식 전환이 필요하며, 이 전환이 자동으로 이뤄집니다.
 
-구조화 출력을 강제하므로 **JSON schema(structured outputs)를 지원하는 모델**이어야 합니다. 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다. 같은 방식으로 Together·Groq·자체 호스팅 프록시 등 OpenAI 호환 게이트웨이도 연결할 수 있습니다.
+세 가지 프론티어 기능(환자 질문 도우미, 질문 다듬기, 약제 삭감 사전검토)이 모두 같은 설정을 따릅니다. 키만 넣고 모델을 비워 두면 켜지지 않으며, `/api/medication-claim-review/status`의 `frontier.reason`이 빠진 항목을 알려 줍니다.
+
+구조화 출력을 강제하므로 **JSON schema(structured outputs)를 지원하는 모델**이어야 합니다([지원 모델 목록](https://openrouter.ai/models?order=newest&supported_parameters=structured_outputs)). 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다.
+
+`POLICYCOMPASS_FRONTIER_BASE_URL`·`POLICYCOMPASS_FRONTIER_API`로 덮어쓰면 Together·Groq·자체 호스팅 프록시 등 다른 OpenAI 호환 게이트웨이도 같은 방식으로 연결됩니다.
 
 ## 검증
 

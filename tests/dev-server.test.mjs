@@ -71,7 +71,7 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
     assert.equal(patientStatus.status, 200);
     assert.deepEqual(await patientStatus.json(), {
       local: { configured: false, model: "" },
-      frontier: { configured: false, model: "gpt-5.6-sol" },
+      frontier: { configured: false, model: "gpt-5.6-sol", reason: "API 키가 설정되지 않았습니다." },
     });
 
     const forbidden = await post(baseUrl, "{}", { "content-type": "application/json", origin: "https://evil.example" });

@@ -154,3 +154,59 @@ test("약제 삭감 검토도 OpenRouter 설정을 그대로 따른다", async (
   assert.equal(result.draft.verdict, "cross");
   assert.equal(JSON.stringify(calls[0].body).includes("김비타"), false);
 });
+
+test("OPENROUTER_API_KEY 하나로 게이트웨이·형식·활성화가 함께 정해진다", async () => {
+  // Given
+  const { frontierCredentials } = await import("../scripts/patient-question-assistant.mjs");
+  const { medicationClaimReviewStatus } = await import("../scripts/graphs/medication-claim-review-graph.mjs");
+  const minimal = { OPENROUTER_API_KEY: "sk-or-1", POLICYCOMPASS_FRONTIER_MODEL: "openai/gpt-4o" };
+
+  // When
+  const credentials = frontierCredentials(minimal);
+  const status = medicationClaimReviewStatus(minimal).frontier;
+
+  // Then
+  assert.equal(credentials.viaOpenRouter, true);
+  assert.equal(status.configured, true);
+  assert.equal(status.model, "openai/gpt-4o");
+  assert.equal(frontierApiStyle(minimal), "chat");
+  assert.equal(frontierBaseUrl(minimal), "https://openrouter.ai/api/v1");
+});
+
+test("키만 있고 모델이 없으면 켜지 않고 이유를 알려 준다", async () => {
+  // Given
+  const { frontierCredentials } = await import("../scripts/patient-question-assistant.mjs");
+  const { medicationClaimReviewStatus } = await import("../scripts/graphs/medication-claim-review-graph.mjs");
+
+  // When
+  const noModel = frontierCredentials({ OPENROUTER_API_KEY: "sk-or-1" });
+  const noKey = frontierCredentials({});
+  const notEnabled = frontierCredentials({ OPENAI_API_KEY: "sk-1" });
+
+  // Then
+  assert.equal(noModel.configured, false);
+  assert.match(noModel.reason, /POLICYCOMPASS_FRONTIER_MODEL/);
+  assert.match(noKey.reason, /API 키가 설정되지 않았습니다/);
+  assert.match(notEnabled.reason, /POLICYCOMPASS_FRONTIER_ENABLED=true/);
+  assert.match(medicationClaimReviewStatus({ OPENROUTER_API_KEY: "sk-or-1" }).frontier.reason, /모델 ID/);
+});
+
+test("기존 OpenAI 설정과 명시적 덮어쓰기는 그대로 동작한다", async () => {
+  // Given
+  const { frontierCredentials } = await import("../scripts/patient-question-assistant.mjs");
+  const openAi = { OPENAI_API_KEY: "sk-1", POLICYCOMPASS_FRONTIER_ENABLED: "true" };
+  const overridden = {
+    OPENROUTER_API_KEY: "sk-or-1",
+    POLICYCOMPASS_FRONTIER_MODEL: "x/y",
+    POLICYCOMPASS_FRONTIER_BASE_URL: "https://api.groq.com/openai/v1",
+    POLICYCOMPASS_FRONTIER_API: "responses",
+  };
+
+  // When / Then
+  assert.equal(frontierCredentials(openAi).configured, true);
+  assert.equal(frontierCredentials(openAi).model, "gpt-5.6-sol");
+  assert.equal(frontierApiStyle(openAi), "responses");
+  assert.equal(frontierBaseUrl(overridden), "https://api.groq.com/openai/v1");
+  assert.equal(frontierApiStyle(overridden), "responses");
+  assert.equal(frontierCredentials({ OPENROUTER_API_KEY: "k", POLICYCOMPASS_FRONTIER_MODEL: "x/y", POLICYCOMPASS_FRONTIER_ENABLED: "false" }).configured, false);
+});

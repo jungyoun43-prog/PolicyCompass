@@ -3,6 +3,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import {
   callFrontierModel,
   cleanText,
+  frontierCredentials,
   ollamaEndpoint,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
@@ -273,10 +274,7 @@ export function medicationClaimReviewStatus(environment = process.env) {
       configured: Boolean(environment.POLICYCOMPASS_OLLAMA_MODEL),
       model: environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
     },
-    frontier: {
-      configured: Boolean(environment.OPENAI_API_KEY) && environment.POLICYCOMPASS_FRONTIER_ENABLED === "true",
-      model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
-    },
+    frontier: (({ configured, model, reason }) => ({ configured, model, ...(reason ? { reason } : {}) }))(frontierCredentials(environment)),
   };
 }
 
@@ -292,7 +290,7 @@ export async function runMedicationClaimReview(payload = {}, {
     ? {
       provider,
       model: status.frontier.configured ? status.frontier.model : "",
-      apiKey: environment.OPENAI_API_KEY ?? "",
+      apiKey: frontierCredentials(environment).apiKey,
       environment,
       fetchImpl,
       timeoutMs,

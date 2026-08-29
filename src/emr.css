@@ -8210,6 +8210,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-notice__summary {
+  /* The button draws the one and only circle; the glyph is a plain "i". */
   display: grid;
   width: 24px;
   height: 24px;
@@ -8218,7 +8219,10 @@ button.claim-attention-item__summary:focus-visible {
   border-radius: 50%;
   background: var(--surface);
   color: var(--muted);
-  font-size: 0.75rem;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 700;
   line-height: 1;
   cursor: help;
 }

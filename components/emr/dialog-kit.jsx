@@ -55,7 +55,7 @@ export function RxDialog({ id, open, onClose, eyebrow, title, titleId, context, 
               <span className="rail-eyebrow">{eyebrow}</span>
               <span className="rx-dialog__titleline">
                 <span className="rx-dialog__title" id={titleId} role="heading" aria-level={3}>{title}</span>
-                <HoverPopover hostClassName="rx-notice" trigger="ⓘ" triggerClassName="rx-notice__summary" triggerId={noticeId}
+                <HoverPopover hostClassName="rx-notice" trigger="i" triggerClassName="rx-notice__summary" triggerId={noticeId}
                   panelId={`${noticeId}Panel`} panelClassName="rx-notice__body rx-notice__body--start" ariaLabel="이 화면의 사용 범위 안내"
                   panel={notice} />
               </span>

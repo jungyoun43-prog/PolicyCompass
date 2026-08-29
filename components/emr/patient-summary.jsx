@@ -19,7 +19,6 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
       <div className="patient-identity">
         <p className="rail-eyebrow">SELECTED PATIENT</p>
         <div className="patient-identity__row">
-          <span className="patient-avatar" aria-hidden="true">{(patient.name || "?").charAt(0)}</span>
           <div>
             <h2 id="selectedPatientName">{patient.name}</h2>
             <span id="selectedPatientMeta">{[
@@ -66,7 +65,7 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
       </div>
       <div className="patient-header-actions">
         <button className="clinical-button" id="editPatient" type="button" onClick={onEditPatient}>환자 정보 편집</button>
-        <span id="lastSavedAt">{demo ? "예시 · 미저장" : "저장 " + displayTimestamp(updatedAt)}</span>
+        {demo ? null : <span id="lastSavedAt">저장 {displayTimestamp(updatedAt)}</span>}
       </div>
     </section>
   );

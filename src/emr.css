@@ -9536,3 +9536,41 @@ model-viewer::part(default-progress-mask) {
 .patient-identity > div > .patient-avatar {
   color: var(--on-inverse);
 }
+
+
+/* Identity hierarchy: essentials read first, condition chips step back. */
+.rail-selected-patient #selectedPatientMeta {
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.rail-selected-patient .patient-identity__row h2 {
+  font-size: 1.05rem;
+}
+
+.rail-selected-patient .patient-condition-summary__label {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.rail-selected-patient .patient-condition-chip {
+  gap: 4px;
+  padding: 2px 8px;
+}
+
+.rail-selected-patient .patient-condition-chip strong {
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.rail-selected-patient .patient-condition-chip small,
+.rail-selected-patient .patient-condition-summary__more {
+  font-size: 0.6rem;
+}
+
+.rail-selected-patient .safety-chip {
+  padding: 2px 8px;
+  font-size: 0.64rem;
+}

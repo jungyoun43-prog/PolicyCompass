@@ -258,10 +258,43 @@ export function frontierBaseUrl(environment = process.env) {
  * "responses" is the OpenAI Responses API. "chat" is the OpenAI Chat Completions
  * shape that OpenRouter and most other gateways implement.
  */
+/**
+ * The exact URL a frontier request will be sent to. Neither the host nor the API
+ * shape is a secret, and surfacing them turns "why did it 401" from a guess into
+ * a lookup.
+ */
+export function frontierEndpoint(environment = process.env) {
+  try {
+    const base = frontierBaseUrl(environment);
+    return frontierApiStyle(environment) === "chat" ? `${base}/chat/completions` : `${base}/responses`;
+  } catch (error) {
+    return `설정 오류: ${error instanceof Error ? error.message : "주소를 해석하지 못했습니다."}`;
+  }
+}
+
 export function frontierApiStyle(environment = process.env) {
   const declared = cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase();
   if (declared === "chat" || declared === "responses") return declared;
   return frontierCredentials(environment).viaOpenRouter ? "chat" : "responses";
+}
+
+/**
+ * OpenRouter answers a non-OpenRouter token with "Missing Authentication header",
+ * which reads like the header never arrived. Name the real problem instead.
+ */
+export function frontierKeyMismatch(environment = process.env) {
+  const { apiKey } = frontierCredentials(environment);
+  if (!apiKey) return "";
+  let host = "";
+  try {
+    host = new URL(frontierBaseUrl(environment)).host;
+  } catch {
+    return "";
+  }
+  if (host.endsWith("openrouter.ai") && !apiKey.startsWith("sk-or-")) {
+    return "OpenRouter로 보내도록 설정되어 있으나 API 키가 OpenRouter 키(sk-or-…) 형식이 아닙니다.";
+  }
+  return "";
 }
 
 function frontierHeaders(apiKey, environment) {
@@ -345,7 +378,8 @@ export async function callFrontierModel({
     } catch {
       // The status code remains the primary error when the body is not JSON.
     }
-    throw new Error(`프론티어 모델 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
+    const mismatch = response.status === 401 ? frontierKeyMismatch(environment) : "";
+    throw new Error(`프론티어 모델 요청 실패 (${response.status}) ${url}${detail ? `: ${detail}` : ""}${mismatch ? ` · ${mismatch}` : ""}`);
   }
   const payload = await response.json();
   return {
@@ -611,6 +645,9 @@ export function patientQuestionAssistantStatus(environment = process.env) {
     frontier: (({ configured, model, reason }) => ({
       configured,
       model,
+      api: frontierApiStyle(environment),
+      endpoint: frontierEndpoint(environment),
+      ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
       ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
     }))(frontierCredentials(environment)),
   };

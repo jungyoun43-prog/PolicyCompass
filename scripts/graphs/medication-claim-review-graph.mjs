@@ -3,7 +3,10 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import {
   callFrontierModel,
   cleanText,
+  frontierApiStyle,
   frontierCredentials,
+  frontierEndpoint,
+  frontierKeyMismatch,
   frontierVariablesPresent,
   ollamaEndpoint,
   safeGeneratedText,
@@ -278,6 +281,9 @@ export function medicationClaimReviewStatus(environment = process.env) {
     frontier: (({ configured, model, reason }) => ({
       configured,
       model,
+      api: frontierApiStyle(environment),
+      endpoint: frontierEndpoint(environment),
+      ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
       ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
     }))(frontierCredentials(environment)),
   };

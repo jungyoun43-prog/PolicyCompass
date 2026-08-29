@@ -130,8 +130,9 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(html, /id="medicationReviewPipeline"/);
   assert.ok(html.indexOf('id="medicationReviewProcess"') < html.indexOf('id="medicationReviewVerdict"'), "검토 과정은 판정보다 위에 있다");
   assert.doesNotMatch(html.match(/data-workflow-disclosure="prescriptions"[\s\S]*?id="prescriptionList"/)?.[0] ?? "", /<details/, "팝업 안에 정적 details를 중첩하지 않는다");
-  assert.match(js, /function setReviewProcessOpen\(open\)/);
-  assert.match(js, /addEventListener\("mouseenter"/);
+  assert.match(js, /function attachHoverPopover\(host, trigger, panel\)/);
+  assert.match(js, /host\.addEventListener\("mouseenter"/);
+  assert.match(js, /\[data-rx-popover\]/);
   assert.match(js, /function renderMedicationReviewPipeline\(review\)/);
   assert.match(js, /function medicationReviewTransmission\(review\)/);
   assert.match(js, /\["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"\]/);

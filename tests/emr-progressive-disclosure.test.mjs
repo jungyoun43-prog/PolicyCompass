@@ -50,13 +50,15 @@ test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", 
   assert.match(html, /data-disclosure-summary="soap"/);
 });
 
-test("처방 입력은 자동 검증하지 않는 임상 안전 범위를 가까이 알린다", async () => {
+test("처방 입력은 자동 검증하지 않는 임상 안전 범위를 팝업 안내에 유지한다", async () => {
   const html = await readFile("src/emr.html", "utf8");
   const prescription = html.match(/data-workflow-disclosure="prescriptions"[\s\S]*?<\/details>/)?.[0] ?? "";
+  const notice = prescription.match(/<span class="rx-notice__body" id="prescriptionNoticePanel"[^>]*>([^<]*)</)?.[1] ?? "";
 
-  assert.match(prescription, /의약품 추천이나 전자처방전 전송 기능이 아니며/);
-  assert.match(prescription, /용량·알레르기·상호작용·임신·신장\/간 기능을 자동 검증하지 않습니다/);
-  assert.ok(prescription.indexOf("자동 검증하지 않습니다") < prescription.indexOf('id="prescriptionForm"'));
+  assert.match(prescription, /<button class="rx-notice__summary"[^>]*id="prescriptionNotice"/);
+  assert.match(notice, /급여 인정이나 삭감을 확정하지 않습니다/);
+  assert.match(notice, /최종 처방 결정은 의료진에게 있습니다/);
+  assert.ok(prescription.indexOf('id="prescriptionNotice"') < prescription.indexOf('id="prescriptionForm"'));
 });
 
 test("오늘 진료는 모든 단계를 펼친 채 열리고 사용자 선택은 메모리에만 유지된다", async () => {

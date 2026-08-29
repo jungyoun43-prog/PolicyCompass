@@ -15,21 +15,21 @@ export const MEDICATION_CATALOG_BOUNDARY = "내부 검토용 예시 약품·급�
 const SOURCE = Object.freeze({
   drug: Object.freeze({
     label: "내부 검토용 예시 약제 급여기준 · 실제 고시 아님",
-    documentNumber: "PolicyCompass 예시 기준 PC-RX-2026-01",
+    documentNumber: "PC-RX-2026-01",
     version: "2026.1",
     effectiveFrom: "2026-01-01",
     url: "",
   }),
   duplicate: Object.freeze({
     label: "내부 검토용 예시 동일성분·동일효능군 중복 기준 · 실제 고시 아님",
-    documentNumber: "PolicyCompass 예시 기준 PC-RX-2026-02",
+    documentNumber: "PC-RX-2026-02",
     version: "2026.1",
     effectiveFrom: "2026-01-01",
     url: "",
   }),
   safety: Object.freeze({
     label: "내부 검토용 예시 금기·알레르기 확인 기준 · 실제 고시 아님",
-    documentNumber: "PolicyCompass 예시 기준 PC-RX-2026-03",
+    documentNumber: "PC-RX-2026-03",
     version: "2026.1",
     effectiveFrom: "2026-01-01",
     url: "",

@@ -286,7 +286,6 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">LOINC · ENCOUNTER</span><span class="workflow-disclosure__meta" data-disclosure-summary="measurements">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
                       <div class="prescription-launcher">
                         <button class="clinical-button clinical-button--primary" type="button" id="openVitalDialog" aria-haspopup="dialog">측정 추가</button>
                         <p class="prescription-launcher__hint">측정 항목을 검색해 고르면 LOINC 코드와 단위가 고정되고, 결과값만 입력하면 됩니다.</p>
@@ -300,10 +299,14 @@
                               <span class="rx-dialog__title" id="vitalDialogTitle" role="heading" aria-level="3">측정 추가</span>
                               <span class="rx-dialog__context" id="vitalDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="clinical-button rx-dialog__close" type="button" id="closeVitalDialog">닫기</button>
+                            <span class="rx-dialog__header-actions">
+                              <span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="vitalNotice" aria-expanded="false" aria-controls="vitalNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body" id="vitalNoticePanel" hidden>이번 진료에서 직접 확인한 결과만 기록합니다. 항목별 코드와 단위는 고정되며 서명 전까지 초안입니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeVitalDialog">닫기</button>
+                            </span>
                           </header>
-
-                          <p class="entry-boundary">이번 진료에서 직접 측정하거나 확인한 결과만 기록하세요. 항목별 LOINC 코드와 단위는 고정되며 서명 전까지 초안입니다.</p>
 
                           <form class="rx-search" id="vitalSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
                             <label class="rx-search__field" for="vitalSearchInput">측정 항목 검색<input id="vitalSearchInput" name="query" type="search" maxlength="120" placeholder="항목명·단위·LOINC 코드 (예: 혈압, 당화, 8867-4)" /></label>
@@ -337,7 +340,6 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">KCD · MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="diagnoses">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <p class="entry-boundary">의료진이 확인한 상병을 기록하는 로컬 초안입니다. 자동 코딩이나 진단 판단이 아니며, 최종 상병과 코드는 의료진이 선택해야 합니다.</p>
                       <div class="prescription-launcher">
                         <button class="clinical-button clinical-button--primary" type="button" id="openDiagnosisDialog" aria-haspopup="dialog">진단 추가</button>
                         <p class="prescription-launcher__hint">진단명을 검색해 상병을 고르고, 진단 코드·코드 시스템·주상병 여부를 확인해 이번 진료에 담습니다.</p>
@@ -351,10 +353,14 @@
                               <span class="rx-dialog__title" id="dxDialogTitle" role="heading" aria-level="3">진단 추가</span>
                               <span class="rx-dialog__context" id="dxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="clinical-button rx-dialog__close" type="button" id="closeDiagnosisDialog">닫기</button>
+                            <span class="rx-dialog__header-actions">
+                              <span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="diagnosisNotice" aria-expanded="false" aria-controls="diagnosisNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body" id="diagnosisNoticePanel" hidden>상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeDiagnosisDialog">닫기</button>
+                            </span>
                           </header>
-
-                          <p class="entry-boundary" id="dxDialogBoundary">내부 검토용 예시 상병 목록입니다.</p>
 
                           <form class="rx-search" id="diagnosisSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
                             <label class="rx-search__field" for="diagnosisSearchInput">진단명 검색<input id="diagnosisSearchInput" name="query" type="search" maxlength="120" placeholder="진단명·증상·코드 (예: 고혈압, 당뇨, J44)" /></label>
@@ -394,7 +400,6 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">CLINICIAN DECISION</span><span class="workflow-disclosure__meta" data-disclosure-summary="prescriptions">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <p class="entry-boundary">의료진이 결정한 처방을 기록하는 로컬 초안입니다. 의약품 추천이나 전자처방전 전송 기능이 아니며, 용량·알레르기·상호작용·임신·신장/간 기능을 자동 검증하지 않습니다.</p>
                       <div class="prescription-launcher">
                         <button class="clinical-button clinical-button--primary" type="button" id="openPrescriptionDialog" aria-haspopup="dialog">약 처방하기</button>
                         <p class="prescription-launcher__hint">약을 검색하고 <b>AI 검토</b>로 이 환자 기록과 등록된 예시 급여기준을 대조한 뒤 이번 진료에 담습니다.</p>
@@ -413,11 +418,13 @@
                                 <button class="rx-process__summary" type="button" id="medicationReviewProcessSummary" aria-expanded="false" aria-controls="medicationReviewPipeline">검토 과정 확인하기</button>
                                 <span class="rx-process__body" id="medicationReviewPipeline" hidden></span>
                               </span>
+                              <span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="prescriptionNotice" aria-expanded="false" aria-controls="prescriptionNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body" id="prescriptionNoticePanel" hidden>급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다.</span>
+                              </span>
                               <button class="clinical-button rx-dialog__close" type="button" id="closePrescriptionDialog">닫기</button>
                             </span>
                           </header>
-
-                          <p class="entry-boundary" id="rxDialogBoundary">내부 검토용 예시 약품·급여기준 목록입니다.</p>
 
                           <form class="rx-search" id="medicationSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
                             <label class="rx-search__field" for="medicationSearchInput">약품 검색<input id="medicationSearchInput" name="query" type="search" maxlength="120" placeholder="약품명·성분명·계열·상병코드 (예: 암로디핀, 흡입제, J44)" /></label>
@@ -437,10 +444,9 @@
                                 <div class="rx-verdict" id="medicationReviewVerdict"></div>
                                 <section class="rx-review__section">
                                   <h5 class="rx-review__heading">판정 근거 · 삭감 근거와 환자 정보 대조</h5>
-                                  <p class="rx-review__hint">각 항목을 누르면 기준 원문과 환자 기록 원문이 함께 열리고, 판정을 가른 문구와 값이 강조됩니다.</p>
+                                  <p class="rx-review__hint">항목마다 <b>근거 원문과 환자 기록 원문 확인</b>을 누르면 기준 문구와 차트 기록이 나란히 열리고, 판정을 가른 부분이 강조됩니다.</p>
                                   <ul class="rx-source-list" id="medicationReviewSources"></ul>
                                 </section>
-                                <p class="rx-review__boundary" id="medicationReviewBoundary"></p>
                               </div>
                             </section>
                           </div>
@@ -452,9 +458,9 @@
                               <input type="hidden" id="medicationSystem" name="system" maxlength="300" />
                               <label class="clinical-label-field">약품명<input id="medicationName" name="name" maxlength="160" required placeholder="약품명" /></label>
                               <label>1회 용량<input id="medicationDose" name="dose" maxlength="40" inputmode="decimal" placeholder="예: 1" /></label>
-                              <label>용량 단위<input id="medicationDoseUnit" name="doseUnit" maxlength="30" placeholder="정, mg, mL" /></label>
-                              <label>투여 경로<input id="medicationRoute" name="route" maxlength="60" placeholder="예: 경구" /></label>
-                              <label>투여 빈도<input id="medicationFrequency" name="frequency" maxlength="80" placeholder="예: 1일 2회" /></label>
+                              <label>용량 단위<select id="medicationDoseUnit" name="doseUnit"><option value="정">정</option><option value="캡슐">캡슐</option><option value="포">포</option><option value="mg">mg</option><option value="g">g</option><option value="mL">mL</option><option value="흡입">흡입</option><option value="앰플">앰플</option><option value="바이알">바이알</option><option value="패치">패치</option><option value="방울">방울</option></select></label>
+                              <label>투여 경로<select id="medicationRoute" name="route"><option value="경구">경구 · PO</option><option value="정맥">정맥 · IV</option><option value="근육">근육 · IM</option><option value="피하">피하 · SC</option><option value="흡입">흡입 · INH</option><option value="설하">설하 · SL</option><option value="국소">국소 · TOP</option><option value="점안">점안 · OU</option><option value="직장">직장 · PR</option><option value="비강">비강 · NAS</option></select></label>
+                              <label>투여 빈도<select id="medicationFrequency" name="frequency"><option value="1일 1회">1일 1회 · QD</option><option value="1일 2회">1일 2회 · BID</option><option value="1일 3회">1일 3회 · TID</option><option value="1일 4회">1일 4회 · QID</option><option value="격일 1회">격일 1회 · QOD</option><option value="주 1회">주 1회 · QW</option><option value="취침 전">취침 전 · HS</option><option value="필요 시">필요 시 · PRN</option></select></label>
                               <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min="1" max="365" inputmode="numeric" placeholder="일" /></label>
                               <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="수량" /></label>
                               <label class="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxlength="500" rows="3" placeholder="식전·식후, 주의사항 등 의료진 지시"></textarea></label>
@@ -473,7 +479,6 @@
                       <span class="workflow-disclosure__signals"><span class="source-badge">MANUAL</span><span class="workflow-disclosure__meta" data-disclosure-summary="orders">0건</span></span>
                     </summary>
                     <div class="workflow-disclosure__body">
-                      <p class="entry-boundary">의료진이 결정한 검사·영상·처치·의뢰 오더를 기록하는 로컬 초안입니다. 오더 필요성을 자동으로 판단하지 않으며 실제 오더 전송 기능이 아닙니다.</p>
                       <div class="prescription-launcher">
                         <button class="clinical-button clinical-button--primary" type="button" id="openOrderDialog" aria-haspopup="dialog">오더 추가</button>
                         <p class="prescription-launcher__hint">오더명을 검색해 고르면 유형과 코드가 채워집니다. 우선순위와 요청사항을 확인해 이번 진료에 담습니다.</p>
@@ -487,10 +492,14 @@
                               <span class="rx-dialog__title" id="orderDialogTitle" role="heading" aria-level="3">오더 추가</span>
                               <span class="rx-dialog__context" id="orderDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
-                            <button class="clinical-button rx-dialog__close" type="button" id="closeOrderDialog">닫기</button>
+                            <span class="rx-dialog__header-actions">
+                              <span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="orderNotice" aria-expanded="false" aria-controls="orderNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body" id="orderNoticePanel" hidden>오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeOrderDialog">닫기</button>
+                            </span>
                           </header>
-
-                          <p class="entry-boundary" id="orderDialogBoundary">내부 검토용 예시 오더 목록입니다.</p>
 
                           <form class="rx-search" id="orderSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
                             <label class="rx-search__field" for="orderSearchInput">오더 검색<input id="orderSearchInput" name="query" type="search" maxlength="120" placeholder="오더명·유형·코드 (예: 폐기능, 흉부, 의뢰)" /></label>

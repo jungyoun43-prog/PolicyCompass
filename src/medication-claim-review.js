@@ -1,6 +1,6 @@
 import { chartMedicationClass, MEDICATION_CLAIM_SOURCES } from "./medication-catalog.js";
 
-export const MEDICATION_REVIEW_BOUNDARY = "등록된 내부 예시 기준과 이 환자의 확정 기록을 대조한 청구 전 사전점검입니다. 급여 인정·삭감을 확정하지 않고 처방 여부를 대신 결정하지 않으며, 최종 판단은 의료진과 심사 절차에 있습니다.";
+export const MEDICATION_REVIEW_BOUNDARY = "등록 기준과 이 환자의 확정 기록을 대조한 청구 전 사전점검입니다. 급여 인정·삭감을 확정하지 않고 처방 여부를 대신 결정하지 않으며, 최종 판단은 의료진과 심사 절차에 있습니다.";
 
 export const MEDICATION_REVIEW_VERDICTS = Object.freeze({
   circle: Object.freeze({ symbol: "○", label: "삭감 위험 낮음", tone: "green", rank: 0, sentence: "등록 기준과 이 환자 기록이 일치합니다." }),
@@ -536,7 +536,7 @@ function summarize(verdict, checks, medication) {
   if (verdict === "triangle") {
     return `${medication.label}은(는) ${cautions.map(({ title }) => title).join(" · ")} 항목에서 추가 확인이 필요합니다.`;
   }
-  return `${medication.label}은(는) 등록된 예시 기준 ${checks.length}개 항목 모두에서 이 환자 기록과 일치했습니다.`;
+  return `${medication.label}은(는) 등록 기준 ${checks.length}개 항목 모두에서 이 환자 기록과 일치했습니다.`;
 }
 
 function rationaleFor(checks) {

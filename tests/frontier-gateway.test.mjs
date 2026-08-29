@@ -115,7 +115,7 @@ test("모델 거부와 실패 응답은 그대로 오류로 올라온다", async
   }), /응답을 거부했습니다/);
   await assert.rejects(() => callFrontierModel({
     apiKey: "k", model: "m", instructions: "i", input: "x", schemaName: "d", schema: SCHEMA, fetchImpl: failure, environment: chat,
-  }), /요청 실패 \(402\): 크레딧 부족/);
+  }), /요청 실패 \(402\) https:\/\/openrouter\.ai\/api\/v1\/chat\/completions: 크레딧 부족/);
 });
 
 test("약제 삭감 검토도 OpenRouter 설정을 그대로 따른다", async () => {

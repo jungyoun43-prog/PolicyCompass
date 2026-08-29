@@ -88,17 +88,14 @@ import {
 import { createClaimSearchEntry, searchClaimIndex } from "./claim-search.js";
 import {
   findOrderInCatalog,
-  ORDER_CATALOG_BOUNDARY,
   orderKindLabel,
   searchOrderCatalog,
 } from "./order-catalog.js";
 import {
   findMedicationInCatalog,
-  MEDICATION_CATALOG_BOUNDARY,
   searchMedicationCatalog,
 } from "./medication-catalog.js";
 import {
-  DIAGNOSIS_CATALOG_BOUNDARY,
   findDiagnosisInCatalog,
   KCD_SYSTEM,
   preferredDiagnosisCode,
@@ -328,7 +325,6 @@ const refs = {
   closeDiagnosisDialog: byId("closeDiagnosisDialog"),
   diagnosisDialog: byId("diagnosisDialog"),
   dxDialogContext: byId("dxDialogContext"),
-  dxDialogBoundary: byId("dxDialogBoundary"),
   diagnosisSearchForm: byId("diagnosisSearchForm"),
   diagnosisSearchInput: byId("diagnosisSearchInput"),
   diagnosisResultList: byId("diagnosisResultList"),
@@ -352,7 +348,6 @@ const refs = {
   closePrescriptionDialog: byId("closePrescriptionDialog"),
   prescriptionDialog: byId("prescriptionDialog"),
   rxDialogContext: byId("rxDialogContext"),
-  rxDialogBoundary: byId("rxDialogBoundary"),
   medicationSearchForm: byId("medicationSearchForm"),
   medicationSearchInput: byId("medicationSearchInput"),
   medicationResultList: byId("medicationResultList"),
@@ -366,7 +361,6 @@ const refs = {
   medicationReviewProcess: byId("medicationReviewProcess"),
   medicationReviewProcessSummary: byId("medicationReviewProcessSummary"),
   medicationReviewSources: byId("medicationReviewSources"),
-  medicationReviewBoundary: byId("medicationReviewBoundary"),
   orderForm: byId("orderForm"),
   orderKind: byId("orderKind"),
   orderCode: byId("orderCode"),
@@ -379,7 +373,6 @@ const refs = {
   closeOrderDialog: byId("closeOrderDialog"),
   orderDialog: byId("orderDialog"),
   orderDialogContext: byId("orderDialogContext"),
-  orderDialogBoundary: byId("orderDialogBoundary"),
   orderSearchForm: byId("orderSearchForm"),
   orderSearchInput: byId("orderSearchInput"),
   orderResultList: byId("orderResultList"),
@@ -3628,7 +3621,7 @@ function renderEncounter(patient, evaluations) {
     const coding = displayCoding(medication);
     appendEncounterEntry(refs.prescriptionList, {
       title: medication.label,
-      meta: coding || "예시 처방 항목",
+      meta: coding || "처방 항목",
       detail: [`1회 ${rx.dose ?? "—"}${rx.doseUnit || ""}`, rx.route, rx.frequency, `${rx.durationDays ?? "—"}일`, `총 ${rx.quantity ?? "—"}`, rx.instructions].filter(Boolean).join(" · "),
       badge: medication.recordStatus === "final" ? "확정 처방" : "처방 초안",
       entityId: medication.id,
@@ -4460,7 +4453,7 @@ function pickVitalPreset(code) {
   if (!preset) return;
   refs.vitalPreset.value = preset.code;
   syncVitalPreset();
-  refs.vitalSelectedSummary.textContent = `${preset.label} · LOINC ${preset.code} · 단위 ${preset.unit}. 결과값을 입력하세요.`;
+  refs.vitalSelectedSummary.textContent = `${preset.label} · LOINC ${preset.code} · ${preset.unit}`;
   renderVitalResults();
   refs.vitalValue.focus();
 }
@@ -4513,7 +4506,7 @@ function renderOrderResults() {
       "li",
       "rx-result-empty",
       refs.orderSearchInput.value.trim()
-        ? "검색어와 맞는 예시 오더가 없습니다. 오더명이나 유형으로 다시 검색하세요."
+        ? "검색어와 맞는 오더가 없습니다. 오더명이나 유형으로 다시 검색하세요."
         : "오더명·유형·코드로 검색하세요.",
     ));
     return;
@@ -4524,7 +4517,7 @@ function renderOrderResults() {
     const heading = element("div", "rx-result__heading");
     heading.append(element("b", "rx-result__label", entry.label));
     heading.append(element("span", "dx-result__category", orderKindLabel(entry.kind)));
-    item.append(heading, element("span", "rx-result__ingredient", displayCoding(entry) || "기관 예시 코드"));
+    item.append(heading, element("span", "rx-result__ingredient", displayCoding(entry) || "기관 코드"));
     const actions = element("div", "rx-result__actions");
     const pickButton = element("button", "clinical-button clinical-button--primary", "이 오더 선택");
     pickButton.type = "button";
@@ -4545,7 +4538,7 @@ function pickCatalogOrder(orderId) {
   refs.orderLabel.value = entry.label;
   refs.orderPriority.value = entry.priority;
   refs.orderInstructions.value = entry.instructions;
-  refs.orderSelectedSummary.textContent = `${entry.label} · ${orderKindLabel(entry.kind)} · ${entry.system} | ${entry.code}. 우선순위와 요청사항을 확인하세요.`;
+  refs.orderSelectedSummary.textContent = `${entry.label} · ${orderKindLabel(entry.kind)}`;
   renderOrderResults();
   refs.orderPriority.focus();
 }
@@ -4563,7 +4556,6 @@ function openOrderDialog() {
     return;
   }
   refs.orderDialog.closest("details")?.setAttribute("open", "");
-  refs.orderDialogBoundary.textContent = ORDER_CATALOG_BOUNDARY;
   refs.orderDialogContext.textContent = encounterDialogContext(patient, encounter);
   renderOrderResults();
   if (!refs.orderDialog.open) refs.orderDialog.showModal();
@@ -4623,7 +4615,7 @@ function renderDiagnosisResults() {
       "li",
       "rx-result-empty",
       refs.diagnosisSearchInput.value.trim()
-        ? "검색어와 맞는 예시 상병이 없습니다. 다른 진단명이나 코드로 다시 검색하세요."
+        ? "검색어와 맞는 상병이 없습니다. 다른 진단명이나 코드로 다시 검색하세요."
         : "진단명·증상·코드로 검색하세요.",
     ));
     return;
@@ -4677,7 +4669,7 @@ function applyDiagnosisCode(code) {
   refs.diagnosisCode.value = candidate.code;
   refs.diagnosisLabel.value = candidate.label;
   renderDiagnosisCodeOptions(entry, candidate.code);
-  refs.diagnosisSelectedSummary.textContent = `${entry.label} · ${candidate.code} ${candidate.label}. 구분과 확실성을 확인한 뒤 추가하세요.`;
+  refs.diagnosisSelectedSummary.textContent = `${entry.label} · ${candidate.code} ${candidate.label}`;
 }
 
 function pickCatalogDiagnosis(diagnosisId) {
@@ -4715,7 +4707,6 @@ function openDiagnosisDialog() {
     return;
   }
   refs.diagnosisDialog.closest("details")?.setAttribute("open", "");
-  refs.dxDialogBoundary.textContent = DIAGNOSIS_CATALOG_BOUNDARY;
   refs.dxDialogContext.textContent = encounterDialogContext(patient, encounter);
   renderDiagnosisResults();
   if (!refs.diagnosisDialog.open) refs.diagnosisDialog.showModal();
@@ -4821,6 +4812,11 @@ function catalogDosingDraft(medication) {
   };
 }
 
+function selectIfPresent(select, value) {
+  const wanted = String(value ?? "");
+  if ([...select.options].some((option) => option.value === wanted)) select.value = wanted;
+}
+
 function pickCatalogMedication(medicationId) {
   const medication = findMedicationInCatalog(medicationId);
   if (!medication) return;
@@ -4829,13 +4825,13 @@ function pickCatalogMedication(medicationId) {
   refs.medicationSystem.value = medication.system;
   refs.medicationName.value = medication.label;
   refs.medicationDose.value = medication.dosing.dose;
-  refs.medicationDoseUnit.value = medication.dosing.doseUnit;
-  refs.medicationRoute.value = medication.dosing.route;
-  refs.medicationFrequency.value = medication.dosing.frequency;
+  selectIfPresent(refs.medicationDoseUnit, medication.dosing.doseUnit);
+  selectIfPresent(refs.medicationRoute, medication.dosing.route);
+  selectIfPresent(refs.medicationFrequency, medication.dosing.frequency);
   refs.medicationDurationDays.value = String(medication.dosing.durationDays);
   refs.medicationQuantity.value = String(medication.dosing.quantity);
   refs.medicationInstructions.value = medication.dosing.instructions;
-  refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient} · ${medication.classLabel} · ${medication.system} | ${medication.code}. 약품 코드와 코드 시스템은 선택한 약품에서 자동으로 채워지며, 용법과 총 수량은 의료진이 확인하고 수정하세요.`;
+  refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient}`;
   renderMedicationResults();
   refs.prescriptionForm.scrollIntoView({ block: "end", behavior: "smooth" });
   refs.medicationDose.focus({ preventScroll: true });
@@ -4865,7 +4861,7 @@ function renderMedicationResults() {
       "li",
       "rx-result-empty",
       refs.medicationSearchInput.value.trim()
-        ? "검색어와 맞는 예시 약품이 없습니다. 성분명이나 계열로 다시 검색하세요."
+        ? "검색어와 맞는 약품이 없습니다. 성분명이나 계열로 다시 검색하세요."
         : "약품명·성분명·계열·상병코드로 검색하세요.",
     ));
     return;
@@ -4961,7 +4957,6 @@ function medicationReviewTransmission(review) {
 function renderMedicationReviewPipeline(review) {
   clear(refs.medicationReviewPipeline);
   refs.medicationReviewProcess.hidden = true;
-  reviewProcessPinned = false;
   setReviewProcessOpen(false);
   const provider = medicationReviewProvider();
   const cloudLabel = provider === "frontier"
@@ -5005,33 +5000,54 @@ function renderMedicationReviewPipeline(review) {
   }
 }
 
-let reviewProcessPinned = false;
-
-function setReviewProcessOpen(open) {
-  refs.medicationReviewPipeline.hidden = !open;
-  refs.medicationReviewProcessSummary.setAttribute("aria-expanded", String(open));
+/**
+ * Hovering peeks, clicking pins. Used for anything that should be available on
+ * demand without taking room from the work: the review pipeline and the
+ * boundary notices.
+ */
+function attachHoverPopover(host, trigger, panel) {
+  if (!host || !trigger || !panel) return () => {};
+  let pinned = false;
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    trigger.setAttribute("aria-expanded", String(open));
+  };
+  trigger.addEventListener("click", () => {
+    pinned = !pinned;
+    setOpen(pinned);
+  });
+  host.addEventListener("mouseenter", () => {
+    if (!pinned) setOpen(true);
+  });
+  host.addEventListener("mouseleave", () => {
+    if (!pinned) setOpen(false);
+  });
+  host.addEventListener("focusin", () => {
+    if (!pinned) setOpen(true);
+  });
+  host.addEventListener("focusout", (event) => {
+    if (!pinned && !host.contains(event.relatedTarget)) setOpen(false);
+  });
+  return () => {
+    pinned = false;
+    setOpen(false);
+  };
 }
 
-refs.medicationReviewProcessSummary.addEventListener("click", () => {
-  reviewProcessPinned = !reviewProcessPinned;
-  setReviewProcessOpen(reviewProcessPinned);
-});
+const setReviewProcessOpen = (() => {
+  const reset = attachHoverPopover(
+    refs.medicationReviewProcess,
+    refs.medicationReviewProcessSummary,
+    refs.medicationReviewPipeline,
+  );
+  return (open) => {
+    if (!open) reset();
+  };
+})();
 
-refs.medicationReviewProcess.addEventListener("mouseenter", () => {
-  if (!reviewProcessPinned) setReviewProcessOpen(true);
-});
-
-refs.medicationReviewProcess.addEventListener("mouseleave", () => {
-  if (!reviewProcessPinned) setReviewProcessOpen(false);
-});
-
-refs.medicationReviewProcess.addEventListener("focusin", () => {
-  if (!reviewProcessPinned) setReviewProcessOpen(true);
-});
-
-refs.medicationReviewProcess.addEventListener("focusout", (event) => {
-  if (!reviewProcessPinned && !refs.medicationReviewProcess.contains(event.relatedTarget)) setReviewProcessOpen(false);
-});
+for (const host of document.querySelectorAll("[data-rx-popover]")) {
+  attachHoverPopover(host, host.querySelector(".rx-notice__summary"), host.querySelector(".rx-notice__body"));
+}
 
 /**
  * Both sides of a criterion get their own source text: the rule wording on the
@@ -5112,7 +5128,7 @@ function renderMedicationReviewSources(review) {
     const panes = [rulePane(check), chartRecordPane(check)].filter(Boolean);
     if (panes.length) {
       const open = expandedSourceIds.has(check.id);
-      const trigger = element("button", "rx-source__origin-trigger", "근거 원문 확인");
+      const trigger = element("button", "rx-source__origin-trigger", "근거 원문과 환자 기록 원문 확인");
       trigger.type = "button";
       trigger.dataset.sourceOrigin = check.id;
       trigger.setAttribute("aria-expanded", String(open));
@@ -5123,7 +5139,6 @@ function renderMedicationReviewSources(review) {
     }
 
     item.append(element("p", "rx-source__document", [
-      check.source.label,
       check.source.documentNumber,
       check.source.version ? `v${check.source.version}` : "",
       check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
@@ -5145,7 +5160,6 @@ function renderMedicationReview(review) {
   refs.medicationReviewProcess.hidden = false;
   if (review.note) text.append(element("span", "rx-verdict__note", review.note));
   renderMedicationReviewSources(review);
-  refs.medicationReviewBoundary.textContent = review.boundary;
 }
 
 function resetMedicationReviewPanel() {
@@ -5154,7 +5168,6 @@ function resetMedicationReviewPanel() {
   clear(refs.medicationReviewVerdict);
   clear(refs.medicationReviewPipeline);
   clear(refs.medicationReviewSources);
-  refs.medicationReviewBoundary.textContent = "";
   activeMedicationReviewId = "";
   expandedSourceIds.clear();
   renderMedicationReviewMode();
@@ -5220,7 +5233,6 @@ function openPrescriptionDialog() {
     return;
   }
   refs.prescriptionDialog.closest("details")?.setAttribute("open", "");
-  refs.rxDialogBoundary.textContent = MEDICATION_CATALOG_BOUNDARY;
   refs.rxDialogContext.textContent = encounterDialogContext(patient, encounter);
   medicationReviewById.clear();
   resetMedicationReviewPanel();
@@ -5262,7 +5274,7 @@ function toggleSourceOrigins(source) {
 }
 
 refs.medicationReviewSources.addEventListener("click", (event) => {
-  if (event.target.closest(".rx-source__origins")) return;
+  if (!event.target.closest("[data-source-origin]")) return;
   toggleSourceOrigins(event.target.closest(".rx-source"));
 });
 

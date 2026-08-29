@@ -7826,6 +7826,7 @@ button.claim-attention-item__summary:focus-visible {
 /* Prescription search dialog ------------------------------------------- */
 
 .prescription-launcher {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -7865,16 +7866,23 @@ button.claim-attention-item__summary:focus-visible {
   flex-direction: column;
   gap: var(--space-4);
   max-height: min(92vh, 900px);
-  padding: var(--space-5);
+  padding: 0 var(--space-5) var(--space-5);
   overflow-y: auto;
 }
 
+/* The title, the process peek and the way out stay reachable at any scroll depth. */
 .rx-dialog__header {
-  position: relative;
+  position: sticky;
+  z-index: 6;
+  top: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
+  margin-inline: calc(-1 * var(--space-5));
+  border-bottom: var(--border-subtle);
+  background: var(--surface-raised);
+  padding: var(--space-5) var(--space-5) var(--space-3);
 }
 
 .rx-dialog__header .text-action {
@@ -8184,8 +8192,58 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-3);
 }
 
-.rx-process {
+.rx-process,
+.rx-notice {
+  position: relative;
   display: inline-flex;
+}
+
+.rx-notice__summary {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: help;
+}
+
+.rx-notice__summary:hover,
+.rx-notice__summary[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rx-notice__summary:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.rx-notice__body {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(360px, 76vw);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  padding: var(--space-3);
+  color: var(--muted);
+  font-size: var(--font-size-caption);
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: left;
+  box-shadow: var(--shadow-panel);
+}
+
+.rx-notice__body--start {
+  right: auto;
+  left: 0;
 }
 
 /* Available beside the exit, but never competing with it for attention. */
@@ -8287,25 +8345,37 @@ button.claim-attention-item__summary:focus-visible {
 
 /* One control reveals the pair, then each side stands in its own pane. */
 .rx-source__origin-trigger {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
-  border: 0;
-  background: none;
-  padding: var(--space-1) 0;
+  margin-top: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 45%, var(--line));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--rx-source-tone) 8%, var(--surface-raised));
+  padding: var(--space-2) var(--space-4);
   color: var(--rx-source-tone);
-  font-size: var(--font-size-caption);
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 700;
   cursor: pointer;
+  transition: background 140ms ease-out, border-color 140ms ease-out;
 }
 
-.rx-source__origin-trigger::before {
-  content: "▸";
-  font-size: 0.6875rem;
-}
-
-.rx-source__origin-trigger[aria-expanded="true"]::before {
+.rx-source__origin-trigger::after {
   content: "▾";
+  font-size: 0.75rem;
+  transition: transform 140ms ease-out;
+}
+
+.rx-source__origin-trigger[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.rx-source__origin-trigger:hover {
+  border-color: var(--rx-source-tone);
+  background: color-mix(in srgb, var(--rx-source-tone) 18%, var(--surface-raised));
 }
 
 .rx-source__origin-trigger:focus-visible {
@@ -8335,7 +8405,7 @@ button.claim-attention-item__summary:focus-visible {
 .rx-source__pane-title {
   margin: 0 0 var(--space-2);
   color: var(--rx-source-tone);
-  font-size: var(--font-size-caption);
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -8361,12 +8431,17 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-source__excerpt {
   margin: 0;
-  border-left: 2px solid var(--rx-source-tone);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 30%, var(--line));
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--rx-source-tone) 10%, var(--surface)) 0%,
+    var(--surface) 70%
+  );
   color: var(--ink);
-  font-size: var(--font-size-caption);
-  line-height: 1.7;
+  font-size: 0.875rem;
+  line-height: 1.75;
 }
 
 .rx-source__mark-text {
@@ -8477,11 +8552,12 @@ button.claim-attention-item__summary:focus-visible {
   align-items: center;
   gap: var(--space-2);
   color: var(--rx-source-tone);
-  font-size: var(--font-size-caption);
+  font-size: 0.9375rem;
+  font-weight: 700;
 }
 
 .rx-source__mark {
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   line-height: 1;
 }
 
@@ -8495,17 +8571,17 @@ button.claim-attention-item__summary:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--rx-source-tone) 32%, var(--line));
   border-radius: var(--radius-control);
   background: var(--surface-raised);
-  font-size: var(--font-size-caption);
-  line-height: 1.55;
+  font-size: 0.875rem;
+  line-height: 1.65;
 }
 
 .rx-source__cell-label {
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -8531,6 +8607,7 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-source__findings li span {
   color: var(--muted);
+  font-size: 0.8125rem;
 }
 
 .rx-source__document {

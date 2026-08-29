@@ -9165,3 +9165,171 @@ model-viewer::part(default-progress-mask) {
   justify-items: end;
   gap: 2px;
 }
+
+
+/* --- Prescription dialog: extra-compact pass -------------------------------- */
+
+.rx-dialog__panel {
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.rx-dialog__header {
+  margin-inline: calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+
+.rx-dialog__title {
+  font-size: 0.95rem;
+}
+
+.rx-dialog__context {
+  font-size: 0.68rem;
+}
+
+.rx-notice__summary {
+  width: 20px;
+  height: 20px;
+  font-size: 0.72rem;
+}
+
+.rx-dialog .clinical-button {
+  min-height: 32px;
+  padding-block: 3px;
+  font-size: 0.78rem;
+}
+
+.rx-search__field {
+  font-size: 0.71rem;
+}
+
+.rx-search__field input {
+  min-height: 34px;
+  padding-block: 4px;
+  font-size: 0.8rem;
+}
+
+.rx-section-title {
+  font-size: 0.8rem;
+}
+
+.rx-count {
+  font-size: 0.68rem;
+}
+
+/* Results: another notch down. */
+.rx-result {
+  padding: 4px var(--space-3);
+}
+
+.rx-result__label {
+  font-size: 0.845rem;
+}
+
+.rx-result__ingredient,
+.rx-result__details-summary {
+  font-size: 0.68rem;
+}
+
+.rx-result__actions .clinical-button {
+  min-height: 28px;
+  padding-block: 1px;
+  font-size: 0.75rem;
+}
+
+.rx-result-list {
+  gap: var(--space-1);
+}
+
+/* Review side: tighter cards, smaller copy. */
+.rx-review__empty,
+.rx-review__progress-text {
+  font-size: 0.73rem;
+}
+
+.rx-verdict {
+  padding: var(--space-2) var(--space-3);
+}
+
+.rx-verdict .rx-verdict__symbol {
+  width: 24px;
+  height: 24px;
+  font-size: 0.85rem;
+}
+
+.rx-verdict .rx-verdict__text b {
+  font-size: 0.86rem;
+}
+
+.rx-verdict .rx-verdict__text span {
+  font-size: 0.74rem;
+}
+
+.rx-review__heading {
+  font-size: 0.76rem;
+}
+
+.rx-source {
+  padding: var(--space-1) var(--space-2);
+}
+
+.rx-source__title {
+  font-size: 0.8rem;
+}
+
+.rx-source__mark {
+  font-size: 1rem;
+}
+
+.rx-source__cell {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.74rem;
+}
+
+.rx-source__cell b {
+  font-size: 0.78rem;
+}
+
+.rx-source__cell-label {
+  font-size: 0.62rem;
+}
+
+.rx-source__origin-trigger {
+  min-height: 28px;
+  margin-top: var(--space-1);
+  font-size: 0.7rem;
+}
+
+.rx-source__pane {
+  font-size: 0.73rem;
+}
+
+.rx-source__pane-title {
+  font-size: 0.66rem;
+}
+
+.rx-detail-list {
+  font-size: 0.73rem;
+}
+
+/* Dosing form: shorter fields, tighter grid. */
+.rx-form {
+  padding-top: var(--space-3);
+}
+
+.rx-form label,
+.rx-form .clinical-system-field {
+  font-size: 0.71rem;
+}
+
+.rx-form input,
+.rx-form select,
+.rx-form textarea {
+  min-height: 32px;
+  padding-block: 4px;
+  font-size: 0.8rem;
+}
+
+.rx-form textarea {
+  min-height: 56px;
+}

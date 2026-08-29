@@ -53,7 +53,7 @@ test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", 
 test("처방 입력은 자동 검증하지 않는 임상 안전 범위를 팝업 안내에 유지한다", async () => {
   const html = await readFile("src/emr.html", "utf8");
   const prescription = html.match(/data-workflow-disclosure="prescriptions"[\s\S]*?<\/details>/)?.[0] ?? "";
-  const notice = prescription.match(/<span class="rx-notice__body" id="prescriptionNoticePanel"[^>]*>([^<]*)</)?.[1] ?? "";
+  const notice = prescription.match(/id="prescriptionNoticePanel"[^>]*>([^<]*)</)?.[1] ?? "";
 
   assert.match(prescription, /<button class="rx-notice__summary"[^>]*id="prescriptionNotice"/);
   assert.match(notice, /급여 인정이나 삭감을 확정하지 않습니다/);

@@ -8192,10 +8192,19 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-3);
 }
 
-.rx-process,
+.rx-process {
+  display: inline-flex;
+}
+
 .rx-notice {
   position: relative;
   display: inline-flex;
+}
+
+.rx-dialog__titleline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .rx-notice__summary {
@@ -8274,9 +8283,9 @@ button.claim-attention-item__summary:focus-visible {
 .rx-process__body {
   position: absolute;
   z-index: 5;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  width: min(520px, 100%);
+  top: calc(100% - var(--space-2));
+  right: var(--space-5);
+  width: min(560px, calc(100% - var(--space-8)));
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-panel);
   background: var(--surface-raised);
@@ -8352,15 +8361,15 @@ button.claim-attention-item__summary:focus-visible {
   justify-content: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 45%, var(--line));
+  border: 1px solid var(--accent);
   border-radius: var(--radius-control);
-  background: color-mix(in srgb, var(--rx-source-tone) 8%, var(--surface-raised));
+  background: var(--accent);
   padding: var(--space-2) var(--space-4);
-  color: var(--rx-source-tone);
+  color: var(--on-inverse);
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 140ms ease-out, border-color 140ms ease-out;
+  transition: filter 140ms ease-out;
 }
 
 .rx-source__origin-trigger::after {
@@ -8374,8 +8383,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-source__origin-trigger:hover {
-  border-color: var(--rx-source-tone);
-  background: color-mix(in srgb, var(--rx-source-tone) 18%, var(--surface-raised));
+  filter: brightness(1.18);
 }
 
 .rx-source__origin-trigger:focus-visible {
@@ -8411,9 +8419,7 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-source__record {
   margin-top: var(--space-1);
-  border-left: 2px solid var(--rx-source-tone);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-raised);
+  padding: 0;
 }
 
 .rx-source__record dd {
@@ -8431,17 +8437,10 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-source__excerpt {
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 30%, var(--line));
-  border-radius: var(--radius-control);
-  padding: var(--space-3);
-  background: linear-gradient(
-    125deg,
-    color-mix(in srgb, var(--rx-source-tone) 10%, var(--surface)) 0%,
-    var(--surface) 70%
-  );
+  padding: 0;
   color: var(--ink);
   font-size: 0.875rem;
-  line-height: 1.75;
+  line-height: 1.8;
 }
 
 .rx-source__mark-text {

@@ -296,16 +296,16 @@
                           <header class="rx-dialog__header">
                             <span class="rx-dialog__heading">
                               <span class="rail-eyebrow">MEASUREMENT SEARCH</span>
-                              <span class="rx-dialog__title" id="vitalDialogTitle" role="heading" aria-level="3">측정 추가</span>
+                              <span class="rx-dialog__titleline"><span class="rx-dialog__title" id="vitalDialogTitle" role="heading" aria-level="3">측정 추가</span><span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="vitalNotice" aria-expanded="false" aria-controls="vitalNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body rx-notice__body--start" id="vitalNoticePanel" hidden>이번 진료에서 직접 확인한 결과만 기록합니다. 항목별 코드와 단위는 고정되며 서명 전까지 초안입니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeVitalDialog">닫기</button>
+                            </span></span>
                               <span class="rx-dialog__context" id="vitalDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
                             <span class="rx-dialog__header-actions">
-                              <span class="rx-notice" data-rx-popover>
-                                <button class="rx-notice__summary" type="button" id="vitalNotice" aria-expanded="false" aria-controls="vitalNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
-                                <span class="rx-notice__body" id="vitalNoticePanel" hidden>이번 진료에서 직접 확인한 결과만 기록합니다. 항목별 코드와 단위는 고정되며 서명 전까지 초안입니다.</span>
-                              </span>
-                              <button class="clinical-button rx-dialog__close" type="button" id="closeVitalDialog">닫기</button>
-                            </span>
+                              
                           </header>
 
                           <form class="rx-search" id="vitalSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
@@ -350,16 +350,16 @@
                           <header class="rx-dialog__header">
                             <span class="rx-dialog__heading">
                               <span class="rail-eyebrow">DIAGNOSIS SEARCH</span>
-                              <span class="rx-dialog__title" id="dxDialogTitle" role="heading" aria-level="3">진단 추가</span>
+                              <span class="rx-dialog__titleline"><span class="rx-dialog__title" id="dxDialogTitle" role="heading" aria-level="3">진단 추가</span><span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="diagnosisNotice" aria-expanded="false" aria-controls="diagnosisNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body rx-notice__body--start" id="diagnosisNoticePanel" hidden>상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeDiagnosisDialog">닫기</button>
+                            </span></span>
                               <span class="rx-dialog__context" id="dxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
                             <span class="rx-dialog__header-actions">
-                              <span class="rx-notice" data-rx-popover>
-                                <button class="rx-notice__summary" type="button" id="diagnosisNotice" aria-expanded="false" aria-controls="diagnosisNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
-                                <span class="rx-notice__body" id="diagnosisNoticePanel" hidden>상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다.</span>
-                              </span>
-                              <button class="clinical-button rx-dialog__close" type="button" id="closeDiagnosisDialog">닫기</button>
-                            </span>
+                              
                           </header>
 
                           <form class="rx-search" id="diagnosisSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">
@@ -410,17 +410,13 @@
                           <header class="rx-dialog__header">
                             <span class="rx-dialog__heading">
                               <span class="rail-eyebrow">PRESCRIPTION SEARCH</span>
-                              <span class="rx-dialog__title" id="rxDialogTitle" role="heading" aria-level="3">약 처방하기</span>
+                              <span class="rx-dialog__titleline"><span class="rx-dialog__title" id="rxDialogTitle" role="heading" aria-level="3">약 처방하기</span><span class="rx-notice" data-rx-popover><button class="rx-notice__summary" type="button" id="prescriptionNotice" aria-expanded="false" aria-controls="prescriptionNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button><span class="rx-notice__body rx-notice__body--start" id="prescriptionNoticePanel" hidden>급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다.</span></span></span>
                               <span class="rx-dialog__context" id="rxDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
                             <span class="rx-dialog__header-actions">
                               <span class="rx-process" id="medicationReviewProcess" hidden>
                                 <button class="rx-process__summary" type="button" id="medicationReviewProcessSummary" aria-expanded="false" aria-controls="medicationReviewPipeline">검토 과정 확인하기</button>
                                 <span class="rx-process__body" id="medicationReviewPipeline" hidden></span>
-                              </span>
-                              <span class="rx-notice" data-rx-popover>
-                                <button class="rx-notice__summary" type="button" id="prescriptionNotice" aria-expanded="false" aria-controls="prescriptionNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
-                                <span class="rx-notice__body" id="prescriptionNoticePanel" hidden>급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다.</span>
                               </span>
                               <button class="clinical-button rx-dialog__close" type="button" id="closePrescriptionDialog">닫기</button>
                             </span>
@@ -489,16 +485,16 @@
                           <header class="rx-dialog__header">
                             <span class="rx-dialog__heading">
                               <span class="rail-eyebrow">ORDER SEARCH</span>
-                              <span class="rx-dialog__title" id="orderDialogTitle" role="heading" aria-level="3">오더 추가</span>
+                              <span class="rx-dialog__titleline"><span class="rx-dialog__title" id="orderDialogTitle" role="heading" aria-level="3">오더 추가</span><span class="rx-notice" data-rx-popover>
+                                <button class="rx-notice__summary" type="button" id="orderNotice" aria-expanded="false" aria-controls="orderNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
+                                <span class="rx-notice__body rx-notice__body--start" id="orderNoticePanel" hidden>오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다.</span>
+                              </span>
+                              <button class="clinical-button rx-dialog__close" type="button" id="closeOrderDialog">닫기</button>
+                            </span></span>
                               <span class="rx-dialog__context" id="orderDialogContext">환자를 먼저 선택하세요.</span>
                             </span>
                             <span class="rx-dialog__header-actions">
-                              <span class="rx-notice" data-rx-popover>
-                                <button class="rx-notice__summary" type="button" id="orderNotice" aria-expanded="false" aria-controls="orderNoticePanel" aria-label="이 화면의 사용 범위 안내">ⓘ</button>
-                                <span class="rx-notice__body" id="orderNoticePanel" hidden>오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다.</span>
-                              </span>
-                              <button class="clinical-button rx-dialog__close" type="button" id="closeOrderDialog">닫기</button>
-                            </span>
+                              
                           </header>
 
                           <form class="rx-search" id="orderSearchForm" role="search" novalidate autocomplete="off" spellcheck="false">

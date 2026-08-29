@@ -377,7 +377,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
               <fieldset className="form-fieldset form-fieldset--plain" disabled={!editable}>
                 <legend className="visually-hidden">진료 기본정보 입력</legend>
                 <div className="encounter-meta-grid">
-                  <label>진료일<input id="encounterDate" name="date" type="date" required value={form.date} onChange={set("date")} /></label>
+                  <label>진료일<input id="encounterDate" name="date" type="date" required lang="ko" value={form.date} onChange={set("date")} />{typeof navigator !== "undefined" && !String(navigator.language).toLowerCase().startsWith("ko") && form.date ? <small className="field-echo">{displayDate(form.date)}</small> : null}</label>
                   <label>진료과<input id="encounterDepartment" name="department" maxLength={80} placeholder="예: 내과" value={form.department} onChange={set("department")} /></label>
                   <label>담당 의료진<input id="encounterClinician" name="clinician" maxLength={80} placeholder="예: 김의사" value={form.clinician} onChange={set("clinician")} /></label>
                   <label>진료실<input id="encounterRoom" name="room" maxLength={40} placeholder="예: 1진료실" value={form.room} onChange={set("room")} /></label>

@@ -64,7 +64,7 @@ export default function Page() {
 
             <section className="patient-start-path" aria-labelledby="patientStartTitle" data-first-use="patient" data-reveal>
               <header>
-                <p className="eyebrow">FIRST VISIT · 3 STEPS</p>
+                <p className="eyebrow">첫 사용 · 3단계</p>
                 <h2 id="patientStartTitle">처음이라면 세 단계면 됩니다.</h2>
                 <p>파일이 없어도 안전한 예시로 먼저 볼 수 있습니다.</p>
               </header>
@@ -83,8 +83,8 @@ export default function Page() {
                 </li>
               </ol>
               <div className="patient-start-path__actions">
-                <a className="landing-button landing-button--primary" href="/map?sample=1">예시로 시작</a>
-                <a className="text-action" href="/map#import-record">환자용 기록 가져오기 <span aria-hidden="true">→</span></a>
+                <a className="landing-button landing-button--primary" href="/map#import-record">환자용 기록 가져오기</a>
+                <a className="text-action" href="/map?sample=1">예시로 시작 <span aria-hidden="true">→</span></a>
               </div>
             </section>
 

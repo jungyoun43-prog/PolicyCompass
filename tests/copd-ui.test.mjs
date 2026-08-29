@@ -104,7 +104,8 @@ test("청구 색상은 내부 규칙 상태와 지급·심사 경계를 텍스�
   assert.match(html, /초록 · 등록 규칙 조건 일치/);
   assert.match(html, /보라 · 자료 부족/);
   assert.match(html, /지급·급여·심사 결과 보장 아님/);
-  assert.match(html, /ADJUDICATION RESULT[\s\S]*?2\. 심사 결과/);
+  assert.match(html, /ADJUDICATION RESULT[\s\S]*?>심사 결과</);
+  assert.doesNotMatch(html, /[0-9]\. 청구 전 점검|[0-9]\. 심사 결과|[0-9]\. 적정성 평가/);
   assert.match(js, /resolveClaimPreflightPresentation/);
   assert.match(js, /resolveClaimAdjudicationPresentation/);
   assert.match(js, /latestFinalAdjudication/);
@@ -139,7 +140,7 @@ test("급여·적정성의 핵심 판정은 근거 문구보다 큰 위계로 �
   assert.match(css, /EMR review hierarchy/);
   assert.match(css, /\.claim-attention-summary__content > strong\s*\{[\s\S]*?font-size:\s*1\.05rem/);
   assert.match(css, /\.quality-program-score b\s*\{[\s\S]*?font-size:\s*1\.35rem/);
-  assert.match(css, /\.claim-intro \.card-heading h3\s*\{[\s\S]*?font-size:\s*clamp\(1\.6rem/);
+  assert.match(css, /\.claim-intro \.card-heading h3\s*\{[\s\S]*?font-size:\s*clamp\(1\.15rem/);
   assert.match(css, /\.claim-board-kpi > strong\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem/);
   assert.match(css, /\.claim-card__details-header h5\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem/);
   assert.match(html, /진료일·청구 항목별로 조치가 필요한 조건만 먼저 보여 줍니다/);

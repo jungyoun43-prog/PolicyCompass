@@ -218,7 +218,7 @@ export function DiseaseAssessmentCard({ state, patient, selectedDiseaseId, onSel
   return (
     <section className="clinical-card claim-overview-card disease-assessment-card" aria-labelledby="diseaseAssessmentTitle">
       <div className="card-heading">
-        <div><p className="rail-eyebrow">QUALITY ASSESSMENT</p><h3 id="diseaseAssessmentTitle">3. 적정성 평가</h3></div>
+        <div><p className="rail-eyebrow">QUALITY ASSESSMENT</p><h3 id="diseaseAssessmentTitle">적정성 평가</h3></div>
         <span className="source-badge source-badge--draft">기관 질 지표 예상</span>
       </div>
       <aside className="quality-claim-boundary" aria-label="청구 심사와 적정성 평가의 차이">

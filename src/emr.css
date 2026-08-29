@@ -6029,7 +6029,7 @@ body.emr-page {
 }
 
 .claim-intro .card-heading h3 {
-  font-size: clamp(1.6rem, calc(1.3rem + 0.8vw), 2rem);
+  font-size: clamp(1.15rem, calc(1.05rem + 0.3vw), 1.35rem);
 }
 
 .claim-intro > p {
@@ -8828,4 +8828,111 @@ button.claim-attention-item__summary:focus-visible {
     width: 100%;
     justify-content: center;
   }
+}
+
+
+/* --- Design pass: hierarchy, density, polish -------------------------------- */
+
+/* 원문 확인 is a disclosure, not the page's main action: quiet outline. */
+.rx-source__origin-trigger {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.rx-source__origin-trigger:hover {
+  filter: none;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+/* AI 검토 is the signature action: solid, alive, accent-forward. */
+.rx-result__review {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.rx-result__review:not(:disabled):hover,
+.rx-result__review:not(:disabled):focus-visible {
+  background: var(--accent);
+  color: var(--on-inverse);
+}
+
+/* Verdict must outrank everything around it: solid surface, heavy tone edge. */
+.rx-verdict {
+  border-width: 2px;
+  background: var(--surface-raised);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--rx-tone) 22%, transparent);
+}
+
+.rx-verdict .rx-verdict__symbol {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--rx-tone) 16%, var(--surface));
+  color: var(--rx-tone);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* Workstation pacing: shave the command block and trust strip. */
+.clinical-command h1 {
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+}
+
+.clinical-command {
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.trust-strip {
+  padding-block: var(--space-2);
+}
+
+/* Denser patient rail: more patients per screen without losing tap targets. */
+.patient-list button {
+  padding: var(--space-2) var(--space-3);
+}
+
+.patient-list {
+  gap: var(--space-2);
+}
+
+/* Hide the model-viewer loading bar artifact above the 3D stage. */
+model-viewer::part(default-progress-bar),
+model-viewer::part(default-progress-mask) {
+  display: none;
+}
+
+/* Mobile: headings sized for a tool, not a poster; no clipped card text. */
+@media (max-width: 620px) {
+  .clinical-command h1 {
+    font-size: 1.15rem;
+  }
+
+  .rail-heading h2,
+  #selectedPatientName {
+    font-size: 1.25rem;
+  }
+
+  .patient-list button strong,
+  .patient-list button small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Korean-date echo beside the native date input on non-Korean browsers. */
+.field-echo {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
 }

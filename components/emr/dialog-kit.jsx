@@ -77,7 +77,7 @@ export function RxSearch({ id, label, placeholder, value, onChange, inputId }) {
   return (
     <form className="rx-search" id={id} role="search" noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => event.preventDefault()}>
       <label className="rx-search__field" htmlFor={inputId}>{label}<input id={inputId} name="query" type="search" maxLength={120} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} /></label>
-      <button className="clinical-button clinical-button--primary" type="submit">검색</button>
+      <button className="clinical-button" type="submit">검색</button>
     </form>
   );
 }

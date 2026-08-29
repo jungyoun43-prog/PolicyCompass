@@ -28,7 +28,7 @@ export function CommandBar({ demo, onExitDemo, utilities }) {
               <circle className="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
             </svg>
           </span>
-          <span className="page-hero__eyebrow signal-kicker__label">CLINICAL WORKSPACE</span>
+          <span className="page-hero__eyebrow signal-kicker__label">의료진 워크스페이스</span>
         </div>
         <h1 id="emrTitle">오늘 진료</h1>
         <p>환자 선택 → 기록 → 서명</p>

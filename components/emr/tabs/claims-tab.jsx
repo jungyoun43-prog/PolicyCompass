@@ -114,7 +114,7 @@ export function ClaimsTab({ state, patient, store }) {
           ["high-risk", "청구 고위험", counts["high-risk"], "청구 전 점검"],
           ["needs-review", "확인 필요", counts["needs-review"], "급여조건·기록"],
           ["insufficient", "자료 보완", counts.insufficient, "판정 불가 포함"],
-          ["quality", "적정성 지표", applicableCount ? `${includedCount}/${applicableCount}` : "—", "기관 평가 예상"],
+          ["quality", "적정성 지표", applicableCount ? `${includedCount}/${applicableCount}` : "해당 없음", "기관 평가 예상"],
         ].map(([kpi, label, value, description]) => (
           <div className="claim-board-kpi" data-claim-kpi={kpi} key={kpi}>
             <span>{label}</span><strong>{value}</strong><small>{description}</small>
@@ -172,7 +172,7 @@ export function ClaimsTab({ state, patient, store }) {
       <div className="claim-overview-grid" aria-label="환자별 급여와 질환별 근거 요약">
         <section className="clinical-card claim-overview-card claim-attention-card" aria-labelledby="claimAttentionTitle">
           <div className="card-heading">
-            <div><p className="rail-eyebrow">PRE-CLAIM CHECK</p><h3 id="claimAttentionTitle">1. 청구 전 점검</h3></div>
+            <div><p className="rail-eyebrow">PRE-CLAIM CHECK</p><h3 id="claimAttentionTitle">청구 전 점검</h3></div>
             <span className="source-badge">자동 규칙 예상</span>
           </div>
           <p className="claim-overview-card__intro">이번 환자의 진료일·청구 항목별로 조치가 필요한 조건만 먼저 보여 줍니다. 행을 누르면 적용 규칙과 EMR 근거가 열립니다.</p>
@@ -232,7 +232,7 @@ export function ClaimsTab({ state, patient, store }) {
 
           <section className="claim-adjudication" aria-labelledby="claimAdjudicationTitle">
             <div className="claim-adjudication__heading">
-              <div><p className="rail-eyebrow">ADJUDICATION RESULT</p><h3 id="claimAdjudicationTitle">2. 심사 결과</h3></div>
+              <div><p className="rail-eyebrow">ADJUDICATION RESULT</p><h3 id="claimAdjudicationTitle">심사 결과</h3></div>
               <span className="source-badge claim-adjudication__badge">실제 결과만</span>
             </div>
             <p className="claim-overview-card__intro">심사기관 결과가 연결된 명세서·청구 line만 표시합니다. 사전점검의 예상 판정과 분리됩니다.</p>

@@ -183,10 +183,10 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
   ];
 
   const metrics = [
-    ["ACTIVE PROBLEMS", conditions.length + "개", conditions[0]?.label ?? "구조화 문제 없음", false],
-    ["ACTIVE MEDICATIONS", medications.length + "개", medications[0]?.label ?? "활성 약물 없음", false],
-    ["LATEST MEASURE", latestObservation ? displayDate(latestObservation.date) : "없음", latestObservation?.label ?? "측정 기록 없음", false],
-    ["CLAIM ATTENTION", attention.length + "건", "결정 아님 · 담당자 확인", attention.length > 0],
+    ["활성 문제", conditions.length + "개", conditions[0]?.label ?? "구조화 문제 없음", false],
+    ["활성 약물", medications.length + "개", medications[0]?.label ?? "활성 약물 없음", false],
+    ["최근 측정", latestObservation ? displayDate(latestObservation.date) : "없음", latestObservation?.label ?? "측정 기록 없음", false],
+    ["청구 주의", attention.length + "건", "결정 아님 · 담당자 확인", attention.length > 0],
   ];
 
   return (
@@ -203,7 +203,7 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
         <section className="clinical-card clinical-card--summary" aria-labelledby="clinicalSummaryTitle">
           <div className="card-heading">
             <div><p className="rail-eyebrow">CHART SUMMARY</p><h3 id="clinicalSummaryTitle">확정 기록 요약</h3></div>
-            <span className="source-badge">CHART FACTS</span>
+            <span className="source-badge">확정 차트</span>
           </div>
           <div className="summary-sections" id="clinicalSummary">
             {summaryGroups.map(([title, types]) => {

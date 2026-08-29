@@ -8936,3 +8936,111 @@ model-viewer::part(default-progress-mask) {
   color: var(--muted);
   font-size: 0.72rem;
 }
+
+
+/* --- Compact pass: search results + AI review panel ------------------------- */
+
+/* One result = one tight row: name/ingredient left, actions right. */
+.rx-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "heading actions"
+    "ingredient actions"
+    "details details";
+  gap: 2px var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.rx-result__heading {
+  grid-area: heading;
+}
+
+.rx-result__ingredient {
+  grid-area: ingredient;
+}
+
+.rx-result__actions {
+  display: flex;
+  grid-area: actions;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-2);
+  margin-top: 0;
+}
+
+.rx-result__actions-divider {
+  display: none;
+}
+
+.rx-result__actions > .clinical-button:first-child {
+  width: auto;
+}
+
+.rx-result__actions .clinical-button {
+  min-height: 36px;
+  padding-block: 4px;
+}
+
+.rx-result__details {
+  grid-area: details;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+/* Review panel: same content, less air. */
+.rx-review__body {
+  gap: var(--space-3);
+}
+
+.rx-verdict {
+  padding: var(--space-2) var(--space-3);
+}
+
+.rx-verdict .rx-verdict__symbol {
+  width: 28px;
+  height: 28px;
+  font-size: 0.95rem;
+}
+
+.rx-source {
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+}
+
+.rx-source__title {
+  font-size: 0.875rem;
+}
+
+.rx-source__mark {
+  font-size: 1.15rem;
+}
+
+.rx-source__grid {
+  gap: var(--space-2);
+}
+
+.rx-source__cell {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.83rem;
+}
+
+.rx-source__origin-trigger {
+  min-height: 34px;
+  margin-top: var(--space-2);
+  padding-block: 4px;
+  font-size: var(--font-size-caption);
+}
+
+.rx-source__origins {
+  gap: var(--space-2);
+}
+
+.rx-source__pane {
+  padding: var(--space-2) var(--space-3);
+}
+
+.rx-source__document {
+  margin-top: var(--space-1);
+  font-size: 0.68rem;
+}

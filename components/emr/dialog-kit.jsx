@@ -24,7 +24,6 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
       ref={hostRef}
       onMouseEnter={() => { if (!pinned) setOpen(true); }}
       onMouseLeave={() => { if (!pinned) setOpen(false); }}
-      onFocus={() => { if (!pinned) setOpen(true); }}
       onBlur={(event) => { if (!pinned && !hostRef.current?.contains(event.relatedTarget)) setOpen(false); }}
     >
       <button className={triggerClassName} type="button" id={triggerId} aria-expanded={open} aria-controls={panelId} aria-label={ariaLabel}

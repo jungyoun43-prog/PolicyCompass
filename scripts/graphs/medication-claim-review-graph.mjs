@@ -1,6 +1,7 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import {
+  callFrontierModel,
   cleanText,
   ollamaEndpoint,
   safeGeneratedText,
@@ -207,52 +208,24 @@ async function localDraft(comparison, options, feedback) {
   };
 }
 
-function frontierOutputText(body) {
-  if (typeof body?.output_text === "string" && body.output_text.trim()) return body.output_text;
-  for (const item of Array.isArray(body?.output) ? body.output : []) {
-    if (item?.type !== "message") continue;
-    for (const content of Array.isArray(item?.content) ? item.content : []) {
-      if (content?.type === "output_text" && typeof content.text === "string") return content.text;
-      if (content?.type === "refusal") throw new Error("프론티어 모델이 검토를 거부했습니다.");
-    }
-  }
-  throw new Error("프론티어 모델이 구조화 응답을 반환하지 않았습니다.");
-}
-
 async function frontierDraft(comparison, options, feedback) {
   const input = feedback
     ? `${modelInput(comparison)}\n\n[재시도 안내] ${feedback}`
     : modelInput(comparison);
-  const response = await options.fetchImpl("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${options.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: options.model,
-      store: false,
-      reasoning: { effort: "low" },
-      instructions: instructions(),
-      input,
-      max_output_tokens: 2_000,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "policycompass_medication_claim_review",
-          strict: true,
-          schema: REVIEW_SCHEMA,
-        },
-      },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
+  const result = await callFrontierModel({
+    apiKey: options.apiKey,
+    model: options.model,
+    instructions: instructions(),
+    input,
+    schemaName: "policycompass_medication_claim_review",
+    schema: REVIEW_SCHEMA,
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    environment: options.environment ?? process.env,
   });
-  if (!response.ok) throw new Error(`프론티어 모델 요청 실패 (${response.status})`);
-  const body = await response.json();
   return {
-    parsed: JSON.parse(frontierOutputText(body)),
-    model: cleanText(body?.model, 160) || options.model,
+    parsed: JSON.parse(result.text),
+    model: result.model,
     generatedBy: "frontier-model",
   };
 }
@@ -320,6 +293,7 @@ export async function runMedicationClaimReview(payload = {}, {
       provider,
       model: status.frontier.configured ? status.frontier.model : "",
       apiKey: environment.OPENAI_API_KEY ?? "",
+      environment,
       fetchImpl,
       timeoutMs,
     }

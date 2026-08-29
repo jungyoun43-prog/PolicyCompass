@@ -11,6 +11,7 @@ import {
 import {
   buildPatientQuestionContext,
   buildRuleBasedPatientQuestions,
+  callFrontierModel,
   cleanText,
   ollamaEndpoint,
   safeGeneratedText,
@@ -113,40 +114,17 @@ async function callFrontierRefine(state, options, feedback) {
   const input = feedback
     ? `${refineInput(state)}\n\n[재시도 안내] 이전 응답이 거부되었습니다: ${feedback}`
     : refineInput(state);
-  const response = await options.fetchImpl("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${options.apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: options.model,
-      store: false,
-      reasoning: { effort: "low" },
-      instructions: refineInstructions(),
-      input,
-      max_output_tokens: 2_000,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "policycompass_question_refine",
-          strict: true,
-          schema: REFINE_SCHEMA,
-        },
-      },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
+  const { text } = await callFrontierModel({
+    apiKey: options.apiKey,
+    model: options.model,
+    instructions: refineInstructions(),
+    input,
+    schemaName: "policycompass_question_refine",
+    schema: REFINE_SCHEMA,
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    environment: options.environment ?? process.env,
   });
-  if (!response.ok) throw new Error(`질문 다듬기 프론티어 모델 요청 실패 (${response.status})`);
-  const body = await response.json();
-  const text = typeof body?.output_text === "string" && body.output_text.trim()
-    ? body.output_text
-    : (Array.isArray(body?.output) ? body.output : [])
-      .filter((item) => item?.type === "message")
-      .flatMap((item) => (Array.isArray(item?.content) ? item.content : []))
-      .find((content) => content?.type === "output_text")?.text;
-  if (!text) throw new Error("프론티어 모델이 다듬은 질문을 반환하지 않았습니다.");
   return JSON.parse(text);
 }
 
@@ -242,6 +220,7 @@ export async function runQuestionRefine(payload = {}, {
       provider,
       apiKey: cleanText(environment.OPENAI_API_KEY ?? "", 500),
       model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
+      environment,
       fetchImpl,
       timeoutMs,
       maxAttempts,

@@ -172,7 +172,19 @@ function environmentFromBindings(env) {
     POLICYCOMPASS_FRONTIER_ENABLED: env?.POLICYCOMPASS_FRONTIER_ENABLED === "true" ? "true" : "false",
     POLICYCOMPASS_FRONTIER_MODEL: typeof env?.POLICYCOMPASS_FRONTIER_MODEL === "string"
       ? env.POLICYCOMPASS_FRONTIER_MODEL
-      : "gpt-5.6-sol"
+      : "gpt-5.6-sol",
+    POLICYCOMPASS_FRONTIER_BASE_URL: typeof env?.POLICYCOMPASS_FRONTIER_BASE_URL === "string"
+      ? env.POLICYCOMPASS_FRONTIER_BASE_URL
+      : "",
+    POLICYCOMPASS_FRONTIER_API: typeof env?.POLICYCOMPASS_FRONTIER_API === "string"
+      ? env.POLICYCOMPASS_FRONTIER_API
+      : "",
+    POLICYCOMPASS_FRONTIER_SITE_URL: typeof env?.POLICYCOMPASS_FRONTIER_SITE_URL === "string"
+      ? env.POLICYCOMPASS_FRONTIER_SITE_URL
+      : "",
+    POLICYCOMPASS_FRONTIER_APP_NAME: typeof env?.POLICYCOMPASS_FRONTIER_APP_NAME === "string"
+      ? env.POLICYCOMPASS_FRONTIER_APP_NAME
+      : ""
   };
 }
 

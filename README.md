@@ -137,8 +137,29 @@ Vercel에 배포합니다. `vercel.json`이 `npm run build`로 워커 번들을 
 | `POLICYCOMPASS_OLLAMA_MODEL` / `POLICYCOMPASS_OLLAMA_URL` | 루프백 Ollama 로컬 모델(개발 환경) |
 | `OPENAI_API_KEY` + `POLICYCOMPASS_FRONTIER_ENABLED=true` | 외부 프론티어 모델. 매 요청 사용자 동의가 필요합니다 |
 | `POLICYCOMPASS_FRONTIER_MODEL` | 프론티어 모델 이름(기본 `gpt-5.6-sol`) |
+| `POLICYCOMPASS_FRONTIER_BASE_URL` | OpenAI 호환 게이트웨이 주소(기본 `https://api.openai.com/v1`). https만 허용합니다 |
+| `POLICYCOMPASS_FRONTIER_API` | `responses`(기본, OpenAI Responses API) 또는 `chat`(Chat Completions) |
+| `POLICYCOMPASS_FRONTIER_SITE_URL` / `POLICYCOMPASS_FRONTIER_APP_NAME` | OpenRouter 트래픽 표기용 `HTTP-Referer` · `X-Title`. 선택 |
 
 환경변수를 설정하지 않으면 모든 AI 기능은 외부 호출 없이 규칙 기반으로 동작합니다.
+
+### OpenRouter로 연결하기
+
+OpenRouter는 OpenAI Responses API(`/v1/responses`)가 아니라 Chat Completions(`/v1/chat/completions`)를 제공하므로 `POLICYCOMPASS_FRONTIER_API=chat`이 필요합니다.
+
+```
+OPENAI_API_KEY=sk-or-v1-...
+POLICYCOMPASS_FRONTIER_ENABLED=true
+POLICYCOMPASS_FRONTIER_BASE_URL=https://openrouter.ai/api/v1
+POLICYCOMPASS_FRONTIER_API=chat
+POLICYCOMPASS_FRONTIER_MODEL=openai/gpt-4.1-mini
+POLICYCOMPASS_FRONTIER_SITE_URL=https://<배포 도메인>
+POLICYCOMPASS_FRONTIER_APP_NAME=PolicyCompass
+```
+
+`POLICYCOMPASS_FRONTIER_MODEL`에는 OpenRouter의 모델 ID(`제공자/모델`)를 그대로 씁니다. 세 가지 프론티어 기능(환자 질문 도우미, 질문 다듬기, 약제 삭감 사전검토)이 모두 같은 설정을 따릅니다.
+
+구조화 출력을 강제하므로 **JSON schema(structured outputs)를 지원하는 모델**이어야 합니다. 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다. 같은 방식으로 Together·Groq·자체 호스팅 프록시 등 OpenAI 호환 게이트웨이도 연결할 수 있습니다.
 
 ## 검증
 

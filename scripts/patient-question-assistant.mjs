@@ -181,6 +181,125 @@ export function ollamaEndpoint(value) {
   return url.origin;
 }
 
+const OPENAI_RESPONSES_BASE = "https://api.openai.com/v1";
+
+/**
+ * Where frontier requests go. Defaults to OpenAI; an operator can point this at
+ * any OpenAI-compatible gateway (OpenRouter, a self-hosted proxy) with
+ * POLICYCOMPASS_FRONTIER_BASE_URL. Plain HTTP is refused so patient-derived
+ * context never leaves over an unencrypted hop.
+ */
+export function frontierBaseUrl(environment = process.env) {
+  const raw = cleanText(environment.POLICYCOMPASS_FRONTIER_BASE_URL ?? "", 300) || OPENAI_RESPONSES_BASE;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("프론티어 API 주소가 올바른 URL이 아닙니다.");
+  }
+  if (url.protocol !== "https:") throw new Error("프론티어 API 주소는 https만 허용합니다.");
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+}
+
+/**
+ * "responses" is the OpenAI Responses API. "chat" is the OpenAI Chat Completions
+ * shape that OpenRouter and most other gateways implement.
+ */
+export function frontierApiStyle(environment = process.env) {
+  return cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase() === "chat" ? "chat" : "responses";
+}
+
+function frontierHeaders(apiKey, environment) {
+  const headers = {
+    authorization: `Bearer ${apiKey}`,
+    "content-type": "application/json",
+  };
+  // OpenRouter attributes traffic with these; other gateways ignore them.
+  const site = cleanText(environment.POLICYCOMPASS_FRONTIER_SITE_URL ?? "", 300);
+  const title = cleanText(environment.POLICYCOMPASS_FRONTIER_APP_NAME ?? "", 120);
+  if (site) headers["http-referer"] = site;
+  if (title) headers["x-title"] = title;
+  return headers;
+}
+
+function chatCompletionText(body) {
+  const choice = Array.isArray(body?.choices) ? body.choices[0] : null;
+  if (cleanText(choice?.message?.refusal, 500)) throw new Error("프론티어 모델이 응답을 거부했습니다.");
+  const content = choice?.message?.content;
+  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const text = content.find((part) => typeof part?.text === "string" && part.text.trim())?.text;
+    if (text) return text;
+  }
+  throw new Error("모델이 구조화 응답을 반환하지 않았습니다.");
+}
+
+/**
+ * One frontier request, in whichever API shape the configured gateway speaks.
+ * Returns the raw structured text plus the model name the gateway reported.
+ */
+export async function callFrontierModel({
+  apiKey,
+  model,
+  instructions,
+  input,
+  schemaName,
+  schema,
+  maxOutputTokens = 2_000,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = 30_000,
+  environment = process.env,
+}) {
+  const key = cleanText(apiKey, 500);
+  const name = cleanText(model, 160);
+  if (!key || !name) throw new Error("프론티어 모델이 서버에 설정되지 않았습니다.");
+  const style = frontierApiStyle(environment);
+  const baseUrl = frontierBaseUrl(environment);
+  const url = style === "chat" ? `${baseUrl}/chat/completions` : `${baseUrl}/responses`;
+  const body = style === "chat"
+    ? {
+      model: name,
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: input },
+      ],
+      max_tokens: maxOutputTokens,
+      temperature: 0,
+      response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
+    }
+    : {
+      model: name,
+      store: false,
+      reasoning: { effort: "low" },
+      instructions,
+      input,
+      max_output_tokens: maxOutputTokens,
+      text: { format: { type: "json_schema", name: schemaName, strict: true, schema } },
+    };
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: frontierHeaders(key, environment),
+    body: JSON.stringify(body),
+    redirect: "error",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    let detail = "";
+    try {
+      detail = cleanText((await response.json())?.error?.message, 500);
+    } catch {
+      // The status code remains the primary error when the body is not JSON.
+    }
+    throw new Error(`프론티어 모델 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+  const payload = await response.json();
+  return {
+    text: style === "chat" ? chatCompletionText(payload) : parseStructuredText(payload),
+    model: cleanText(payload?.model, 160) || name,
+    generatedAt: cleanText(payload?.created_at, 80) || new Date().toISOString(),
+  };
+}
+
 function responseInput(context) {
   return JSON.stringify({
     clinical: context.clinical,
@@ -280,67 +399,38 @@ async function generateLocalDraft(context, options, feedback) {
 }
 
 async function generateFrontierDraft(context, options, feedback) {
-  const apiKey = cleanText(options.apiKey, 500);
-  const model = cleanText(options.model, 160);
-  if (!apiKey || !model) throw new Error("프론티어 모델이 서버에 설정되지 않았습니다.");
   const input = feedback?.reason
     ? `${responseInput(context)}\n\n[재시도 안내] ${retryFeedbackMessage(feedback)}`
     : responseInput(context);
-  const response = await options.fetchImpl("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      store: false,
-      reasoning: { effort: "low" },
+  let result;
+  try {
+    result = await callFrontierModel({
+      apiKey: options.apiKey,
+      model: options.model,
       instructions: instructions(),
       input,
-      max_output_tokens: 2_000,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "policycompass_patient_questions",
-          strict: true,
-          schema: OUTPUT_SCHEMA,
-        },
-      },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
-  });
-  if (!response.ok) {
-    let detail = "";
-    try {
-      const body = await response.json();
-      detail = cleanText(body?.error?.message, 500);
-    } catch {
-      // The status code remains the primary error when the body is not JSON.
-    }
-    throw new Error(`프론티어 모델 요청 실패 (${response.status})${detail ? `: ${detail}` : ""}`);
-  }
-  const body = await response.json();
-  let raw;
-  try {
-    raw = parseStructuredText(body);
+      schemaName: "policycompass_patient_questions",
+      schema: OUTPUT_SCHEMA,
+      fetchImpl: options.fetchImpl,
+      timeoutMs: options.timeoutMs,
+      environment: options.environment ?? process.env,
+    });
   } catch (error) {
-    if (error.message.includes("거부")) throw error;
+    if (error.message.includes("거부") || error.message.includes("요청 실패") || error.message.includes("설정되지")) throw error;
     throw new DraftRejectedError(error.message);
   }
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(result.text);
   } catch {
     throw new DraftRejectedError("프론티어 모델 응답이 JSON 형식이 아닙니다.");
   }
   return {
     provider: "frontier",
-    model: cleanText(body?.model, 160) || model,
-    generatedAt: cleanText(body?.created_at, 80) || new Date().toISOString(),
+    model: result.model,
+    generatedAt: result.generatedAt,
     parsed,
-    raw: cleanText(raw, 30_000),
+    raw: cleanText(result.text, 30_000),
   };
 }
 
@@ -491,6 +581,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
       provider,
       apiKey: environment.OPENAI_API_KEY ?? "",
       model: environment.POLICYCOMPASS_FRONTIER_MODEL ?? "gpt-5.6-sol",
+      environment,
       fetchImpl,
       timeoutMs,
       maxAttempts,

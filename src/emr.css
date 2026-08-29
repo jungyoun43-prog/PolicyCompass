@@ -9613,3 +9613,23 @@ model-viewer::part(default-progress-mask) {
   width: 4px;
   background: var(--accent);
 }
+
+
+/* Bigger name; a small edit control in the card's top-right corner. */
+.patient-identity__row {
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.rail-selected-patient .patient-identity__row h2 {
+  font-size: 1.4rem;
+  letter-spacing: -0.04em;
+}
+
+.rail-edit-button {
+  flex: none;
+  min-height: 26px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+}

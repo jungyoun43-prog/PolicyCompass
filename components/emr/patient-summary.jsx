@@ -27,6 +27,7 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
               patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "",
             ].filter(Boolean).join(" · ")}</span>
           </div>
+          <button className="clinical-button rail-edit-button" id="editPatient" type="button" aria-label="환자 정보 편집" onClick={onEditPatient}>편집</button>
         </div>
         <div className="patient-condition-summary" aria-label="확정 활성 질환">
           <span className="patient-condition-summary__label">현재 질환</span>
@@ -63,10 +64,11 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
           : <span className="safety-chip">알레르기 확인 필요</span>}
         <span className="safety-chip">활성 약물 {activeMedications.length}건</span>
       </div>
-      <div className="patient-header-actions">
-        <button className="clinical-button" id="editPatient" type="button" onClick={onEditPatient}>환자 정보 편집</button>
-        {demo ? null : <span id="lastSavedAt">저장 {displayTimestamp(updatedAt)}</span>}
-      </div>
+      {demo ? null : (
+        <div className="patient-header-actions">
+          <span id="lastSavedAt">저장 {displayTimestamp(updatedAt)}</span>
+        </div>
+      )}
     </section>
   );
 }

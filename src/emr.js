@@ -5166,7 +5166,7 @@ function renderMedicationReviewSources(review) {
     const panes = [rulePane(check, pairs), chartRecordPane(check, pairs)].filter(Boolean);
     if (panes.length) {
       const open = expandedSourceIds.has(check.id);
-      const trigger = element("button", "rx-source__origin-trigger", "근거 원문과 환자 기록 원문 확인");
+      const trigger = element("button", "rx-source__origin-trigger", "원문 확인");
       trigger.type = "button";
       trigger.dataset.sourceOrigin = check.id;
       trigger.setAttribute("aria-expanded", String(open));

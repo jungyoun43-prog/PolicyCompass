@@ -176,9 +176,6 @@ const server = http.createServer((request, response) => {
         throw new ApiError(400, "INVALID_PAYLOAD", "약제 급여 사전점검 비교 결과가 필요합니다.");
       }
       const provider = payload.provider === "frontier" ? "frontier" : "local";
-      if (provider === "frontier" && payload.consent !== true) {
-        throw new ApiError(400, "FRONTIER_CONSENT_REQUIRED", "프론티어 모델 전송 동의가 필요합니다.");
-      }
       const status = medicationClaimReviewStatus();
       if (!status[provider].configured) {
         sendJson(response, 503, {

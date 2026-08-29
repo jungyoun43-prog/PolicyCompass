@@ -7944,25 +7944,6 @@ button.claim-attention-item__summary:focus-visible {
   font-size: var(--font-size-body);
 }
 
-.rx-consent {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-control);
-  background: var(--accent-wash);
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  line-height: 1.5;
-}
-
-.rx-consent[data-state="pending"] {
-  border-style: solid;
-  border-color: var(--data-amber);
-  color: var(--ink);
-}
-
 .rx-dialog__columns {
   display: grid;
   grid-template-columns: minmax(280px, 2fr) minmax(320px, 3fr);
@@ -8105,8 +8086,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 /* The workspace styles every input as a full-width field; choice controls opt out. */
-.dx-code-option input[type="radio"],
-.rx-consent input[type="checkbox"] {
+.dx-code-option input[type="radio"] {
   width: 1.05rem;
   min-width: 1.05rem;
   height: 1.05rem;
@@ -8305,30 +8285,58 @@ button.claim-attention-item__summary:focus-visible {
   cursor: pointer;
 }
 
+/* One control reveals the pair, then each side stands in its own pane. */
+.rx-source__origin-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: none;
+  padding: var(--space-1) 0;
+  color: var(--rx-source-tone);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rx-source__origin-trigger::before {
+  content: "▸";
+  font-size: 0.6875rem;
+}
+
+.rx-source__origin-trigger[aria-expanded="true"]::before {
+  content: "▾";
+}
+
+.rx-source__origin-trigger:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
 .rx-source__origins {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
-  border-top: 1px dashed var(--line-strong);
-  padding-top: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .rx-source__origins > :only-child {
   grid-column: 1 / -1;
 }
 
-.rx-source__origin {
+.rx-source__pane {
   min-width: 0;
   border: 1px solid color-mix(in srgb, var(--rx-source-tone) 26%, var(--line));
   border-radius: var(--radius-control);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   background: var(--surface-raised);
 }
 
-.rx-source__origins,
-.rx-source__origin .rx-result__details-summary {
-  border-top-color: color-mix(in srgb, var(--rx-source-tone) 40%, var(--line));
+.rx-source__pane-title {
+  margin: 0 0 var(--space-2);
   color: var(--rx-source-tone);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
 }
 
 .rx-source__record {

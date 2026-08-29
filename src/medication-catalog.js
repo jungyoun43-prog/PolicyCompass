@@ -65,6 +65,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "암로디핀정 5mg",
     ingredient: "Amlodipine besylate",
     classLabel: "Calcium channel blocker (CCB)",
+    indication: "고혈압, 만성 안정형 협심증",
     keywords: "amlodipine 노바스크 혈압약 고혈압 CCB 칼슘차단제",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식후 복용" },
     coverage: {
@@ -82,6 +83,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "로사르탄칼륨정 50mg",
     ingredient: "Losartan potassium",
     classLabel: "Angiotensin II receptor blocker (ARB)",
+    indication: "고혈압, 고혈압 환자의 좌심실 비대 동반 시 뇌졸중 위험 감소",
     keywords: "losartan 코자 혈압약 고혈압 ARB 안지오텐신",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
     coverage: {
@@ -99,6 +101,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "리시노프릴정 10mg",
     ingredient: "Lisinopril",
     classLabel: "ACE inhibitor (ACEI)",
+    indication: "고혈압, 심부전, 급성 심근경색 후 보조요법",
     keywords: "lisinopril 혈압약 고혈압 ACEI 안지오텐신전환효소",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
     coverage: {
@@ -116,6 +119,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "하이드로클로로티아지드정 12.5mg",
     ingredient: "Hydrochlorothiazide",
     classLabel: "Thiazide diuretic",
+    indication: "고혈압, 부종",
     keywords: "hydrochlorothiazide HCTZ 이뇨제 혈압약 고혈압",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "오전 복용" },
     coverage: {
@@ -133,6 +137,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "메트포르민염산염서방정 500mg",
     ingredient: "Metformin hydrochloride",
     classLabel: "Biguanide",
+    indication: "제2형 당뇨병에서 식사·운동 요법으로 조절되지 않는 경우의 1차 약제",
     keywords: "metformin 메트포민 당뇨약 당뇨 비구아나이드",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 2회", durationDays: 28, quantity: 56, instructions: "식사 직후 복용" },
     coverage: {
@@ -151,6 +156,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "글리메피리드정 2mg",
     ingredient: "Glimepiride",
     classLabel: "Sulfonylurea (SU)",
+    indication: "제2형 당뇨병에서 식사·운동 요법 및 메트포르민으로 조절되지 않는 경우",
     keywords: "glimepiride 아마릴 당뇨약 당뇨 설포닐우레아",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식전 복용" },
     coverage: {
@@ -168,6 +174,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "엠파글리플로진정 10mg",
     ingredient: "Empagliflozin",
     classLabel: "SGLT-2 inhibitor",
+    indication: "제2형 당뇨병의 혈당 조절, 심혈관 위험 동반 시 보조",
     keywords: "empagliflozin 자디앙 당뇨약 당뇨 SGLT2",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
     coverage: {
@@ -188,6 +195,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "아토르바스타틴칼슘정 20mg",
     ingredient: "Atorvastatin calcium",
     classLabel: "HMG-CoA reductase inhibitor (statin)",
+    indication: "고콜레스테롤혈증, 이상지질혈증, 심혈관 사건 위험 감소",
     keywords: "atorvastatin 리피토 고지혈증 이상지질혈증 콜레스테롤 스타틴",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "저녁 복용" },
     coverage: {
@@ -205,6 +213,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "티오트로피움브롬화물 흡입제 18mcg",
     ingredient: "Tiotropium bromide",
     classLabel: "Long-acting muscarinic antagonist (LAMA)",
+    indication: "만성폐쇄성폐질환의 유지요법, 기관지 확장 및 악화 감소",
     keywords: "tiotropium 스피리바 흡입제 COPD 만성폐쇄성폐질환 LAMA 기관지확장제",
     dosing: { dose: "1", doseUnit: "캡슐", route: "흡입", frequency: "1일 1회", durationDays: 30, quantity: 30, instructions: "흡입기 사용법 교육 후 사용" },
     coverage: {
@@ -222,6 +231,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "살메테롤/플루티카손 흡입제 50/250mcg",
     ingredient: "Salmeterol xinafoate · Fluticasone propionate",
     classLabel: "LABA/ICS combination inhaler",
+    indication: "천식의 지속적 유지요법, 만성폐쇄성폐질환의 증상 완화",
     keywords: "salmeterol fluticasone 세레타이드 흡입제 COPD 천식 LABA ICS",
     dosing: { dose: "1", doseUnit: "흡입", route: "흡입", frequency: "1일 2회", durationDays: 30, quantity: 1, instructions: "사용 후 입안 헹굼" },
     coverage: {
@@ -239,6 +249,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "아목시실린·클라불란산정 625mg",
     ingredient: "Amoxicillin hydrate · Clavulanate potassium",
     classLabel: "Penicillin-class antibiotic",
+    indication: "감수성 균에 의한 하기도감염, 폐렴, 부비동염, 요로감염",
     keywords: "amoxicillin clavulanate 오구멘틴 항생제 폐렴 기관지염 페니실린",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 7, quantity: 21, instructions: "식후 복용, 임의 중단 없이 지시된 기간 유지" },
     coverage: {
@@ -257,6 +268,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "레보플록사신정 500mg",
     ingredient: "Levofloxacin hydrate",
     classLabel: "Fluoroquinolone antibiotic",
+    indication: "지역사회획득 폐렴, 급성 세균성 부비동염, 복잡성 요로감염",
     keywords: "levofloxacin 크라비트 항생제 폐렴 퀴놀론",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 7, quantity: 7, instructions: "충분한 물과 함께 복용" },
     coverage: {
@@ -275,6 +287,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "판토프라졸나트륨정 40mg",
     ingredient: "Pantoprazole sodium sesquihydrate",
     classLabel: "Proton pump inhibitor (PPI)",
+    indication: "위식도역류질환, 위·십이지장궤양, 역류성 식도염의 치료 및 유지",
     keywords: "pantoprazole 판토록 위산 역류 위식도역류 PPI 위산억제제",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식전 복용" },
     coverage: {
@@ -292,6 +305,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "알렌드론산정 70mg",
     ingredient: "Alendronate sodium hydrate",
     classLabel: "Bisphosphonate",
+    indication: "폐경 후 골다공증의 치료 및 예방, 남성 골다공증",
     keywords: "alendronate 포사맥스 골다공증 골밀도 비스포스포네이트",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "주 1회", durationDays: 84, quantity: 12, instructions: "기상 직후 충분한 물과 복용 후 30분간 눕지 않기" },
     coverage: {
@@ -309,6 +323,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "아세트아미노펜서방정 650mg",
     ingredient: "Acetaminophen (paracetamol)",
     classLabel: "Analgesic · antipyretic",
+    indication: "경증에서 중등도의 통증 완화 및 해열",
     keywords: "acetaminophen 타이레놀 진통제 해열제 두통 통증",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 5, quantity: 15, instructions: "통증 시 복용" },
     coverage: {
@@ -327,6 +342,7 @@ export const MEDICATION_CATALOG = Object.freeze([
     label: "이부프로펜정 400mg",
     ingredient: "Ibuprofen",
     classLabel: "NSAID",
+    indication: "골관절염·류마티스관절염의 소염·진통, 급성 통증, 해열",
     keywords: "ibuprofen 부루펜 소염진통제 NSAID 관절염 통증",
     dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 7, quantity: 21, instructions: "식후 복용" },
     coverage: {

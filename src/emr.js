@@ -353,8 +353,6 @@ const refs = {
   prescriptionDialog: byId("prescriptionDialog"),
   rxDialogContext: byId("rxDialogContext"),
   rxDialogBoundary: byId("rxDialogBoundary"),
-  rxConsentField: byId("rxConsentField"),
-  medicationFrontierConsent: byId("medicationFrontierConsent"),
   medicationSearchForm: byId("medicationSearchForm"),
   medicationSearchInput: byId("medicationSearchInput"),
   medicationResultList: byId("medicationResultList"),
@@ -508,7 +506,13 @@ const refs = {
 };
 
 let savedState = await initializeEmrState();
+/**
+ * A first visit lands on the sample chart rather than an empty workspace: every
+ * patient here is synthetic, and an empty list teaches nothing. A stored chart
+ * always wins, and the sample is never written to storage.
+ */
 let state = new URL(window.location.href).searchParams.get("demo") === "1"
+  || (!savedState.patients.length && !savedState.storageError && !savedState.recoveryRaw)
   ? createDemoEmrState()
   : savedState;
 let activeTab = "encounter";
@@ -4785,24 +4789,12 @@ async function checkMedicationReviewStatus() {
   } catch {
     medicationReviewCapability = { checked: true, local: false, frontier: false, model: "" };
   }
-  refs.rxConsentField.hidden = !(medicationReviewCapability.frontier && !medicationReviewCapability.local);
-  refs.rxConsentField.dataset.state = refs.rxConsentField.hidden || refs.medicationFrontierConsent.checked ? "" : "pending";
   renderMedicationReviewMode();
 }
 
 function medicationReviewProvider() {
   if (medicationReviewCapability.local) return "local";
-  if (medicationReviewCapability.frontier && refs.medicationFrontierConsent.checked) return "frontier";
-  return "";
-}
-
-/**
- * A configured model that is waiting on this session's consent is a different
- * state from no model at all, and the panel has to say which one it is.
- */
-function medicationReviewBlockReason() {
-  if (medicationReviewProvider()) return "";
-  return medicationReviewCapability.frontier ? "consent" : "unconfigured";
+  return medicationReviewCapability.frontier ? "frontier" : "";
 }
 
 function renderMedicationReviewMode(review = null) {
@@ -4811,12 +4803,8 @@ function renderMedicationReviewMode(review = null) {
     return;
   }
   const provider = medicationReviewProvider();
-  if (provider) {
-    refs.medicationReviewMode.textContent = `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : "프론티어 모델"}`;
-    return;
-  }
-  refs.medicationReviewMode.textContent = medicationReviewBlockReason() === "consent"
-    ? "규칙 기반 · 전송 동의 필요"
+  refs.medicationReviewMode.textContent = provider
+    ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : medicationReviewCapability.model || "연결된 모델"}`
     : "규칙 기반 · 모델 미설정";
 }
 
@@ -4849,13 +4837,16 @@ function pickCatalogMedication(medicationId) {
   refs.medicationInstructions.value = medication.dosing.instructions;
   refs.medicationSelectedSummary.textContent = `${medication.label} · ${medication.ingredient} · ${medication.classLabel} · ${medication.system} | ${medication.code}. 약품 코드와 코드 시스템은 선택한 약품에서 자동으로 채워지며, 용법과 총 수량은 의료진이 확인하고 수정하세요.`;
   renderMedicationResults();
+  refs.prescriptionForm.scrollIntoView({ block: "end", behavior: "smooth" });
+  refs.medicationDose.focus({ preventScroll: true });
 }
 
 function medicationDetailRows(medication) {
   return [
     ["계열", medication.classLabel],
+    ["적응증", medication.indication || "등록된 적응증 없음"],
     ["약품 코드", `${medication.system} | ${medication.code}`],
-    ["인정 상병", medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ") || "등록된 인정 상병 없음"],
+    ["급여 인정 상병", medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ") || "등록된 인정 상병 없음"],
     ["기본 용법", `1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일 · 총 ${medication.dosing.quantity}`],
     ["복약 안내", medication.dosing.instructions || "등록된 복약 안내 없음"],
     ["인정 일수", medication.coverage.maxDurationDays ? `1회 최대 ${medication.coverage.maxDurationDays}일` : "등록된 인정 일수 없음"],
@@ -4973,14 +4964,11 @@ function renderMedicationReviewPipeline(review) {
   reviewProcessPinned = false;
   setReviewProcessOpen(false);
   const provider = medicationReviewProvider();
-  const blocked = medicationReviewBlockReason();
   const cloudLabel = provider === "frontier"
-    ? `클라우드 LLM 규칙 재검토 · ${medicationReviewCapability.model || "프론티어 모델"}`
+    ? `클라우드 LLM 규칙 재검토 · ${medicationReviewCapability.model || "연결된 모델"}`
     : provider === "local"
       ? "LLM 규칙 재검토 · 이 기기의 로컬 모델"
-      : blocked === "consent"
-        ? "클라우드 LLM 규칙 재검토 · 전송 동의 필요"
-        : "클라우드 LLM 규칙 재검토 · 모델 미설정";
+      : "클라우드 LLM 규칙 재검토 · 모델 미설정";
   const steps = [
     ["1", "이 브라우저에서 규칙 대조", "선택 환자의 확정 차트와 등록된 급여기준을 항목별로 맞춥니다."],
     ["2", "대조 결과 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
@@ -5012,9 +5000,7 @@ function renderMedicationReviewPipeline(review) {
     refs.medicationReviewPipeline.append(element(
       "p",
       "rx-review__boundary",
-      blocked === "consent"
-        ? "모델은 연결되어 있지만 이번 세션 전송 동의가 없어 2~3단계를 실행하지 않았습니다. 위 검색창 아래 동의 항목을 선택하면 클라우드 검토를 사용합니다."
-        : "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
+      "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
     ));
   }
 }
@@ -5051,24 +5037,33 @@ refs.medicationReviewProcess.addEventListener("focusout", (event) => {
  * Both sides of a criterion get their own source text: the rule wording on the
  * left, the stored chart row on the right, each with the deciding part marked.
  */
-function chartRecordOrigin(check) {
+function chartRecordPane(check) {
   const records = check.chart.findings.filter(({ record }) => Array.isArray(record) && record.length);
   if (!records.length) return null;
-  const origin = element("details", "rx-source__origin");
-  origin.open = expandedSourceIds.has(check.id);
-  origin.dataset.sourceOrigin = `${check.id}:chart`;
-  origin.append(element("summary", "rx-result__details-summary", "환자 기록 원문 확인"));
+  const pane = element("div", "rx-source__pane");
+  pane.append(element("h6", "rx-source__pane-title", "환자 기록 원문 확인"));
   for (const item of records.slice(0, 3)) {
-    origin.append(element("p", "rx-source__article", `${item.label}${item.provenance ? ` · ${item.provenance}` : ""}`));
+    pane.append(element("p", "rx-source__article", `${item.label}${item.provenance ? ` · ${item.provenance}` : ""}`));
     const rows = element("dl", "rx-detail-list rx-source__record");
     for (const [term, value] of item.record) {
       const definition = element("dd", "");
       appendHighlightedText(definition, value, item.highlights);
       rows.append(element("dt", "", term), definition);
     }
-    origin.append(rows);
+    pane.append(rows);
   }
-  return origin;
+  return pane;
+}
+
+function rulePane(check) {
+  if (!check.source.excerpt) return null;
+  const pane = element("div", "rx-source__pane");
+  pane.append(element("h6", "rx-source__pane-title", "근거 원문 확인"));
+  if (check.source.article) pane.append(element("p", "rx-source__article", check.source.article));
+  const excerpt = element("blockquote", "rx-source__excerpt");
+  appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights);
+  pane.append(excerpt);
+  return pane;
 }
 
 function renderMedicationReviewSources(review) {
@@ -5114,21 +5109,18 @@ function renderMedicationReviewSources(review) {
     grid.append(criterion, chart);
     item.append(title, grid);
 
-    const origins = element("div", "rx-source__origins");
-    if (check.source.excerpt) {
-      const ruleOrigin = element("details", "rx-source__origin");
-      ruleOrigin.open = expandedSourceIds.has(check.id);
-      ruleOrigin.dataset.sourceOrigin = `${check.id}:rule`;
-      ruleOrigin.append(element("summary", "rx-result__details-summary", "근거 원문 확인"));
-      if (check.source.article) ruleOrigin.append(element("p", "rx-source__article", check.source.article));
-      const excerpt = element("blockquote", "rx-source__excerpt");
-      appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights);
-      ruleOrigin.append(excerpt);
-      origins.append(ruleOrigin);
+    const panes = [rulePane(check), chartRecordPane(check)].filter(Boolean);
+    if (panes.length) {
+      const open = expandedSourceIds.has(check.id);
+      const trigger = element("button", "rx-source__origin-trigger", "근거 원문 확인");
+      trigger.type = "button";
+      trigger.dataset.sourceOrigin = check.id;
+      trigger.setAttribute("aria-expanded", String(open));
+      const origins = element("div", "rx-source__origins");
+      origins.hidden = !open;
+      origins.append(...panes);
+      item.append(trigger, origins);
     }
-    const chartOrigin = chartRecordOrigin(check);
-    if (chartOrigin) origins.append(chartOrigin);
-    if (origins.childElementCount) item.append(origins);
 
     item.append(element("p", "rx-source__document", [
       check.source.label,
@@ -5203,7 +5195,7 @@ async function runMedicationReview(medicationId) {
     const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ comparison: review, provider, consent: provider === "frontier" }),
+      body: JSON.stringify({ comparison: review, provider }),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
@@ -5243,11 +5235,6 @@ function closePrescriptionDialog() {
 
 refs.openPrescriptionDialog.addEventListener("click", openPrescriptionDialog);
 refs.closePrescriptionDialog.addEventListener("click", closePrescriptionDialog);
-refs.medicationFrontierConsent.addEventListener("change", () => {
-  refs.rxConsentField.dataset.state = refs.medicationFrontierConsent.checked ? "" : "pending";
-  renderMedicationReviewMode();
-});
-
 refs.medicationSearchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   medicationSearchResults = searchMedicationCatalog(refs.medicationSearchInput.value, 8);
@@ -5259,37 +5246,24 @@ refs.medicationSearchInput.addEventListener("input", () => {
   renderMedicationResults();
 });
 
-let syncingSourceOrigins = false;
-
 /**
- * The rule text and the chart row are one comparison, so they open and close as
- * a pair however the reader got there - either summary, or the row itself.
+ * The rule text and the chart row are one comparison, so a single control reveals
+ * both panes at once - reached from the trigger or from the row around it.
  */
-function syncSourceOrigins(origin) {
-  if (syncingSourceOrigins) return;
-  const source = origin.closest(".rx-source");
-  const [checkId] = origin.dataset.sourceOrigin.split(":");
-  syncingSourceOrigins = true;
-  try {
-    for (const sibling of source?.querySelectorAll("[data-source-origin]") ?? []) {
-      if (sibling !== origin) sibling.open = origin.open;
-    }
-  } finally {
-    syncingSourceOrigins = false;
-  }
-  if (origin.open) expandedSourceIds.add(checkId);
-  else expandedSourceIds.delete(checkId);
+function toggleSourceOrigins(source) {
+  const trigger = source?.querySelector("[data-source-origin]");
+  const origins = source?.querySelector(".rx-source__origins");
+  if (!trigger || !origins) return;
+  const nextOpen = origins.hidden;
+  origins.hidden = !nextOpen;
+  trigger.setAttribute("aria-expanded", String(nextOpen));
+  if (nextOpen) expandedSourceIds.add(trigger.dataset.sourceOrigin);
+  else expandedSourceIds.delete(trigger.dataset.sourceOrigin);
 }
 
-refs.medicationReviewSources.addEventListener("toggle", (event) => {
-  const origin = event.target.closest("[data-source-origin]");
-  if (origin) syncSourceOrigins(origin);
-}, true);
-
 refs.medicationReviewSources.addEventListener("click", (event) => {
-  if (event.target.closest("[data-source-origin]")) return;
-  const origin = event.target.closest(".rx-source")?.querySelector("[data-source-origin]");
-  if (origin) origin.open = !origin.open;
+  if (event.target.closest(".rx-source__origins")) return;
+  toggleSourceOrigins(event.target.closest(".rx-source"));
 });
 
 refs.medicationResultList.addEventListener("toggle", (event) => {

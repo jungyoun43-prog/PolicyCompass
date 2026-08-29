@@ -154,6 +154,18 @@ const BODY_3D_CSS = `
     display: none !important;
   }
 
+  /* Hold the 2D fallback art back while the 3D map is being decided, so it never
+     flashes in for a frame before the viewer mounts. Without the script this
+     attribute is never set and the 2D map shows as it always did. */
+  .body-stage[data-body-3d] .human-figure {
+    transition: opacity 140ms ease-out;
+  }
+
+  .body-stage[data-body-3d][data-body3d-state="initializing"] .human-figure,
+  .body-stage[data-body-3d][data-body3d-state="loading"]:not(.is-body-2d) .human-figure__image {
+    opacity: 0;
+  }
+
   .body-stage[data-body-3d] model-viewer.body-3d-viewer {
     position: absolute;
     z-index: 2;
@@ -453,6 +465,7 @@ export class Body3DController {
   }
 
   scheduleInitialActivation() {
+    this.stage.dataset.body3dState = "initializing";
     if (!this.modelSource) {
       this.markUnavailable("3D 모델 경로가 지정되지 않아 2D 지도를 표시합니다.");
       return;
@@ -815,6 +828,7 @@ export class Body3DController {
 
   markUnavailable(message) {
     this.requestedMode = "2d";
+    this.stage.classList.add("is-body-2d");
     this.stage.dataset.body3dState = "unavailable";
     this.status.textContent = message;
     dispatchStageEvent(this.stage, "body-3d:unavailable", {

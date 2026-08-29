@@ -138,6 +138,65 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(js, /\["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"\]/);
   assert.match(js, /const review = medication\.id === activeMedicationReviewId \? medicationReviewById\.get\(medication\.id\) : null;/);
   assert.match(js, /medicationReviewById\.clear\(\);\n\s*expandedSourceIds\.clear\(\);/);
-  assert.match(js, /function appendHighlightedText\(node, text, highlights = \[\]\)/);
+  assert.match(js, /function appendHighlightedText\(node, text, highlights = \[\], pairs = new Map\(\)\)/);
+  assert.match(js, /function buildHighlightPairs\(check, counter\)/);
   assert.match(js, /data-source-origin/);
+});
+
+test("같은 사실을 가리키는 기준 문구와 차트 값은 한 쌍으로 묶인다", async () => {
+  // Given
+  const js = await readFile("src/emr.js", "utf8");
+  const css = await readFile("src/emr.css", "utf8");
+  const builder = js.match(/function buildHighlightPairs\(check, counter\)[\s\S]*?\n}/)?.[0] ?? "";
+
+  // When
+  const usesEnginePairs = builder.includes("check.source.pairs");
+
+  // Then
+  assert.equal(usesEnginePairs, true, "짝은 문자열 겹침이 아니라 규칙 엔진이 알려 준다");
+  assert.match(builder, /phrasesOverlap\(chart, candidate\)/, "차트가 다른 표기로 저장한 값에도 같은 색이 따라간다");
+  assert.match(builder, /counter\.next \+= 1;/, "색 번호는 검토 전체에서 이어진다");
+  for (const index of [0, 1, 2, 3, 4]) {
+    assert.ok(css.includes(`.rx-source__mark-text[data-pair="${index}"]`), `pair ${index} 색`);
+  }
+  assert.equal(new Set(["--data-cyan", "--data-violet", "--data-amber", "--urgent", "--data-lime"]
+    .filter((token) => css.includes(`data-pair="0"] { --rx-pair: var(${token})`)
+      || css.includes(`data-pair="1"] { --rx-pair: var(${token})`)
+      || css.includes(`data-pair="2"] { --rx-pair: var(${token})`)
+      || css.includes(`data-pair="3"] { --rx-pair: var(${token})`)
+      || css.includes(`data-pair="4"] { --rx-pair: var(${token})`))).size, 5, "쌍마다 서로 다른 색");
+  assert.match(css, /\.rx-source__pane\s*\{[\s\S]*?border: 1px dashed/, "원문 패널은 하위 계층으로 읽힌다");
+  assert.match(css, /\.rx-source__excerpt\s*\{[\s\S]*?color: color-mix\(in srgb, var\(--muted\)/);
+});
+
+test("규칙 엔진은 기준 문구와 그것을 충족한 차트 값을 짝으로 알려 준다", () => {
+  // Given
+  const medication = findMedicationInCatalog("metformin-500");
+
+  // When
+  const review = buildMedicationClaimComparison({
+    patient: demo.patients.find(({ name }) => name === "김비타"),
+    medication,
+    prescription: medication.dosing,
+    asOf: AS_OF,
+  });
+  const byId = Object.fromEntries(review.checks.map((check) => [check.id, check.source.pairs]));
+
+  // Then
+  assert.deepEqual(byId.indication, [{ rule: "E11", chart: "E11" }]);
+  assert.deepEqual(byId["evidence-1"], [
+    { rule: "최근 180일 이내 당화혈색소 기록", chart: "4548-4" },
+    { rule: "최근 180일 이내", chart: "2026-07-08" },
+  ]);
+  assert.deepEqual(byId.age, [{ rule: "만 18세 이상", chart: "만 52세" }]);
+  assert.deepEqual(byId.duration, [{ rule: "90일분까지 인정", chart: "28일" }]);
+  for (const check of review.checks) {
+    for (const { rule, chart } of check.source.pairs) {
+      assert.ok(check.source.excerpt.includes(rule), `${check.id} 기준 구절은 원문 안에 있다: ${rule}`);
+      assert.ok(
+        check.chart.findings.some(({ highlights }) => (highlights ?? []).includes(chart)),
+        `${check.id} 차트 값은 강조 목록 안에 있다: ${chart}`,
+      );
+    }
+  }
 });

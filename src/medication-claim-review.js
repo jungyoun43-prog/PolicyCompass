@@ -119,7 +119,7 @@ function codeMatches(eventCode, criterionCode) {
   return left === right || left.startsWith(`${right}.`) || left.startsWith(right);
 }
 
-function check({ id, kind, title, verdict, matched, requirement, criterionDetail, chartDetail, findings = [], source, article = "", excerpt = "", highlights = [] }) {
+function check({ id, kind, title, verdict, matched, requirement, criterionDetail, chartDetail, findings = [], source, article = "", excerpt = "", highlights = [], pairs = [] }) {
   return {
     id,
     kind,
@@ -133,6 +133,12 @@ function check({ id, kind, title, verdict, matched, requirement, criterionDetail
       article: cleanText(article, 160),
       excerpt: cleanText(excerpt, 600),
       highlights: highlights.map((value) => cleanText(value, 120)).filter(Boolean).slice(0, 6),
+      // Which phrase of the criterion each chart value actually answers. The two
+      // sides rarely share wording, so the match cannot be recovered from text.
+      pairs: pairs
+        .map(({ rule, chart }) => ({ rule: cleanText(rule, 120), chart: cleanText(chart, 120) }))
+        .filter(({ rule, chart }) => rule && chart)
+        .slice(0, 6),
     },
   };
 }
@@ -216,6 +222,10 @@ function indicationCheck(medication, conditions, encounterId) {
       findings,
       source,
       ...indicationOrigin(medication),
+      pairs: confirmed.slice(0, 4).flatMap((event) => {
+        const matched = medication.coverage.indications.find(({ code }) => codeMatches(event.code, code));
+        return matched ? [{ rule: matched.code, chart: cleanText(event.code, 80) }] : [];
+      }),
     });
   }
   if (matches.length) {
@@ -286,6 +296,10 @@ function evidenceChecks(medication, events, encounterId, asOf) {
         );
       }),
       source,
+      pairs: matches.slice(0, 2).flatMap((event) => [
+        { rule: criterion.label, chart: cleanText(event.code, 80) },
+        ...(cutoffDays ? [{ rule: `최근 ${cutoffDays}일 이내`, chart: validDate(event.date) }] : []),
+      ]),
       article: "제2장 제4절 · 선행 검사·기록 요건",
       excerpt: `「${medication.label}」의 투여는 ${criterion.label}이(가) ${cutoffDays ? `처방일 기준 최근 ${cutoffDays}일 이내에 ` : ""}진료기록에서 확인되는 경우에 인정한다. 선행 근거가 확인되지 않은 청구분은 조정 대상이 된다.`,
       highlights: [criterion.label, cutoffDays ? `최근 ${cutoffDays}일 이내` : "", "선행 근거가 확인되지 않은 청구분은 조정 대상"].filter(Boolean),
@@ -338,6 +352,10 @@ function duplicateCheck(medication, events, encounterId, asOf) {
       [cleanText(event.code, 80), cleanText(event.status, 40) || "active"],
     )),
     source,
+    pairs: duplicates.slice(0, 3).map((event) => ({
+      rule: medication.coverage.duplicateClassLabel || medication.classLabel,
+      chart: cleanText(event.code, 80),
+    })),
     article: "제4장 제1절 · 동일 효능군 중복 투여",
     excerpt: `동일 효능군(${medication.coverage.duplicateClassLabel || medication.classLabel})에 속하는 약제를 같은 기간에 함께 투여한 경우, 중복 투여분은 인정하지 아니한다. 병용이 임상적으로 필요한 경우 그 사유를 진료기록부에 기재한다.`,
     highlights: [medication.coverage.duplicateClassLabel || medication.classLabel, "중복 투여분은 인정하지 아니한다"],
@@ -395,6 +413,11 @@ function allergyCheck(medication, events, encounterId) {
       [cleanText(event.label, 160), cleanText(event.code, 80)],
     )),
     source,
+    pairs: matches.slice(0, 3).flatMap((event) => {
+      const haystack = [cleanText(event.label, 160), cleanText(event.code, 80), cleanText(event.note, 240)].join(" ").toLowerCase();
+      const ingredient = ingredients.find((item) => haystack.includes(item.toLowerCase()));
+      return ingredient ? [{ rule: ingredient, chart: cleanText(event.label, 160) }] : [];
+    }),
     article: "제5장 제2절 · 투여 전 알레르기 확인",
     excerpt: `투여 전 환자의 약물 알레르기 기록을 확인한다. 기록된 알레르기와 투여 약제의 성분명(${ingredients.slice(0, 3).join(", ")})이 일치하는 경우, 임상적 관련성과 대체 약제 검토 결과를 진료기록부에 기재한다.`,
     highlights: [...ingredients.slice(0, 3), "임상적 관련성과 대체 약제 검토 결과를 진료기록부에 기재"],
@@ -419,6 +442,10 @@ function contraindicationCheck(medication, conditions, encounterId) {
       : "이 환자 기록에서 금기 상병이 확인되지 않습니다.",
     findings: matches.slice(0, 4).map((event) => finding(event, encounterId, "금기 상병 일치", [cleanText(event.code, 80)])),
     source,
+    pairs: matches.slice(0, 3).flatMap((event) => {
+      const matchedCode = codes.find(({ code }) => codeMatches(event.code, code));
+      return matchedCode ? [{ rule: matchedCode.code, chart: cleanText(event.code, 80) }] : [];
+    }),
     article: "제5장 제1절 · 금기·신중투여",
     excerpt: `다음 상병이 확인된 환자에게 「${medication.label}」을(를) 투여하는 경우는 금기 또는 신중투여에 해당한다: ${codes.map(({ code, label }) => `${code} ${label}`).join(", ")}. 투여가 필요한 경우 그 사유를 진료기록부에 기재하며, 사유가 확인되지 않은 청구분은 조정 대상이 된다.`,
     highlights: [...codes.map(({ code }) => code), "사유가 확인되지 않은 청구분은 조정 대상"],
@@ -456,6 +483,7 @@ function durationCheck(medication, prescription) {
     chartDetail: requested > maximum
       ? `이번 처방 ${requested}일은 인정 일수를 ${requested - maximum}일 초과합니다.`
       : `이번 처방 ${requested}일은 인정 일수 안에 있습니다.`,
+    pairs: [{ rule: `${maximum}일분까지 인정`, chart: `${requested}일` }],
     findings: [{
       eventId: "",
       label: "이번 처방 입력",
@@ -501,6 +529,7 @@ function ageCheck(medication, patientAge) {
     requirement,
     criterionDetail: "연령 범위를 벗어난 처방은 별도 사유 없이는 조정될 수 있습니다.",
     chartDetail: `이 환자는 만 ${patientAge}세로 ${withinRange ? "연령 기준 안에 있습니다." : "연령 기준을 벗어납니다."}`,
+    pairs: [{ rule: requirement.replace("연령 인정 범위: ", ""), chart: `만 ${patientAge}세` }],
     findings: [{
       eventId: "",
       label: "환자 나이",

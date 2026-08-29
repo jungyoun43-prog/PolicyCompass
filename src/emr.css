@@ -8396,25 +8396,30 @@ button.claim-attention-item__summary:focus-visible {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   margin-top: var(--space-2);
+  padding-left: var(--space-5);
 }
 
 .rx-source__origins > :only-child {
   grid-column: 1 / -1;
 }
 
+/* Supporting text: flatter surface, dashed edge, dimmer body. The coloured pair
+   marks stay at full strength so the matched parts still carry the eye. */
 .rx-source__pane {
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 26%, var(--line));
+  border: 1px dashed color-mix(in srgb, var(--rx-source-tone) 30%, var(--line));
   border-radius: var(--radius-control);
   padding: var(--space-3);
-  background: var(--surface-raised);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
 }
 
 .rx-source__pane-title {
   margin: 0 0 var(--space-2);
-  color: var(--rx-source-tone);
-  font-size: 0.875rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .rx-source__record {
@@ -8423,6 +8428,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-source__record dd {
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
   font-family: var(--font-mono);
   font-size: 0.6875rem;
 }
@@ -8438,24 +8444,32 @@ button.claim-attention-item__summary:focus-visible {
 .rx-source__excerpt {
   margin: 0;
   padding: 0;
-  color: var(--ink);
-  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--muted) 78%, var(--ink));
+  font-size: 0.8125rem;
   line-height: 1.8;
 }
 
 .rx-source__mark-text {
+  --rx-pair: var(--muted);
   border-radius: 3px;
-  background: color-mix(in srgb, var(--rx-source-tone) 22%, var(--surface-raised));
-  padding: 0 2px;
-  color: var(--ink);
+  background: color-mix(in srgb, var(--rx-pair) 18%, var(--surface-raised));
+  padding: 0 3px;
+  color: color-mix(in srgb, var(--rx-pair) 88%, var(--ink));
   font-weight: 700;
 }
 
-/* Pointing at a criterion sharpens the phrase that decided it. */
+/* One colour per matched fact, so the sentence and the record that answer each
+   other are found by colour rather than by re-reading both. */
+.rx-source__mark-text[data-pair="0"] { --rx-pair: var(--data-cyan); }
+.rx-source__mark-text[data-pair="1"] { --rx-pair: var(--data-violet); }
+.rx-source__mark-text[data-pair="2"] { --rx-pair: var(--data-amber); }
+.rx-source__mark-text[data-pair="3"] { --rx-pair: var(--urgent); }
+.rx-source__mark-text[data-pair="4"] { --rx-pair: var(--data-lime); }
+
 .rx-source:hover .rx-source__mark-text,
 .rx-source:focus-within .rx-source__mark-text {
-  background: color-mix(in srgb, var(--rx-source-tone) 42%, var(--surface-raised));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--rx-source-tone) 60%, transparent);
+  background: color-mix(in srgb, var(--rx-pair) 32%, var(--surface-raised));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--rx-pair) 55%, transparent);
 }
 
 .rx-review__empty,

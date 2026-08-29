@@ -4910,7 +4910,41 @@ function renderMedicationResults() {
  * Marks the decisive phrases inside the rule text without building HTML from
  * strings, so a clinician can read the criterion wording itself, not a paraphrase.
  */
-function appendHighlightedText(node, text, highlights = []) {
+const HIGHLIGHT_PAIR_COLORS = 5;
+
+function phrasesOverlap(left, right) {
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+/**
+ * Groups the phrases that stand for the same fact on both sides of a criterion -
+ * "J18" in the rule and "J18.9" in the chart - and gives each group its own
+ * colour, so a reader can see which sentence answers which record. Phrases that
+ * appear on only one side stay neutral: they are emphasis, not a pairing.
+ */
+function buildHighlightPairs(check, counter) {
+  const chartPhrases = [...new Set(
+    (check.chart.findings ?? []).flatMap(({ highlights }) => highlights ?? []).filter(Boolean),
+  )];
+  const pairs = new Map();
+  for (const { rule, chart } of check.source.pairs ?? []) {
+    if (pairs.has(rule)) continue;
+    // The counter runs across the whole review, so neighbouring criteria do not
+    // both come out in the same colour.
+    const tone = counter.next % HIGHLIGHT_PAIR_COLORS;
+    counter.next += 1;
+    pairs.set(rule, tone);
+    pairs.set(chart, tone);
+    // A record shows the fact in its own wording too - J18.9 for J18 - so the
+    // colour follows onto whichever form the chart happens to store.
+    for (const candidate of chartPhrases) {
+      if (!pairs.has(candidate) && phrasesOverlap(chart, candidate)) pairs.set(candidate, tone);
+    }
+  }
+  return pairs;
+}
+
+function appendHighlightedText(node, text, highlights = [], pairs = new Map()) {
   const phrases = [...new Set(highlights.filter(Boolean))];
   let rest = String(text ?? "");
   while (rest) {
@@ -4928,7 +4962,9 @@ function appendHighlightedText(node, text, highlights = []) {
       return;
     }
     if (bestIndex > 0) node.append(rest.slice(0, bestIndex));
-    node.append(element("mark", "rx-source__mark-text", bestPhrase));
+    const mark = element("mark", "rx-source__mark-text", bestPhrase);
+    if (pairs.has(bestPhrase)) mark.dataset.pair = String(pairs.get(bestPhrase));
+    node.append(mark);
     rest = rest.slice(bestIndex + bestPhrase.length);
   }
 }
@@ -5053,17 +5089,17 @@ for (const host of document.querySelectorAll("[data-rx-popover]")) {
  * Both sides of a criterion get their own source text: the rule wording on the
  * left, the stored chart row on the right, each with the deciding part marked.
  */
-function chartRecordPane(check) {
+function chartRecordPane(check, pairs) {
   const records = check.chart.findings.filter(({ record }) => Array.isArray(record) && record.length);
   if (!records.length) return null;
   const pane = element("div", "rx-source__pane");
-  pane.append(element("h6", "rx-source__pane-title", "환자 기록 원문 확인"));
+  pane.append(element("h6", "rx-source__pane-title", "환자 기록 원문"));
   for (const item of records.slice(0, 3)) {
     pane.append(element("p", "rx-source__article", `${item.label}${item.provenance ? ` · ${item.provenance}` : ""}`));
     const rows = element("dl", "rx-detail-list rx-source__record");
     for (const [term, value] of item.record) {
       const definition = element("dd", "");
-      appendHighlightedText(definition, value, item.highlights);
+      appendHighlightedText(definition, value, item.highlights, pairs);
       rows.append(element("dt", "", term), definition);
     }
     pane.append(rows);
@@ -5071,19 +5107,20 @@ function chartRecordPane(check) {
   return pane;
 }
 
-function rulePane(check) {
+function rulePane(check, pairs) {
   if (!check.source.excerpt) return null;
   const pane = element("div", "rx-source__pane");
-  pane.append(element("h6", "rx-source__pane-title", "근거 원문 확인"));
+  pane.append(element("h6", "rx-source__pane-title", "기준 원문"));
   if (check.source.article) pane.append(element("p", "rx-source__article", check.source.article));
   const excerpt = element("blockquote", "rx-source__excerpt");
-  appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights);
+  appendHighlightedText(excerpt, check.source.excerpt, check.source.highlights, pairs);
   pane.append(excerpt);
   return pane;
 }
 
 function renderMedicationReviewSources(review) {
   clear(refs.medicationReviewSources);
+  const pairCounter = { next: 0 };
   for (const check of review.checks) {
     const item = element("li", "rx-source");
     item.dataset.verdict = check.verdict;
@@ -5125,7 +5162,8 @@ function renderMedicationReviewSources(review) {
     grid.append(criterion, chart);
     item.append(title, grid);
 
-    const panes = [rulePane(check), chartRecordPane(check)].filter(Boolean);
+    const pairs = buildHighlightPairs(check, pairCounter);
+    const panes = [rulePane(check, pairs), chartRecordPane(check, pairs)].filter(Boolean);
     if (panes.length) {
       const open = expandedSourceIds.has(check.id);
       const trigger = element("button", "rx-source__origin-trigger", "근거 원문과 환자 기록 원문 확인");

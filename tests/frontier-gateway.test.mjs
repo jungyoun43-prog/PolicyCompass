@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 
 import {
   callFrontierModel,
@@ -209,4 +210,34 @@ test("기존 OpenAI 설정과 명시적 덮어쓰기는 그대로 동작한다",
   assert.equal(frontierBaseUrl(overridden), "https://api.groq.com/openai/v1");
   assert.equal(frontierApiStyle(overridden), "responses");
   assert.equal(frontierCredentials({ OPENROUTER_API_KEY: "k", POLICYCOMPASS_FRONTIER_MODEL: "x/y", POLICYCOMPASS_FRONTIER_ENABLED: "false" }).configured, false);
+});
+
+test("설정 상태는 어떤 환경변수가 서버에 도달했는지 이름만 알려 준다", async () => {
+  // Given
+  const { frontierVariablesPresent } = await import("../scripts/patient-question-assistant.mjs");
+  const { medicationClaimReviewStatus } = await import("../scripts/graphs/medication-claim-review-graph.mjs");
+  const environment = { OPENROUTER_API_KEY: "sk-or-1" };
+
+  // When
+  const detected = frontierVariablesPresent(environment);
+  const status = medicationClaimReviewStatus(environment).frontier;
+  const configured = medicationClaimReviewStatus({ ...environment, POLICYCOMPASS_FRONTIER_MODEL: "openai/gpt-4o" }).frontier;
+
+  // Then
+  assert.equal(detected.OPENROUTER_API_KEY, true);
+  assert.equal(detected.POLICYCOMPASS_FRONTIER_MODEL, false);
+  assert.equal(status.detected.OPENROUTER_API_KEY, true);
+  assert.equal(JSON.stringify(status).includes("sk-or-1"), false, "값은 절대 노출하지 않는다");
+  assert.equal(Object.hasOwn(configured, "detected"), false, "설정이 끝나면 진단 정보를 붙이지 않는다");
+});
+
+test("모델이 연결돼도 세션 동의 전에는 클라우드로 보내지 않는다", async () => {
+  // Given
+  const js = await readFile("../src/emr.js", "utf8").catch(() => readFile("src/emr.js", "utf8"));
+
+  // When / Then
+  assert.match(js, /function medicationReviewBlockReason\(\)/);
+  assert.match(js, /"규칙 기반 · 전송 동의 필요"/);
+  assert.match(js, /"규칙 기반 · 모델 미설정"/);
+  assert.match(js, /medicationReviewCapability\.frontier && refs\.medicationFrontierConsent\.checked/);
 });

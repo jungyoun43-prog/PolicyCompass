@@ -189,6 +189,27 @@ const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
  * shape and the operator's intent to enable frontier calls. Everything stays
  * overridable for other OpenAI-compatible gateways.
  */
+const FRONTIER_VARIABLE_NAMES = Object.freeze([
+  "OPENROUTER_API_KEY",
+  "OPENAI_API_KEY",
+  "POLICYCOMPASS_FRONTIER_MODEL",
+  "POLICYCOMPASS_FRONTIER_ENABLED",
+  "POLICYCOMPASS_FRONTIER_BASE_URL",
+  "POLICYCOMPASS_FRONTIER_API",
+]);
+
+/**
+ * Which known configuration variables the running server can actually see.
+ * Names and presence only - never a value - so "did my env var arrive?" is one
+ * request to answer instead of a redeploy-and-hope loop.
+ */
+export function frontierVariablesPresent(environment = process.env) {
+  return Object.fromEntries(FRONTIER_VARIABLE_NAMES.map((name) => [
+    name,
+    Boolean(cleanText(environment[name] ?? "", 500)),
+  ]));
+}
+
 export function frontierCredentials(environment = process.env) {
   const openRouterKey = cleanText(environment.OPENROUTER_API_KEY ?? "", 500);
   const openAiKey = cleanText(environment.OPENAI_API_KEY ?? "", 500);
@@ -587,7 +608,11 @@ export function patientQuestionAssistantStatus(environment = process.env) {
       configured: Boolean(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL),
       model: environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
     },
-    frontier: (({ configured, model, reason }) => ({ configured, model, ...(reason ? { reason } : {}) }))(frontierCredentials(environment)),
+    frontier: (({ configured, model, reason }) => ({
+      configured,
+      model,
+      ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
+    }))(frontierCredentials(environment)),
   };
 }
 

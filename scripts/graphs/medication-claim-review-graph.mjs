@@ -4,6 +4,7 @@ import {
   callFrontierModel,
   cleanText,
   frontierCredentials,
+  frontierVariablesPresent,
   ollamaEndpoint,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
@@ -274,7 +275,11 @@ export function medicationClaimReviewStatus(environment = process.env) {
       configured: Boolean(environment.POLICYCOMPASS_OLLAMA_MODEL),
       model: environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
     },
-    frontier: (({ configured, model, reason }) => ({ configured, model, ...(reason ? { reason } : {}) }))(frontierCredentials(environment)),
+    frontier: (({ configured, model, reason }) => ({
+      configured,
+      model,
+      ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
+    }))(frontierCredentials(environment)),
   };
 }
 

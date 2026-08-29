@@ -155,7 +155,17 @@ POLICYCOMPASS_FRONTIER_MODEL=openai/gpt-4o
 
 `OPENROUTER_API_KEY`가 있으면 게이트웨이 주소는 `https://openrouter.ai/api/v1`, API 형식은 Chat Completions(`/chat/completions`), 프론티어 활성화는 켜짐으로 함께 정해집니다. OpenRouter에는 OpenAI Responses API(`/v1/responses`)가 없기 때문에 형식 전환이 필요하며, 이 전환이 자동으로 이뤄집니다.
 
-세 가지 프론티어 기능(환자 질문 도우미, 질문 다듬기, 약제 삭감 사전검토)이 모두 같은 설정을 따릅니다. 키만 넣고 모델을 비워 두면 켜지지 않으며, `/api/medication-claim-review/status`의 `frontier.reason`이 빠진 항목을 알려 줍니다.
+세 가지 프론티어 기능(환자 질문 도우미, 질문 다듬기, 약제 삭감 사전검토)이 모두 같은 설정을 따릅니다.
+
+**Vercel에서는 환경변수를 추가한 뒤 반드시 재배포해야 적용됩니다.** 값은 빌드·실행 시점에 주입되므로, 기존 배포는 변수를 추가해도 그대로입니다. 적용 여부는 상태 엔드포인트로 확인합니다.
+
+```
+curl https://<배포 도메인>/api/medication-claim-review/status
+```
+
+설정이 끝나면 `{"frontier":{"configured":true,"model":"..."}}`만 돌아옵니다. 아직이면 `reason`이 빠진 항목을 짚고, `detected`가 어떤 변수 이름이 서버까지 도달했는지 참/거짓으로 보여 줍니다(값은 표시하지 않습니다). `OPENROUTER_API_KEY: false`면 변수가 이 배포에 반영되지 않은 것이므로 환경(Production/Preview) 지정과 재배포를 확인하세요.
+
+연결된 뒤에도 처방 팝업에서 **전송 동의 항목을 선택해야** 클라우드로 보냅니다. 동의 전에는 상태 표시가 `규칙 기반 · 전송 동의 필요`로 바뀌고, 검토 과정 3단계도 같은 이유를 적습니다.
 
 구조화 출력을 강제하므로 **JSON schema(structured outputs)를 지원하는 모델**이어야 합니다([지원 모델 목록](https://openrouter.ai/models?order=newest&supported_parameters=structured_outputs)). 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다.
 

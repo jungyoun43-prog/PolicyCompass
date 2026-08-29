@@ -4787,6 +4787,7 @@ async function checkMedicationReviewStatus() {
     medicationReviewCapability = { checked: true, local: false, frontier: false, model: "" };
   }
   refs.rxConsentField.hidden = !(medicationReviewCapability.frontier && !medicationReviewCapability.local);
+  refs.rxConsentField.dataset.state = refs.rxConsentField.hidden || refs.medicationFrontierConsent.checked ? "" : "pending";
   renderMedicationReviewMode();
 }
 
@@ -4796,15 +4797,28 @@ function medicationReviewProvider() {
   return "";
 }
 
+/**
+ * A configured model that is waiting on this session's consent is a different
+ * state from no model at all, and the panel has to say which one it is.
+ */
+function medicationReviewBlockReason() {
+  if (medicationReviewProvider()) return "";
+  return medicationReviewCapability.frontier ? "consent" : "unconfigured";
+}
+
 function renderMedicationReviewMode(review = null) {
   if (review && review.generatedBy !== "rule") {
     refs.medicationReviewMode.textContent = `AI 검토 · ${review.model || review.generatedBy}`;
     return;
   }
   const provider = medicationReviewProvider();
-  refs.medicationReviewMode.textContent = provider
-    ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : "프론티어 모델"}`
-    : "규칙 기반";
+  if (provider) {
+    refs.medicationReviewMode.textContent = `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : "프론티어 모델"}`;
+    return;
+  }
+  refs.medicationReviewMode.textContent = medicationReviewBlockReason() === "consent"
+    ? "규칙 기반 · 전송 동의 필요"
+    : "규칙 기반 · 모델 미설정";
 }
 
 function catalogDosingDraft(medication) {
@@ -4960,11 +4974,14 @@ function renderMedicationReviewPipeline(review) {
   reviewProcessPinned = false;
   setReviewProcessOpen(false);
   const provider = medicationReviewProvider();
+  const blocked = medicationReviewBlockReason();
   const cloudLabel = provider === "frontier"
-    ? "클라우드 LLM 규칙 재검토 · 프론티어 모델"
+    ? `클라우드 LLM 규칙 재검토 · ${medicationReviewCapability.model || "프론티어 모델"}`
     : provider === "local"
       ? "LLM 규칙 재검토 · 이 기기의 로컬 모델"
-      : "클라우드 LLM 규칙 재검토 · 모델 미설정";
+      : blocked === "consent"
+        ? "클라우드 LLM 규칙 재검토 · 전송 동의 필요"
+        : "클라우드 LLM 규칙 재검토 · 모델 미설정";
   const steps = [
     ["1", "이 브라우저에서 규칙 대조", "선택 환자의 확정 차트와 등록된 급여기준을 항목별로 맞춥니다."],
     ["2", "대조 결과 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
@@ -4996,7 +5013,9 @@ function renderMedicationReviewPipeline(review) {
     refs.medicationReviewPipeline.append(element(
       "p",
       "rx-review__boundary",
-      "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
+      blocked === "consent"
+        ? "모델은 연결되어 있지만 이번 세션 전송 동의가 없어 2~3단계를 실행하지 않았습니다. 위 검색창 아래 동의 항목을 선택하면 클라우드 검토를 사용합니다."
+        : "지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.",
     ));
   }
 }
@@ -5228,7 +5247,10 @@ function closePrescriptionDialog() {
 
 refs.openPrescriptionDialog.addEventListener("click", openPrescriptionDialog);
 refs.closePrescriptionDialog.addEventListener("click", closePrescriptionDialog);
-refs.medicationFrontierConsent.addEventListener("change", () => renderMedicationReviewMode());
+refs.medicationFrontierConsent.addEventListener("change", () => {
+  refs.rxConsentField.dataset.state = refs.medicationFrontierConsent.checked ? "" : "pending";
+  renderMedicationReviewMode();
+});
 
 refs.medicationSearchForm.addEventListener("submit", (event) => {
   event.preventDefault();

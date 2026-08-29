@@ -69,10 +69,13 @@ test("로컬 개발 서버는 출처·JSON·크기·오류 상태 계약을 지�
 
     const patientStatus = await fetch(`${baseUrl}/api/patient-question-assistant/status`);
     assert.equal(patientStatus.status, 200);
-    assert.deepEqual(await patientStatus.json(), {
-      local: { configured: false, model: "" },
-      frontier: { configured: false, model: "gpt-5.6-sol", reason: "API 키가 설정되지 않았습니다." },
-    });
+    const patientStatusBody = await patientStatus.json();
+    assert.deepEqual(patientStatusBody.local, { configured: false, model: "" });
+    assert.equal(patientStatusBody.frontier.configured, false);
+    assert.equal(patientStatusBody.frontier.model, "gpt-5.6-sol");
+    assert.equal(patientStatusBody.frontier.reason, "API 키가 설정되지 않았습니다.");
+    assert.equal(patientStatusBody.frontier.detected.OPENROUTER_API_KEY, false);
+    assert.equal(Object.values(patientStatusBody.frontier.detected).every((value) => typeof value === "boolean"), true);
 
     const forbidden = await post(baseUrl, "{}", { "content-type": "application/json", origin: "https://evil.example" });
     assert.equal(forbidden.status, 403);

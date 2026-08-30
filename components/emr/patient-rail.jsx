@@ -151,6 +151,7 @@ export function PatientRail({
       {selectedPatient ? (
         <PatientSummaryCard patient={selectedPatient} demo={demo} updatedAt={updatedAt} onEditPatient={onEditPatient} />
       ) : null}
+      <div id="visitContextSlot" className="rail-visit-slot" />
       <div className="rail-heading">
         <div>
           <p className="rail-eyebrow">TODAY&apos;S WORKLIST</p>

@@ -10281,3 +10281,59 @@ model-viewer::part(default-progress-mask) {
 .entry-grid .workflow-disclosure__summary .source-badge {
   display: none;
 }
+
+
+/* Entry rows wrap uniformly: title line, then badges/chips on their own line. */
+.encounter-entry-row__heading {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.encounter-entry-row__heading > b {
+  flex: 0 0 100%;
+}
+
+/* Visit context docks in the LEFT rail via portal. */
+.rail-visit-slot {
+  margin-bottom: var(--space-3);
+}
+
+.rail-visit-slot:empty {
+  display: none;
+}
+
+.rail-visit-slot .encounter-meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rail-visit-slot .encounter-details input {
+  font-size: 0.78rem;
+}
+
+.rail-visit-slot .workflow-disclosure__body {
+  padding: var(--space-2) var(--space-3);
+}
+
+.rail-visit-slot .field-echo {
+  white-space: nowrap;
+}
+
+/* 주호소 spans the SOAP grid. */
+.soap-field--full {
+  grid-column: 1 / -1;
+}
+
+
+/* Rail visit card: no room for the CLINICIAN ENTRY badge; title stays on one line. */
+.rail-visit-slot .workflow-disclosure__title {
+  white-space: nowrap;
+}
+
+.rail-visit-slot .source-badge {
+  display: none;
+}
+
+.rail-visit-slot .workflow-disclosure__summary {
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}

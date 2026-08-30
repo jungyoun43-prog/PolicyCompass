@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   cancelEncounter,
@@ -139,6 +140,8 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   const [openDisclosures, setOpenDisclosures] = useState(() => new Map());
   const [railTab, setRailTab] = useState("notes");
   const [trendRowId, setTrendRowId] = useState("");
+  const [visitSlot, setVisitSlot] = useState(null);
+  useEffect(() => { setVisitSlot(document.getElementById("visitContextSlot")); }, []);
   const [activeDialog, setActiveDialog] = useState("");
   const dialogsDirtyRef = useRef(() => false);
   const formRef = useRef(form);
@@ -415,6 +418,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             </summary>
             <div className="workflow-disclosure__body">
               <div className="soap-grid">
+                <label className="soap-field soap-field--full">주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows={2} maxLength={2000} placeholder="환자의 표현과 증상 시작 시점을 기록하세요." disabled={!editable} value={form.chiefComplaint} onChange={set("chiefComplaint")} /></label>
                 <label className="soap-field" data-soap="subjective"><span><b>S</b> Subjective · 주관적 소견</span><textarea id="soapSubjective" name="soapSubjective" rows={4} maxLength={8000} placeholder="환자가 말한 그대로 · 주호소, 증상 발생 시점과 경과, 악화·완화 요인" disabled={!editable} value={form.subjective} onChange={set("subjective")} /></label>
                 <label className="soap-field" data-soap="objective"><span><b>O</b> Objective · 객관적 소견</span><textarea id="soapObjective" name="soapObjective" rows={4} maxLength={8000} placeholder="측정한 수치 · 활력징후, 신체검진 소견, 검사·영상 결과값" disabled={!editable} value={form.objective} onChange={set("objective")} /></label>
                 <label className="soap-field" data-soap="assessment"><span><b>A</b> Assessment · 평가</span><textarea id="soapAssessment" name="soapAssessment" rows={4} maxLength={8000} placeholder="추정 진단과 상병코드 · 감별진단과 그렇게 본 근거" disabled={!editable} value={form.assessment} onChange={set("assessment")} /></label>
@@ -575,7 +579,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         </section>
       </div>
 
-      <aside className="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
+      {visitSlot ? createPortal(<>
           <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
             <summary className="workflow-disclosure__summary">
               <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>
@@ -590,10 +594,12 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
                   <label>담당 의료진<input id="encounterClinician" name="clinician" maxLength={80} placeholder="예: 김의사" value={form.clinician} onChange={set("clinician")} /></label>
                   <label>진료실<input id="encounterRoom" name="room" maxLength={40} placeholder="예: 1진료실" value={form.room} onChange={set("room")} /></label>
                 </div>
-                <label>주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows={2} maxLength={2000} placeholder="환자의 표현과 증상 시작 시점을 기록하세요." value={form.chiefComplaint} onChange={set("chiefComplaint")} /></label>
               </fieldset>
             </div>
           </details>
+      </>, visitSlot) : null}
+
+      <aside className="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
         <section className="clinical-card context-card context-card--stream" aria-labelledby="patientStreamTitle">
           <div className="card-heading">
             <div><p className="rail-eyebrow">PATIENT STREAM</p><h3 id="patientStreamTitle">환자 기록</h3></div>

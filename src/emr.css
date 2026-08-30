@@ -10064,3 +10064,32 @@ model-viewer::part(default-progress-mask) {
 .lab-trend li[data-flag="H"] em { color: var(--urgent); }
 .lab-trend li[data-flag="L"] em { color: var(--data-cyan); }
 .lab-trend em { font-style: normal; font-weight: 800; }
+
+
+/* SOAP text keeps its numbered line breaks in the stream. */
+.stream-note__soap {
+  white-space: pre-line;
+}
+
+/* --- Zoning: white worksheets in the center, tinted context rails ----------- */
+
+.clinical-card {
+  background: var(--surface-raised);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.patient-rail {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--line));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-soft));
+}
+
+.encounter-context-rail {
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-soft));
+  padding: var(--space-2);
+}
+
+.encounter-context-rail > .clinical-card {
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+}

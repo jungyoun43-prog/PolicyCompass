@@ -315,6 +315,7 @@ export function addEncounterPrescription(stateInput, patientId, encounterId, inp
     status: "active",
     intent: "order",
     prescription,
+    claimReviewVerdict: ["circle", "triangle", "cross"].includes(input.claimReviewVerdict) ? input.claimReviewVerdict : undefined,
     note: prescription.instructions,
   }, "prescription.added", now);
 }

@@ -285,6 +285,9 @@ export function normalizePatientEvent(input = {}) {
     if (observedAt) event.observedAt = observedAt;
   } else if (type === "medication") {
     event.prescription = normalizePrescription(input.prescription);
+    if (["circle", "triangle", "cross"].includes(input.claimReviewVerdict)) {
+      event.claimReviewVerdict = input.claimReviewVerdict;
+    }
   } else if (type === "service-request") {
     event.status = ["active", "completed", "cancelled"].includes(input.status) ? input.status : "active";
     event.intent = ORDER_INTENTS.has(input.intent) ? input.intent : "order";
@@ -1493,13 +1496,51 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         verificationStatus: "confirmed",
         diagnosisRole: "primary",
       }),
+      demoEvent("kim-visit-dx2", "condition", "E11", "제2형 당뇨병", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        diagnosisRole: "secondary",
+      }),
+      demoEvent("kim-visit-dx3", "condition", "E78.5", "이상지질혈증", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "provisional",
+        certainty: "provisional",
+        diagnosisRole: "secondary",
+      }),
       demoEvent("kim-visit-med", "medication", "MED-ARB", "예시 혈압약", asOf, {
         recordStatus: "draft",
         encounterId: "kim-visit-today",
         system: "urn:policycompass:demo:drug",
         status: "active",
         intent: "order",
+        claimReviewVerdict: "circle",
         prescription: { dose: 1, doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 30, quantity: 30, instructions: "아침 식후" },
+      }),
+      demoEvent("kim-visit-med2", "medication", "MED-METFORMIN", "메트포르민염산염서방정 500mg", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: "urn:policycompass:demo:drug",
+        status: "active",
+        intent: "order",
+        claimReviewVerdict: "circle",
+        prescription: { dose: 1, doseUnit: "정", route: "경구", frequency: "1일 2회", durationDays: 28, quantity: 56, instructions: "식사 직후 복용" },
+      }),
+      demoEvent("kim-visit-med3", "medication", "MED-AMOXCLAV", "아목시실린·클라불란산정 625mg", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: "urn:policycompass:demo:drug",
+        status: "active",
+        intent: "order",
+        claimReviewVerdict: "cross",
+        prescription: { dose: 1, doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 7, quantity: 21, instructions: "식후 복용" },
       }),
       demoEvent("kim-visit-order", "service-request", "DEMO-A1C-FOLLOWUP", "당화혈색소 추적검사", asOf, {
         recordStatus: "draft",
@@ -1508,6 +1549,22 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         status: "active",
         intent: "order",
         order: { kind: "laboratory", priority: "routine", instructions: "다음 내원 전 시행" },
+      }),
+      demoEvent("kim-visit-order2", "service-request", "DEMO-LIPID-PANEL", "공복 지질 검사", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: "urn:policycompass:demo:service",
+        status: "active",
+        intent: "order",
+        order: { kind: "laboratory", priority: "routine", instructions: "8시간 공복 후 시행" },
+      }),
+      demoEvent("kim-visit-order3", "service-request", "DEMO-CHEST-XRAY", "흉부 X선 촬영", asOf, {
+        recordStatus: "draft",
+        encounterId: "kim-visit-today",
+        system: "urn:policycompass:demo:service",
+        status: "active",
+        intent: "order",
+        order: { kind: "imaging", priority: "routine", instructions: "폐렴 병력 추적" },
       }),
       demoEvent("kim-encounter", "encounter", "AMB", "내분비내과 외래", dateBefore(asOf, 4), {
         chiefComplaint: "당뇨·고혈압 정기 추적",

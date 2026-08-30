@@ -83,6 +83,7 @@ function EncounterEntryList({ id, ariaLabel, entries, emptyLabel, onRemove }) {
             <div className="encounter-entry-row__heading">
               <b>{entry.title}</b>
               {entry.badge ? <span className="event-type-badge">{entry.badge}</span> : null}
+              {entry.verdict ? <span className="rx-verdict-chip" data-tone={entry.verdict === "cross" ? "red" : entry.verdict === "triangle" ? "amber" : "green"}>{entry.verdict === "cross" ? "✕ 삭감 위험 높음" : entry.verdict === "triangle" ? "△ 추가 확인" : "○ 위험 낮음"}</span> : null}
             </div>
             <small>{entry.meta}</small>
             {entry.detail ? <p>{entry.detail}</p> : null}
@@ -451,6 +452,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
                 meta: displayCoding(medication) || "처방 항목",
                 detail: [`1회 ${rx.dose ?? "—"}${rx.doseUnit || ""}`, rx.route, rx.frequency, `${rx.durationDays ?? "—"}일`, `총 ${rx.quantity ?? "—"}`, rx.instructions].filter(Boolean).join(" · "),
                 badge: medication.recordStatus === "final" ? "확정 처방" : "처방 초안",
+                verdict: medication.claimReviewVerdict || "",
                 editable,
               };
             })} />

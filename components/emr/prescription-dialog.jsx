@@ -284,6 +284,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         durationDays: form.durationDays,
         quantity: form.quantity,
         instructions: form.instructions,
+        claimReviewVerdict: review && review.medicationId === selectedMedicationId ? review.verdict : undefined,
       })), "처방 초안을 추가했습니다.");
       setForm(EMPTY_RX_FORM);
       setSelectedMedicationId("");

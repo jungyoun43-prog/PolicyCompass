@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { displayTimestamp, patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
 import { confirmedActiveConditions, finalizedPatient } from "../../lib/emr/selectors.js";
 
@@ -27,7 +29,7 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
               patient.bloodType && patient.bloodType !== "unknown" ? `${patient.bloodType}형` : "",
             ].filter(Boolean).join(" · ")}</span>
           </div>
-          <button className="clinical-button rail-edit-button" id="editPatient" type="button" aria-label="환자 정보 편집" onClick={onEditPatient}>편집</button>
+          <Button className="rail-edit-button" id="editPatient" type="button" aria-label="환자 정보 편집" onClick={onEditPatient}>편집</Button>
         </div>
         <div className="patient-condition-summary" aria-label="확정 활성 질환">
           <span className="patient-condition-summary__label">현재 질환</span>

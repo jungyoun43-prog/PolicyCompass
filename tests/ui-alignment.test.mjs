@@ -53,8 +53,8 @@ test("EMR 모바일은 서명 전에 급여 점검을 보여 주고 스크롤 �
   const mobileClaimIndex = html.indexOf('class="clinical-card encounter-mobile-claim"');
   const saveBarIndex = html.indexOf('class="encounter-save-bar"');
   assert.ok(mobileClaimIndex > 0 && mobileClaimIndex < saveBarIndex);
-  assert.match(html, /id="completeEncounter"[^>]*clinical-button--primary|clinical-button--primary" id="completeEncounter"/);
-  assert.match(html, /clinical-button--confirm" id="signEncounter"/);
+  assert.match(html, /<Button variant="primary" id="completeEncounter"/);
+  assert.match(html, /<Button variant="confirm" id="signEncounter"/);
   assert.match(css, /\.text-action\s*\{[\s\S]*?min-height:\s*44px/);
   assert.match(css, /\.patient-list\s*\{[\s\S]*?scroll-snap-type:\s*x proximity/);
   assert.match(css, /\.workspace-tabs\[data-scroll-position="middle"\]/);

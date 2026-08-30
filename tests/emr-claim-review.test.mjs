@@ -55,7 +55,8 @@ test("급여 카드는 판단 요약을 먼저 보이고 선택하면 근거와 
   assert.match(claimsTab, /카드를 선택하면 오른쪽 근거 패널에서 적용 규칙·EMR 기록·시간 흐름과 완료 조건을 함께 볼 수 있습니다|근거 패널/);
   assert.match(workbench, /aria-expanded/);
   assert.match(workbench, /aria-haspopup="dialog"/);
-  assert.match(workbench, /<dialog class="claim-card__details" open role="dialog" aria-modal="false" aria-labelledby="claimDetailTitle">/);
+  assert.match(workbench, /DialogPrimitive\.Root open modal=\{false\}/);
+  assert.match(workbench, /class="claim-card__details" data-claim-detail-open aria-labelledby="claimDetailTitle"/);
   assert.match(workbench, /기간·횟수 미집계/);
   assert.match(workbench, /집계 구간 내" : "집계 구간 밖/);
   assert.match(workbench, /시간·횟수 계산/);

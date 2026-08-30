@@ -1,5 +1,7 @@
 "use client";
 
+import { Tabs as TabsPrimitive } from "radix-ui";
+
 import {
   evaluateDiseaseAssessment,
   getDiseaseAssessmentOptions,
@@ -201,20 +203,6 @@ export function DiseaseAssessmentCard({ state, patient, selectedDiseaseId, onSel
   const qualityRule = activeId === "copd" ? HIRA_COPD_2026_RULESET : HIRA_PNEUMONIA_2026_RULESET;
   const diagnosticRule = activeId === "copd" ? GOLD_COPD_2026_RULESET : KDCA_PNEUMONIA_2026_GUIDELINE;
 
-  const onTabKeyDown = (event) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    const index = options.findIndex(({ id }) => id === activeId);
-    const nextIndex = event.key === "Home" ? 0
-      : event.key === "End" ? options.length - 1
-        : (index + (event.key === "ArrowRight" ? 1 : options.length - 1)) % options.length;
-    const next = options[nextIndex];
-    if (next) {
-      onSelectDisease(next.id);
-      requestAnimationFrame(() => document.querySelector(`[data-disease-assessment-id="${next.id}"]`)?.focus());
-    }
-  };
-
   return (
     <section className="clinical-card claim-overview-card disease-assessment-card" aria-labelledby="diseaseAssessmentTitle">
       <div className="card-heading">
@@ -227,16 +215,16 @@ export function DiseaseAssessmentCard({ state, patient, selectedDiseaseId, onSel
       </aside>
       <p className="claim-overview-card__intro">질환을 선택해 평가대상 여부와 지표별 충족 예상만 먼저 보고, 산출 기간과 근거는 필요할 때 펼쳐 보세요.</p>
 
-      <div className="disease-assessment-tabs" id="diseaseAssessmentTabs" role="tablist" aria-label="질환 평가 선택" onKeyDown={onTabKeyDown}>
-        {options.length === 0 ? <span className="claim-overview-empty">{emptyMessage || "연결된 질환을 확인하는 중입니다."}</span> : options.map((option) => (
-          <button className="disease-assessment-tab" type="button" role="tab" key={option.id}
-            data-disease-assessment-id={option.id}
-            aria-selected={option.id === activeId} aria-controls="diseaseAssessmentPanel" tabIndex={option.id === activeId ? 0 : -1}
-            onClick={() => onSelectDisease(option.id)}>
-            <b>{option.label}</b><small>{option.shortLabel}</small>
-          </button>
-        ))}
-      </div>
+      <TabsPrimitive.Root value={activeId} onValueChange={onSelectDisease}>
+        <TabsPrimitive.List className="disease-assessment-tabs" id="diseaseAssessmentTabs" aria-label="질환 평가 선택" loop>
+          {options.length === 0 ? <span className="claim-overview-empty">{emptyMessage || "연결된 질환을 확인하는 중입니다."}</span> : options.map((option) => (
+            <TabsPrimitive.Trigger className="disease-assessment-tab" key={option.id} value={option.id}
+              data-disease-assessment-id={option.id} aria-controls="diseaseAssessmentPanel">
+              <b>{option.label}</b><small>{option.shortLabel}</small>
+            </TabsPrimitive.Trigger>
+          ))}
+        </TabsPrimitive.List>
+      </TabsPrimitive.Root>
 
       <div className="disease-assessment-panel" id="diseaseAssessmentPanel" role="tabpanel" aria-labelledby="diseaseAssessmentTitle" tabIndex={0}>
         <div className="disease-program-heading">

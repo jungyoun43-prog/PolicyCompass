@@ -67,7 +67,7 @@ test("EMR 헤더는 환자 화면 탭과 환자 추가 전역 작업을 중복�
 
 test("EMR 환자 화면은 한 개의 탭 목록과 일관된 명칭을 사용한다", async () => {
   const source = await componentMarkup("components/emr/workspace-header.jsx");
-  const tablists = [...source.matchAll(/role="tablist"/g)];
+  const tablists = [...source.matchAll(/<TabsPrimitive\.List/g)];
 
   assert.equal(tablists.length, 1);
   const tabRows = [...source.matchAll(/^\s*\["([a-z]+)", "([^"]+)"\],\s*$/gm)].map(([, , label]) => label);

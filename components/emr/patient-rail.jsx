@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useState } from "react";
 
 import { centerSelectedPatientCard, useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
@@ -212,8 +214,8 @@ export function PatientRail({
           <label>환자 메모<textarea id="patientMemo" name="memo" rows={3} maxLength={2000} placeholder="접수·의사소통 참고사항. 주민등록번호는 입력하지 마세요." value={form.memo} onChange={set("memo")} /></label>
           <p className="form-message" id="patientFormMessage" role="alert">{message}</p>
           <div className="compact-actions">
-            <button className="clinical-button clinical-button--primary" type="submit">환자 저장</button>
-            <button className="clinical-button" id="cancelPatientEdit" type="button" hidden={mode === "create"} onClick={resetForm}>편집 취소</button>
+            <Button variant="primary" type="submit">환자 저장</Button>
+            <Button id="cancelPatientEdit" type="button" hidden={mode === "create"} onClick={resetForm}>편집 취소</Button>
           </div>
         </form>
       </details>
@@ -237,7 +239,7 @@ export function PatientRail({
       <div className="rail-empty" id="patientListEmpty" hidden={patients.length > 0}>
         <b>등록된 환자 없음</b>
         <p>새 환자를 등록하거나 예시 환자를 불러오세요.</p>
-        <button className="clinical-button clinical-button--demo" id="loadDemo" type="button" onClick={onLoadDemo}>예시 환자 불러오기</button>
+        <Button variant="demo" id="loadDemo" type="button" onClick={onLoadDemo}>예시 환자 불러오기</Button>
       </div>
     </aside>
   );

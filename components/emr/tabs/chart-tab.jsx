@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useState } from "react";
 
 import {
@@ -94,7 +96,7 @@ export function ChartTab({ state, patient, store, dirtyGuardsRef }) {
             <label>기록 메모<textarea id="eventNote" rows={4} maxLength={2000} placeholder="의료진이 확인한 맥락과 근거" value={form.note} onChange={set("note")} /></label>
             <p className="entry-boundary">먼저 검토 대기로 저장됩니다. 타임라인의 “검토·확정”에서 코드·값·날짜·출처를 다시 대조해야 확정 차트와 환자용 정제 기록에 반영됩니다.</p>
             <p className="form-message" id="eventFormMessage" role="alert">{message}</p>
-            <button className="clinical-button clinical-button--primary" type="submit">검토 대기 기록 추가</button>
+            <Button variant="primary" type="submit">검토 대기 기록 추가</Button>
           </form>
         </div>
       </details>

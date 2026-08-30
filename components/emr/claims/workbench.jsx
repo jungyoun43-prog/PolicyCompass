@@ -1,5 +1,9 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
+import { Dialog as DialogPrimitive } from "radix-ui";
+
 import { useState } from "react";
 
 import { CLAIM_LANE_LABELS, CLAIM_LANE_ORDER } from "../../../src/claim-rules.js";
@@ -99,14 +103,16 @@ function ReviewDetail({ state, evaluation, review, stage, requestedStage, store,
   };
 
   return (
-    <dialog className="claim-card__details" open role="dialog" aria-modal="false" aria-labelledby="claimDetailTitle">
+    <DialogPrimitive.Root open modal={false} onOpenChange={(next) => { if (!next) onClose(); }}>
+    <DialogPrimitive.Content asChild onInteractOutside={(event) => event.preventDefault()} aria-describedby={undefined}>
+    <section className="claim-card__details" data-claim-detail-open aria-labelledby="claimDetailTitle">
       <header className="claim-card__details-header">
         <div>
           <span className="claim-card__details-eyebrow">CLAIM EVIDENCE</span>
-          <h5 id="claimDetailTitle">{evaluation.title}</h5>
+          <DialogPrimitive.Title asChild><h5 id="claimDetailTitle">{evaluation.title}</h5></DialogPrimitive.Title>
           <span className="claim-computed-status" data-status={evaluation.status}>자동 판정 · {CLAIM_LANE_LABELS[evaluation.status]}</span>
         </div>
-        <button className="clinical-button claim-card__details-close" type="button" aria-label={`${evaluation.title} 근거·세부정보 닫기`} onClick={onClose}>닫기</button>
+        <Button className="claim-card__details-close" type="button" aria-label={`${evaluation.title} 근거·세부정보 닫기`} onClick={onClose}>닫기</Button>
       </header>
       <div className="claim-card__details-content">
         <section className="claim-xai-section claim-xai-section--judgment" data-claim-detail-section="judgment">
@@ -209,7 +215,7 @@ function ReviewDetail({ state, evaluation, review, stage, requestedStage, store,
                 {[["", "최종 판정에서 선택"], ["approved", "승인"], ["hold", "보류"], ["exception", "예외 인정"]].map(([value, label]) => <option value={value} key={value}>{label}</option>)}
               </select>
             </label>
-            <button className="clinical-button clinical-button--primary claim-review-apply" type="button" onClick={apply}>검토 기록 저장</button>
+            <Button variant="primary" className="claim-review-apply" type="button" onClick={apply}>검토 기록 저장</Button>
           </div>
         </section>
 
@@ -230,7 +236,9 @@ function ReviewDetail({ state, evaluation, review, stage, requestedStage, store,
 
         <p className="claim-detail-boundary">자동 규칙 판정 → 사람 검토 → 내부 최종 의견의 순서로 기록합니다. 실제 인정·조정·삭감은 보험자 또는 심사기관 결과 영역에서만 표시합니다.</p>
       </div>
-    </dialog>
+    </section>
+    </DialogPrimitive.Content>
+    </DialogPrimitive.Root>
   );
 }
 

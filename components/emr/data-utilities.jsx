@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useRef, useState } from "react";
 
 import {
@@ -209,9 +211,9 @@ export function DataUtilities({ state, patient, store, setFhirReport, setViewedE
         <div className="emr-utility-actions">
           <input className="visually-hidden" id="fhirImport" type="file" accept=".json,application/json,application/fhir+json" ref={fhirInputRef} onChange={onFhirImport} />
           <label className="clinical-button" htmlFor="fhirImport">FHIR 가져오기</label>
-          <button className="clinical-button clinical-button--patient-transfer" id="syncPersonalRecord" type="button" aria-describedby="patientTransferGuidance" onClick={onExportTransfer}>환자 전달 파일 내보내기</button>
-          <button className="clinical-button" id="exportFhir" type="button" onClick={onExportFhir}>의료기관용 FHIR</button>
-          <button className="clinical-button" id="exportEmr" type="button" onClick={exportBackup}>백업 내보내기</button>
+          <Button className="clinical-button--patient-transfer" id="syncPersonalRecord" type="button" aria-describedby="patientTransferGuidance" onClick={onExportTransfer}>환자 전달 파일 내보내기</Button>
+          <Button id="exportFhir" type="button" onClick={onExportFhir}>의료기관용 FHIR</Button>
+          <Button id="exportEmr" type="button" onClick={exportBackup}>백업 내보내기</Button>
           <input className="visually-hidden" id="importEmr" type="file" accept=".json,application/json" ref={backupInputRef} onChange={onBackupRestore} />
           <label className="clinical-button" htmlFor="importEmr">백업 복원</label>
         </div>

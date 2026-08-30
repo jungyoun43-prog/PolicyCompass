@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 /** Static chrome around the workspace: header, command bar, trust strip, footer. */
 export function ClinicalHeader() {
   return (
@@ -36,7 +38,7 @@ export function CommandBar({ demo, onExitDemo, utilities }) {
         </div>
       </div>
       <div className="command-actions" aria-label="로컬 데이터 작업">
-        <button className="clinical-button" id="exitDemo" type="button" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</button>
+        <Button id="exitDemo" type="button" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</Button>
         {utilities}
       </div>
     </section>

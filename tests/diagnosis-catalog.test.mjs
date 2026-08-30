@@ -66,7 +66,7 @@ test("진단 입력은 팝업에서 검색·코드 선택·주상병 구분을 �
   const searchBeforeCodes = dialogs.indexOf('id="diagnosisSearchInput"') < dialogs.indexOf('id="diagnosisCodeOptions"');
 
   // Then
-  assert.match(dialogs, /<button[^>]*id="openDiagnosisDialog"[^>]*>진단 추가<\/button>/);
+  assert.match(dialogs, /<Button[^>]*id="openDiagnosisDialog"[^>]*>진단 추가<\/Button>/);
   assert.match(dialogs, /id="diagnosisDialog"/);
   assert.ok(dialogs.includes('id="diagnosisForm"'), "진단 입력 폼은 팝업 안에 있다");
   assert.equal(launcherFirst, true);

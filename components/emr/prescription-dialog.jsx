@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { addEncounterPrescription } from "../../src/emr-encounter.js";
@@ -305,7 +307,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   return (
     <>
       <div className="prescription-launcher">
-        <button className="clinical-button clinical-button--primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</button>
+        <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</Button>
         <p className="prescription-launcher__hint">약을 검색하고 <b>AI 검토</b>로 이 환자 기록과 등록된 급여기준을 대조한 뒤 이번 진료에 담습니다.</p>
       </div>
       <RxDialog id="prescriptionDialog" open={open} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
@@ -356,11 +358,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     </div>
                     <span className="rx-result__ingredient">{medication.ingredient}</span>
                     <div className="rx-result__actions">
-                      <button className="clinical-button clinical-button--primary" type="button" onClick={() => pickMedication(medication)}>처방 담기</button>
+                      <Button variant="primary" type="button" onClick={() => pickMedication(medication)}>처방 담기</Button>
                       <span className="rx-result__actions-divider"></span>
-                      <button className="clinical-button rx-result__review" type="button" disabled={reviewBusyId === medication.id} onClick={() => runReview(medication.id)}>
+                      <Button className="rx-result__review" type="button" disabled={reviewBusyId === medication.id} onClick={() => runReview(medication.id)}>
                         {reviewBusyId === medication.id ? "검토 중…" : "AI 검토"}
-                      </button>
+                      </Button>
                     </div>
                     <details className="rx-result__details" open={expandedDetails.has(medication.id)} onToggle={(event) => {
                       const isOpen = event.currentTarget.open;
@@ -520,7 +522,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min={1} max={365} inputMode="numeric" placeholder="일" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} /></label>
             <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min={0.01} step={0.01} inputMode="decimal" placeholder="수량" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></label>
             <label className="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxLength={500} rows={3} placeholder="식전·식후, 주의사항 등 의료진 지시" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
-            <button className="clinical-button clinical-button--primary rx-form__submit" type="submit">처방 추가</button>
+            <Button variant="primary" className="rx-form__submit" type="submit">처방 추가</Button>
           </div>
         </form>
       </RxDialog>

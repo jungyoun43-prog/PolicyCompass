@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useState } from "react";
 
 import { addClaimRule, retireClaimRule } from "../../../src/emr-model.js";
@@ -88,7 +90,7 @@ export function RuleManager({ state, store }) {
             <div className="rule-version-actions">
               <label>종료일<input type="date" min={rule.effectiveFrom} value={endDates[rule.id] ?? rule.effectiveTo ?? today()} data-rule-end-date={rule.id}
                 onChange={(event) => setEndDates((current) => ({ ...current, [rule.id]: event.target.value }))} /></label>
-              <button className="clinical-button" type="button" data-retire-rule={rule.id} onClick={() => retire(rule)}>{rule.effectiveTo ? "종료일 수정" : "이 버전 종료"}</button>
+              <Button type="button" data-retire-rule={rule.id} onClick={() => retire(rule)}>{rule.effectiveTo ? "종료일 수정" : "이 버전 종료"}</Button>
             </div>
           </article>
         ))}
@@ -116,7 +118,7 @@ export function RuleManager({ state, store }) {
           <label className="rule-source-url">공식 출처 URL<input id="ruleSourceUrl" type="url" maxLength={500} placeholder="https://..." value={form.sourceUrl} onChange={set("sourceUrl")} /></label>
         </div>
         <p className="form-message" id="ruleFormMessage" role="alert">{message}</p>
-        <button className="clinical-button clinical-button--primary" type="submit">버전형 규칙 저장</button>
+        <Button variant="primary" type="submit">버전형 규칙 저장</Button>
       </form>
     </details>
   );

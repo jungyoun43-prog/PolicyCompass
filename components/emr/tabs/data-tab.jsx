@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { clearEmrState, exportEmrBackup, loadEmrState } from "../../../src/emr-model.js";
 import { AUDIT_LABELS, downloadJson, downloadText, isClearedEmrState } from "../../../lib/emr/files.js";
 import { displayTimestamp, today } from "../../../lib/emr/format.js";
@@ -90,16 +92,16 @@ export function DataTab({ state, store, dirtyGuardsRef }) {
           ))}
         </dl>
         <div className="data-actions">
-          <button className="clinical-button clinical-button--primary" id="exportEmrSecondary" type="button" onClick={exportBackup}>전체 백업 내보내기</button>
-          <button className="clinical-button" id="exportRecoveryRaw" type="button" hidden={!state.recoveryRaw} onClick={() => {
+          <Button variant="primary" id="exportEmrSecondary" type="button" onClick={exportBackup}>전체 백업 내보내기</Button>
+          <Button id="exportRecoveryRaw" type="button" hidden={!state.recoveryRaw} onClick={() => {
             if (!state.recoveryRaw) {
               setStatus("내보낼 손상 저장 원본이 없습니다.");
               return;
             }
             downloadText(state.recoveryRaw, "policycompass-emr-recovery-raw-" + today() + ".json", "application/json;charset=utf-8");
             setStatus("손상 저장 원본을 변경 없이 내보냈습니다.", "success");
-          }}>손상 저장 원본 내보내기</button>
-          <button className="clinical-button clinical-button--danger" id="wipeEmr" type="button" onClick={onWipe}>이 브라우저 기록 모두 삭제</button>
+          }}>손상 저장 원본 내보내기</Button>
+          <Button variant="danger" id="wipeEmr" type="button" onClick={onWipe}>이 브라우저 기록 모두 삭제</Button>
         </div>
       </section>
     </div>

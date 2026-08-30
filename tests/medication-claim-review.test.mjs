@@ -211,7 +211,7 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   const verdictBeforeSources = rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"');
 
   // Then
-  assert.match(rx, /<button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/button>/);
+  assert.match(rx, /<Button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/Button>/);
   assert.match(rx, /id="prescriptionDialog"/);
   assert.match(rx, /inputId="medicationSearchInput"/);
   assert.ok(rx.includes('id="prescriptionForm"'), "처방 입력 폼은 팝업 안에 있다");

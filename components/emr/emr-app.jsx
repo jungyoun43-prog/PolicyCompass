@@ -11,6 +11,8 @@ import {
 import { claimEvaluationsFor, currentEncounterFor } from "../../lib/emr/selectors.js";
 import { useEmrStore } from "./store.js";
 import { ClinicalFooter, ClinicalHeader, CommandBar, SafetyNotes, TrustStrip } from "./chrome.jsx";
+import { Tabs as TabsPrimitive } from "radix-ui";
+
 import { PatientRail } from "./patient-rail.jsx";
 import { WorkspaceHeader } from "./workspace-header.jsx";
 import { DataUtilities } from "./data-utilities.jsx";
@@ -224,34 +226,36 @@ export function EmrApp() {
                 <p>차트·신체 지도·급여 보드를 한 화면에서 확인합니다.</p>
               </div>
             ) : (
+              <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="manual">
               <div id="workspaceContent">
                 <WorkspaceHeader
                   patient={patient}
                   activeTab={activeTab}
                   onSelectTab={selectTab}
                 />
-                <section className="workspace-panel encounter-panel" id="panel-encounter" role="tabpanel" aria-labelledby="tab-encounter" data-panel="encounter" hidden={activeTab !== "encounter"}>
+                <TabsPrimitive.Content asChild forceMount value="encounter"><section className="workspace-panel encounter-panel" id="panel-encounter" data-panel="encounter" hidden={activeTab !== "encounter"}>
                   <EncounterTab {...tabProps} />
-                </section>
-                <section className="workspace-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" data-panel="overview" hidden={activeTab !== "overview"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="overview"><section className="workspace-panel" id="panel-overview" data-panel="overview" hidden={activeTab !== "overview"}>
                   <OverviewTab {...tabProps} />
-                </section>
-                <section className="workspace-panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" data-panel="chart" hidden={activeTab !== "chart"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="chart"><section className="workspace-panel" id="panel-chart" data-panel="chart" hidden={activeTab !== "chart"}>
                   <ChartTab {...tabProps} />
-                </section>
-                <section className="workspace-panel" id="panel-graph" role="tabpanel" aria-labelledby="tab-graph" data-panel="graph" hidden={activeTab !== "graph"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="graph"><section className="workspace-panel" id="panel-graph" data-panel="graph" hidden={activeTab !== "graph"}>
                   <BodyTab {...tabProps} active={activeTab === "graph"} />
-                </section>
-                <section className="workspace-panel" id="panel-claims" role="tabpanel" aria-labelledby="tab-claims" data-panel="claims" hidden={activeTab !== "claims"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="claims"><section className="workspace-panel" id="panel-claims" data-panel="claims" hidden={activeTab !== "claims"}>
                   <ClaimsTab {...tabProps} />
-                </section>
-                <section className="workspace-panel" id="panel-journey" role="tabpanel" aria-labelledby="tab-journey" data-panel="journey" hidden={activeTab !== "journey"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="journey"><section className="workspace-panel" id="panel-journey" data-panel="journey" hidden={activeTab !== "journey"}>
                   <JourneyTab {...tabProps} />
-                </section>
-                <section className="workspace-panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data" data-panel="data" hidden={activeTab !== "data"}>
+                </section></TabsPrimitive.Content>
+                <TabsPrimitive.Content asChild forceMount value="data"><section className="workspace-panel" id="panel-data" data-panel="data" hidden={activeTab !== "data"}>
                   <DataTab {...tabProps} />
-                </section>
+                </section></TabsPrimitive.Content>
               </div>
+              </TabsPrimitive.Root>
             )}
           </section>
         </div>

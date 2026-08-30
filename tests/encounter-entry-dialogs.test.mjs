@@ -101,7 +101,7 @@ test("측정·진단·처방·오더는 모두 팝업에서 입력한다", async
     ["prescriptions", "openPrescriptionDialog", "prescriptionDialog", "prescriptionForm"],
     ["orders", "openOrderDialog", "orderDialog", "orderForm"],
   ]) {
-    assert.match(dialogs, new RegExp(`<button[^>]*id="${launcher}"`), step);
+    assert.match(dialogs, new RegExp(`<Button[^>]*id="${launcher}"`), step);
     assert.match(dialogs, new RegExp(`id="${dialog}"`), step);
     assert.ok(dialogs.includes(`id="${form}"`), `${step} 입력 폼은 팝업 안에 있다`);
     assert.ok(dialogs.indexOf(`id="${launcher}"`) < dialogs.indexOf(`id="${dialog}"`), step);

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -392,14 +394,14 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             </div>
           </div>
           <div className="encounter-quick-actions" aria-label="진료 상태 작업">
-            <button className="clinical-button" id="returnCurrentEncounter" type="button" hidden={!viewedEncounterId} onClick={() => {
+            <Button id="returnCurrentEncounter" type="button" hidden={!viewedEncounterId} onClick={() => {
               if (blockClinicalContextChange()) return;
               setViewedEncounterId("");
-            }}>현재 진료로 돌아가기</button>
-            <button className="clinical-button" id="checkInPatient" type="button" hidden={!unverifiedBackup && !["none", "signed", "legacy", "external"].includes(status)} onClick={onCheckIn}>
+            }}>현재 진료로 돌아가기</Button>
+            <Button id="checkInPatient" type="button" hidden={!unverifiedBackup && !["none", "signed", "legacy", "external"].includes(status)} onClick={onCheckIn}>
               {finalized || unverifiedBackup ? "새 로컬 진료 접수" : "오늘 접수"}
-            </button>
-            <button className="clinical-button clinical-button--primary" id="startEncounter" type="button" hidden={status !== "waiting" || unverifiedBackup} onClick={onStart}>진료 시작</button>
+            </Button>
+            <Button variant="primary" id="startEncounter" type="button" hidden={status !== "waiting" || unverifiedBackup} onClick={onStart}>진료 시작</Button>
           </div>
         </section>
 
@@ -524,10 +526,10 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
                 {[...review.conflicts.map((item) => ({ ...item, kind: "충돌" })), ...review.omissions.map((item) => ({ ...item, kind: "누락" }))].map((finding, index) => (
                   <div className="sign-review__finding" key={index}>
                     <p>{finding.kind} · {finding.message}</p>
-                    <button className="clinical-button" type="button" onClick={async () => {
+                    <Button type="button" onClick={async () => {
                       await onReopen();
                       requestAnimationFrame(() => document.getElementById(finding.target)?.focus());
-                    }}>{finding.action} — 진료 재개</button>
+                    }}>{finding.action} — 진료 재개</Button>
                   </div>
                 ))}
               </section>
@@ -577,7 +579,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           </div>
           <p className="context-guidance">현재 진료 초안을 가상 반영해 기간·횟수·근거 누락을 먼저 확인합니다.</p>
           <div className="context-summary" id="encounterMobileClaimSummary" aria-live="polite"><ClaimMiniSummary evaluations={preflightEvaluations} attention={attention} /></div>
-          <button className="clinical-button context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 보드 열기</button>
+          <Button className="context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 보드 열기</Button>
         </section>
 
         <section className="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
@@ -591,11 +593,11 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
           </div>
           <div className="encounter-save-actions">
-            <button className="clinical-button clinical-button--danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</button>
-            <button className="clinical-button" id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</button>
-            <button className="clinical-button" id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</button>
-            <button className="clinical-button clinical-button--primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</button>
-            <button className="clinical-button clinical-button--primary clinical-button--confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</button>
+            <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
+            <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
+            <Button id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</Button>
+            <Button variant="primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</Button>
+            <Button variant="confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</Button>
           </div>
         </section>
       </div>
@@ -624,10 +626,10 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
                       <header className="stream-note__head">
                         <b>{entry.title}</b>
                         {entry.clinician ? <span>{entry.clinician}</span> : null}
-                        <button className="text-action" type="button" disabled={entry.encounterId === encounter?.id} onClick={() => {
+                        <Button variant="text" type="button" disabled={entry.encounterId === encounter?.id} onClick={() => {
                           if (blockClinicalContextChange()) return;
                           setViewedEncounterId(entry.encounterId);
-                        }}>{entry.encounterId === encounter?.id ? "열림" : "열기"}</button>
+                        }}>{entry.encounterId === encounter?.id ? "열림" : "열기"}</Button>
                       </header>
                       {entry.chiefComplaint ? <p className="stream-note__cc">주호소 · {entry.chiefComplaint}</p> : null}
                       {[["S", entry.soap?.subjective], ["O", entry.soap?.objective], ["A", entry.soap?.assessment], ["P", entry.soap?.plan]]
@@ -698,7 +700,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
               ))
             )}
           </div>
-          <button className="text-action" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</button>
+          <Button variant="text" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</Button>
         </section>
 
       </aside>

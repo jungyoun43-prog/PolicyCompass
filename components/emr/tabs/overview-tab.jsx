@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -298,16 +300,16 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
               </div>
             </section>
           </div>
-          <button className="clinical-button clinical-button--primary" id="runCopilot" type="button" disabled={busy} onClick={runCopilot}>
+          <Button variant="primary" id="runCopilot" type="button" disabled={busy} onClick={runCopilot}>
             {busy ? "로컬 초안 생성 중…" : "근거로 초안 다시 만들기"}
-          </button>
+          </Button>
         </section>
       </div>
 
       <section className="clinical-card next-work-card" aria-labelledby="nextWorkTitle">
         <div className="card-heading">
           <div><p className="rail-eyebrow">NEXT WORK</p><h3 id="nextWorkTitle">놓치면 안 되는 다음 작업</h3></div>
-          <button className="text-action" type="button" onClick={() => selectTab("claims")}>급여 보드 열기</button>
+          <Button variant="text" type="button" onClick={() => selectTab("claims")}>급여 보드 열기</Button>
         </div>
         <div className="next-work-list" id="nextWorkList">
           {nextWork.length === 0 ? <p className="summary-empty">현재 연결 규칙에서 바로 확인할 작업이 없습니다.</p> : nextWork.map((item) => (

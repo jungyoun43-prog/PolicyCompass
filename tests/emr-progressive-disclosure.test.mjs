@@ -19,7 +19,7 @@ test("EMR 안전 맥락과 최종 서명은 점진적 공개 밖에 남는다", 
   for (const marker of ['id="selectedPatientName"', 'id="safetyAlerts"']) {
     assert.ok(summary.indexOf(marker, persistent) > persistent, marker);
   }
-  assert.match(header, /role="tablist"/);
+  assert.match(header, /TabsPrimitive\.List/);
 
   for (const marker of ['class="encounter-save-bar"', 'class="encounter-context-rail"']) {
     const index = encounter.indexOf(marker);
@@ -119,14 +119,12 @@ test("EMR 워크스페이스 탭과 질환 평가 탭은 각각 독립된 키보
     readFile("src/emr.css", "utf8"),
   ]);
 
-  assert.equal((header.match(/role="tablist"/g) ?? []).length, 1);
-  assert.equal((assessment.match(/role="tablist"/g) ?? []).length, 1);
+  assert.equal((header.match(/<TabsPrimitive\.List/g) ?? []).length, 1);
+  assert.equal((assessment.match(/<TabsPrimitive\.List/g) ?? []).length, 1);
   assert.doesNotMatch(header + assessment, /data-tab-target/);
+  // 화살표·Home·End 키보드 모델은 Radix Tabs 프리미티브가 제공한다.
   for (const source of [header, assessment]) {
-    assert.match(source, /ArrowLeft/);
-    assert.match(source, /ArrowRight/);
-    assert.match(source, /"Home"/);
-    assert.match(source, /"End"/);
+    assert.match(source, /TabsPrimitive\.(List|Trigger)/);
   }
   assert.match(css, /\.workspace-tabs button:focus\s*\{[^}]*outline:\s*3px solid var\(--focus-ring\);/s);
 });

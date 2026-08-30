@@ -59,8 +59,7 @@ test("질환 선택은 환자별 관련 프로그램만 렌더하고 전환해�
   assert.match(js, /getCombinedDiseaseClaimProfile/);
   assert.match(js, /selectedDiseaseByPatientId/);
   assert.match(js, /data-disease-assessment-id/);
-  assert.match(js, /ArrowLeft/);
-  assert.match(js, /ArrowRight/);
+  assert.match(js, /TabsPrimitive\.(Root|List|Trigger)/);
   assert.match(js, /왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다/);
   assert.match(css, /\.disease-assessment-tab\s*\{[\s\S]*?min-height:\s*48px/);
 });

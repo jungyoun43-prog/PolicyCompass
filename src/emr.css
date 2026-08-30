@@ -4106,7 +4106,8 @@ body.emr-page {
   color: var(--ink);
 }
 
-.claim-card__details[open] {
+.claim-card__details[open],
+.claim-card__details[data-claim-detail-open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
 }
@@ -10112,4 +10113,15 @@ model-viewer::part(default-progress-mask) {
   margin: 0;
   transform: translate(-50%, -50%);
   outline: none;
+}
+
+
+/* Radix keeps inactive panels mounted (forceMount); hide them by state. */
+.workspace-panel[data-state="inactive"] {
+  display: none;
+}
+
+/* Radix Trigger marks selection with data-state. */
+.workspace-tabs button[data-state="active"] {
+  color: var(--ink);
 }

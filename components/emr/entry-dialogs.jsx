@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -47,7 +49,7 @@ function ResultItem({ heading, category, sub, selected, action, onPick, extra })
       </div>
       <span className="rx-result__ingredient">{sub}</span>
       <div className="rx-result__actions">
-        <button className="clinical-button clinical-button--primary" type="button" onClick={onPick}>{action}</button>
+        <Button variant="primary" type="button" onClick={onPick}>{action}</Button>
       </div>
       {extra}
     </li>
@@ -95,7 +97,7 @@ export function VitalDialog({ patient, encounter, editable, applyMutation, withD
   return (
     <>
       <div className="prescription-launcher">
-        <button className="clinical-button clinical-button--primary" id="openVitalDialog" type="button" aria-haspopup="dialog" disabled={!editable && false} onClick={requestOpen}>측정 추가</button>
+        <Button variant="primary" id="openVitalDialog" type="button" aria-haspopup="dialog" disabled={!editable && false} onClick={requestOpen}>측정 추가</Button>
         <p className="prescription-launcher__hint">측정 항목을 검색해 고르면 LOINC 코드와 단위가 고정되고, 결과값만 입력하면 됩니다.</p>
       </div>
       <RxDialog id="vitalDialog" open={open} onClose={close} eyebrow="MEASUREMENT SEARCH" title="측정 추가" titleId="vitalDialogTitle" context={context}
@@ -117,7 +119,7 @@ export function VitalDialog({ patient, encounter, editable, applyMutation, withD
             <label>결과<input id="vitalValue" name="value" maxLength={40} required inputMode={preset?.kind === "blood-pressure" ? "text" : "decimal"} placeholder={preset?.placeholder} aria-label={`${preset?.label} 결과`} value={value} onChange={(event) => setValue(event.target.value)} /></label>
             <label>단위<input id="vitalUnit" name="unit" readOnly tabIndex={-1} value={preset?.unit ?? ""} onChange={() => {}} /></label>
             <label className="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxLength={500} placeholder="예: 좌측 상완, 공복" value={note} onChange={(event) => setNote(event.target.value)} /></label>
-            <button className="clinical-button clinical-button--primary rx-form__submit" type="submit">측정 추가</button>
+            <Button variant="primary" className="rx-form__submit" type="submit">측정 추가</Button>
           </div>
         </form>
       </RxDialog>
@@ -173,7 +175,7 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
   return (
     <>
       <div className="prescription-launcher">
-        <button className="clinical-button clinical-button--primary" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</button>
+        <Button variant="primary" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>
         <p className="prescription-launcher__hint">진단명을 검색해 상병을 고르고, 진단 코드·코드 시스템·주상병 여부를 확인해 이번 진료에 담습니다.</p>
       </div>
       <RxDialog id="diagnosisDialog" open={open} onClose={close} eyebrow="DIAGNOSIS SEARCH" title="진단 추가" titleId="dxDialogTitle" context={context}
@@ -215,7 +217,7 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
             <label className="clinical-system-field">코드 시스템<select id="diagnosisSystem" name="system" value={form.system} onChange={(event) => setForm((current) => ({ ...current, system: event.target.value }))}><option value="urn:kr:kcd">KCD-8 · 한국표준질병사인분류</option><option value="http://hl7.org/fhir/sid/icd-10">ICD-10 · WHO 국제질병분류</option></select></label>
             <label className="clinical-label-field">진단명<input id="diagnosisLabel" name="label" maxLength={160} placeholder="예: 본태성 고혈압" required value={form.label} onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))} /></label>
             <label>확실성<select id="diagnosisCertainty" name="certainty" value={form.certainty} onChange={(event) => setForm((current) => ({ ...current, certainty: event.target.value }))}><option value="confirmed">확정</option><option value="provisional">의증·잠정</option></select></label>
-            <button className="clinical-button clinical-button--primary rx-form__submit" type="submit">진단 추가</button>
+            <Button variant="primary" className="rx-form__submit" type="submit">진단 추가</Button>
           </div>
         </form>
       </RxDialog>
@@ -264,7 +266,7 @@ export function OrderDialog({ patient, encounter, editable, applyMutation, withD
   return (
     <>
       <div className="prescription-launcher">
-        <button className="clinical-button clinical-button--primary" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</button>
+        <Button variant="primary" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>
         <p className="prescription-launcher__hint">오더명을 검색해 고르면 유형과 코드가 채워집니다. 우선순위와 요청사항을 확인해 이번 진료에 담습니다.</p>
       </div>
       <RxDialog id="orderDialog" open={open} onClose={close} eyebrow="ORDER SEARCH" title="오더 추가" titleId="orderDialogTitle" context={context}
@@ -290,7 +292,7 @@ export function OrderDialog({ patient, encounter, editable, applyMutation, withD
             <label className="clinical-label-field">오더명<input id="orderLabel" name="label" maxLength={160} required placeholder="예: 흉부 X-ray" value={form.label} onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))} /></label>
             <label>우선순위<select id="orderPriority" name="priority" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}><option value="routine">일반</option><option value="urgent">긴급</option><option value="asap">즉시</option></select></label>
             <label className="clinical-instructions-field">요청사항<input id="orderInstructions" name="instructions" maxLength={500} placeholder="검사 목적·부위·주의사항" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
-            <button className="clinical-button clinical-button--primary rx-form__submit" type="submit">오더 추가</button>
+            <Button variant="primary" className="rx-form__submit" type="submit">오더 추가</Button>
           </div>
         </form>
       </RxDialog>

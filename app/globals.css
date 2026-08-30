@@ -1,0 +1,31 @@
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* shadcn semantic colors mapped straight onto PolicyCompass tokens.
+   Only --color-* names are defined so shadcn's conventional variable names
+   (--muted, --accent…) never collide with the product's own tokens. */
+@theme inline {
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface-raised);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface-raised);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-inverse);
+  --color-secondary: var(--surface-soft);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-soft);
+  --color-muted-foreground: #5d675e;
+  --color-accent: var(--accent-wash);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--urgent);
+  --color-destructive-foreground: var(--on-inverse);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--focus-ring);
+  --radius-lg: var(--radius-control);
+  --radius-md: calc(var(--radius-control) - 2px);
+  --radius-sm: calc(var(--radius-control) - 4px);
+}

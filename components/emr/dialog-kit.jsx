@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { Dialog as DialogPrimitive } from "radix-ui";
 
+import { Button } from "@/components/ui/button";
 import { displayDate, INSURANCE_LABELS, patientAgeLabel } from "../../lib/emr/format.js";
 
 export function encounterDialogContext(patient, encounter) {
@@ -38,37 +40,34 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
  * title, its scope notice, any extra header actions, and the way out.
  */
 export function RxDialog({ id, open, onClose, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
-  const dialogRef = useRef(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
   return (
-    <dialog className="rx-dialog" id={id} aria-labelledby={titleId} ref={dialogRef} onClose={onClose} onCancel={onClose}>
-      {open ? (
-        <div className="rx-dialog__panel">
-          <header className="rx-dialog__header">
-            <span className="rx-dialog__heading">
-              <span className="rail-eyebrow">{eyebrow}</span>
-              <span className="rx-dialog__titleline">
-                <span className="rx-dialog__title" id={titleId} role="heading" aria-level={3}>{title}</span>
-                <HoverPopover hostClassName="rx-notice" trigger="i" triggerClassName="rx-notice__summary" triggerId={noticeId}
-                  panelId={`${noticeId}Panel`} panelClassName="rx-notice__body rx-notice__body--start" ariaLabel="이 화면의 사용 범위 안내"
-                  panel={notice} />
+    <DialogPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="rx-dialog-overlay" />
+        <DialogPrimitive.Content className="rx-dialog" id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
+          <DialogPrimitive.Title className="visually-hidden">{title}</DialogPrimitive.Title>
+          <div className="rx-dialog__panel">
+            <header className="rx-dialog__header">
+              <span className="rx-dialog__heading">
+                <span className="rail-eyebrow">{eyebrow}</span>
+                <span className="rx-dialog__titleline">
+                  <span className="rx-dialog__title" id={titleId} role="heading" aria-level={3}>{title}</span>
+                  <HoverPopover hostClassName="rx-notice" trigger="i" triggerClassName="rx-notice__summary" triggerId={noticeId}
+                    panelId={`${noticeId}Panel`} panelClassName="rx-notice__body rx-notice__body--start" ariaLabel="이 화면의 사용 범위 안내"
+                    panel={notice} />
+                </span>
+                <span className="rx-dialog__context">{context}</span>
               </span>
-              <span className="rx-dialog__context">{context}</span>
-            </span>
-            <span className="rx-dialog__header-actions">
-              {headerExtra}
-              <button className="clinical-button rx-dialog__close" type="button" onClick={onClose}>닫기</button>
-            </span>
-          </header>
-          {children}
-        </div>
-      ) : null}
-    </dialog>
+              <span className="rx-dialog__header-actions">
+                {headerExtra}
+                <Button className="rx-dialog__close" onClick={onClose}>닫기</Button>
+              </span>
+            </header>
+            {children}
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 

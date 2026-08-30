@@ -10093,3 +10093,23 @@ model-viewer::part(default-progress-mask) {
 .encounter-context-rail > .clinical-card {
   border-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
+
+
+/* --- Radix dialog positioning: reproduces the native <dialog> modal look --- */
+
+.rx-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.rx-dialog[data-radix-rx-dialog] {
+  position: fixed;
+  z-index: 41;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  outline: none;
+}

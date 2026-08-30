@@ -1,5 +1,7 @@
 import { headers } from "next/headers";
 
+import "../app/globals.css";
+
 /**
  * Every route group renders its own <html> so each page keeps the body class
  * its stylesheet is scoped to, exactly as the static pages did. Reading the

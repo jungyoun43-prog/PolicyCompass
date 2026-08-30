@@ -9711,3 +9711,78 @@ model-viewer::part(default-progress-mask) {
 .rx-dialog__panel {
   scrollbar-gutter: stable;
 }
+
+
+/* --- Density pass: tighter cards and gaps across the EMR -------------------- */
+
+.clinical-card {
+  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.clinical-card.workflow-disclosure {
+  padding: 0;
+}
+
+.workspace-panel {
+  padding: var(--space-3) var(--space-4);
+}
+
+.workflow-disclosure__body {
+  padding: var(--space-3) var(--space-4);
+}
+
+.card-heading {
+  margin-bottom: var(--space-2);
+}
+
+.emr-shell {
+  padding: var(--space-3) 0 var(--space-8);
+}
+
+.clinical-layout,
+.encounter-layout,
+.data-layout,
+.chart-layout {
+  gap: var(--space-3);
+}
+
+.patient-rail {
+  padding: var(--space-3);
+}
+
+.rail-selected-patient {
+  padding: var(--space-3);
+}
+
+.metric-grid {
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.emr-page input,
+.emr-page select {
+  min-height: 34px;
+  padding-block: 4px;
+}
+
+.emr-page textarea {
+  padding-block: 6px;
+}
+
+.emr-page label {
+  gap: 2px;
+}
+
+/* Cards inside the encounter flow stack closer together. */
+.encounter-flow {
+  gap: var(--space-3);
+}
+
+.encounter-context-rail {
+  gap: var(--space-3);
+}
+
+.summary-sections {
+  gap: var(--space-3);
+}

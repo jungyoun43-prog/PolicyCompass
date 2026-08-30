@@ -10189,3 +10189,37 @@ model-viewer::part(default-progress-mask) {
 .rx-source[data-collapsed] {
   padding-block: 4px;
 }
+
+
+/* --- Visit context lives in the rail; entry cards pack 2×2 ------------------- */
+
+.entry-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 900px) {
+  .entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* The visit-context card renders compact inside the rail: fields go 2×2. */
+.encounter-context-rail .encounter-details .encounter-meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.encounter-context-rail .encounter-details .field-echo {
+  word-break: keep-all;
+  white-space: nowrap;
+}
+
+.encounter-context-rail .encounter-details input,
+.encounter-context-rail .encounter-details textarea {
+  font-size: 0.8rem;
+}
+
+.encounter-context-rail .encounter-details .workflow-disclosure__body {
+  padding: var(--space-2) var(--space-3);
+}

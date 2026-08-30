@@ -406,24 +406,6 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         </section>
 
         <form className="encounter-form" id="encounterForm" noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => { event.preventDefault(); onSaveDraft(); }}>
-          <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
-            <summary className="workflow-disclosure__summary">
-              <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>
-              <span className="workflow-disclosure__signals"><span className="source-badge">CLINICIAN ENTRY</span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
-            </summary>
-            <div className="workflow-disclosure__body">
-              <fieldset className="form-fieldset form-fieldset--plain" disabled={!editable}>
-                <legend className="visually-hidden">진료 기본정보 입력</legend>
-                <div className="encounter-meta-grid">
-                  <label>진료일<input id="encounterDate" name="date" type="date" required lang="ko" value={form.date} onChange={set("date")} />{typeof navigator !== "undefined" && !String(navigator.language).toLowerCase().startsWith("ko") && form.date ? <small className="field-echo">{displayDate(form.date)}</small> : null}</label>
-                  <label>진료과<input id="encounterDepartment" name="department" maxLength={80} placeholder="예: 내과" value={form.department} onChange={set("department")} /></label>
-                  <label>담당 의료진<input id="encounterClinician" name="clinician" maxLength={80} placeholder="예: 김의사" value={form.clinician} onChange={set("clinician")} /></label>
-                  <label>진료실<input id="encounterRoom" name="room" maxLength={40} placeholder="예: 1진료실" value={form.room} onChange={set("room")} /></label>
-                </div>
-                <label>주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows={2} maxLength={2000} placeholder="환자의 표현과 증상 시작 시점을 기록하세요." value={form.chiefComplaint} onChange={set("chiefComplaint")} /></label>
-              </fieldset>
-            </div>
-          </details>
 
           <details className="clinical-card soap-card workflow-disclosure" aria-labelledby="soapTitle" data-workflow-disclosure="soap" open={disclosureOpen("soap")} onToggle={(event) => onDisclosureToggle("soap", event.currentTarget.open)}>
             <summary className="workflow-disclosure__summary">
@@ -441,6 +423,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           </details>
         </form>
 
+        <div className="entry-grid">
         <WorkflowDisclosure name="measurements" eyebrow="VITAL SIGNS · RESULTS" title="진료 측정" titleId="vitalTitle" badge="LOINC · ENCOUNTER" summaryText={`${entryCounts.measurements}건`} summaryTone={entryCounts.measurements ? "ready" : ""} open={disclosureOpen("measurements")} onToggle={onDisclosureToggle}>
           <VitalDialog {...dialogShared} key={`vital:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="vitalList" ariaLabel="이번 진료 측정 목록" onRemove={onRemoveItem}
@@ -505,6 +488,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
               };
             })} />
         </WorkflowDisclosure>
+        </div>
 
         {completed && review ? (
           <section className="clinical-card sign-review" id="encounterSignReview" aria-labelledby="encounterSignReviewTitle">
@@ -603,6 +587,24 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
       </div>
 
       <aside className="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
+          <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
+            <summary className="workflow-disclosure__summary">
+              <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>
+              <span className="workflow-disclosure__signals"><span className="source-badge">CLINICIAN ENTRY</span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
+            </summary>
+            <div className="workflow-disclosure__body">
+              <fieldset className="form-fieldset form-fieldset--plain" disabled={!editable}>
+                <legend className="visually-hidden">진료 기본정보 입력</legend>
+                <div className="encounter-meta-grid">
+                  <label>진료일<input id="encounterDate" name="date" type="date" required lang="ko" value={form.date} onChange={set("date")} />{typeof navigator !== "undefined" && !String(navigator.language).toLowerCase().startsWith("ko") && form.date ? <small className="field-echo">{displayDate(form.date)}</small> : null}</label>
+                  <label>진료과<input id="encounterDepartment" name="department" maxLength={80} placeholder="예: 내과" value={form.department} onChange={set("department")} /></label>
+                  <label>담당 의료진<input id="encounterClinician" name="clinician" maxLength={80} placeholder="예: 김의사" value={form.clinician} onChange={set("clinician")} /></label>
+                  <label>진료실<input id="encounterRoom" name="room" maxLength={40} placeholder="예: 1진료실" value={form.room} onChange={set("room")} /></label>
+                </div>
+                <label>주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows={2} maxLength={2000} placeholder="환자의 표현과 증상 시작 시점을 기록하세요." value={form.chiefComplaint} onChange={set("chiefComplaint")} /></label>
+              </fieldset>
+            </div>
+          </details>
         <section className="clinical-card context-card context-card--stream" aria-labelledby="patientStreamTitle">
           <div className="card-heading">
             <div><p className="rail-eyebrow">PATIENT STREAM</p><h3 id="patientStreamTitle">환자 기록</h3></div>

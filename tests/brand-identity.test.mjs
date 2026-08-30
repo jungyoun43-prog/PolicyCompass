@@ -35,7 +35,7 @@ test("all product routes share the connected-life-signals identity", async () =>
 
   for (const [route, layout] of Object.entries(layouts)) {
     const source = await readFile(layout, "utf8");
-    assert.match(source, /themeColor: ["']#e8f5e9["']/, `${route} must expose the green browser theme`);
+    assert.match(source, /themeColor: ["']#fafbfa["']/, `${route} must expose the green browser theme`);
     assert.match(source, /brand-signals\.css/, `${route} must load the shared motif stylesheet`);
   }
 });

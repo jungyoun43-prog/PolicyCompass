@@ -39,11 +39,11 @@ function mixHex(left, right, leftWeight) {
 }
 
 test("공통 임상 토큰은 밝은 녹색 표면과 짙은 숲색 계층을 제공한다", () => {
-  assert.match(root, /--surface: #f8fcf8;/);
-  assert.match(root, /--surface-soft: #e8f5e9;/);
+  assert.match(root, /--surface: #fafbfa;/);
+  assert.match(root, /--surface-soft: #f1f3f1;/);
   assert.match(root, /--surface-inverse: #1b5e20;/);
   assert.match(root, /--on-inverse: #f8fcf8;/);
-  assert.match(root, /--ink: #173b1b;/);
+  assert.match(root, /--ink: #20261f;/);
   assert.match(root, /--accent: #1b5e20;/);
   assert.match(root, /--accent-mid: #66bb6a;/);
   assert.match(root, /--accent-soft: #a5d6a7;/);
@@ -81,18 +81,18 @@ test("타입·간격·반경·테두리·고도·밀도 토큰은 선언되고 �
 });
 
 test("컨트롤 경계·포커스·어두운 표면 경고 토큰은 비텍스트 및 소형 텍스트 대비를 충족한다", () => {
-  assert.match(root, /--line-strong: #548858;/);
+  assert.match(root, /--line-strong: #7d8a7e;/);
   assert.match(root, /--focus-ring: var\(--accent\);/);
   assert.match(root, /--status-amber-on-dark: #f2c66d;/);
-  assert.ok(contrast("548858", "f8fcf8") >= 3);
-  assert.ok(contrast("548858", "e8f5e9") >= 3);
-  assert.ok(contrast("1b5e20", "f8fcf8") >= 3);
-  assert.ok(contrast("2f6b34", "f8fcf8") >= 4.5);
-  assert.ok(contrast("2f6b34", "e8f5e9") >= 4.5);
-  assert.ok(contrast("477a43", "f8fcf8") >= 4.5);
-  assert.ok(contrast("477a43", "e8f5e9") >= 4.5);
-  assert.ok(contrast("a5d6a7", "173b1b") >= 3);
-  assert.ok(contrast("66bb6a", "173b1b") >= 3);
+  assert.ok(contrast("7d8a7e", "fafbfa") >= 3);
+  assert.ok(contrast("7d8a7e", "f1f3f1") >= 3);
+  assert.ok(contrast("1b5e20", "fafbfa") >= 3);
+  assert.ok(contrast("2f6b34", "fafbfa") >= 4.5);
+  assert.ok(contrast("2f6b34", "f1f3f1") >= 4.5);
+  assert.ok(contrast("477a43", "fafbfa") >= 4.5);
+  assert.ok(contrast("477a43", "f1f3f1") >= 4.5);
+  assert.ok(contrast("a5d6a7", "20261f") >= 3);
+  assert.ok(contrast("66bb6a", "20261f") >= 3);
   assert.ok(contrast("f2c66d", "1b5e20") >= 4.5);
   assert.match(applicationCss, /outline: 3px solid var\(--focus-ring\)/);
   assert.match(applicationCss, /border: 1px solid var\(--line-strong\)/);

@@ -17,7 +17,7 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export const viewport = { themeColor: '#e8f5e9' };
+export const viewport = { themeColor: "#fafbfa" };
 
 export default function Layout({ children }) {
   return <RootShell bodyClassName='map-page clinician-hierarchy'>{children}</RootShell>;

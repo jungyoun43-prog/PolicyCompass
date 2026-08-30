@@ -30,8 +30,10 @@ export function CommandBar({ demo, onExitDemo, utilities }) {
           </span>
           <span className="page-hero__eyebrow signal-kicker__label">의료진 워크스페이스</span>
         </div>
-        <h1 id="emrTitle">오늘 진료</h1>
-        <p>환자 선택 → 기록 → 서명</p>
+        <div className="command-title__row">
+          <h1 id="emrTitle">오늘 진료</h1>
+          <p className="command-title__path">환자 선택 → 기록 → 서명</p>
+        </div>
       </div>
       <div className="command-actions" aria-label="로컬 데이터 작업">
         <button className="clinical-button" id="exitDemo" type="button" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</button>

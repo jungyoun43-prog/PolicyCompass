@@ -22,9 +22,8 @@ import {
   encounterSignReviewIdentity,
 } from "../../../src/emr-sign-review.js";
 import { CLAIM_LANE_LABELS, CLAIM_LANE_ORDER } from "../../../src/claim-rules.js";
-import { createClinicalBodyAtlas } from "../../../src/emr-model.js";
 import { displayCoding, displayDate, displayTimestamp, prescriptionSummary, QUEUE_LABELS, today } from "../../../lib/emr/format.js";
-import { encounterQueueStatus } from "../../../lib/emr/selectors.js";
+import { encounterQueueStatus, finalizedPatient } from "../../../lib/emr/selectors.js";
 import { VitalDialog, DiagnosisDialog, OrderDialog } from "../entry-dialogs.jsx";
 import { PrescriptionDialog } from "../prescription-dialog.jsx";
 
@@ -134,6 +133,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   const [formMessage, setFormMessage] = useState("");
   const [signAck, setSignAck] = useState({ identity: null, fingerprint: "", checked: false });
   const [openDisclosures, setOpenDisclosures] = useState(() => new Map());
+  const [railTab, setRailTab] = useState("notes");
   const [activeDialog, setActiveDialog] = useState("");
   const dialogsDirtyRef = useRef(() => false);
   const formRef = useRef(form);
@@ -308,12 +308,38 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
 
   const attentionStatuses = new Set(["missing-evidence", "due-soon", "unknown"]);
   const attention = preflightEvaluations.filter((item) => attentionStatuses.has(item.status)).slice(0, 3);
-  const atlas = useMemo(() => createClinicalBodyAtlas(patient), [patient]);
 
-  const recent = patient.events
-    .filter((event) => event.type === "encounter" && event.recordStatus === "final" && event.status === "finished")
-    .sort((left, right) => right.date.localeCompare(left.date))
-    .slice(0, 3);
+
+
+  const IMAGING_PATTERN = /X선|엑스레이|CT|MRI|초음파|영상|촬영/i;
+  const chartFinal = finalizedPatient(patient);
+  const streamEntries = {
+    notes: [...chartFinal.events].filter((event) => event.type === "encounter").map((event) => ({
+      id: event.id, date: event.date,
+      title: [event.department, event.label].filter(Boolean).join(" · ") || "진료",
+      detail: [event.clinician, event.note || event.reason].filter(Boolean).join(" · "),
+      encounterId: event.id,
+    })),
+    labs: chartFinal.events.filter((event) => event.type === "observation" || (event.type === "procedure" && !IMAGING_PATTERN.test(event.label ?? ""))).map((event) => ({
+      id: event.id, date: event.date,
+      title: event.label,
+      detail: event.type === "procedure" ? "시술·검사" : [event.value, event.unit].filter(Boolean).join(" "),
+    })),
+    imaging: chartFinal.events.filter((event) => event.type === "procedure" && IMAGING_PATTERN.test(event.label ?? "")).map((event) => ({
+      id: event.id, date: event.date,
+      title: event.label,
+      detail: event.note || "영상 검사",
+    })),
+  };
+  const streamByDate = (entries) => {
+    const groups = new Map();
+    for (const entry of [...entries].sort((a, b) => String(b.date).localeCompare(String(a.date)))) {
+      const key = entry.date || "날짜 없음";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(entry);
+    }
+    return [...groups.entries()];
+  };
 
   const formMessageText = formMessage || (unverifiedBackup
     ? "백업 복원 · 출처 미검증 진료. 진행·수정·완료·서명·취소할 수 없으며 새 로컬 진료로 접수해야 합니다."
@@ -565,6 +591,43 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
       </div>
 
       <aside className="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
+        <section className="clinical-card context-card context-card--stream" aria-labelledby="patientStreamTitle">
+          <div className="card-heading">
+            <div><p className="rail-eyebrow">PATIENT STREAM</p><h3 id="patientStreamTitle">환자 기록</h3></div>
+          </div>
+          <div className="stream-tabs" role="group" aria-label="기록 스트림 선택">
+            {[["notes", "일지"], ["labs", "검사"], ["imaging", "영상"]].map(([key, label]) => (
+              <button key={key} type="button" className="stream-tab" aria-pressed={railTab === key} onClick={() => setRailTab(key)}>
+                {label} <small>{streamEntries[key].length}</small>
+              </button>
+            ))}
+          </div>
+          <div className="stream-scroll" aria-live="polite">
+            {streamByDate(streamEntries[railTab]).length === 0 ? (
+              <p className="stream-empty">{railTab === "imaging" ? "확정된 영상 검사가 없습니다." : railTab === "labs" ? "확정된 검사 결과가 없습니다." : "완료된 진료 일지가 없습니다."}</p>
+            ) : streamByDate(streamEntries[railTab]).map(([date, entries]) => (
+              <section className="stream-day" key={date}>
+                <h4 className="stream-day__date">{displayDate(date)}</h4>
+                <ol className="stream-day__list">
+                  {entries.map((entry) => (
+                    <li key={entry.id}>
+                      <b>{entry.title}</b>
+                      {entry.detail ? <span>{entry.detail}</span> : null}
+                      {entry.encounterId ? (
+                        <button className="text-action" type="button" disabled={entry.encounterId === encounter?.id} onClick={() => {
+                          if (blockClinicalContextChange()) return;
+                          setViewedEncounterId(entry.encounterId);
+                        }}>{entry.encounterId === encounter?.id ? "열림" : "진료 기록 열기"}</button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+          <button className="text-action" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</button>
+        </section>
+
         <section className="clinical-card context-card context-card--claim" aria-labelledby="encounterClaimTitle">
           <div className="card-heading">
             <div><p className="rail-eyebrow">CLAIM READINESS</p><h3 id="encounterClaimTitle">청구 조정 위험</h3></div>
@@ -573,44 +636,6 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           <p className="context-guidance">서명된 기록에 현재 진료 초안을 가상 반영해 기간·횟수·근거 누락을 사전 점검합니다. 초안은 확정 근거가 아니며 급여 결과를 보장하지 않습니다.</p>
           <div className="context-summary" id="encounterClaimSummary" aria-live="polite"><ClaimMiniSummary evaluations={preflightEvaluations} attention={attention} /></div>
           <button className="clinical-button context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 칸반 열기</button>
-        </section>
-
-        <section className="clinical-card context-card" aria-labelledby="recentEncounterTitle">
-          <div className="card-heading">
-            <div><p className="rail-eyebrow">RECENT VISITS</p><h3 id="recentEncounterTitle">최근 진료</h3></div>
-          </div>
-          <ol className="context-list" id="recentEncounterList" aria-live="polite">
-            {recent.length === 0 ? <li>완료·서명된 이전 진료 없음</li> : recent.map((visit) => (
-              <li key={visit.id}>
-                <b>{visit.label}</b>
-                <span>{[displayDate(visit.date), visit.department, visit.clinician].filter(Boolean).join(" · ")}</span>
-                <button className="text-action" type="button" disabled={visit.id === encounter?.id} onClick={() => {
-                  if (blockClinicalContextChange()) return;
-                  setViewedEncounterId(visit.id);
-                }}>{visit.id === encounter?.id ? "열림" : "진료 기록 열기"}</button>
-              </li>
-            ))}
-          </ol>
-          <button className="text-action" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</button>
-        </section>
-
-        <section className="clinical-card context-card context-card--body" aria-labelledby="encounterBodyTitle">
-          <div className="card-heading">
-            <div><p className="rail-eyebrow">CARE BY DEPARTMENT</p><h3 id="encounterBodyTitle">진료과 기록 요약</h3></div>
-          </div>
-          <div className="context-summary" id="encounterBodySummary" aria-live="polite">
-            <div className="body-mini-facts">
-              <strong>{atlas.totals.careAreas}/12개 영역에 진료 연결</strong>
-              <span>진료과 확인 진료 {atlas.totals.declaredVisits}건 · 연결 처방 {atlas.totals.declaredMedications}건</span>
-              <small>{[
-                atlas.totals.classifiedVisits ? `진료명 분류 후보 ${atlas.totals.classifiedVisits}건 · 후보 진료 처방 ${atlas.totals.classifiedMedications}건` : "",
-                `질환 기반 탐색 영역 ${atlas.totals.signalAreas}개 · 진료 이력과 분리`,
-                atlas.totals.unassignedVisits ? `진료과 미확인 진료 ${atlas.totals.unassignedVisits}건 미배정` : "",
-                atlas.totals.unassignedMedications ? `진료과 미지정 약물 ${atlas.totals.unassignedMedications}건 미배정` : "",
-              ].filter(Boolean).join(" · ")}</small>
-            </div>
-          </div>
-          <button className="text-action" type="button" onClick={() => selectTab("graph")}>신체·진료과 지도 열기</button>
         </section>
       </aside>
     </div>

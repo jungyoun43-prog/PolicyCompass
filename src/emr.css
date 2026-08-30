@@ -9796,3 +9796,106 @@ model-viewer::part(default-progress-mask) {
     justify-content: start;
   }
 }
+
+
+/* --- Command header: one confident row -------------------------------------- */
+
+.command-title__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.clinical-command h1 {
+  font-size: clamp(1.5rem, 1.8vw, 1.8rem);
+}
+
+.command-title__path {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.clinical-command .signal-kicker__label {
+  font-size: 0.78rem;
+}
+
+/* --- Patient stream rail card ------------------------------------------------ */
+
+.stream-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.stream-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  padding: 3px 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.stream-tab small {
+  font-size: 0.66rem;
+  opacity: 0.75;
+}
+
+.stream-tab[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-inverse);
+}
+
+.stream-scroll {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.stream-day {
+  padding-block: var(--space-2);
+}
+
+.stream-day + .stream-day {
+  border-top: 1px dashed var(--line);
+}
+
+.stream-day__date {
+  margin: 0 0 var(--space-1);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.stream-day__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stream-day__list li {
+  display: grid;
+  gap: 1px;
+  font-size: 0.78rem;
+}
+
+.stream-day__list li > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.stream-empty {
+  margin: var(--space-2) 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}

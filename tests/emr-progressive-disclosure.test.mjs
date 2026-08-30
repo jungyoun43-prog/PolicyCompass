@@ -33,7 +33,7 @@ test("EMR 안전 맥락과 최종 서명은 점진적 공개 밖에 남는다", 
 test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", async () => {
   const encounter = await componentMarkup("components/emr/tabs/encounter-tab.jsx");
   const chart = await componentMarkup("components/emr/tabs/chart-tab.jsx");
-  const expected = ["visit-context", "soap", "measurements", "diagnoses", "prescriptions", "orders"];
+  const expected = ["visit-context", "soap", "diagnoses", "prescriptions", "orders"];
   const names = [
     ...[...encounter.matchAll(/data-workflow-disclosure=\{?"?([a-z-]+)/g)].map((match) => match[1]),
     ...[...encounter.matchAll(/<WorkflowDisclosure name="([a-z-]+)"/g)].map((match) => match[1]),

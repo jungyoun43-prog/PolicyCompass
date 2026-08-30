@@ -27,7 +27,7 @@ import { CLAIM_LANE_LABELS, CLAIM_LANE_ORDER } from "../../../src/claim-rules.js
 import { displayCoding, displayDate, displayTimestamp, prescriptionSummary, QUEUE_LABELS, today } from "../../../lib/emr/format.js";
 import { encounterQueueStatus, finalizedPatient } from "../../../lib/emr/selectors.js";
 import { labPanel, labPresentation } from "../../../lib/emr/lab-reference.js";
-import { VitalDialog, DiagnosisDialog, OrderDialog } from "../entry-dialogs.jsx";
+import { DiagnosisDialog, OrderDialog } from "../entry-dialogs.jsx";
 import { PrescriptionDialog } from "../prescription-dialog.jsx";
 
 const EMPTY_FORM = {
@@ -424,19 +424,6 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         </form>
 
         <div className="entry-grid">
-        <WorkflowDisclosure name="measurements" eyebrow="VITAL SIGNS · RESULTS" title="진료 측정" titleId="vitalTitle" badge="LOINC · ENCOUNTER" summaryText={`${entryCounts.measurements}건`} summaryTone={entryCounts.measurements ? "ready" : ""} open={disclosureOpen("measurements")} onToggle={onDisclosureToggle}>
-          <VitalDialog {...dialogShared} key={`vital:${patient.id}:${encounter?.id ?? ""}`} />
-          <EncounterEntryList id="vitalList" ariaLabel="이번 진료 측정 목록" onRemove={onRemoveItem}
-            emptyLabel={editable ? "이번 진료의 활력징후·검사 결과를 추가하세요." : "이번 진료 측정 없음"}
-            entries={records.filter((event) => event.type === "observation").map((observation) => ({
-              entityId: observation.id,
-              title: observation.label,
-              meta: ["LOINC", observation.code, displayDate(observation.date)].filter(Boolean).join(" · "),
-              detail: [`${observation.value} ${observation.unit}`.trim(), observation.note].filter(Boolean).join(" · "),
-              badge: observation.recordStatus === "final" ? "확정 측정" : "측정 초안",
-              editable,
-            }))} />
-        </WorkflowDisclosure>
 
         <WorkflowDisclosure name="diagnoses" eyebrow="DIAGNOSIS" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""} open={disclosureOpen("diagnoses")} onToggle={onDisclosureToggle}>
           <DiagnosisDialog {...dialogShared} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />

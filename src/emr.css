@@ -10200,7 +10200,7 @@ model-viewer::part(default-progress-mask) {
 
 @media (min-width: 900px) {
   .entry-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
   }
 }
@@ -10222,4 +10222,62 @@ model-viewer::part(default-progress-mask) {
 
 .encounter-context-rail .encounter-details .workflow-disclosure__body {
   padding: var(--space-2) var(--space-3);
+}
+
+
+/* Entry cards: launcher + list only — the how-to prose goes away. */
+.entry-grid .prescription-launcher__hint {
+  display: none;
+}
+
+.entry-grid .prescription-launcher {
+  margin-bottom: var(--space-2);
+}
+
+/* 측정 추가 rides the stream-tab row as a compact control. */
+.stream-vital {
+  display: inline-flex;
+  order: 9;
+  margin-left: auto;
+}
+
+.stream-vital .prescription-launcher {
+  margin: 0;
+}
+
+.stream-vital .prescription-launcher__hint {
+  display: none;
+}
+
+.stream-vital .clinical-button {
+  min-height: 24px;
+  padding: 1px 9px;
+  font-size: 0.66rem;
+}
+
+.stream-tabs {
+  align-items: center;
+}
+
+
+/* Narrow entry columns: the title never letter-wraps; signals drop below. */
+.entry-grid .workflow-disclosure__summary {
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.entry-grid .workflow-disclosure__title {
+  white-space: nowrap;
+}
+
+.entry-grid .workflow-disclosure__heading {
+  min-width: 0;
+  flex: none;
+}
+
+
+/* Narrow entry columns drop the decorative source badges — title, count,
+   caret are the signal. */
+.entry-grid .workflow-disclosure__summary .source-badge {
+  display: none;
 }

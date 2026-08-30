@@ -14,7 +14,7 @@ const script = [dataUtilities, overview, encounter, app, chart].join("\n");
 test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 데이터 제어를 한 흐름에 둔다", () => {
   for (const id of [
     "patientList", "encounterForm", "soapSubjective", "diagnosisForm", "prescriptionForm", "orderForm",
-    "encounterClaimSummary", "eventForm", "eventSystem", "clinicalBodyTitle", "bodyVisitList",
+    "encounterMobileClaimSummary", "eventForm", "eventSystem", "clinicalBodyTitle", "bodyVisitList",
     "bodyMedicationList", "copilotPanel", "claimBoard", "ruleServiceSystem", "ruleApplicabilitySystem",
     "fhirImport", "syncPersonalRecord", "personalSyncStatus", "exportEmr", "wipeEmr",
   ]) {

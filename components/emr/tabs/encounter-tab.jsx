@@ -24,6 +24,7 @@ import {
 import { CLAIM_LANE_LABELS, CLAIM_LANE_ORDER } from "../../../src/claim-rules.js";
 import { displayCoding, displayDate, displayTimestamp, prescriptionSummary, QUEUE_LABELS, today } from "../../../lib/emr/format.js";
 import { encounterQueueStatus, finalizedPatient } from "../../../lib/emr/selectors.js";
+import { labPanel, labPresentation } from "../../../lib/emr/lab-reference.js";
 import { VitalDialog, DiagnosisDialog, OrderDialog } from "../entry-dialogs.jsx";
 import { PrescriptionDialog } from "../prescription-dialog.jsx";
 
@@ -134,6 +135,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   const [signAck, setSignAck] = useState({ identity: null, fingerprint: "", checked: false });
   const [openDisclosures, setOpenDisclosures] = useState(() => new Map());
   const [railTab, setRailTab] = useState("notes");
+  const [trendRowId, setTrendRowId] = useState("");
   const [activeDialog, setActiveDialog] = useState("");
   const dialogsDirtyRef = useRef(() => false);
   const formRef = useRef(form);
@@ -317,13 +319,18 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
     notes: [...chartFinal.events].filter((event) => event.type === "encounter").map((event) => ({
       id: event.id, date: event.date,
       title: [event.department, event.label].filter(Boolean).join(" · ") || "진료",
-      detail: [event.clinician, event.note || event.reason].filter(Boolean).join(" · "),
+      clinician: event.clinician,
+      chiefComplaint: event.chiefComplaint,
+      soap: event.soap,
+      note: event.note,
       encounterId: event.id,
     })),
     labs: chartFinal.events.filter((event) => event.type === "observation" || (event.type === "procedure" && !IMAGING_PATTERN.test(event.label ?? ""))).map((event) => ({
-      id: event.id, date: event.date,
+      id: event.id, date: event.date, code: event.code,
       title: event.label,
-      detail: event.type === "procedure" ? "시술·검사" : [event.value, event.unit].filter(Boolean).join(" "),
+      value: event.type === "procedure" ? "시행" : [event.value, event.unit].filter(Boolean).join(" "),
+      ...labPresentation(event),
+      panel: event.type === "procedure" ? "시술·검사" : labPanel(event),
     })),
     imaging: chartFinal.events.filter((event) => event.type === "procedure" && IMAGING_PATTERN.test(event.label ?? "")).map((event) => ({
       id: event.id, date: event.date,
@@ -331,6 +338,9 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
       detail: event.note || "영상 검사",
     })),
   };
+  const labTrend = (code) => streamEntries.labs
+    .filter((entry) => entry.code === code)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const streamByDate = (entries) => {
     const groups = new Map();
     for (const entry of [...entries].sort((a, b) => String(b.date).localeCompare(String(a.date)))) {
@@ -605,38 +615,92 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           <div className="stream-scroll" aria-live="polite">
             {streamByDate(streamEntries[railTab]).length === 0 ? (
               <p className="stream-empty">{railTab === "imaging" ? "확정된 영상 검사가 없습니다." : railTab === "labs" ? "확정된 검사 결과가 없습니다." : "완료된 진료 일지가 없습니다."}</p>
-            ) : streamByDate(streamEntries[railTab]).map(([date, entries]) => (
-              <section className="stream-day" key={date}>
-                <h4 className="stream-day__date">{displayDate(date)}</h4>
-                <ol className="stream-day__list">
+            ) : railTab === "notes" ? (
+              streamByDate(streamEntries.notes).map(([date, entries]) => (
+                <section className="stream-day" key={date}>
+                  <h4 className="stream-day__date">{displayDate(date)}</h4>
                   {entries.map((entry) => (
-                    <li key={entry.id}>
-                      <b>{entry.title}</b>
-                      {entry.detail ? <span>{entry.detail}</span> : null}
-                      {entry.encounterId ? (
+                    <article className="stream-note" key={entry.id}>
+                      <header className="stream-note__head">
+                        <b>{entry.title}</b>
+                        {entry.clinician ? <span>{entry.clinician}</span> : null}
                         <button className="text-action" type="button" disabled={entry.encounterId === encounter?.id} onClick={() => {
                           if (blockClinicalContextChange()) return;
                           setViewedEncounterId(entry.encounterId);
-                        }}>{entry.encounterId === encounter?.id ? "열림" : "진료 기록 열기"}</button>
+                        }}>{entry.encounterId === encounter?.id ? "열림" : "열기"}</button>
+                      </header>
+                      {entry.chiefComplaint ? <p className="stream-note__cc">주호소 · {entry.chiefComplaint}</p> : null}
+                      {[["S", entry.soap?.subjective], ["O", entry.soap?.objective], ["A", entry.soap?.assessment], ["P", entry.soap?.plan]]
+                        .filter(([, text]) => text)
+                        .map(([letter, text]) => (
+                          <p className="stream-note__soap" key={letter}><b>{letter}</b>{text}</p>
+                        ))}
+                      {!entry.chiefComplaint && !entry.soap?.subjective && !entry.soap?.objective && !entry.soap?.assessment && !entry.soap?.plan && entry.note ? (
+                        <p className="stream-note__cc">{entry.note}</p>
                       ) : null}
-                    </li>
+                    </article>
                   ))}
-                </ol>
-              </section>
-            ))}
+                </section>
+              ))
+            ) : railTab === "labs" ? (
+              streamByDate(streamEntries.labs).map(([date, entries]) => {
+                const panels = new Map();
+                for (const entry of entries) {
+                  if (!panels.has(entry.panel)) panels.set(entry.panel, []);
+                  panels.get(entry.panel).push(entry);
+                }
+                return (
+                  <section className="lab-day" key={date}>
+                    <h4 className="lab-day__date">{displayDate(date)}</h4>
+                    <div className="lab-day__panels">
+                      {[...panels.entries()].map(([panel, rows]) => (
+                        <div className="lab-panel" key={panel}>
+                          <h5 className="lab-panel__name">{panel}</h5>
+                          {rows.map((row) => (
+                            <div className="lab-row-wrap" key={row.id}>
+                              <div className="lab-row" data-flag={row.flag || undefined}>
+                                <span className="lab-row__name">{row.title}</span>
+                                <b className="lab-row__value">{row.value}</b>
+                                <span className="lab-row__reference">{row.reference}</span>
+                                <span className="lab-row__flag">{row.flag}</span>
+                                <button className="lab-row__trend" type="button" aria-expanded={trendRowId === row.id}
+                                  onClick={() => setTrendRowId((current) => (current === row.id ? "" : row.id))}>추이</button>
+                              </div>
+                              {trendRowId === row.id ? (
+                                <ol className="lab-trend">
+                                  {labTrend(row.code).map((point) => (
+                                    <li key={point.id} data-flag={point.flag || undefined}>
+                                      <span>{displayDate(point.date)}</span>
+                                      <b>{point.value}</b>
+                                      <em>{point.flag}</em>
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })
+            ) : (
+              streamByDate(streamEntries.imaging).map(([date, entries]) => (
+                <section className="stream-day" key={date}>
+                  <h4 className="stream-day__date">{displayDate(date)}</h4>
+                  <ol className="stream-day__list">
+                    {entries.map((entry) => (
+                      <li key={entry.id}><b>{entry.title}</b><span>{entry.detail}</span></li>
+                    ))}
+                  </ol>
+                </section>
+              ))
+            )}
           </div>
           <button className="text-action" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</button>
         </section>
 
-        <section className="clinical-card context-card context-card--claim" aria-labelledby="encounterClaimTitle">
-          <div className="card-heading">
-            <div><p className="rail-eyebrow">CLAIM READINESS</p><h3 id="encounterClaimTitle">청구 조정 위험</h3></div>
-            <span className="source-badge">예비 점검</span>
-          </div>
-          <p className="context-guidance">서명된 기록에 현재 진료 초안을 가상 반영해 기간·횟수·근거 누락을 사전 점검합니다. 초안은 확정 근거가 아니며 급여 결과를 보장하지 않습니다.</p>
-          <div className="context-summary" id="encounterClaimSummary" aria-live="polite"><ClaimMiniSummary evaluations={preflightEvaluations} attention={attention} /></div>
-          <button className="clinical-button context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 칸반 열기</button>
-        </section>
       </aside>
     </div>
   );

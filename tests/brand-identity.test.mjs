@@ -29,9 +29,9 @@ test("all product routes share the connected-life-signals identity", async () =>
   }
 
   const emr = await emrMarkup();
-  const chrome = await componentMarkup("components/emr/chrome.jsx");
+  // EMR carries the identity through the branded app header mark; the
+  // decorative hero with the thread motif was removed for workspace density.
   assert.match(emr, /class="app-brand__mark"/, "emr must expose the shared product mark");
-  assert.match(chrome, /signal-kicker|SignalKicker/, "emr must use the motif in a meaningful heading");
 
   for (const [route, layout] of Object.entries(layouts)) {
     const source = await readFile(layout, "utf8");

@@ -10125,3 +10125,67 @@ model-viewer::part(default-progress-mask) {
 .workspace-tabs button[data-state="active"] {
   color: var(--ink);
 }
+
+
+/* --- Header-hosted data actions; the hero section is gone ------------------- */
+
+.clinical-header .app-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clinical-header .command-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.clinical-header .command-actions .clinical-button {
+  min-height: 32px;
+  padding-block: 3px;
+  font-size: 0.78rem;
+}
+
+/* Empty boxes stop advertising their emptiness: shorter unfilled fields. */
+.emr-page textarea {
+  min-height: 0;
+}
+
+
+/* Passing checks collapse to one line; the title itself is the toggle. */
+.rx-source__title--toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--rx-source-tone);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.rx-source__summary-line {
+  overflow: hidden;
+  flex: 1;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rx-source__caret {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.rx-source[data-collapsed] {
+  padding-block: 4px;
+}

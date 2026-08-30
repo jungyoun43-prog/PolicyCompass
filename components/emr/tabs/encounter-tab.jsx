@@ -432,10 +432,10 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             </summary>
             <div className="workflow-disclosure__body">
               <div className="soap-grid">
-                <label className="soap-field" data-soap="subjective"><span><b>S</b> Subjective · 주관적 소견</span><textarea id="soapSubjective" name="soapSubjective" rows={6} maxLength={8000} placeholder="환자가 말한 그대로 · 주호소, 증상 발생 시점과 경과, 악화·완화 요인" disabled={!editable} value={form.subjective} onChange={set("subjective")} /></label>
-                <label className="soap-field" data-soap="objective"><span><b>O</b> Objective · 객관적 소견</span><textarea id="soapObjective" name="soapObjective" rows={6} maxLength={8000} placeholder="측정한 수치 · 활력징후, 신체검진 소견, 검사·영상 결과값" disabled={!editable} value={form.objective} onChange={set("objective")} /></label>
-                <label className="soap-field" data-soap="assessment"><span><b>A</b> Assessment · 평가</span><textarea id="soapAssessment" name="soapAssessment" rows={6} maxLength={8000} placeholder="추정 진단과 상병코드 · 감별진단과 그렇게 본 근거" disabled={!editable} value={form.assessment} onChange={set("assessment")} /></label>
-                <label className="soap-field" data-soap="plan"><span><b>P</b> Plan · 계획</span><textarea id="soapPlan" name="soapPlan" rows={6} maxLength={8000} placeholder="치료 계획 · 약물, 추가 검사, 환자 교육, 다음 추적 시점" disabled={!editable} value={form.plan} onChange={set("plan")} /></label>
+                <label className="soap-field" data-soap="subjective"><span><b>S</b> Subjective · 주관적 소견</span><textarea id="soapSubjective" name="soapSubjective" rows={4} maxLength={8000} placeholder="환자가 말한 그대로 · 주호소, 증상 발생 시점과 경과, 악화·완화 요인" disabled={!editable} value={form.subjective} onChange={set("subjective")} /></label>
+                <label className="soap-field" data-soap="objective"><span><b>O</b> Objective · 객관적 소견</span><textarea id="soapObjective" name="soapObjective" rows={4} maxLength={8000} placeholder="측정한 수치 · 활력징후, 신체검진 소견, 검사·영상 결과값" disabled={!editable} value={form.objective} onChange={set("objective")} /></label>
+                <label className="soap-field" data-soap="assessment"><span><b>A</b> Assessment · 평가</span><textarea id="soapAssessment" name="soapAssessment" rows={4} maxLength={8000} placeholder="추정 진단과 상병코드 · 감별진단과 그렇게 본 근거" disabled={!editable} value={form.assessment} onChange={set("assessment")} /></label>
+                <label className="soap-field" data-soap="plan"><span><b>P</b> Plan · 계획</span><textarea id="soapPlan" name="soapPlan" rows={4} maxLength={8000} placeholder="치료 계획 · 약물, 추가 검사, 환자 교육, 다음 추적 시점" disabled={!editable} value={form.plan} onChange={set("plan")} /></label>
               </div>
             </div>
           </details>

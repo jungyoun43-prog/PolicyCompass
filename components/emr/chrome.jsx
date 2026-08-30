@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 /** Static chrome around the workspace: header, command bar, trust strip, footer. */
-export function ClinicalHeader() {
+export function ClinicalHeader({ demo = false, onExitDemo, utilities = null }) {
   return (
     <header className="app-header clinical-header">
       <div className="app-header__inner">
@@ -11,37 +11,14 @@ export function ClinicalHeader() {
           <span className="app-brand__mark" aria-hidden="true"></span>
           <span>PolicyCompass <b>Clinical</b></span>
         </a>
+        {utilities || onExitDemo ? (
+          <div className="command-actions" aria-label="로컬 데이터 작업">
+            <Button id="exitDemo" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</Button>
+            {utilities}
+          </div>
+        ) : null}
       </div>
     </header>
-  );
-}
-
-export function CommandBar({ demo, onExitDemo, utilities }) {
-  return (
-    <section className="clinical-command" aria-labelledby="emrTitle">
-      <div className="command-title">
-        <div className="signal-kicker">
-          <span className="signal-thread signal-thread--quiet" aria-hidden="true">
-            <svg viewBox="0 0 76 22" focusable="false">
-              <path className="signal-thread__line" d="M5 15 C18 15 20 6 33 6 S49 16 70 11" />
-              <path className="signal-thread__line signal-thread__line--inferred" d="M33 6 C43 3 54 4 70 11" />
-              <circle className="signal-thread__node signal-thread__node--recorded" cx="5" cy="15" r="3" />
-              <circle className="signal-thread__node signal-thread__node--recorded" cx="33" cy="6" r="3" />
-              <circle className="signal-thread__node signal-thread__node--inferred" cx="70" cy="11" r="3" />
-            </svg>
-          </span>
-          <span className="page-hero__eyebrow signal-kicker__label">의료진 워크스페이스</span>
-        </div>
-        <div className="command-title__row">
-          <h1 id="emrTitle">오늘 진료</h1>
-          <p className="command-title__path">환자 선택 → 기록 → 서명</p>
-        </div>
-      </div>
-      <div className="command-actions" aria-label="로컬 데이터 작업">
-        <Button id="exitDemo" type="button" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</Button>
-        {utilities}
-      </div>
-    </section>
   );
 }
 

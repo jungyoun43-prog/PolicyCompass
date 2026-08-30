@@ -150,6 +150,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
   const [expandedDetails, setExpandedDetails] = useState(() => new Set());
   const [expandedSources, setExpandedSources] = useState(() => new Set());
+  const [expandedChecks, setExpandedChecks] = useState(() => new Set());
 
   useEffect(() => {
     registerDirty(() => Boolean(form.name.trim() || form.dose.trim() || form.instructions.trim()));
@@ -188,6 +189,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setReview(null);
     setPendingReview(null);
     setExpandedSources(new Set());
+    setExpandedChecks(new Set());
     setActiveDialog("prescription");
   };
   const close = () => setActiveDialog((current) => (current === "prescription" ? "" : current));
@@ -233,6 +235,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       return;
     }
     setExpandedSources(new Set());
+    setExpandedChecks(new Set());
     if (!provider) {
       setReview({ medicationId, ...base });
       setStatus("규칙 기반 사전점검을 완료했습니다.");
@@ -433,12 +436,30 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                         else next.add(check.id);
                         return next;
                       });
+                      const passed = check.verdict === "circle";
+                      const bodyOpen = !passed || expandedChecks.has(check.id);
+                      const toggleCheck = () => setExpandedChecks((current) => {
+                        const next = new Set(current);
+                        if (next.has(check.id)) next.delete(check.id);
+                        else next.add(check.id);
+                        return next;
+                      });
                       return (
-                        <li className="rx-source" data-verdict={check.verdict} key={check.id}>
-                          <div className="rx-source__title">
-                            <span className="rx-source__mark">{MEDICATION_REVIEW_VERDICTS[check.verdict].symbol}</span>
-                            <b>{check.title}</b>
-                          </div>
+                        <li className="rx-source" data-verdict={check.verdict} data-collapsed={passed && !bodyOpen ? "" : undefined} key={check.id}>
+                          {passed ? (
+                            <button className="rx-source__title rx-source__title--toggle" type="button" aria-expanded={bodyOpen} onClick={toggleCheck}>
+                              <span className="rx-source__mark">{MEDICATION_REVIEW_VERDICTS[check.verdict].symbol}</span>
+                              <b>{check.title}</b>
+                              <span className="rx-source__summary-line">{check.chart.detail}</span>
+                              <span className="rx-source__caret" aria-hidden="true">{bodyOpen ? "▲" : "▼"}</span>
+                            </button>
+                          ) : (
+                            <div className="rx-source__title">
+                              <span className="rx-source__mark">{MEDICATION_REVIEW_VERDICTS[check.verdict].symbol}</span>
+                              <b>{check.title}</b>
+                            </div>
+                          )}
+                          {bodyOpen ? (<>
                           <div className="rx-source__grid">
                             <div className="rx-source__cell">
                               <span className="rx-source__cell-label">삭감 근거</span>
@@ -497,6 +518,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                               check.source.effectiveFrom ? `시행 ${check.source.effectiveFrom}` : "",
                             ].filter(Boolean).join(" · ")}</p>
                           ) : null}
+                          </>) : null}
                         </li>
                       );
                     })}

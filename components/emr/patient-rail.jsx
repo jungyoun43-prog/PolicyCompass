@@ -211,7 +211,7 @@ export function PatientRail({
             </div>
           </fieldset>
 
-          <label>환자 메모<textarea id="patientMemo" name="memo" rows={3} maxLength={2000} placeholder="접수·의사소통 참고사항. 주민등록번호는 입력하지 마세요." value={form.memo} onChange={set("memo")} /></label>
+          <label>환자 메모<textarea id="patientMemo" name="memo" rows={2} maxLength={2000} placeholder="접수·의사소통 참고사항. 주민등록번호는 입력하지 마세요." value={form.memo} onChange={set("memo")} /></label>
           <p className="form-message" id="patientFormMessage" role="alert">{message}</p>
           <div className="compact-actions">
             <Button variant="primary" type="submit">환자 저장</Button>

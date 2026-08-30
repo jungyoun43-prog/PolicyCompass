@@ -10,7 +10,7 @@ import {
 } from "../../src/emr-model.js";
 import { claimEvaluationsFor, currentEncounterFor } from "../../lib/emr/selectors.js";
 import { useEmrStore } from "./store.js";
-import { ClinicalFooter, ClinicalHeader, CommandBar, SafetyNotes, TrustStrip } from "./chrome.jsx";
+import { ClinicalFooter, ClinicalHeader, SafetyNotes, TrustStrip } from "./chrome.jsx";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { PatientRail } from "./patient-rail.jsx";
@@ -178,14 +178,8 @@ export function EmrApp() {
   return (
     <>
       <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
-      <ClinicalHeader />
+      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
-        <CommandBar
-          demo={state.demo}
-          onExitDemo={handleExitDemo}
-          utilities={<DataUtilities {...tabProps} />}
-        />
-
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">
             <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary">외부 미검증 · 지원 {fhirReport.supported}건 · 제외 {fhirReport.unsupported}건</span></summary>

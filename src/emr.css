@@ -9855,7 +9855,8 @@ model-viewer::part(default-progress-mask) {
 }
 
 .stream-scroll {
-  max-height: 46vh;
+  max-height: calc(100dvh - var(--header-height) - 240px);
+  min-height: 46vh;
   overflow-y: auto;
   padding-right: 2px;
   scrollbar-width: thin;
@@ -10336,4 +10337,50 @@ model-viewer::part(default-progress-mask) {
 .rail-visit-slot .workflow-disclosure__summary {
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
+}
+
+
+/* AI status rides the header beside the brand. */
+.header-ai-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  padding: 3px 12px;
+  font-size: 0.72rem;
+}
+
+.header-ai-status b {
+  font-weight: 700;
+}
+
+.header-ai-status #aiStatusDetail {
+  color: var(--muted);
+}
+
+.clinical-header .command-actions {
+  margin-left: auto;
+}
+
+/* The status line floats as a toast instead of holding a text row. */
+.workspace-status {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 60;
+  max-width: 420px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--ink) 18%, transparent);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.78rem;
+}
+
+.workspace-status:empty {
+  display: none;
 }

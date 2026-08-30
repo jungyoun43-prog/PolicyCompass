@@ -10,7 +10,7 @@ import {
 } from "../../src/emr-model.js";
 import { claimEvaluationsFor, currentEncounterFor } from "../../lib/emr/selectors.js";
 import { useEmrStore } from "./store.js";
-import { ClinicalFooter, ClinicalHeader, SafetyNotes, TrustStrip } from "./chrome.jsx";
+import { ClinicalFooter, ClinicalHeader, SafetyNotes } from "./chrome.jsx";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { PatientRail } from "./patient-rail.jsx";
@@ -178,7 +178,7 @@ export function EmrApp() {
   return (
     <>
       <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
-      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} />
+      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">
@@ -193,7 +193,6 @@ export function EmrApp() {
           </details>
         ) : null}
 
-        <TrustStrip ai={ai} />
 
         <p className={`workspace-status${status.tone ? " is-" + status.tone : ""}`} id="workspaceStatus" role="status" aria-live="polite">{status.message}</p>
 

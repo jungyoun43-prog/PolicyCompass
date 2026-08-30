@@ -10,7 +10,7 @@ PolicyCompass는 의료진 EMR과 환자용 PolicyCompass Personal이 각자의 
 
 ## 기술 구조
 
-UI는 React 19 + Next.js 15(App Router)로 렌더링합니다. 의료진 EMR은 React 컴포넌트로 완전히 재구성했고, 다섯 개인 화면(`/patient` `/map` `/connections` `/insights` `/journey`)은 서버 렌더링된 마크업 위에서 기존에 검증된 바닐라 컨트롤러(`src/*.js`)를 그대로 실행합니다. 규칙 엔진·FHIR 처리·카탈로그·LangGraph 파이프라인 등 순수 로직(`src/*.js`, `scripts/graphs/`)은 프레임워크와 무관하게 유지되어 React 컴포넌트가 그대로 import합니다.
+UI는 React 19 + Next.js 15(App Router)로 렌더링하며, 인터랙티브 프리미티브(버튼·다이얼로그·탭)는 shadcn/Radix 기반이고 Tailwind CSS v4가 유틸리티 레이어로 올라가 있습니다(디자인 토큰은 `src/foundation.css`가 원천, shadcn 팔레트는 `app/globals.css`에서 브리지). 의료진 EMR은 React 컴포넌트로 완전히 재구성했고, 다섯 개인 화면(`/patient` `/map` `/connections` `/insights` `/journey`)은 서버 렌더링된 마크업 위에서 기존에 검증된 바닐라 컨트롤러(`src/*.js`)를 그대로 실행합니다. 규칙 엔진·FHIR 처리·카탈로그·LangGraph 파이프라인 등 순수 로직(`src/*.js`, `scripts/graphs/`)은 프레임워크와 무관하게 유지되어 React 컴포넌트가 그대로 import합니다.
 
 ## 로컬 실행
 

@@ -47,7 +47,7 @@ body.emr-page {
 }
 
 .clinical-header .app-header__inner {
-  width: min(calc(100% - var(--space-8)), 1600px);
+  width: calc(100% - var(--space-6));
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   min-height: var(--header-height);
@@ -73,7 +73,7 @@ body.emr-page {
 }
 
 .emr-shell {
-  width: min(calc(100% - var(--space-8)), 1600px);
+  width: calc(100% - var(--space-6));
   margin-inline: auto;
   padding: var(--space-5) 0 var(--space-12);
 }
@@ -4578,7 +4578,7 @@ body.emr-page {
 }
 
 .clinical-footer {
-  width: min(calc(100% - var(--space-8)), 1600px);
+  width: calc(100% - var(--space-6));
 }
 
 /* Clinical labels and provenance stay readable at the 13px operational floor. */
@@ -5540,7 +5540,7 @@ body.emr-page {
 @media (max-width: 620px) {
   .emr-shell,
   .clinical-footer {
-    width: min(calc(100% - var(--space-4)), 1600px);
+    width: calc(100% - var(--space-4));
   }
 
   .emr-shell {
@@ -5548,7 +5548,7 @@ body.emr-page {
   }
 
   .clinical-header .app-header__inner {
-    width: min(calc(100% - var(--space-4)), 1600px);
+    width: calc(100% - var(--space-4));
   }
 
   .clinical-command h1 {

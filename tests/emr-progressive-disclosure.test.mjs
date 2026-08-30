@@ -104,11 +104,11 @@ test("EMR 헤더는 워크스페이스 여백에 맞춰 단일 로고 열을 정
 
   assert.match(
     css,
-    /\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*min\(calc\(100% - var\(--space-8\)\), 1600px\);[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
+    /\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*calc\(100% - var\(--space-6\)\);[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s,
   );
   assert.match(
     css,
-    /@media \(max-width: 620px\)\s*\{[\s\S]*?\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*min\(calc\(100% - var\(--space-4\)\), 1600px\);/s,
+    /@media \(max-width: 620px\)\s*\{[\s\S]*?\.clinical-header \.app-header__inner\s*\{[^}]*width:\s*calc\(100% - var\(--space-4\)\);/s,
   );
 });
 

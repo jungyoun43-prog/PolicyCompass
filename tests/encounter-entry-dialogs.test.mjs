@@ -157,6 +157,9 @@ test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미
   assert.match(rx, /medicationReviewModelPayload\(reviewPreview\.base\)/);
   assert.match(rx, /medicationReviewInstructions\(\)/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{sendReview\}/);
+  // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.
+  assert.match(rx, /\{review\.markdown \? <MarkdownReport markdown=\{review\.markdown\} \/> : \(/);
+  assert.match(rx, /\{review\.markdown \? null : <span>\{review\.summary\}<\/span>\}/);
   // 미리보기가 보여 주는 프롬프트와 서버가 실제로 보내는 프롬프트는 같은 모듈에서 나온다.
   assert.match(graph, /from "\.\.\/\.\.\/src\/medication-review-prompt\.js"/);
   assert.match(graph, /const instructions = medicationReviewInstructions;/);

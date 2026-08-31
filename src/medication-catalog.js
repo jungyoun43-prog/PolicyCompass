@@ -133,7 +133,6 @@ export const MEDICATION_CATALOG = Object.freeze([
       indications: [{ code: "C34", label: "기관지 및 폐의 악성 신생물" }],
       duplicateClass: "IMMUNE-CHECKPOINT",
       duplicateClassLabel: "Immune checkpoint inhibitor (anti-PD-1·anti-PD-L1)",
-      ageMinimum: 18,
     },
     notice: NOTICE_DURVALUMAB,
   }),

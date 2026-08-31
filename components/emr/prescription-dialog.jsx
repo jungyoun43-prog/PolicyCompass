@@ -478,11 +478,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   <span className="rx-verdict__symbol">{review.verdictSymbol}</span>
                   <span className="rx-verdict__text">
                     <b>{review.verdictLabel}</b>
-                    <span>{review.summary}</span>
+                    {review.markdown ? null : <span>{review.summary}</span>}
                     {review.note ? <span className="rx-verdict__note">{review.note}</span> : null}
                   </span>
                 </div>
-                {review.markdown ? <MarkdownReport markdown={review.markdown} /> : null}
+                {review.markdown ? <MarkdownReport markdown={review.markdown} /> : (
                 <section className="rx-review__section">
                   <h5 className="rx-review__heading">판정 근거 · 삭감 근거와 환자 정보 대조</h5>
                   <ul className="rx-source-list" id="medicationReviewSources">
@@ -584,6 +584,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     })}
                   </ul>
                 </section>
+                )}
               </div>
             )}
           </section>

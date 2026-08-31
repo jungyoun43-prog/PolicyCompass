@@ -11169,3 +11169,23 @@ model-viewer::part(default-progress-mask) {
 #prescriptionDialog .rx-model-report__heading {
   font-size: 0.95rem;
 }
+
+/* 전송 미리보기: 전부 같은 크기 — 위계는 굵기로만. */
+#reviewPreviewDialog .review-preview__section > h4,
+#reviewPreviewDialog .review-preview__section > h4 > span,
+#reviewPreviewDialog .review-preview textarea.review-preview__code,
+#reviewPreviewDialog .review-preview textarea.review-preview__code--notice,
+#reviewPreviewDialog .review-preview textarea.review-preview__prose,
+#reviewPreviewDialog .review-preview__expand,
+#reviewPreviewDialog .review-preview__model,
+#reviewPreviewDialog .review-preview__model select {
+  font-size: 0.8rem;
+}
+
+#reviewPreviewDialog .review-preview__section > h4 {
+  font-weight: 700;
+}
+
+#reviewPreviewDialog .review-preview__section > h4 > span {
+  font-weight: 500;
+}

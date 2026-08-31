@@ -10635,3 +10635,111 @@ model-viewer::part(default-progress-mask) {
 #reviewPreviewDialog .review-preview__actions {
   flex: 0 0 auto;
 }
+
+/* 약 처방하기: proportioned large — taller, slightly narrower, and the
+   contents scale with the box instead of floating in it. */
+#prescriptionDialog {
+  width: min(100% - var(--space-6), 1240px);
+  height: min(92vh, 1000px);
+  max-height: 92vh;
+  display: flex;
+}
+
+#prescriptionDialog .rx-dialog__panel {
+  flex: 1;
+  width: 100%;
+  max-height: none;
+}
+
+#prescriptionDialog .rx-dialog__title {
+  font-size: 1.3rem;
+}
+
+#prescriptionDialog .rx-dialog__context {
+  font-size: 0.9rem;
+}
+
+#prescriptionDialog .rx-search__field input {
+  min-height: 46px;
+  font-size: 1rem;
+}
+
+#prescriptionDialog .rx-section-title {
+  font-size: 1.05rem;
+}
+
+#prescriptionDialog .rx-result__label {
+  font-size: 1rem;
+}
+
+#prescriptionDialog .rx-result__meta,
+#prescriptionDialog .rx-result__ingredient {
+  font-size: 0.82rem;
+}
+
+#prescriptionDialog .rx-result__actions .clinical-button,
+#prescriptionDialog .rx-form__submit,
+#prescriptionDialog .rx-dialog__close {
+  font-size: 0.9rem;
+}
+
+#prescriptionDialog .rx-review__empty,
+#prescriptionDialog .rx-verdict__text span,
+#prescriptionDialog .rx-process {
+  font-size: 0.88rem;
+}
+
+#prescriptionDialog .rx-verdict .rx-verdict__text b {
+  font-size: 1.05rem;
+}
+
+#prescriptionDialog .rx-model-report {
+  font-size: 0.88rem;
+}
+
+#prescriptionDialog .rx-model-report__heading {
+  font-size: 0.98rem;
+}
+
+#prescriptionDialog .rx-model-report__table {
+  font-size: 0.84rem;
+}
+
+#prescriptionDialog .rx-form label,
+#prescriptionDialog .rx-form .clinical-system-field {
+  font-size: 0.8rem;
+}
+
+#prescriptionDialog .rx-form input,
+#prescriptionDialog .rx-form select,
+#prescriptionDialog .rx-form textarea {
+  min-height: 40px;
+  padding-block: 7px;
+  font-size: 0.92rem;
+}
+
+#prescriptionDialog .rx-form textarea {
+  min-height: 72px;
+}
+
+/* 전송 미리보기도 같은 톤으로 한 단계 키운다. */
+#reviewPreviewDialog .rx-dialog__title {
+  font-size: 1.3rem;
+}
+
+#reviewPreviewDialog .review-preview__section > h4 {
+  font-size: 0.95rem;
+}
+
+#reviewPreviewDialog .review-preview__section > h4 > span {
+  font-size: 0.8rem;
+}
+
+#reviewPreviewDialog .review-preview textarea.review-preview__code {
+  font-size: 0.78rem;
+}
+
+#reviewPreviewDialog .review-preview textarea.review-preview__code--notice,
+#reviewPreviewDialog .review-preview textarea.review-preview__prose {
+  font-size: 0.85rem;
+}

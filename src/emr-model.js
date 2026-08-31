@@ -1610,10 +1610,6 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         status: "active",
         prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
       }),
-      demoEvent("kim-mpred-3", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 270), {
-        status: "active",
-        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
-      }),
       demoEvent("kim-dyspnea", "symptom", "SYM-DYSPNEA", "호흡곤란 — 야간·운동 시 악화, 흡입제 유지에도 조절 불충분", dateBefore(asOf, 38), { status: "active" }),
     ],
   }, timestamp);
@@ -1769,24 +1765,24 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         status: "completed",
         value: "stage IIIA",
       }),
-      demoEvent("lee-pdl1", "observation", "PDL1-SP263", "병리조직검사 PD-L1 발현율 (SP263)", dateBefore(asOf, 115), { value: 5, unit: "%" }),
-      demoEvent("lee-taxol-1", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 1주기", dateBefore(asOf, 55), {
+      demoEvent("lee-pdl1", "observation", "PDL1-SP263", "병리조직검사 PD-L1 발현율 (SP263)", dateBefore(asOf, 115), { value: 0, unit: "%" }),
+      demoEvent("lee-taxol-1", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 1주기", dateBefore(asOf, 95), {
         status: "active",
         prescription: { dose: 50, doseUnit: "mg/m²", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
       }),
-      demoEvent("lee-carbo-1", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 1주기", dateBefore(asOf, 55), {
+      demoEvent("lee-carbo-1", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 1주기", dateBefore(asOf, 95), {
         status: "active",
         prescription: { dose: 2, doseUnit: "AUC", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
       }),
-      demoEvent("lee-taxol-2", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 20), {
+      demoEvent("lee-taxol-2", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 60), {
         status: "active",
         prescription: { dose: 50, doseUnit: "mg/m²", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
       }),
-      demoEvent("lee-carbo-2", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 20), {
+      demoEvent("lee-carbo-2", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 60), {
         status: "active",
         prescription: { dose: 2, doseUnit: "AUC", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
       }),
-      demoEvent("lee-ccrt", "procedure", "DEMO-CCRT", "백금 기반 동시적 항암화학방사선요법(CCRT) 2주기 완료 — 질병진행 없음(안정병변)", dateBefore(asOf, 20), {
+      demoEvent("lee-ccrt", "procedure", "DEMO-CCRT", "백금 기반 동시적 항암화학방사선요법(CCRT) 2주기 완료 — 질병진행 없음(안정병변)", dateBefore(asOf, 60), {
         status: "completed",
       }),
     ],

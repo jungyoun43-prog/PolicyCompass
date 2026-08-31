@@ -14,7 +14,7 @@ import {
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
 } from "../../src/medication-claim-review.js";
-import { medicationReviewInstructions, medicationReviewModelPayload, medicationReviewNotice } from "../../src/medication-review-prompt.js";
+import { medicationReviewInstructions, medicationReviewNotice, medicationReviewPatientDataText } from "../../src/medication-review-prompt.js";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
@@ -291,13 +291,26 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       setStatus("규칙 기반 사전점검을 완료했습니다.");
       return;
     }
-    // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인한다.
-    setReviewPreview({ medicationId, name: medication.label, base });
+    // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인·수정한다.
+    setReviewPreview({
+      medicationId,
+      name: medication.label,
+      base,
+      dataText: medicationReviewPatientDataText(base),
+      noticeText: medicationReviewNotice(medicationId),
+      promptText: medicationReviewInstructions(),
+    });
+  };
+
+  const editPreview = (field) => (event) => {
+    const value = event.target.value;
+    setReviewPreview((current) => (current ? { ...current, [field]: value } : current));
   };
 
   const sendReview = async () => {
     if (!reviewPreview) return;
-    const { medicationId, name, base } = reviewPreview;
+    const { medicationId, name, base, dataText, noticeText, promptText } = reviewPreview;
+    const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
     setReviewPreview(null);
     // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
     setReview(null);
@@ -307,7 +320,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ comparison: base, provider }),
+        body: JSON.stringify({ comparison: base, provider, overrides }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
@@ -616,16 +629,16 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           notice={<p>검토 요청 시 서버로 전송되는 입력을 그대로 보여 줍니다. 이름·등록번호 같은 직접식별자는 포함되지 않습니다.</p>}>
           <div className="review-preview">
             <section className="review-preview__section">
-              <h4>진료데이터 <span>환자 구조화 기록에서 추출해 급여기준과 짝지은 대조 항목 — 이 JSON이 모델 입력으로 전송됩니다.</span></h4>
-              <pre className="review-preview__code">{JSON.stringify(medicationReviewModelPayload(reviewPreview.base), null, 2)}</pre>
+              <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span></h4>
+              <textarea className="review-preview__code" id="reviewPreviewData" rows={12} value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
             </section>
             <section className="review-preview__section">
-              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어갑니다.</span></h4>
-              <pre className="review-preview__code review-preview__code--notice">{medicationReviewNotice(reviewPreview.medicationId)}</pre>
+              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span></h4>
+              <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" rows={10} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
             </section>
             <section className="review-preview__section">
               <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span></h4>
-              <pre className="review-preview__prose review-preview__prose--prompt">{medicationReviewInstructions()}</pre>
+              <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
             </section>
             <div className="review-preview__actions">
               <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>

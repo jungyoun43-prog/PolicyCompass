@@ -83,6 +83,28 @@ test("모델 요청은 고시정보·환자 의료데이터를 담고 직접식�
   assert.equal(sent.includes("김비타"), false);
 });
 
+test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그대로 전송된다", async () => {
+  // Given
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const calls = [];
+  const fetchImpl = ollamaStub(REPORT, calls);
+  const overrides = {
+    instructions: "수정된 시스템 지시입니다. ## [○/△/✕] 형식으로 답하세요.",
+    notice: "수정된 고시 본문입니다.",
+    patientData: "수정된 환자 의료데이터입니다.",
+  };
+
+  // When
+  await runMedicationClaimReview({ comparison, overrides }, { environment: localEnvironment, fetchImpl });
+
+  // Then
+  const [system, user] = calls[0].body.messages;
+  assert.equal(system.content, overrides.instructions);
+  assert.match(user.content, /### 급여 고시정보\n\n수정된 고시 본문입니다\./);
+  assert.match(user.content, /### 환자 의료데이터\n\n수정된 환자 의료데이터입니다\./);
+  assert.doesNotMatch(user.content, /고시 제2026-92호/);
+});
+
 test("판정 헤더가 없는 응답은 규칙 판정으로 되돌린다", async () => {
   // Given
   const comparison = comparisonFor("김비타", "benralizumab-30");

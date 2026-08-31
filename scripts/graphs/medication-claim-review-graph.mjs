@@ -147,6 +147,19 @@ const instructions = medicationReviewInstructions;
 
 const modelInput = medicationReviewModelInput;
 
+/** Operator-edited 프롬프트/고시정보/진료데이터 from the pre-send preview. */
+function sanitizeOverrides(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const overrides = {};
+  const instructionsText = markdownText(input.instructions, 8_000);
+  const noticeText = markdownText(input.notice, 8_000);
+  const patientDataText = markdownText(input.patientData, 40_000);
+  if (instructionsText) overrides.instructions = instructionsText;
+  if (noticeText) overrides.notice = noticeText;
+  if (patientDataText) overrides.patientData = patientDataText;
+  return overrides;
+}
+
 const VERDICT_SYMBOLS = {
   "\u25cb": "circle", "\u25ef": "circle", "\u3007": "circle", "O": "circle",
   "\u25b3": "triangle", "\u25b5": "triangle",
@@ -176,8 +189,8 @@ function validateDraft(raw, comparison) {
 
 async function localDraft(comparison, options, feedback) {
   const messages = [
-    { role: "system", content: instructions() },
-    { role: "user", content: modelInput(comparison) },
+    { role: "system", content: options.overrides?.instructions || instructions() },
+    { role: "user", content: modelInput(comparison, options.overrides ?? {}) },
   ];
   if (feedback) {
     messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 지정된 출력 형식을 지켜 다시 작성하세요.` });
@@ -205,13 +218,12 @@ async function localDraft(comparison, options, feedback) {
 }
 
 async function frontierDraft(comparison, options, feedback) {
-  const input = feedback
-    ? `${modelInput(comparison)}\n\n[재시도 안내] ${feedback}`
-    : modelInput(comparison);
+  const base = modelInput(comparison, options.overrides ?? {});
+  const input = feedback ? `${base}\n\n[재시도 안내] ${feedback}` : base;
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
-    instructions: instructions(),
+    instructions: options.overrides?.instructions || instructions(),
     input,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
@@ -284,11 +296,13 @@ export async function runMedicationClaimReview(payload = {}, {
   timeoutMs = 30_000,
 } = {}) {
   const comparison = sanitizeMedicationClaimComparison(payload);
+  const overrides = sanitizeOverrides(payload?.overrides);
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
   const status = medicationClaimReviewStatus(environment);
   const options = provider === "frontier"
     ? {
       provider,
+      overrides,
       model: status.frontier.configured ? status.frontier.model : "",
       apiKey: frontierCredentials(environment).apiKey,
       environment,
@@ -297,6 +311,7 @@ export async function runMedicationClaimReview(payload = {}, {
     }
     : {
       provider,
+      overrides,
       model: status.local.configured ? status.local.model : "",
       endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
       fetchImpl,

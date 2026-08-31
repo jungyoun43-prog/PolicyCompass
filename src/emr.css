@@ -10562,3 +10562,17 @@ model-viewer::part(default-progress-mask) {
   background: var(--surface);
   font-weight: 600;
 }
+
+/* Pre-send preview fields are editable; keep the document look. */
+.review-preview textarea.review-preview__code,
+.review-preview textarea.review-preview__prose {
+  width: 100%;
+  resize: vertical;
+  max-height: none;
+  min-height: 140px;
+  color: var(--ink);
+}
+
+.review-preview textarea.review-preview__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

@@ -148,13 +148,21 @@ test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미
   const graph = await readFile(new URL("../scripts/graphs/medication-claim-review-graph.mjs", import.meta.url), "utf8");
 
   // When / Then — 모델 없는 규칙 기반 경로는 전송이 없으므로 팝업 없이 그대로 진행한다.
-  assert.match(rx, /setReviewPreview\(\{ medicationId, name: medication\.label, base \}\)/);
+  assert.match(rx, /setReviewPreview\(\{\s*medicationId,\s*name: medication\.label,\s*base,/);
+  assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
+  assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
+  assert.match(rx, /promptText: medicationReviewInstructions\(\)/);
   assert.match(rx, /id="reviewPreviewDialog"/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
   assert.match(rx, /프롬프트/);
-  assert.match(rx, /medicationReviewNotice\(reviewPreview\.medicationId\)/);
-  assert.match(rx, /medicationReviewModelPayload\(reviewPreview\.base\)/);
+  assert.match(rx, /medicationReviewNotice\(medicationId\)/);
+  // 세 섹션은 미리 채워진 편집 가능한 입력이고 수정본이 오버라이드로 전송된다.
+  assert.match(rx, /id="reviewPreviewData"[^>]*value=\{reviewPreview\.dataText\}/);
+  assert.match(rx, /id="reviewPreviewNoticeText"[^>]*value=\{reviewPreview\.noticeText\}/);
+  assert.match(rx, /id="reviewPreviewPrompt"[^>]*value=\{reviewPreview\.promptText\}/);
+  assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText \}/);
+  assert.match(rx, /comparison: base, provider, overrides/);
   assert.match(rx, /medicationReviewInstructions\(\)/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{sendReview\}/);
   // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.

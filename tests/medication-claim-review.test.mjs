@@ -68,11 +68,11 @@ test("검토 진료데이터에는 고시 판정에 필요한 구조화 기록 �
 
   // Then — benralizumab: 12개월 내 호산구 수치와 전신 스테로이드 처방 이력.
   assert.equal(kim.records.filter(({ code }) => code === "26449-9").length, 2);
-  assert.equal(kim.records.filter(({ code }) => code === "MED-MPRED").length, 3);
+  assert.equal(kim.records.filter(({ code }) => code === "MED-MPRED").length, 2, "급성악화 2회 — 고시의 3회 기준을 한 끗 차이로 놓친다");
   assert.ok(kim.records.some(({ code }) => code === "SYM-DYSPNEA"));
   // durvalumab: stage III·PD-L1·CCRT 종료 시점·백금 기반 항암제 투약 이력.
   assert.ok(lee.records.some(({ code }) => code === "DEMO-PETCT"));
-  assert.equal(lee.records.find(({ code }) => code === "PDL1-SP263").value, 5);
+  assert.equal(lee.records.find(({ code }) => code === "PDL1-SP263").value, 0, "PD-L1 0% — 1% 기준 미충족");
   assert.ok(lee.records.some(({ code }) => code === "DEMO-CCRT"));
   assert.equal(lee.records.filter(({ code }) => code === "MED-TAXOL" || code === "MED-CARBO").length, 4);
   // 자유 메모·식별자는 추출에 없다.

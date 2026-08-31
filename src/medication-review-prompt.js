@@ -56,14 +56,21 @@ export function medicationReviewModelPayload(comparison) {
   };
 }
 
-export function medicationReviewModelInput(comparison) {
-  return [
-    "### 급여 고시정보",
-    "",
-    medicationReviewNotice(comparison.medication?.id),
-    "",
-    "### 환자 의료데이터",
-    "",
-    JSON.stringify(medicationReviewModelPayload(comparison), null, 1),
-  ].join("\n");
+export function medicationReviewPatientDataText(comparison) {
+  return JSON.stringify(medicationReviewModelPayload(comparison), null, 1);
+}
+
+export function medicationReviewUserMessage({ notice, patientData }) {
+  return ["### 급여 고시정보", "", notice, "", "### 환자 의료데이터", "", patientData].join("\n");
+}
+
+/**
+ * `overrides` carries operator-edited 고시정보/환자 의료데이터 from the pre-send
+ * preview; absent fields fall back to the canonical catalogue/extract values.
+ */
+export function medicationReviewModelInput(comparison, overrides = {}) {
+  return medicationReviewUserMessage({
+    notice: overrides.notice || medicationReviewNotice(comparison.medication?.id),
+    patientData: overrides.patientData || medicationReviewPatientDataText(comparison),
+  });
 }

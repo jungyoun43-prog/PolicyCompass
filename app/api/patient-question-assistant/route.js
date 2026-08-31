@@ -4,7 +4,7 @@ import {
   patientQuestionAssistantStatus,
   runPatientQuestionAssistant,
 } from "../../../scripts/patient-question-assistant.mjs";
-import { ApiError, assertFrontierRequestAllowed, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
+import { ApiError, assertFrontierDailyBudget, assertFrontierRequestAllowed, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
@@ -20,7 +20,10 @@ export const POST = withApiErrors(async (request) => {
       message: "규칙 기반 질문을 사용합니다.",
     });
   }
-  if (provider === "frontier") assertFrontierRequestAllowed(request);
+  if (provider === "frontier") {
+    assertFrontierRequestAllowed(request);
+    await assertFrontierDailyBudget();
+  }
   try {
     return jsonResponse(200, await runPatientQuestionAssistant(payload));
   } catch (error) {

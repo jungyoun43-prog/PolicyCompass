@@ -4,7 +4,7 @@ import {
   medicationClaimReviewStatus,
   runMedicationClaimReview,
 } from "../../../scripts/graphs/medication-claim-review-graph.mjs";
-import { ApiError, assertFrontierRequestAllowed, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
+import { ApiError, assertFrontierDailyBudget, assertFrontierRequestAllowed, assertSameOrigin, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
@@ -17,7 +17,10 @@ export const POST = withApiErrors(async (request) => {
       message: "AI 검토가 설정되지 않아 규칙 기반 사전점검을 사용합니다.",
     });
   }
-  if (provider === "frontier") assertFrontierRequestAllowed(request);
+  if (provider === "frontier") {
+    assertFrontierRequestAllowed(request);
+    await assertFrontierDailyBudget();
+  }
   try {
     return jsonResponse(200, await runMedicationClaimReview(payload));
   } catch (error) {

@@ -10384,3 +10384,8 @@ model-viewer::part(default-progress-mask) {
 .workspace-status:empty {
   display: none;
 }
+
+
+.workspace-status {
+  cursor: pointer;
+}

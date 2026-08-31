@@ -27,6 +27,14 @@ import { DataTab } from "./tabs/data-tab.jsx";
 export function EmrApp() {
   const store = useEmrStore();
   const { state, status, setStatus, applyMutation, replaceState, ready } = store;
+
+  // The status toast dismisses itself — errors linger a little longer —
+  // and a click anywhere on it clears it immediately.
+  useEffect(() => {
+    if (!status.message) return undefined;
+    const timer = setTimeout(() => setStatus(""), status.tone === "error" ? 8000 : 5000);
+    return () => clearTimeout(timer);
+  }, [status.message, status.tone, setStatus]);
   const [activeTab, setActiveTab] = useState("encounter");
   const [viewedEncounterId, setViewedEncounterId] = useState("");
   const [editRequest, setEditRequest] = useState(null);
@@ -194,7 +202,7 @@ export function EmrApp() {
         ) : null}
 
 
-        <p className={`workspace-status${status.tone ? " is-" + status.tone : ""}`} id="workspaceStatus" role="status" aria-live="polite">{status.message}</p>
+        <p className={`workspace-status${status.tone ? " is-" + status.tone : ""}`} id="workspaceStatus" role="status" aria-live="polite" onClick={() => setStatus("")} title="클릭해서 닫기">{status.message}</p>
 
         <div className="clinical-layout">
           <PatientRail

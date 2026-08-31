@@ -11214,3 +11214,8 @@ model-viewer::part(default-progress-mask) {
     max-width: 150px;
   }
 }
+
+.clinical-header .header-ai-status {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}

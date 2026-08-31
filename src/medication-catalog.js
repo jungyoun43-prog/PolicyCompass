@@ -90,6 +90,18 @@ LAMA: Long Acting Muscarinic Antagonist
 ■ 고시번호(시행일자): 고시 제2026-92호(2026.5.1.)
 ■ 변경 전 고시번호(시행일자): 고시 제2025-224호(2026.1.1.)`;
 
+const NOTICE_DURVALUMAB = `6. 관해공고요법(consolidation)
+연번 1
+항암요법 durvalumab(주1)
+투여대상 PD-L1 발현 양성(발현 비율 ≧ 1%)이면서 백금 기반 동시적 항암화학방사선요법 2주기 이상 투여 후 질병진행이 없는 안정병변 이상의 절제 불가능한 국소 진행성(stage III)으로 CCRT 치료 종료 이후 42일 내에 투여하는 경우
+※ 급여 인정 기간은 12개월로 함 (주1항 최대 2년 적용 불가)
+※ 이전 PD-1 inhibitor 등 면역관문억제제 치료를 받지 않은 경우에 한함 (제2020-81호: 2020.4.1. 개정 제2026-88호: 2026.4.2.)
+주1. 면역관문억제제(nivolumab, pembrolizumab 등)는 예상치 못한 부작용 발생 등의 긴급 상황에 대응 가능한 의료기관에서 항암치료요법에 대한 지식과 경험이 충분한 의사에 의해 투여되어야 하며, 요양급여 실시 현황 등에 관한 자료를 건강보험심사평가원장에게 제출하여야 한다.
+▪ 급여인정기관: 상급종합병원․종합병원 중 상근하는 병리과 전문의 1인 이상(또는 면역병리검사결과지에 따라 치료한 경우)이면서, 혈액종양내과, 순환기내과, 호흡기내과, 소화기내과, 내분비내과, 신경과 중 4과 이상의 상근하는 전문의가 각 1인 이상인 기관
+▪ 급여인정기간: 1년까지(단, 질병진행시 중단) 급여인정 하되, 1년 내에 최적의 투여기간에 대한 임상결과 미 발표 시 자동 연장하여 최대 2년으로 함.
+▪ 투여대상: PD-L1 발현율 등의 biomarker를 활용하여 투여대상을 선정하되, 세부 암종별 특성에 따라 달리 적용할 수 있음.
+▪ 사후관리: 요양기관에서 제출한 급여실시내역을 활용하여 효과 및 부작용에 대한 모니터링을 실시할 수 있음.`;
+
 export const MEDICATION_CATALOG = Object.freeze([
   medication({
     id: "benralizumab-30",
@@ -123,6 +135,7 @@ export const MEDICATION_CATALOG = Object.freeze([
       duplicateClassLabel: "Immune checkpoint inhibitor (anti-PD-1·anti-PD-L1)",
       ageMinimum: 18,
     },
+    notice: NOTICE_DURVALUMAB,
   }),
 ]);
 

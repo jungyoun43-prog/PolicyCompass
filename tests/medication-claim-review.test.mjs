@@ -34,7 +34,7 @@ function review(patientName, medication, prescription) {
   });
 }
 
-test("약품 목록은 benralizumab·durvalumab 둘이고 benralizumab은 고시 원문을 지닌다", () => {
+test("약품 목록은 benralizumab·durvalumab 둘이고 각자 고시 원문을 지닌다", () => {
   // Given / When
   const byIngredient = searchMedicationCatalog("벤라리주맙");
   const byBrand = searchMedicationCatalog("파센라");
@@ -52,7 +52,9 @@ test("약품 목록은 benralizumab·durvalumab 둘이고 benralizumab은 고시
   assert.match(benralizumab.notice, /고시 제2026-92호/);
   assert.match(benralizumab.notice, /중증 호산구성 천식/);
   const durvalumab = findMedicationInCatalog("durvalumab-500");
-  assert.equal(durvalumab.notice ?? "", "", "durvalumab 고시는 아직 등록 전이다");
+  assert.match(durvalumab.notice, /제2026-88호/);
+  assert.match(durvalumab.notice, /관해공고요법/);
+  assert.match(durvalumab.notice, /CCRT 치료 종료 이후 42일 내/);
   for (const medication of MEDICATION_CATALOG) {
     assert.match(medication.coverage.source.label, /예시/, `${medication.id} 출처 표기`);
     assert.equal(medication.coverage.source.url, "", `${medication.id} 은 실제 고시 링크를 만들어내지 않는다`);

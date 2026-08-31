@@ -198,7 +198,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [reviewPreview, setReviewPreview] = useState(null);
-  const [expandedField, setExpandedField] = useState("dataText");
+  const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
   const [expandedDetails, setExpandedDetails] = useState(() => new Set());
@@ -295,7 +295,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       return;
     }
     // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인·수정한다.
-    setExpandedField("dataText");
+    setExpandedField("");
     setReviewPreview({
       medicationId,
       name: medication.label,

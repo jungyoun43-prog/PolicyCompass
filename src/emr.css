@@ -9791,8 +9791,7 @@ model-viewer::part(default-progress-mask) {
    the context rail instead of stretching textareas across the monitor. */
 @media (min-width: 1500px) {
   .encounter-layout {
-    grid-template-columns: minmax(0, 1000px) minmax(320px, 420px);
-    justify-content: start;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 27%);
   }
 }
 

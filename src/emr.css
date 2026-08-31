@@ -11116,3 +11116,17 @@ model-viewer::part(default-progress-mask) {
 .rail-visit-slot .workflow-disclosure__heading {
   flex: 0 0 auto;
 }
+
+/* 레일 요약 줄은 flex: 제목은 절대 줄지 않고 칩·메타가 오른쪽에 붙는다. */
+.rail-visit-slot .workflow-disclosure__summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.rail-visit-slot .workflow-disclosure__signals {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}

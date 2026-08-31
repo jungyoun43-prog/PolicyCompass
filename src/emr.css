@@ -10961,3 +10961,77 @@ model-viewer::part(default-progress-mask) {
     scrollbar-width: thin;
   }
 }
+
+/* --- Tabs live in the top chrome row, next to the brand --------------------- */
+.emr-frame {
+  display: contents;
+}
+
+.clinical-header .patient-workspace-navigation {
+  position: static;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding-block: 0;
+  min-height: 0;
+}
+
+.clinical-header .workspace-tabs {
+  border-bottom: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.clinical-header .workspace-tabs__context {
+  padding-inline: 0 var(--space-3);
+}
+
+/* Entry launchers live in the card title row; cards no longer collapse. */
+.workflow-disclosure--static > .workflow-disclosure__summary {
+  cursor: default;
+  list-style: none;
+}
+
+.workflow-disclosure--static > .workflow-disclosure__summary::after {
+  display: none;
+}
+
+.entry-launcher-slot {
+  display: inline-flex;
+}
+
+.entry-launcher-slot:empty {
+  display: none;
+}
+
+.entry-launcher-slot .clinical-button {
+  min-height: 32px;
+  padding-block: 3px;
+  padding-inline: var(--space-3);
+  font-size: 0.82rem;
+}
+
+/* Density: cards sit closer and pad tighter. */
+.entry-grid {
+  gap: var(--space-2);
+}
+
+.encounter-main .clinical-card {
+  padding: var(--space-3) var(--space-4);
+}
+
+.workflow-disclosure--static > .workflow-disclosure__summary {
+  margin-bottom: var(--space-2);
+}
+
+@media (min-width: 1180px) {
+  .emr-page .clinical-layout,
+  .emr-page #panel-encounter .encounter-layout {
+    gap: var(--space-2);
+  }
+
+  .emr-page .encounter-context-rail,
+  .emr-page .rail-visit-slot {
+    gap: var(--space-2);
+  }
+}

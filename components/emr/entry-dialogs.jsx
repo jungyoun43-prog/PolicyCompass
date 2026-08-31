@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   addEncounterDiagnosis,
@@ -25,6 +26,13 @@ import {
 } from "../../src/order-catalog.js";
 import { displayCoding } from "../../lib/emr/format.js";
 import { encounterDialogContext, RxDialog, RxSearch } from "./dialog-kit.jsx";
+
+
+function useLauncherSlot(id) {
+  const [slot, setSlot] = useState(null);
+  useEffect(() => { setSlot(document.getElementById(id)); }, [id]);
+  return slot;
+}
 
 function useOpenGuard({ patient, encounter, editable, setStatus, activeDialog, setActiveDialog, name, blockedMessage }) {
   const open = activeDialog === name;
@@ -128,6 +136,7 @@ export function VitalDialog({ patient, encounter, editable, applyMutation, withD
 }
 
 export function DiagnosisDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty }) {
+  const diagnosisLauncherSlot = useLauncherSlot("entryLauncher-diagnoses");
   const { open, requestOpen, close, context } = useOpenGuard({
     patient, encounter, editable, setStatus, activeDialog, setActiveDialog,
     name: "diagnosis", blockedMessage: "진료를 시작한 뒤 진단을 담을 수 있습니다.",
@@ -174,10 +183,9 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
 
   return (
     <>
-      <div className="prescription-launcher">
-        <Button variant="primary" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>
-        <p className="prescription-launcher__hint">진단명을 검색해 상병을 고르고, 진단 코드·코드 시스템·주상병 여부를 확인해 이번 진료에 담습니다.</p>
-      </div>
+      {diagnosisLauncherSlot ? createPortal(
+        <Button variant="primary" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>,
+        diagnosisLauncherSlot) : null}
       <RxDialog id="diagnosisDialog" open={open} onClose={close} eyebrow="DIAGNOSIS SEARCH" title="진단 추가" titleId="dxDialogTitle" context={context}
         notice="상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다." noticeId="diagnosisNotice">
         <RxSearch id="diagnosisSearchForm" inputId="diagnosisSearchInput" label="진단명 검색" placeholder="진단명·증상·코드 (예: 고혈압, 당뇨, J44)" value={query} onChange={setQuery} />
@@ -226,6 +234,7 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
 }
 
 export function OrderDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty }) {
+  const orderLauncherSlot = useLauncherSlot("entryLauncher-orders");
   const { open, requestOpen, close, context } = useOpenGuard({
     patient, encounter, editable, setStatus, activeDialog, setActiveDialog,
     name: "order", blockedMessage: "진료를 시작한 뒤 오더를 담을 수 있습니다.",
@@ -265,10 +274,9 @@ export function OrderDialog({ patient, encounter, editable, applyMutation, withD
 
   return (
     <>
-      <div className="prescription-launcher">
-        <Button variant="primary" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>
-        <p className="prescription-launcher__hint">오더명을 검색해 고르면 유형과 코드가 채워집니다. 우선순위와 요청사항을 확인해 이번 진료에 담습니다.</p>
-      </div>
+      {orderLauncherSlot ? createPortal(
+        <Button variant="primary" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>,
+        orderLauncherSlot) : null}
       <RxDialog id="orderDialog" open={open} onClose={close} eyebrow="ORDER SEARCH" title="오더 추가" titleId="orderDialogTitle" context={context}
         notice="오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다." noticeId="orderNotice">
         <RxSearch id="orderSearchForm" inputId="orderSearchInput" label="오더 검색" placeholder="오더명·유형·코드 (예: 폐기능, 흉부, 의뢰)" value={query} onChange={setQuery} />

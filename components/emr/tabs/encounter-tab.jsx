@@ -98,15 +98,15 @@ function EncounterEntryList({ id, ariaLabel, entries, emptyLabel, onRemove }) {
   );
 }
 
-function WorkflowDisclosure({ name, eyebrow, title, titleId, badge, summaryText, summaryTone, open, onToggle, children }) {
+function WorkflowDisclosure({ name, title, titleId, summaryText, summaryTone, children }) {
   return (
-    <details className="clinical-card clinical-entry-card workflow-disclosure" aria-labelledby={titleId} data-workflow-disclosure={name} open={open} onToggle={(event) => onToggle(name, event.currentTarget.open)}>
-      <summary className="workflow-disclosure__summary">
-        <span className="workflow-disclosure__heading"><span className="rail-eyebrow">{eyebrow}</span><span className="workflow-disclosure__title" id={titleId} role="heading" aria-level={3}>{title}</span></span>
-        <span className="workflow-disclosure__signals"><span className="source-badge">{badge}</span><span className="workflow-disclosure__meta" data-disclosure-summary={name} data-tone={summaryTone || undefined}>{summaryText}</span></span>
-      </summary>
+    <section className="clinical-card clinical-entry-card workflow-disclosure workflow-disclosure--static" aria-labelledby={titleId} data-workflow-disclosure={name}>
+      <div className="workflow-disclosure__summary">
+        <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id={titleId} role="heading" aria-level={3}>{title}</span></span>
+        <span className="workflow-disclosure__signals"><span className="entry-launcher-slot" id={`entryLauncher-${name}`}></span><span className="workflow-disclosure__meta" data-disclosure-summary={name} data-tone={summaryTone || undefined}>{summaryText}</span></span>
+      </div>
       <div className="workflow-disclosure__body">{children}</div>
-    </details>
+    </section>
   );
 }
 
@@ -389,11 +389,11 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
 
         <form className="encounter-form" id="encounterForm" noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => { event.preventDefault(); onSaveDraft(); }}>
 
-          <details className="clinical-card soap-card workflow-disclosure" aria-labelledby="soapTitle" data-workflow-disclosure="soap" open={disclosureOpen("soap")} onToggle={(event) => onDisclosureToggle("soap", event.currentTarget.open)}>
-            <summary className="workflow-disclosure__summary">
-              <span className="workflow-disclosure__heading"><span className="rail-eyebrow">SOAP NOTE</span><span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3}>진료 기록</span></span>
-              <span className="workflow-disclosure__signals"><span className="source-badge">DRAFT</span><span className="workflow-disclosure__meta" data-disclosure-summary="soap" data-tone={status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : undefined}>{status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`}</span></span>
-            </summary>
+          <section className="clinical-card soap-card workflow-disclosure workflow-disclosure--static" aria-labelledby="soapTitle" data-workflow-disclosure="soap">
+            <div className="workflow-disclosure__summary">
+              <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3}>진료 기록</span></span>
+              <span className="workflow-disclosure__signals"><span className="workflow-disclosure__meta" data-disclosure-summary="soap" data-tone={status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : undefined}>{status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`}</span></span>
+            </div>
             <div className="workflow-disclosure__body">
               <div className="soap-grid">
                 <label className="soap-field soap-field--full">주호소 · 내원 사유<textarea id="chiefComplaint" name="chiefComplaint" rows={2} maxLength={2000} placeholder="환자의 표현과 증상 시작 시점을 기록하세요." disabled={!editable} value={form.chiefComplaint} onChange={set("chiefComplaint")} /></label>
@@ -403,12 +403,12 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
                 <label className="soap-field" data-soap="plan"><span><b>P</b> Plan · 계획</span><textarea id="soapPlan" name="soapPlan" rows={4} maxLength={8000} placeholder="치료 계획 · 약물, 추가 검사, 환자 교육, 다음 추적 시점" disabled={!editable} value={form.plan} onChange={set("plan")} /></label>
               </div>
             </div>
-          </details>
+          </section>
         </form>
 
         <div className="entry-grid">
 
-        <WorkflowDisclosure name="diagnoses" eyebrow="DIAGNOSIS" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""} open={disclosureOpen("diagnoses")} onToggle={onDisclosureToggle}>
+        <WorkflowDisclosure name="diagnoses" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""}>
           <DiagnosisDialog {...dialogShared} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="diagnosisList" ariaLabel="이번 진료 진단 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "이번 진료 진단을 추가하세요." : "이번 진료 진단 없음"}
@@ -422,7 +422,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             }))} />
         </WorkflowDisclosure>
 
-        <WorkflowDisclosure name="prescriptions" eyebrow="PRESCRIPTION RECORD" title="처방 기록" titleId="prescriptionTitle" badge="CLINICIAN DECISION" summaryText={`${entryCounts.prescriptions}건`} summaryTone={entryCounts.prescriptions ? "ready" : ""} open={disclosureOpen("prescriptions")} onToggle={onDisclosureToggle}>
+        <WorkflowDisclosure name="prescriptions" title="처방 기록" titleId="prescriptionTitle" summaryText={`${entryCounts.prescriptions}건`} summaryTone={entryCounts.prescriptions ? "ready" : ""}>
           <PrescriptionDialog {...dialogShared} key={`rx:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="prescriptionList" ariaLabel="이번 진료 처방 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "처방이 필요한 경우 구조화해 추가하세요." : "이번 진료 처방 없음"}
@@ -440,7 +440,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
             })} />
         </WorkflowDisclosure>
 
-        <WorkflowDisclosure name="orders" eyebrow="ORDERS" title="검사·처치·의뢰 오더" titleId="orderTitle" badge="MANUAL" summaryText={`${entryCounts.orders}건`} summaryTone={entryCounts.orders ? "ready" : ""} open={disclosureOpen("orders")} onToggle={onDisclosureToggle}>
+        <WorkflowDisclosure name="orders" title="검사·처치·의뢰 오더" titleId="orderTitle" summaryText={`${entryCounts.orders}건`} summaryTone={entryCounts.orders ? "ready" : ""}>
           <OrderDialog {...dialogShared} key={`order:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="orderList" ariaLabel="이번 진료 오더 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"}

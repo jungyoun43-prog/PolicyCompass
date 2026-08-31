@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 /** Static chrome around the workspace: header, command bar, trust strip, footer. */
-export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai = null }) {
+export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai = null, nav = null }) {
   return (
     <header className="app-header clinical-header">
       <div className="app-header__inner">
@@ -18,6 +18,7 @@ export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai 
             <span id="aiStatusDetail">{ai.detail}</span>
           </span>
         ) : null}
+        {nav}
         {utilities || onExitDemo ? (
           <div className="command-actions" aria-label="로컬 데이터 작업">
             <Button id="exitDemo" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</Button>

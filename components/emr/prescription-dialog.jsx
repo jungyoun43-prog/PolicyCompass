@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { addEncounterPrescription } from "../../src/emr-encounter.js";
 import {
@@ -198,6 +199,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [reviewPreview, setReviewPreview] = useState(null);
+  const [launcherSlot, setLauncherSlot] = useState(null);
+  useEffect(() => { setLauncherSlot(document.getElementById("entryLauncher-prescriptions")); }, []);
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
@@ -394,10 +397,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
   return (
     <>
-      <div className="prescription-launcher">
-        <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</Button>
-        <p className="prescription-launcher__hint">약을 검색하고 <b>AI 검토</b>로 이 환자 기록과 등록된 급여기준을 대조한 뒤 이번 진료에 담습니다.</p>
-      </div>
+      {launcherSlot ? createPortal(
+        <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</Button>,
+        launcherSlot) : null}
       <RxDialog id="prescriptionDialog" open={open} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
         notice="급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다." noticeId="prescriptionNotice"
         headerExtra={review ? (

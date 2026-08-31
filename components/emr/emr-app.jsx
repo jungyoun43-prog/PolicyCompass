@@ -185,7 +185,10 @@ export function EmrApp() {
   return (
     <>
       <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
-      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai} />
+      <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="manual">
+      <div className="emr-frame">
+      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai}
+        nav={patient ? <WorkspaceHeader patient={patient} activeTab={activeTab} onSelectTab={selectTab} /> : null} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">
@@ -226,13 +229,7 @@ export function EmrApp() {
                 <p>차트·신체 지도·급여 보드를 한 화면에서 확인합니다.</p>
               </div>
             ) : (
-              <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="manual">
               <div id="workspaceContent">
-                <WorkspaceHeader
-                  patient={patient}
-                  activeTab={activeTab}
-                  onSelectTab={selectTab}
-                />
                 <TabsPrimitive.Content asChild forceMount value="encounter"><section className="workspace-panel encounter-panel" id="panel-encounter" data-panel="encounter" hidden={activeTab !== "encounter"}>
                   <EncounterTab {...tabProps} />
                 </section></TabsPrimitive.Content>
@@ -255,12 +252,13 @@ export function EmrApp() {
                   <DataTab {...tabProps} />
                 </section></TabsPrimitive.Content>
               </div>
-              </TabsPrimitive.Root>
             )}
           </section>
         </div>
 
       </main>
+      </div>
+      </TabsPrimitive.Root>
     </>
   );
 }

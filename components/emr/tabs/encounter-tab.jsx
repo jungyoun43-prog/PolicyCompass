@@ -386,28 +386,6 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   return (
     <div className="encounter-layout">
       <div className="encounter-main">
-        <section className="clinical-card encounter-command-card" aria-labelledby="encounterTitle">
-          <div className="encounter-command-heading">
-            <div>
-              <p className="rail-eyebrow">ACTIVE ENCOUNTER</p>
-              <h3 id="encounterTitle">{encounter ? `${displayDate(encounter.date)} ${encounter.label}` : "오늘 외래 진료"}</h3>
-            </div>
-            <div className="encounter-state" id="encounterStatus" data-status={status} aria-live="polite" tabIndex={-1}>
-              <span className="encounter-state__dot" aria-hidden="true"></span>
-              <b id="encounterStatusText">{QUEUE_LABELS[status]}</b>
-            </div>
-          </div>
-          <div className="encounter-quick-actions" aria-label="진료 상태 작업">
-            <Button id="returnCurrentEncounter" type="button" hidden={!viewedEncounterId} onClick={() => {
-              if (blockClinicalContextChange()) return;
-              setViewedEncounterId("");
-            }}>현재 진료로 돌아가기</Button>
-            <Button id="checkInPatient" type="button" hidden={!unverifiedBackup && !["none", "signed", "legacy", "external"].includes(status)} onClick={onCheckIn}>
-              {finalized || unverifiedBackup ? "새 로컬 진료 접수" : "오늘 접수"}
-            </Button>
-            <Button variant="primary" id="startEncounter" type="button" hidden={status !== "waiting" || unverifiedBackup} onClick={onStart}>진료 시작</Button>
-          </div>
-        </section>
 
         <form className="encounter-form" id="encounterForm" noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => { event.preventDefault(); onSaveDraft(); }}>
 
@@ -580,6 +558,28 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
       </div>
 
       {visitSlot ? createPortal(<>
+        <section className="clinical-card encounter-command-card" aria-labelledby="encounterTitle">
+          <div className="encounter-command-heading">
+            <div>
+              <p className="rail-eyebrow">ACTIVE ENCOUNTER</p>
+              <h3 id="encounterTitle">{encounter ? `${displayDate(encounter.date)} ${encounter.label}` : "오늘 외래 진료"}</h3>
+            </div>
+            <div className="encounter-state" id="encounterStatus" data-status={status} aria-live="polite" tabIndex={-1}>
+              <span className="encounter-state__dot" aria-hidden="true"></span>
+              <b id="encounterStatusText">{QUEUE_LABELS[status]}</b>
+            </div>
+          </div>
+          <div className="encounter-quick-actions" aria-label="진료 상태 작업">
+            <Button id="returnCurrentEncounter" type="button" hidden={!viewedEncounterId} onClick={() => {
+              if (blockClinicalContextChange()) return;
+              setViewedEncounterId("");
+            }}>현재 진료로 돌아가기</Button>
+            <Button id="checkInPatient" type="button" hidden={!unverifiedBackup && !["none", "signed", "legacy", "external"].includes(status)} onClick={onCheckIn}>
+              {finalized || unverifiedBackup ? "새 로컬 진료 접수" : "오늘 접수"}
+            </Button>
+            <Button variant="primary" id="startEncounter" type="button" hidden={status !== "waiting" || unverifiedBackup} onClick={onStart}>진료 시작</Button>
+          </div>
+        </section>
           <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
             <summary className="workflow-disclosure__summary">
               <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>

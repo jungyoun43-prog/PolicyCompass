@@ -10800,3 +10800,164 @@ model-viewer::part(default-progress-mask) {
   padding: 4px 10px;
   font-size: 0.85rem;
 }
+
+/* --- App-shell layout: the page never scrolls; each region scrolls inside --- */
+@media (min-width: 1180px) {
+  body.emr-page {
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .emr-page .clinical-header,
+  .emr-page .clinical-footer {
+    flex: 0 0 auto;
+  }
+
+  .emr-page .emr-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: var(--space-3);
+  }
+
+  .emr-page .clinical-layout {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .emr-page .patient-rail {
+    position: static;
+    top: auto;
+    height: 100%;
+    max-height: none;
+  }
+
+  .emr-page .patient-workspace {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .emr-page #workspaceContent {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .emr-page .workspace-panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-color: var(--line) transparent;
+    scrollbar-width: thin;
+  }
+
+  /* 진료 탭: 중앙 기록과 우측 환자 기록 레일이 따로 스크롤된다. */
+  .emr-page #panel-encounter {
+    overflow: hidden;
+  }
+
+  .emr-page #panel-encounter .encounter-layout {
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .emr-page .encounter-flow {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+    scrollbar-color: var(--line) transparent;
+    scrollbar-width: thin;
+  }
+
+  .emr-page .encounter-context-rail {
+    position: static;
+    top: auto;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    align-content: start;
+    padding-right: 2px;
+    scrollbar-color: var(--line) transparent;
+    scrollbar-width: thin;
+  }
+
+  .emr-page .stream-scroll {
+    max-height: none;
+    min-height: 0;
+  }
+}
+
+/* 진료 헤더(날짜·진료과·상태·시작 버튼)는 왼쪽 레일의 진료 기본정보 위에 산다. */
+.rail-visit-slot .encounter-command-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rail-visit-slot .encounter-command-card .rail-eyebrow {
+  display: none;
+}
+
+.rail-visit-slot .encounter-command-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rail-visit-slot .encounter-command-heading h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.rail-visit-slot .encounter-state {
+  font-size: 0.78rem;
+}
+
+.rail-visit-slot .encounter-quick-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rail-visit-slot .encounter-quick-actions .clinical-button {
+  width: 100%;
+  min-height: 38px;
+  font-size: 0.85rem;
+}
+
+.rail-visit-slot .encounter-quick-actions .clinical-button[hidden] {
+  display: none;
+}
+
+/* App-shell corrections: the center column is the scroller, and the tab strip
+   sits in flow instead of floating over panel content. */
+@media (min-width: 1180px) {
+  .emr-page .patient-workspace-navigation {
+    position: static;
+    top: auto;
+    margin-bottom: var(--space-2);
+  }
+
+  .emr-page .encounter-main {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+    scrollbar-color: var(--line) transparent;
+    scrollbar-width: thin;
+  }
+}

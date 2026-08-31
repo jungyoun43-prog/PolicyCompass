@@ -11130,3 +11130,42 @@ model-viewer::part(default-progress-mask) {
   flex-wrap: nowrap;
   justify-content: flex-end;
 }
+
+/* AI 검토 영역: 한 스케일로 통일 (제목 0.95 / 본문 0.84 / 보조 0.8). */
+#prescriptionDialog .rx-section-title {
+  font-size: 0.95rem;
+}
+
+#prescriptionDialog .rx-verdict__symbol {
+  font-size: 1.4rem;
+}
+
+#prescriptionDialog .rx-verdict .rx-verdict__text b {
+  font-size: 0.95rem;
+}
+
+#prescriptionDialog .rx-verdict__text span,
+#prescriptionDialog .rx-verdict__note,
+#prescriptionDialog .rx-review__empty,
+#prescriptionDialog .rx-process__summary,
+#prescriptionDialog .rx-process,
+#prescriptionDialog .rx-detail-list dt,
+#prescriptionDialog .rx-detail-list dd,
+#prescriptionDialog .rx-model-report {
+  font-size: 0.84rem;
+}
+
+#prescriptionDialog .rx-review__heading,
+#prescriptionDialog .rx-source__title--toggle,
+#prescriptionDialog .rx-source__summary-line,
+#prescriptionDialog .rx-source__origin-trigger,
+#prescriptionDialog .rx-source-list b,
+#prescriptionDialog .rx-source-list span,
+#prescriptionDialog .rx-source-list p,
+#prescriptionDialog .rx-model-report__table {
+  font-size: 0.8rem;
+}
+
+#prescriptionDialog .rx-model-report__heading {
+  font-size: 0.95rem;
+}

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { componentMarkup } from "./helpers/markup.mjs";
+import { AMOXICLAV, METFORMIN } from "./helpers/medication-fixtures.mjs";
 
 import {
   findOrderInCatalog,
@@ -58,12 +59,13 @@ test("성분명과 계열은 영문으로, 제품명은 한글로 표기한다",
     assert.doesNotMatch(medication.coverage.duplicateClassLabel, /[가-힣]/, `${medication.id} 효능군`);
     assert.match(medication.label, /[가-힣]/, `${medication.id} 제품명`);
   }
-  assert.equal(findMedicationInCatalog("tiotropium-inhaler").ingredient, "Tiotropium bromide");
+  assert.equal(findMedicationInCatalog("benralizumab-30").ingredient, "Benralizumab");
+  assert.equal(findMedicationInCatalog("durvalumab-500").ingredient, "Durvalumab");
 });
 
 test("모든 대조 항목은 확인할 수 있는 기준 원문과 강조 구절을 함께 낸다", () => {
   // Given
-  const medication = findMedicationInCatalog("amoxicillin-clavulanate-625");
+  const medication = AMOXICLAV;
 
   // When
   const review = buildMedicationClaimComparison({
@@ -151,7 +153,7 @@ test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
   assert.match(rx, /프롬프트/);
-  assert.match(rx, /고시 원문 연동 예정/);
+  assert.match(rx, /medicationReviewNotice\(reviewPreview\.medicationId\)/);
   assert.match(rx, /medicationReviewModelPayload\(reviewPreview\.base\)/);
   assert.match(rx, /medicationReviewInstructions\(\)/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{sendReview\}/);
@@ -189,7 +191,7 @@ test("같은 사실을 가리키는 기준 문구와 차트 값은 한 쌍으로
 
 test("규칙 엔진은 기준 문구와 그것을 충족한 차트 값을 짝으로 알려 준다", () => {
   // Given
-  const medication = findMedicationInCatalog("metformin-500");
+  const medication = METFORMIN;
 
   // When
   const review = buildMedicationClaimComparison({

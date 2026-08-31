@@ -662,9 +662,13 @@ export function applyMedicationReviewDraft(comparison, draft = {}) {
     .filter(Boolean)
     .slice(0, 8);
   const proposed = cleanText(draft.verdict, 20);
-  const verdict = isVerdictAtLeastAsCautious(proposed, comparison.verdict) ? proposed : comparison.verdict;
+  const markdown = typeof draft.markdown === "string" ? draft.markdown.slice(0, 8_000) : "";
+  // 고시 프롬프트 기반 검토(markdown)는 프롬프트 판정을 그대로 따른다.
+  const verdict = markdown && MEDICATION_REVIEW_VERDICTS[proposed]
+    ? proposed
+    : isVerdictAtLeastAsCautious(proposed, comparison.verdict) ? proposed : comparison.verdict;
   const state = MEDICATION_REVIEW_VERDICTS[verdict];
-  const softened = Boolean(proposed) && proposed !== verdict;
+  const softened = !markdown && Boolean(proposed) && proposed !== verdict;
   return {
     ...comparison,
     verdict,
@@ -676,6 +680,7 @@ export function applyMedicationReviewDraft(comparison, draft = {}) {
     citedCheckIds: citedCheckIds.length ? citedCheckIds : comparison.checks.map(({ id }) => id),
     generatedBy: cleanText(draft.generatedBy, 40) || "model",
     model: cleanText(draft.model, 120),
+    markdown,
     ruleVerdict: comparison.verdict,
     note: softened
       ? `모델이 제시한 '${MEDICATION_REVIEW_VERDICTS[proposed]?.label ?? proposed}'보다 규칙 판정을 우선했습니다.`

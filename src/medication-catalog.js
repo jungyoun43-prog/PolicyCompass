@@ -58,302 +58,70 @@ function medication(entry) {
   });
 }
 
+const NOTICE_BENRALIZUMAB = `허가사항 범위 내에서 아래와 같은 기준으로 투여 시 요양급여를 인정하며, 동 인정기준 이외에는 약값 전액을 환자가 부담토록 함.
+
+- 아 래 -
+1. 투여대상
+○ 성인 중증 호산구성 천식 환자 중 고용량의 흡입용 코르티코스테로이드-장기지속형 흡입용 베타2 작용제 (ICS-LABA)와 장기지속형 무스카린 길항제(LAMA)의 투여에도 불구하고 적절하게 조절이 되지 않는 경우로서 다음 1), 2) 조건 중 하나에 해당하는 경우
+※ ICS-LABA: Inhaled CorticoSteroids-Long Acting Beta-2 Agonist
+LAMA: Long Acting Muscarinic Antagonist
+- 다 음 -
+1) 치료 시작 전 12개월 이내에 혈중 호산구 수치가 300 cells/㎕ 이상이면서
+- 치료 시작 전 12개월 이내에 전신 코르티코스테로이드가 요구되는 천식 급성악화가 4번 이상 발생하였거나, 치료 시작 6개월 전부터 prednisolone 5mg/day 와 동등한 수준 이상의 경구용 코르티코스테로이드를 지속적으로 투여한 경우
+2) 치료 시작 전 12개월 이내에 혈중 호산구 수치가 400 cells/㎕ 이상이면서
+- 치료 시작 전 12개월 이내에 전신 코르티코스테로이드가 요구되는 천식 급성악화가 3번 이상 발생한 경우
+
+2. 평가방법
+○ 동 약제 투여 전과 투여 후 매 1년마다 평가하여 다음 중 한 가지 이상을 만족하면서, 전반적인 천식조절을 확인한 환자에 대한 투여 소견서 제출 시 지속 투여를 인정함.
+(단, 임상증상 등을 고려하여 효과가 불충분하다고 판단되는 경우에는 1년 이내이더라도 치료효과를 평가할 수 있음.)
+- 다 음 -
+1) 천식 급성악화의 빈도가 치료 시작 전 대비 50% 이상 감소
+2) 지속적인 경구용 코르티코스테로이드 치료가 필요한 환자의 경우 천식증상 조절을 개선하거나 유지하면서 경구용 코르티코스테로이드 용량을 치료 시작 전 대비 50% 이상 감소
+
+3. 중증 천식 환자에 사용하는 생물학적 제제(omalizumab, mepolizumab, benralizumab, reslizumab, dupilumab)간 병용투여는 급여 인정하지 아니함.
+
+4. 교체투여
+가. 중증 호산구성 천식 환자에 사용하는 생물학적 제제(mepolizumab, reslizumab, dupilumab)간 교체투여 및 동 약제에서 omalizumab으로의 교체투여는 인정하지 아니함.
+나. omalizumab 주사제 투여 후 동 약제로의 교체투여는 다음의 조건을 모두 만족하면서 투여소견서 첨부 시 사례별로 급여 인정함.
+- 다 음 -
+1) omalizumab 주사제를 3-6개월 이상 사용하였음에도 효과가 불충분하거나 부작용으로 투약을 지속할 수 없는 경우 또는 복약순응도 개선의 필요성이 있는 경우
+2) 동 약제의 투여대상 조건을 만족하는 경우
+
+■ 고시번호(시행일자): 고시 제2026-92호(2026.5.1.)
+■ 변경 전 고시번호(시행일자): 고시 제2025-224호(2026.1.1.)`;
+
 export const MEDICATION_CATALOG = Object.freeze([
   medication({
-    id: "amlodipine-5",
-    code: "PC-RX-AMLO5",
-    label: "암로디핀정 5mg",
-    ingredient: "Amlodipine besylate",
-    classLabel: "Calcium channel blocker (CCB)",
-    indication: "고혈압, 만성 안정형 협심증",
-    keywords: "amlodipine 노바스크 혈압약 고혈압 CCB 칼슘차단제",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식후 복용" },
+    id: "benralizumab-30",
+    code: "PC-RX-BENRA30",
+    label: "벤라리주맙 프리필드시린지 30mg",
+    ingredient: "Benralizumab",
+    classLabel: "Anti-IL-5 receptor α monoclonal antibody",
+    indication: "성인 중증 호산구성 천식의 추가 유지 치료",
+    keywords: "benralizumab 벤라리주맙 파센라 fasenra 천식 호산구 생물학적제제 항체 IL-5 asthma",
+    dosing: { dose: "30", doseUnit: "mg", route: "피하주사", frequency: "4주 1회(첫 3회) 후 8주 1회", durationDays: 56, quantity: 1, instructions: "의료기관 내 투여" },
     coverage: {
-      indications: [{ code: "I10", label: "본태성 고혈압" }, { code: "I11", label: "고혈압성 심장질환" }],
-      requiredEvidence: [{ code: "85354-9", system: LOINC_SYSTEM, label: "최근 180일 이내 혈압 측정 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      duplicateClass: "CCB",
-      duplicateClassLabel: "Calcium channel blocker (CCB)",
-      maxDurationDays: 90,
+      indications: [{ code: "J45", label: "천식" }, { code: "J46", label: "천식지속상태" }],
+      duplicateClass: "SEVERE-ASTHMA-BIOLOGIC",
+      duplicateClassLabel: "Severe asthma biologic (anti-IgE·anti-IL-5·anti-IL-4Rα)",
       ageMinimum: 18,
     },
+    notice: NOTICE_BENRALIZUMAB,
   }),
   medication({
-    id: "losartan-50",
-    code: "PC-RX-LOSA50",
-    label: "로사르탄칼륨정 50mg",
-    ingredient: "Losartan potassium",
-    classLabel: "Angiotensin II receptor blocker (ARB)",
-    indication: "고혈압, 고혈압 환자의 좌심실 비대 동반 시 뇌졸중 위험 감소",
-    keywords: "losartan 코자 혈압약 고혈압 ARB 안지오텐신",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
+    id: "durvalumab-500",
+    code: "PC-RX-DURVA500",
+    label: "더발루맙주 500mg",
+    ingredient: "Durvalumab",
+    classLabel: "Anti-PD-L1 monoclonal antibody (immune checkpoint inhibitor)",
+    indication: "절제 불가능한 3기 비소세포폐암의 백금 기반 항암화학방사선요법 후 공고요법 등",
+    keywords: "durvalumab 더발루맙 임핀지 imfinzi 면역항암제 폐암 비소세포폐암 소세포폐암 PD-L1 면역관문억제제 항암제",
+    dosing: { dose: "10", doseUnit: "mg/kg", route: "정맥주입", frequency: "2주 1회", durationDays: 14, quantity: 1, instructions: "의료기관 내 60분 정맥주입" },
     coverage: {
-      indications: [{ code: "I10", label: "본태성 고혈압" }, { code: "I11", label: "고혈압성 심장질환" }],
-      requiredEvidence: [{ code: "85354-9", system: LOINC_SYSTEM, label: "최근 180일 이내 혈압 측정 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      duplicateClass: "RAS",
-      duplicateClassLabel: "Renin-angiotensin system inhibitor (ACEI·ARB)",
-      maxDurationDays: 90,
+      indications: [{ code: "C34", label: "기관지 및 폐의 악성 신생물" }],
+      duplicateClass: "IMMUNE-CHECKPOINT",
+      duplicateClassLabel: "Immune checkpoint inhibitor (anti-PD-1·anti-PD-L1)",
       ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "lisinopril-10",
-    code: "PC-RX-LISI10",
-    label: "리시노프릴정 10mg",
-    ingredient: "Lisinopril",
-    classLabel: "ACE inhibitor (ACEI)",
-    indication: "고혈압, 심부전, 급성 심근경색 후 보조요법",
-    keywords: "lisinopril 혈압약 고혈압 ACEI 안지오텐신전환효소",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
-    coverage: {
-      indications: [{ code: "I10", label: "본태성 고혈압" }, { code: "I11", label: "고혈압성 심장질환" }],
-      requiredEvidence: [{ code: "85354-9", system: LOINC_SYSTEM, label: "최근 180일 이내 혈압 측정 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      duplicateClass: "RAS",
-      duplicateClassLabel: "Renin-angiotensin system inhibitor (ACEI·ARB)",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "hydrochlorothiazide-12-5",
-    code: "PC-RX-HCTZ125",
-    label: "하이드로클로로티아지드정 12.5mg",
-    ingredient: "Hydrochlorothiazide",
-    classLabel: "Thiazide diuretic",
-    indication: "고혈압, 부종",
-    keywords: "hydrochlorothiazide HCTZ 이뇨제 혈압약 고혈압",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "오전 복용" },
-    coverage: {
-      indications: [{ code: "I10", label: "본태성 고혈압" }],
-      requiredEvidence: [{ code: "85354-9", system: LOINC_SYSTEM, label: "최근 180일 이내 혈압 측정 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      duplicateClass: "THIAZIDE",
-      duplicateClassLabel: "Thiazide diuretic",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "metformin-500",
-    code: "PC-RX-METF500",
-    label: "메트포르민염산염서방정 500mg",
-    ingredient: "Metformin hydrochloride",
-    classLabel: "Biguanide",
-    indication: "제2형 당뇨병에서 식사·운동 요법으로 조절되지 않는 경우의 1차 약제",
-    keywords: "metformin 메트포민 당뇨약 당뇨 비구아나이드",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 2회", durationDays: 28, quantity: 56, instructions: "식사 직후 복용" },
-    coverage: {
-      indications: [{ code: "E11", label: "제2형 당뇨병" }],
-      requiredEvidence: [{ code: "4548-4", system: LOINC_SYSTEM, label: "최근 180일 이내 당화혈색소 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      contraindications: [{ code: "N18", label: "만성 콩팥병" }],
-      duplicateClass: "BIGUANIDE",
-      duplicateClassLabel: "Biguanide",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "glimepiride-2",
-    code: "PC-RX-GLIM2",
-    label: "글리메피리드정 2mg",
-    ingredient: "Glimepiride",
-    classLabel: "Sulfonylurea (SU)",
-    indication: "제2형 당뇨병에서 식사·운동 요법 및 메트포르민으로 조절되지 않는 경우",
-    keywords: "glimepiride 아마릴 당뇨약 당뇨 설포닐우레아",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식전 복용" },
-    coverage: {
-      indications: [{ code: "E11", label: "제2형 당뇨병" }],
-      requiredEvidence: [{ code: "4548-4", system: LOINC_SYSTEM, label: "최근 180일 이내 당화혈색소 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" }],
-      duplicateClass: "SU",
-      duplicateClassLabel: "Sulfonylurea (SU)",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "empagliflozin-10",
-    code: "PC-RX-EMPA10",
-    label: "엠파글리플로진정 10mg",
-    ingredient: "Empagliflozin",
-    classLabel: "SGLT-2 inhibitor",
-    indication: "제2형 당뇨병의 혈당 조절, 심혈관 위험 동반 시 보조",
-    keywords: "empagliflozin 자디앙 당뇨약 당뇨 SGLT2",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "" },
-    coverage: {
-      indications: [{ code: "E11", label: "제2형 당뇨병" }],
-      requiredEvidence: [
-        { code: "4548-4", system: LOINC_SYSTEM, label: "최근 180일 이내 당화혈색소 기록", eventTypes: ["observation"], lookbackDays: 180, severity: "required" },
-      ],
-      contraindications: [{ code: "N18", label: "만성 콩팥병" }],
-      duplicateClass: "SGLT2",
-      duplicateClassLabel: "SGLT-2 inhibitor",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "atorvastatin-20",
-    code: "PC-RX-ATOR20",
-    label: "아토르바스타틴칼슘정 20mg",
-    ingredient: "Atorvastatin calcium",
-    classLabel: "HMG-CoA reductase inhibitor (statin)",
-    indication: "고콜레스테롤혈증, 이상지질혈증, 심혈관 사건 위험 감소",
-    keywords: "atorvastatin 리피토 고지혈증 이상지질혈증 콜레스테롤 스타틴",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "저녁 복용" },
-    coverage: {
-      indications: [{ code: "E78", label: "지질단백질대사장애·이상지질혈증" }],
-      requiredEvidence: [{ code: "2089-1", system: LOINC_SYSTEM, label: "최근 365일 이내 LDL 콜레스테롤 기록", eventTypes: ["observation"], lookbackDays: 365, severity: "required" }],
-      duplicateClass: "STATIN",
-      duplicateClassLabel: "HMG-CoA reductase inhibitor (statin)",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "tiotropium-inhaler",
-    code: "PC-RX-TIO18",
-    label: "티오트로피움브롬화물 흡입제 18mcg",
-    ingredient: "Tiotropium bromide",
-    classLabel: "Long-acting muscarinic antagonist (LAMA)",
-    indication: "만성폐쇄성폐질환의 유지요법, 기관지 확장 및 악화 감소",
-    keywords: "tiotropium 스피리바 흡입제 COPD 만성폐쇄성폐질환 LAMA 기관지확장제",
-    dosing: { dose: "1", doseUnit: "캡슐", route: "흡입", frequency: "1일 1회", durationDays: 30, quantity: 30, instructions: "흡입기 사용법 교육 후 사용" },
-    coverage: {
-      indications: [{ code: "J44", label: "기타 만성 폐쇄성 폐질환" }, { code: "J43", label: "폐기종" }],
-      requiredEvidence: [{ code: "F6002", system: HIRA_FEE_SYSTEM, label: "기관지확장제 전후 폐활량검사(PFT) 시행 기록", eventTypes: ["procedure"], lookbackDays: 365, severity: "required" }],
-      duplicateClass: "LAMA",
-      duplicateClassLabel: "Long-acting muscarinic antagonist (LAMA)",
-      maxDurationDays: 90,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "salmeterol-fluticasone-inhaler",
-    code: "PC-RX-SALFLU",
-    label: "살메테롤/플루티카손 흡입제 50/250mcg",
-    ingredient: "Salmeterol xinafoate · Fluticasone propionate",
-    classLabel: "LABA/ICS combination inhaler",
-    indication: "천식의 지속적 유지요법, 만성폐쇄성폐질환의 증상 완화",
-    keywords: "salmeterol fluticasone 세레타이드 흡입제 COPD 천식 LABA ICS",
-    dosing: { dose: "1", doseUnit: "흡입", route: "흡입", frequency: "1일 2회", durationDays: 30, quantity: 1, instructions: "사용 후 입안 헹굼" },
-    coverage: {
-      indications: [{ code: "J44", label: "기타 만성 폐쇄성 폐질환" }, { code: "J45", label: "천식" }],
-      requiredEvidence: [{ code: "F6002", system: HIRA_FEE_SYSTEM, label: "기관지확장제 전후 폐활량검사(PFT) 시행 기록", eventTypes: ["procedure"], lookbackDays: 365, severity: "required" }],
-      duplicateClass: "LABA/ICS",
-      duplicateClassLabel: "LABA/ICS combination inhaler",
-      maxDurationDays: 90,
-      ageMinimum: 12,
-    },
-  }),
-  medication({
-    id: "amoxicillin-clavulanate-625",
-    code: "PC-RX-AMOCLA625",
-    label: "아목시실린·클라불란산정 625mg",
-    ingredient: "Amoxicillin hydrate · Clavulanate potassium",
-    classLabel: "Penicillin-class antibiotic",
-    indication: "감수성 균에 의한 하기도감염, 폐렴, 부비동염, 요로감염",
-    keywords: "amoxicillin clavulanate 오구멘틴 항생제 폐렴 기관지염 페니실린",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 7, quantity: 21, instructions: "식후 복용, 임의 중단 없이 지시된 기간 유지" },
-    coverage: {
-      indications: [{ code: "J18", label: "상세불명 병원체의 폐렴" }, { code: "J20", label: "급성 기관지염" }, { code: "J01", label: "급성 부비동염" }],
-      requiredEvidence: [],
-      allergyIngredients: ["페니실린", "아목시실린", "클라불란산", "penicillin", "amoxicillin"],
-      duplicateClass: "PENICILLIN",
-      duplicateClassLabel: "Penicillin-class antibiotic",
-      maxDurationDays: 14,
-      ageMinimum: 0,
-    },
-  }),
-  medication({
-    id: "levofloxacin-500",
-    code: "PC-RX-LEVO500",
-    label: "레보플록사신정 500mg",
-    ingredient: "Levofloxacin hydrate",
-    classLabel: "Fluoroquinolone antibiotic",
-    indication: "지역사회획득 폐렴, 급성 세균성 부비동염, 복잡성 요로감염",
-    keywords: "levofloxacin 크라비트 항생제 폐렴 퀴놀론",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 7, quantity: 7, instructions: "충분한 물과 함께 복용" },
-    coverage: {
-      indications: [{ code: "J18", label: "상세불명 병원체의 폐렴" }, { code: "J15", label: "달리 분류되지 않은 세균성 폐렴" }],
-      requiredEvidence: [],
-      allergyIngredients: ["퀴놀론", "레보플록사신", "levofloxacin", "quinolone"],
-      duplicateClass: "QUINOLONE",
-      duplicateClassLabel: "Fluoroquinolone antibiotic",
-      maxDurationDays: 14,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "pantoprazole-40",
-    code: "PC-RX-PANTO40",
-    label: "판토프라졸나트륨정 40mg",
-    ingredient: "Pantoprazole sodium sesquihydrate",
-    classLabel: "Proton pump inhibitor (PPI)",
-    indication: "위식도역류질환, 위·십이지장궤양, 역류성 식도염의 치료 및 유지",
-    keywords: "pantoprazole 판토록 위산 역류 위식도역류 PPI 위산억제제",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 1회", durationDays: 28, quantity: 28, instructions: "아침 식전 복용" },
-    coverage: {
-      indications: [{ code: "K21", label: "위식도역류병" }, { code: "K25", label: "위궤양" }, { code: "K27", label: "상세불명 부위의 소화성궤양" }],
-      requiredEvidence: [],
-      duplicateClass: "PPI",
-      duplicateClassLabel: "Proton pump inhibitor (PPI)",
-      maxDurationDays: 56,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "alendronate-70",
-    code: "PC-RX-ALEN70",
-    label: "알렌드론산정 70mg",
-    ingredient: "Alendronate sodium hydrate",
-    classLabel: "Bisphosphonate",
-    indication: "폐경 후 골다공증의 치료 및 예방, 남성 골다공증",
-    keywords: "alendronate 포사맥스 골다공증 골밀도 비스포스포네이트",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "주 1회", durationDays: 84, quantity: 12, instructions: "기상 직후 충분한 물과 복용 후 30분간 눕지 않기" },
-    coverage: {
-      indications: [{ code: "M81", label: "병적 골절이 없는 골다공증" }, { code: "M80", label: "병적 골절을 동반한 골다공증" }],
-      requiredEvidence: [{ code: "DEMO-BMD", system: "urn:policycompass:demo:service", label: "최근 365일 이내 골밀도검사 시행 기록", eventTypes: ["procedure"], lookbackDays: 365, severity: "required" }],
-      duplicateClass: "BISPHOSPHONATE",
-      duplicateClassLabel: "Bisphosphonate",
-      maxDurationDays: 168,
-      ageMinimum: 18,
-    },
-  }),
-  medication({
-    id: "acetaminophen-650",
-    code: "PC-RX-ACET650",
-    label: "아세트아미노펜서방정 650mg",
-    ingredient: "Acetaminophen (paracetamol)",
-    classLabel: "Analgesic · antipyretic",
-    indication: "경증에서 중등도의 통증 완화 및 해열",
-    keywords: "acetaminophen 타이레놀 진통제 해열제 두통 통증",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 5, quantity: 15, instructions: "통증 시 복용" },
-    coverage: {
-      indications: [{ code: "M17", label: "무릎 관절증" }, { code: "G43", label: "편두통" }, { code: "R52", label: "통증" }],
-      requiredEvidence: [],
-      allergyIngredients: ["아세트아미노펜", "acetaminophen"],
-      duplicateClass: "ANALGESIC",
-      duplicateClassLabel: "Analgesic · antipyretic",
-      maxDurationDays: 30,
-      ageMinimum: 12,
-    },
-  }),
-  medication({
-    id: "ibuprofen-400",
-    code: "PC-RX-IBU400",
-    label: "이부프로펜정 400mg",
-    ingredient: "Ibuprofen",
-    classLabel: "NSAID",
-    indication: "골관절염·류마티스관절염의 소염·진통, 급성 통증, 해열",
-    keywords: "ibuprofen 부루펜 소염진통제 NSAID 관절염 통증",
-    dosing: { dose: "1", doseUnit: "정", route: "경구", frequency: "1일 3회", durationDays: 7, quantity: 21, instructions: "식후 복용" },
-    coverage: {
-      indications: [{ code: "M17", label: "무릎 관절증" }, { code: "M15", label: "다발관절증" }, { code: "M54", label: "등통증" }],
-      requiredEvidence: [],
-      contraindications: [{ code: "K25", label: "위궤양" }, { code: "K27", label: "상세불명 부위의 소화성궤양" }, { code: "N18", label: "만성 콩팥병" }],
-      allergyIngredients: ["이부프로펜", "NSAID", "ibuprofen", "아스피린"],
-      duplicateClass: "NSAID",
-      duplicateClassLabel: "NSAID",
-      maxDurationDays: 30,
-      ageMinimum: 12,
     },
   }),
 ]);

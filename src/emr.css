@@ -10510,3 +10510,55 @@ model-viewer::part(default-progress-mask) {
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* Prompt template keeps its line structure; the notice reads as a document. */
+.review-preview__prose--prompt {
+  white-space: pre-wrap;
+  font-size: 0.72rem;
+}
+
+.review-preview__code--notice {
+  font-family: inherit;
+  font-size: 0.74rem;
+  word-break: keep-all;
+}
+
+/* Model's 급여기준 판정 보고 (markdown 출력 형식). */
+.rx-model-report {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+  padding: var(--space-3);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.rx-model-report p {
+  margin: 0;
+}
+
+.rx-model-report__heading {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.rx-model-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.rx-model-report__table th,
+.rx-model-report__table td {
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rx-model-report__table th {
+  background: var(--surface);
+  font-weight: 600;
+}

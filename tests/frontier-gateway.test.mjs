@@ -8,6 +8,7 @@ import {
   frontierBaseUrl,
 } from "../scripts/patient-question-assistant.mjs";
 import { findMedicationInCatalog } from "../src/medication-catalog.js";
+import { markdownReviewReport } from "./helpers/medication-fixtures.mjs";
 import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
 import { createDemoEmrState } from "../src/emr-model.js";
 import { runMedicationClaimReview } from "../scripts/graphs/medication-claim-review-graph.mjs";
@@ -121,7 +122,7 @@ test("모델 거부와 실패 응답은 그대로 오류로 올라온다", async
 test("약제 삭감 검토도 OpenRouter 설정을 그대로 따른다", async () => {
   // Given
   const demo = createDemoEmrState("2026-07-20");
-  const medication = findMedicationInCatalog("amoxicillin-clavulanate-625");
+  const medication = findMedicationInCatalog("benralizumab-30");
   const comparison = buildMedicationClaimComparison({
     patient: demo.patients.find(({ name }) => name === "김비타"),
     medication,
@@ -137,12 +138,7 @@ test("약제 삭감 검토도 OpenRouter 설정을 그대로 따른다", async (
   };
   const { calls, fetchImpl } = recorder({
     model: "anthropic/claude-sonnet-4.5",
-    choices: [{ message: { content: JSON.stringify({
-      verdict: "cross",
-      summary: "등록된 알레르기 성분과 이번 처방 성분명이 일치합니다.",
-      rationale: ["알레르기 기록과 성분명이 일치합니다."],
-      citedCheckIds: ["allergy"],
-    }) } }],
+    choices: [{ message: { content: markdownReviewReport() } }],
   });
 
   // When

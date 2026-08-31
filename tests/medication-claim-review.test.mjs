@@ -18,14 +18,14 @@ import {
   worstVerdict,
 } from "../src/medication-claim-review.js";
 import { createDemoEmrState } from "../src/emr-model.js";
+import { AMLODIPINE, AMOXICLAV, PANTOPRAZOLE, TIOTROPIUM } from "./helpers/medication-fixtures.mjs";
 import { sanitizeMedicationClaimComparison } from "../scripts/graphs/medication-claim-review-graph.mjs";
 
 const AS_OF = "2026-07-20";
 const demo = createDemoEmrState(AS_OF);
 const patientByName = (name) => demo.patients.find((patient) => patient.name === name);
 
-function review(patientName, medicationId, prescription) {
-  const medication = findMedicationInCatalog(medicationId);
+function review(patientName, medication, prescription) {
   return buildMedicationClaimComparison({
     patient: patientByName(patientName),
     medication,
@@ -34,19 +34,25 @@ function review(patientName, medicationId, prescription) {
   });
 }
 
-test("예시 약품 목록은 검색되고 실제 급여기준이 아님을 밝힌다", () => {
+test("약품 목록은 benralizumab·durvalumab 둘이고 benralizumab은 고시 원문을 지닌다", () => {
   // Given / When
-  const byIngredient = searchMedicationCatalog("암로디핀");
-  const byClass = searchMedicationCatalog("흡입제");
-  const byIndication = searchMedicationCatalog("J44");
+  const byIngredient = searchMedicationCatalog("벤라리주맙");
+  const byBrand = searchMedicationCatalog("파센라");
+  const byImfinzi = searchMedicationCatalog("임핀지");
 
   // Then
-  assert.ok(MEDICATION_CATALOG.length >= 12);
-  assert.deepEqual(byIngredient.map(({ id }) => id), ["amlodipine-5"]);
-  assert.ok(byClass.length >= 2);
-  assert.ok(byIndication.some(({ id }) => id === "tiotropium-inhaler"));
+  assert.equal(MEDICATION_CATALOG.length, 2);
+  assert.deepEqual(byIngredient.map(({ id }) => id), ["benralizumab-30"]);
+  assert.deepEqual(byBrand.map(({ id }) => id), ["benralizumab-30"]);
+  assert.deepEqual(byImfinzi.map(({ id }) => id), ["durvalumab-500"]);
+  assert.deepEqual(searchMedicationCatalog("암로디핀"), []);
   assert.deepEqual(searchMedicationCatalog(""), []);
   assert.match(MEDICATION_CATALOG_BOUNDARY, /실제 약제 급여기준 고시나 의약품 데이터베이스가 아니며/);
+  const benralizumab = findMedicationInCatalog("benralizumab-30");
+  assert.match(benralizumab.notice, /고시 제2026-92호/);
+  assert.match(benralizumab.notice, /중증 호산구성 천식/);
+  const durvalumab = findMedicationInCatalog("durvalumab-500");
+  assert.equal(durvalumab.notice ?? "", "", "durvalumab 고시는 아직 등록 전이다");
   for (const medication of MEDICATION_CATALOG) {
     assert.match(medication.coverage.source.label, /예시/, `${medication.id} 출처 표기`);
     assert.equal(medication.coverage.source.url, "", `${medication.id} 은 실제 고시 링크를 만들어내지 않는다`);
@@ -57,14 +63,15 @@ test("차트에 이미 있는 약은 등록된 효능군으로 해석된다", ()
   // Given / When / Then
   assert.equal(chartMedicationClass({ code: "DEMO-LAMA", label: "LAMA 흡입제" }).class, "LAMA");
   assert.equal(chartMedicationClass({ code: "MED-PPI", label: "예시 위산 억제제" }).class, "PPI");
-  assert.equal(chartMedicationClass({ code: "PC-RX-AMLO5", label: "암로디핀정 5mg" }).class, "CCB");
+  assert.equal(chartMedicationClass({ code: "PC-RX-BENRA30", label: "벤라리주맙 프리필드시린지 30mg" }).class, "SEVERE-ASTHMA-BIOLOGIC");
+  assert.equal(chartMedicationClass({ code: "OTHER-AMLO", label: "암로디핀정 5mg" }).class, "CCB");
   assert.equal(chartMedicationClass({ code: "UNKNOWN", label: "알 수 없는 약" }).class, "");
   assert.ok(CHART_MEDICATION_CLASS_HINTS.length >= 5);
 });
 
 test("등록 기준과 환자 기록이 모두 맞으면 동그라미로 제시한다", () => {
   // Given / When
-  const result = review("김비타", "amlodipine-5");
+  const result = review("김비타", AMLODIPINE);
 
   // Then
   assert.equal(result.verdict, "circle");
@@ -76,7 +83,7 @@ test("등록 기준과 환자 기록이 모두 맞으면 동그라미로 제시�
 
 test("알레르기 성분이 일치하면 엑스로 제시하고 근거를 환자 기록으로 짚는다", () => {
   // Given / When
-  const result = review("김비타", "amoxicillin-clavulanate-625");
+  const result = review("김비타", AMOXICLAV);
   const allergy = result.checks.find(({ id }) => id === "allergy");
 
   // Then
@@ -90,8 +97,8 @@ test("알레르기 성분이 일치하면 엑스로 제시하고 근거를 환�
 
 test("필수 선행 근거가 없거나 같은 효능군이 이미 있으면 엑스로 제시한다", () => {
   // Given / When
-  const missingEvidence = review("정수진", "tiotropium-inhaler");
-  const duplicate = review("이준호", "tiotropium-inhaler");
+  const missingEvidence = review("정수진", TIOTROPIUM);
+  const duplicate = review("이준호", TIOTROPIUM);
 
   // Then
   assert.equal(missingEvidence.checks.find(({ id }) => id === "evidence-1").verdict, "cross");
@@ -101,14 +108,11 @@ test("필수 선행 근거가 없거나 같은 효능군이 이미 있으면 엑
 });
 
 test("인정 일수를 넘기면 세모로 제시한다", () => {
-  // Given
-  const medication = findMedicationInCatalog("pantoprazole-40");
-
-  // When
+  // Given / When
   const result = buildMedicationClaimComparison({
     patient: patientByName("최민아"),
-    medication,
-    prescription: { ...medication.dosing, durationDays: 90 },
+    medication: PANTOPRAZOLE,
+    prescription: { ...PANTOPRAZOLE.dosing, durationDays: 90 },
     asOf: AS_OF,
   });
   const duration = result.checks.find(({ id }) => id === "duration");
@@ -120,7 +124,7 @@ test("인정 일수를 넘기면 세모로 제시한다", () => {
 
 test("모든 항목은 삭감 근거와 환자 정보와 출처를 함께 제시한다", () => {
   // Given / When
-  const result = review("이준호", "tiotropium-inhaler");
+  const result = review("이준호", TIOTROPIUM);
 
   // Then
   assert.ok(result.checks.length >= 4);
@@ -137,7 +141,7 @@ test("모든 항목은 삭감 근거와 환자 정보와 출처를 함께 제시
 
 test("검토 결과에는 직접식별자가 들어가지 않는다", () => {
   // Given / When
-  const serialized = JSON.stringify(review("김비타", "amoxicillin-clavulanate-625"));
+  const serialized = JSON.stringify(review("김비타", AMOXICLAV));
 
   // Then
   assert.doesNotMatch(serialized, /김비타/);
@@ -157,7 +161,7 @@ test("판정 등급은 가장 신중한 항목을 따른다", () => {
 
 test("모델 초안은 규칙 판정을 완화하지 못하고 없는 항목을 인용하지 못한다", () => {
   // Given
-  const base = review("김비타", "amoxicillin-clavulanate-625");
+  const base = review("김비타", AMOXICLAV);
 
   // When
   const softened = applyMedicationReviewDraft(base, {
@@ -168,7 +172,7 @@ test("모델 초안은 규칙 판정을 완화하지 못하고 없는 항목을 
     generatedBy: "local-model",
     model: "demo-model",
   });
-  const escalated = applyMedicationReviewDraft(review("김비타", "amlodipine-5"), {
+  const escalated = applyMedicationReviewDraft(review("김비타", AMLODIPINE), {
     verdict: "triangle",
     summary: "추가 확인이 필요합니다.",
     rationale: ["혈압 기록의 최신성을 확인하세요."],
@@ -187,7 +191,7 @@ test("모델 초안은 규칙 판정을 완화하지 못하고 없는 항목을 
 
 test("서버는 브라우저가 보낸 비교 결과만 받아들인다", () => {
   // Given
-  const comparison = review("이준호", "tiotropium-inhaler");
+  const comparison = review("이준호", TIOTROPIUM);
 
   // When
   const sanitized = sanitizeMedicationClaimComparison({ comparison });

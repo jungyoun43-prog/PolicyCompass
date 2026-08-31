@@ -353,7 +353,7 @@ export async function callFrontierModel({
       ],
       max_tokens: maxOutputTokens,
       temperature: 0,
-      response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
+      ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } } } : {}),
     }
     : {
       model: name,
@@ -362,7 +362,7 @@ export async function callFrontierModel({
       instructions,
       input,
       max_output_tokens: maxOutputTokens,
-      text: { format: { type: "json_schema", name: schemaName, strict: true, schema } },
+      ...(schema ? { text: { format: { type: "json_schema", name: schemaName, strict: true, schema } } } : {}),
     };
   const response = await fetchImpl(url, {
     method: "POST",

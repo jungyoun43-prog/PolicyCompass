@@ -14,7 +14,7 @@ import {
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
 } from "../../src/medication-claim-review.js";
-import { medicationReviewInstructions, medicationReviewModelPayload } from "../../src/medication-review-prompt.js";
+import { medicationReviewInstructions, medicationReviewModelPayload, medicationReviewNotice } from "../../src/medication-review-prompt.js";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
@@ -25,6 +25,54 @@ const EMPTY_RX_FORM = {
   code: "", system: "", name: "", dose: "", doseUnit: "정", route: "경구",
   frequency: "1일 1회", durationDays: "", quantity: "", instructions: "",
 };
+
+function boldSegments(text) {
+  return text.split(/\*\*([^*]+)\*\*/g).map((part, index) => (index % 2 ? <b key={index}>{part}</b> : part));
+}
+
+/** Renders the model's 급여기준 판정 보고 (출력 형식 markdown) without a markdown library. */
+function MarkdownReport({ markdown }) {
+  const lines = markdown.split("\n");
+  const blocks = [];
+  let table = null;
+  const flushTable = () => { if (table) { blocks.push({ type: "table", rows: table }); table = null; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.startsWith("|")) {
+      const cells = line.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+      if (cells.every((cell) => /^:?-{2,}:?$/.test(cell))) continue;
+      table = table ?? [];
+      table.push(cells);
+      continue;
+    }
+    flushTable();
+    if (!line) continue;
+    if (line.startsWith("## ")) blocks.push({ type: "heading", text: line.slice(3) });
+    else blocks.push({ type: "paragraph", text: line });
+  }
+  flushTable();
+  return (
+    <div className="rx-model-report" id="medicationReviewReport">
+      {blocks.map((block, index) => {
+        if (block.type === "heading") return <p key={index} className="rx-model-report__heading">{boldSegments(block.text)}</p>;
+        if (block.type === "table") {
+          return (
+            <table key={index} className="rx-model-report__table">
+              <tbody>
+                {block.rows.map((cells, rowIndex) => (
+                  <tr key={rowIndex}>{cells.map((cell, cellIndex) => (rowIndex === 0
+                    ? <th key={cellIndex}>{boldSegments(cell)}</th>
+                    : <td key={cellIndex}>{boldSegments(cell)}</td>))}</tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
+        return <p key={index}>{boldSegments(block.text)}</p>;
+      })}
+    </div>
+  );
+}
 
 function phrasesOverlap(left, right) {
   return left === right || left.includes(right) || right.includes(left);
@@ -434,6 +482,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     {review.note ? <span className="rx-verdict__note">{review.note}</span> : null}
                   </span>
                 </div>
+                {review.markdown ? <MarkdownReport markdown={review.markdown} /> : null}
                 <section className="rx-review__section">
                   <h5 className="rx-review__heading">판정 근거 · 삭감 근거와 환자 정보 대조</h5>
                   <ul className="rx-source-list" id="medicationReviewSources">
@@ -570,12 +619,12 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               <pre className="review-preview__code">{JSON.stringify(medicationReviewModelPayload(reviewPreview.base), null, 2)}</pre>
             </section>
             <section className="review-preview__section">
-              <h4>고시정보 <span>요양급여 적용기준 고시</span></h4>
-              <p className="review-preview__placeholder">고시 원문 연동 예정입니다. 현재는 등록된 예시 급여기준(criterion)이 위 진료데이터의 checks 항목에 포함되어 전송됩니다.</p>
+              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어갑니다.</span></h4>
+              <pre className="review-preview__code review-preview__code--notice">{medicationReviewNotice(reviewPreview.medicationId)}</pre>
             </section>
             <section className="review-preview__section">
-              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 진료데이터 JSON이 사용자 입력으로 함께 전송됩니다.</span></h4>
-              <pre className="review-preview__prose">{medicationReviewInstructions()}</pre>
+              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span></h4>
+              <pre className="review-preview__prose review-preview__prose--prompt">{medicationReviewInstructions()}</pre>
             </section>
             <div className="review-preview__actions">
               <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>

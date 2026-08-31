@@ -14,19 +14,6 @@ import {
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
 
-const REVIEW_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    verdict: { type: "string", enum: ["circle", "triangle", "cross"] },
-    summary: { type: "string" },
-    rationale: { type: "array", maxItems: 8, items: { type: "string" } },
-    citedCheckIds: { type: "array", maxItems: 12, items: { type: "string" } },
-  },
-  required: ["verdict", "summary", "rationale", "citedCheckIds"],
-};
-
-const COVERAGE_DECISION_CLAIM = /(급여|청구|삭감)[를을]?\s*(확정|승인|거절|확신)(합니다|했습니다|됩니다)/;
 const COMPARISON_SCHEMA = "policycompass-medication-claim-review";
 const VERDICT_RANK = { circle: 0, triangle: 1, cross: 2 };
 const MAX_CHECKS = 12;
@@ -104,6 +91,7 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
     version: 1,
     asOf: cleanText(source.asOf, 10),
     medication: {
+      id: cleanText(source.medication?.id, 80),
       code: cleanText(source.medication?.code, 80),
       label,
       ingredient: cleanText(source.medication?.ingredient, 160),
@@ -131,30 +119,31 @@ const instructions = medicationReviewInstructions;
 
 const modelInput = medicationReviewModelInput;
 
-function validateDraft(parsed, comparison) {
-  const verdict = cleanText(parsed?.verdict, 20);
-  if (!Object.hasOwn(VERDICT_RANK, verdict)) throw new Error("verdict가 circle·triangle·cross가 아닙니다.");
-  if (VERDICT_RANK[verdict] < VERDICT_RANK[comparison.verdict]) {
-    throw new Error("규칙 판정보다 관대한 판정을 제시했습니다.");
-  }
-  const summary = safeGeneratedText(parsed?.summary, 400);
-  if (!summary || COVERAGE_DECISION_CLAIM.test(summary)) {
-    throw new Error("요약이 비었거나 급여·삭감을 확정합니다.");
-  }
-  const rationale = (Array.isArray(parsed?.rationale) ? parsed.rationale : [])
-    .map((item) => safeGeneratedText(item, 300))
-    .filter(Boolean)
-    .slice(0, 8);
-  if (!rationale.length) throw new Error("근거 문장이 없습니다.");
-  if (rationale.some((item) => COVERAGE_DECISION_CLAIM.test(item))) {
-    throw new Error("근거 문장이 급여·삭감을 확정합니다.");
-  }
-  const allowed = new Set(comparison.checks.map(({ id }) => id));
-  const citedCheckIds = (Array.isArray(parsed?.citedCheckIds) ? parsed.citedCheckIds : [])
-    .map((item) => cleanText(item, 80))
-    .filter(Boolean);
-  if (citedCheckIds.some((id) => !allowed.has(id))) throw new Error("입력에 없는 기준 항목을 인용했습니다.");
-  return { verdict, summary, rationale, citedCheckIds };
+const VERDICT_SYMBOLS = {
+  "\u25cb": "circle", "\u25ef": "circle", "\u3007": "circle", "O": "circle",
+  "\u25b3": "triangle", "\u25b5": "triangle",
+  "\u2715": "cross", "\u2717": "cross", "\u00d7": "cross", "X": "cross", "x": "cross",
+};
+
+function markdownText(value, maximum = 8_000) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maximum);
+}
+
+function validateDraft(raw, comparison) {
+  const markdown = markdownText(raw);
+  if (!markdown) throw new Error("모델 응답이 비었습니다.");
+  const heading = markdown.match(/##\s*\[\s*(.)\s*\]/u);
+  const symbol = heading ? heading[1] : "";
+  const verdict = VERDICT_SYMBOLS[symbol];
+  if (!verdict) throw new Error("출력 형식의 판정 헤더(## [\u25cb/\u25b3/\u2715])가 없습니다.");
+  safeGeneratedText(markdown.slice(0, 500), 500);
+  return { verdict, markdown };
 }
 
 async function localDraft(comparison, options, feedback) {
@@ -163,7 +152,7 @@ async function localDraft(comparison, options, feedback) {
     { role: "user", content: modelInput(comparison) },
   ];
   if (feedback) {
-    messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 같은 JSON 스키마와 안전 규칙을 지켜 다시 작성하세요.` });
+    messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 지정된 출력 형식을 지켜 다시 작성하세요.` });
   }
   const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
     method: "POST",
@@ -173,7 +162,6 @@ async function localDraft(comparison, options, feedback) {
       messages,
       stream: false,
       think: false,
-      format: REVIEW_SCHEMA,
       options: { temperature: 0 },
     }),
     redirect: "error",
@@ -182,7 +170,7 @@ async function localDraft(comparison, options, feedback) {
   if (!response.ok) throw new Error(`약제 검토 로컬 모델 요청 실패 (${response.status})`);
   const body = await response.json();
   return {
-    parsed: JSON.parse(cleanText(body?.message?.content, 10_000)),
+    text: typeof body?.message?.content === "string" ? body.message.content : "",
     model: cleanText(body?.model, 160) || options.model,
     generatedBy: "local-model",
   };
@@ -197,14 +185,12 @@ async function frontierDraft(comparison, options, feedback) {
     model: options.model,
     instructions: instructions(),
     input,
-    schemaName: "policycompass_medication_claim_review",
-    schema: REVIEW_SCHEMA,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
     environment: options.environment ?? process.env,
   });
   return {
-    parsed: JSON.parse(result.text),
+    text: result.text,
     model: result.model,
     generatedBy: "frontier-model",
   };
@@ -231,7 +217,7 @@ function medicationClaimReviewGraph() {
           const raw = options.provider === "frontier"
             ? await frontierDraft(state.comparison, options, feedback)
             : await localDraft(state.comparison, options, feedback);
-          return { draft: { ...validateDraft(raw.parsed, state.comparison), model: raw.model, generatedBy: raw.generatedBy } };
+          return { draft: { ...validateDraft(raw.text, state.comparison), model: raw.model, generatedBy: raw.generatedBy } };
         } catch (error) {
           feedback = cleanText(error?.message, 300);
         }

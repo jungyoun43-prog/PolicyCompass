@@ -505,8 +505,7 @@ test("샘플 환자는 명시 진료와 진료명 후보를 같은 영역에서 
   );
   assert.equal(endocrine.visits.find(({ id }) => id === "kim-visit-today").lifecycleLabel, "진료 중");
   assert.equal(endocrine.visits.find(({ id }) => id === "kim-encounter").association.kind, "classified");
-  assert.deepEqual(endocrine.medications.map(({ id }) => id), ["kim-visit-med", "kim-visit-med2", "kim-visit-med3"]);
-  assert.equal(endocrine.medications[0].lifecycleLabel, "처방 초안");
+  assert.deepEqual(endocrine.medications.map(({ id }) => id), [], "처방 초안 시드는 제거되었다 — 검토는 데모에서 직접 실행한다");
   assert.deepEqual(atlas.careAreaIds, ["respiratory", "endocrine"]);
   assert.deepEqual(atlas.candidateAreaIds, ["endocrine"]);
   assert.deepEqual(respiratory.visits.map(({ id }) => id), ["kim-pneumonia-encounter"]);

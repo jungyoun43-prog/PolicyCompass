@@ -140,6 +140,27 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(rx, /data-source-origin/);
 });
 
+test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미리보기 팝업으로 확인한다", async () => {
+  // Given
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
+  const graph = await readFile(new URL("../scripts/graphs/medication-claim-review-graph.mjs", import.meta.url), "utf8");
+
+  // When / Then — 모델 없는 규칙 기반 경로는 전송이 없으므로 팝업 없이 그대로 진행한다.
+  assert.match(rx, /setReviewPreview\(\{ medicationId, name: medication\.label, base \}\)/);
+  assert.match(rx, /id="reviewPreviewDialog"/);
+  assert.match(rx, /진료데이터/);
+  assert.match(rx, /고시정보/);
+  assert.match(rx, /프롬프트/);
+  assert.match(rx, /고시 원문 연동 예정/);
+  assert.match(rx, /medicationReviewModelPayload\(reviewPreview\.base\)/);
+  assert.match(rx, /medicationReviewInstructions\(\)/);
+  assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{sendReview\}/);
+  // 미리보기가 보여 주는 프롬프트와 서버가 실제로 보내는 프롬프트는 같은 모듈에서 나온다.
+  assert.match(graph, /from "\.\.\/\.\.\/src\/medication-review-prompt\.js"/);
+  assert.match(graph, /const instructions = medicationReviewInstructions;/);
+  assert.match(graph, /const modelInput = medicationReviewModelInput;/);
+});
+
 test("같은 사실을 가리키는 기준 문구와 차트 값은 한 쌍으로 묶인다", async () => {
   // Given
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");

@@ -14,6 +14,7 @@ import {
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
 } from "../../src/medication-claim-review.js";
+import { medicationReviewInstructions, medicationReviewModelPayload } from "../../src/medication-review-prompt.js";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
@@ -147,6 +148,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [review, setReview] = useState(null);
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
+  const [reviewPreview, setReviewPreview] = useState(null);
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
   const [expandedDetails, setExpandedDetails] = useState(() => new Set());
   const [expandedSources, setExpandedSources] = useState(() => new Set());
@@ -241,9 +243,17 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       setStatus("규칙 기반 사전점검을 완료했습니다.");
       return;
     }
+    // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인한다.
+    setReviewPreview({ medicationId, name: medication.label, base });
+  };
+
+  const sendReview = async () => {
+    if (!reviewPreview) return;
+    const { medicationId, name, base } = reviewPreview;
+    setReviewPreview(null);
     // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
     setReview(null);
-    setPendingReview({ medicationId, name: medication.label });
+    setPendingReview({ medicationId, name });
     setReviewBusyId(medicationId);
     try {
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
@@ -549,6 +559,31 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           </div>
         </form>
       </RxDialog>
+      {reviewPreview ? (
+        <RxDialog id="reviewPreviewDialog" open onClose={() => setReviewPreview(null)} eyebrow="검토 요청 확인"
+          title="AI 검토 전송 내용" titleId="reviewPreviewTitle" context={`${reviewPreview.name} · ${cloudLabel}`}
+          noticeId="reviewPreviewNotice"
+          notice={<p>검토 요청 시 서버로 전송되는 입력을 그대로 보여 줍니다. 이름·등록번호 같은 직접식별자는 포함되지 않습니다.</p>}>
+          <div className="review-preview">
+            <section className="review-preview__section">
+              <h4>진료데이터 <span>환자 구조화 기록에서 추출해 급여기준과 짝지은 대조 항목 — 이 JSON이 모델 입력으로 전송됩니다.</span></h4>
+              <pre className="review-preview__code">{JSON.stringify(medicationReviewModelPayload(reviewPreview.base), null, 2)}</pre>
+            </section>
+            <section className="review-preview__section">
+              <h4>고시정보 <span>요양급여 적용기준 고시</span></h4>
+              <p className="review-preview__placeholder">고시 원문 연동 예정입니다. 현재는 등록된 예시 급여기준(criterion)이 위 진료데이터의 checks 항목에 포함되어 전송됩니다.</p>
+            </section>
+            <section className="review-preview__section">
+              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 진료데이터 JSON이 사용자 입력으로 함께 전송됩니다.</span></h4>
+              <pre className="review-preview__prose">{medicationReviewInstructions()}</pre>
+            </section>
+            <div className="review-preview__actions">
+              <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>
+              <Button variant="primary" type="button" id="reviewPreviewSend" onClick={sendReview}>이 내용으로 검토 요청</Button>
+            </div>
+          </div>
+        </RxDialog>
+      ) : null}
     </>
   );
 }

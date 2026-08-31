@@ -10447,3 +10447,66 @@ model-viewer::part(default-progress-mask) {
   padding-block: 6px;
   font-size: 0.84rem;
 }
+
+/* Pre-send review preview: the exact server-bound input, human-checked. */
+.review-preview {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  overflow-y: auto;
+  max-height: min(62vh, 640px);
+}
+
+.review-preview__section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.review-preview__section > h4 {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.review-preview__section > h4 > span {
+  margin-left: var(--space-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.review-preview__code,
+.review-preview__prose {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.7rem;
+  line-height: 1.55;
+  overflow: auto;
+  max-height: 220px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.review-preview__prose {
+  font-family: inherit;
+  font-size: 0.76rem;
+  word-break: keep-all;
+  white-space: normal;
+}
+
+.review-preview__placeholder {
+  margin: 0;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.review-preview__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

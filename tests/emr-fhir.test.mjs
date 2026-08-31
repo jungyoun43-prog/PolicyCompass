@@ -67,7 +67,7 @@ function roundTripPatient() {
         intent: "original-order",
         system: "https://example.test/medication",
         code: "MED-001",
-        label: "예시 혈압약",
+        label: "로사르탄정 50mg",
         date: "2026-07-19",
         prescription: {
           dose: 1,
@@ -363,7 +363,7 @@ test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", identifier: [{ type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number" }] }, value: "PC-1001" }], name: [{ text: "김비타" }], birthDate: "1974-04-12", gender: "female" } },
       { fullUrl: "Condition/c1", resource: { resourceType: "Condition", id: "c1", subject: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("I10", "고혈압"), recordedDate: "2026-01-01" } },
       { fullUrl: "Observation/o1", resource: { resourceType: "Observation", id: "o1", subject: { reference: "Patient/p1" }, status: "final", code: coding("4548-4", "당화혈색소"), valueQuantity: { value: 6.8, unit: "%" }, effectiveDateTime: "2026-07-10" } },
-      { fullUrl: "MedicationRequest/m1", resource: { resourceType: "MedicationRequest", id: "m1", subject: { reference: "Patient/p1" }, status: "active", intent: "order", medicationCodeableConcept: coding("MED-1", "예시 혈압약"), authoredOn: "2026-07-01" } },
+      { fullUrl: "MedicationRequest/m1", resource: { resourceType: "MedicationRequest", id: "m1", subject: { reference: "Patient/p1" }, status: "active", intent: "order", medicationCodeableConcept: coding("MED-1", "로사르탄정 50mg"), authoredOn: "2026-07-01" } },
       { fullUrl: "AllergyIntolerance/a1", resource: { resourceType: "AllergyIntolerance", id: "a1", patient: { reference: "Patient/p1" }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("ALG-1", "페니실린"), recordedDate: "2025-01-01" } },
       { fullUrl: "Procedure/pr1", resource: { resourceType: "Procedure", id: "pr1", subject: { reference: "Patient/p1" }, status: "completed", code: coding("DEMO-PROC", "예시 추적검사"), performedDateTime: "2026-06-20" } },
       { fullUrl: "Encounter/e1", resource: { resourceType: "Encounter", id: "e1", subject: { reference: "Patient/p1" }, status: "finished", class: { code: "AMB", display: "외래" }, period: { start: "2026-07-19T09:00:00Z", end: "2026-07-19T09:20:00Z" } } },

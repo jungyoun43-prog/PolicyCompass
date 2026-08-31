@@ -1523,7 +1523,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
       demoEvent("kim-wbc", "observation", "6690-2", "백혈구", dateBefore(asOf, 12), { system: "http://loinc.org", value: 7.2, unit: "10³/µL" }),
       demoEvent("kim-hb", "observation", "718-7", "혈색소", dateBefore(asOf, 12), { system: "http://loinc.org", value: 11.8, unit: "g/dL" }),
       demoEvent("kim-plt", "observation", "777-3", "혈소판", dateBefore(asOf, 12), { system: "http://loinc.org", value: 233, unit: "10³/µL" }),
-      demoEvent("kim-med", "medication", "MED-ARB", "예시 혈압약", dateBefore(asOf, 28), { status: "active", note: "1일 1회" }),
+      demoEvent("kim-med", "medication", "MED-ARB", "로사르탄정 50mg", dateBefore(asOf, 28), { status: "active", note: "1일 1회" }),
       demoEvent("kim-procedure", "procedure", "DEMO-BP-FOLLOWUP", "고혈압 추적검사", dateBefore(asOf, 55), { system: "urn:policycompass:demo:service", status: "completed" }),
       demoEvent("kim-diabetes", "condition", "E11", "제2형 당뇨병", dateBefore(asOf, 940), { system: KCD_SYSTEM, status: "active" }),
       demoEvent("kim-hypertension", "condition", "I10", "고혈압", dateBefore(asOf, 1_460), { system: KCD_SYSTEM, status: "active" }),

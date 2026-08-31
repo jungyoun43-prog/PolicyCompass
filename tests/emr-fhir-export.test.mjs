@@ -62,7 +62,7 @@ function fullPatient() {
         intent: "original-order",
         system: "https://example.test/medication",
         code: "MED-001",
-        label: "예시 혈압약",
+        label: "로사르탄정 50mg",
         date: "2026-07-19",
         prescription: {
           dose: 1,
@@ -218,7 +218,7 @@ test("처방 용법·기간·수량과 검사·처치 오더를 구조화한다"
 
   assert.equal(medication.status, "active");
   assert.equal(medication.intent, "original-order");
-  assert.equal(medication.medicationCodeableConcept.text, "예시 혈압약");
+  assert.equal(medication.medicationCodeableConcept.text, "로사르탄정 50mg");
   assert.equal(medication.dosageInstruction[0].text, "아침 식후 복용");
   assert.equal(medication.dosageInstruction[0].route.text, "경구");
   assert.equal(medication.dosageInstruction[0].timing.code.text, "하루 1회");

@@ -11189,3 +11189,28 @@ model-viewer::part(default-progress-mask) {
 #reviewPreviewDialog .review-preview__section > h4 > span {
   font-weight: 500;
 }
+
+/* 판정 표 헤더는 한 줄. */
+.rx-model-report__table th {
+  white-space: nowrap;
+}
+
+/* 좁은 헤더(노트북): 모델 상세는 숨기고 브랜드는 온전히 보인다. */
+@media (max-width: 1520px) {
+  .clinical-header .header-ai-status #aiStatusDetail {
+    display: none;
+  }
+
+  .clinical-header .app-brand {
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+  }
+
+  .clinical-header .app-header__inner {
+    gap: var(--space-2);
+  }
+
+  .clinical-header .workspace-tabs__context {
+    max-width: 150px;
+  }
+}

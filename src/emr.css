@@ -10576,3 +10576,62 @@ model-viewer::part(default-progress-mask) {
 .review-preview textarea.review-preview__code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+/* 약 처방하기: use more of the screen. */
+#prescriptionDialog {
+  width: min(100% - var(--space-6), 1380px);
+  max-height: min(94vh, 1060px);
+}
+
+#prescriptionDialog .rx-dialog__panel {
+  max-height: min(94vh, 1060px);
+}
+
+/* 검토 전송 미리보기: the whole popup fits the viewport — only the three
+   fields scroll internally, never the dialog itself. */
+#reviewPreviewDialog {
+  width: min(100% - var(--space-6), 1280px);
+  height: min(94vh, 1100px);
+  max-height: 94vh;
+  display: flex;
+}
+
+#reviewPreviewDialog .rx-dialog__panel {
+  flex: 1;
+  width: 100%;
+  max-height: none;
+  overflow: hidden;
+}
+
+#reviewPreviewDialog .review-preview {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#reviewPreviewDialog .review-preview__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
+}
+
+#reviewPreviewDialog .review-preview__section:first-of-type {
+  flex: 1.35;
+}
+
+#reviewPreviewDialog .review-preview textarea.review-preview__code,
+#reviewPreviewDialog .review-preview textarea.review-preview__prose {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  resize: none;
+}
+
+#reviewPreviewDialog .review-preview__actions {
+  flex: 0 0 auto;
+}

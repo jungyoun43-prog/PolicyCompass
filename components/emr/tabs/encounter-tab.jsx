@@ -305,7 +305,8 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   };
 
   const disclosureKey = (name) => `${patient.id}:${encounter?.id ?? "no-encounter"}:${status}:${name}`;
-  const disclosureOpen = (name) => openDisclosures.get(disclosureKey(name)) ?? true;
+  // 진료 기본정보는 자동 채움 기본값이라 접힌 한 줄로 시작한다 — 필요할 때만 펼친다.
+  const disclosureOpen = (name) => openDisclosures.get(disclosureKey(name)) ?? (name !== "visit-context");
   const onDisclosureToggle = (name, open) => {
     setOpenDisclosures((current) => {
       const next = new Map(current);
@@ -558,18 +559,8 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
       </div>
 
       {visitSlot ? createPortal(<>
-        <section className="clinical-card encounter-command-card" aria-labelledby="encounterTitle">
-          <div className="encounter-command-heading">
-            <div>
-              <p className="rail-eyebrow">ACTIVE ENCOUNTER</p>
-              <h3 id="encounterTitle">{encounter ? `${displayDate(encounter.date)} ${encounter.label}` : "오늘 외래 진료"}</h3>
-            </div>
-            <div className="encounter-state" id="encounterStatus" data-status={status} aria-live="polite" tabIndex={-1}>
-              <span className="encounter-state__dot" aria-hidden="true"></span>
-              <b id="encounterStatusText">{QUEUE_LABELS[status]}</b>
-            </div>
-          </div>
-          <div className="encounter-quick-actions" aria-label="진료 상태 작업">
+        <section className="clinical-card encounter-command-card" aria-label="진료 상태 작업">
+          <div className="encounter-quick-actions">
             <Button id="returnCurrentEncounter" type="button" hidden={!viewedEncounterId} onClick={() => {
               if (blockClinicalContextChange()) return;
               setViewedEncounterId("");
@@ -583,7 +574,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
             <summary className="workflow-disclosure__summary">
               <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>
-              <span className="workflow-disclosure__signals"><span className="source-badge">CLINICIAN ENTRY</span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
+              <span className="workflow-disclosure__signals"><span className="encounter-state" id="encounterStatus" data-status={status} aria-live="polite" tabIndex={-1}><span className="encounter-state__dot" aria-hidden="true"></span><b id="encounterStatusText">{QUEUE_LABELS[status]}</b></span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
             </summary>
             <div className="workflow-disclosure__body">
               <fieldset className="form-fieldset form-fieldset--plain" disabled={!editable}>

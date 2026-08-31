@@ -41,7 +41,7 @@ test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", 
 
   assert.deepEqual([...new Set(names)].sort(), [...expected].sort());
   // 사용자가 닫기 전에는 모든 단계가 열린 채 시작한다.
-  assert.match(encounter, /openDisclosures\.get\(disclosureKey\(name\)\) \?\? true/);
+  assert.match(encounter, /openDisclosures\.get\(disclosureKey\(name\)\) \?\? \(name !== "visit-context"\)/);
   assert.match(encounter, /class="workflow-disclosure__summary"/);
   assert.match(chart, /data-workflow-disclosure="historical-entry"/);
   assert.match(encounter, /data-disclosure-summary=\{?"?visit-context|data-disclosure-summary="visit-context"/);

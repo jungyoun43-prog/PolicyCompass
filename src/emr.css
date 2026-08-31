@@ -11074,3 +11074,45 @@ model-viewer::part(default-progress-mask) {
 .workflow-disclosure--static .workflow-disclosure__title {
   font-size: 1rem;
 }
+
+/* 상태 작업 카드는 보일 버튼이 있을 때만 나타난다. */
+.rail-visit-slot .encounter-command-card:not(:has(.clinical-button:not([hidden]))) {
+  display: none;
+}
+
+/* 추가 버튼은 제목행 오른쪽 끝에 정렬 — 건수는 제목 옆에 남는다. */
+.workflow-disclosure--static .workflow-disclosure__signals {
+  display: contents;
+}
+
+.workflow-disclosure--static .workflow-disclosure__meta {
+  order: 1;
+}
+
+.workflow-disclosure--static .entry-launcher-slot {
+  order: 2;
+  margin-left: auto;
+}
+
+/* 접힌 진료 기본정보 한 줄: 제목이 잘리지 않게 칩과 메타를 축소. */
+.rail-visit-slot .workflow-disclosure__summary {
+  gap: var(--space-2);
+}
+
+.rail-visit-slot .encounter-state {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+.rail-visit-slot .workflow-disclosure__title {
+  font-size: 0.95rem;
+}
+
+.rail-visit-slot .workflow-disclosure__meta {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.rail-visit-slot .workflow-disclosure__heading {
+  flex: 0 0 auto;
+}

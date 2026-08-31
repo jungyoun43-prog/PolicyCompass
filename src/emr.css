@@ -174,7 +174,7 @@ body.emr-page {
 
 .emr-utility-actions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
@@ -4638,8 +4638,6 @@ body.emr-page {
   .event-type-badge,
   .event-row__body p,
   .event-source,
-  .event-remove,
-  .event-confirm,
   .claim-intro > p,
   .data-control-card > p,
   .scope-switch button,
@@ -10388,4 +10386,65 @@ model-viewer::part(default-progress-mask) {
 
 .workspace-status {
   cursor: pointer;
+}
+
+
+/* --- Button type balances its box ------------------------------------------- */
+
+/* Tall CTAs earn full-size labels. */
+.encounter-save-actions .clinical-button,
+.compact-actions .clinical-button {
+  font-size: 0.875rem;
+}
+
+.event-remove,
+.event-confirm {
+  font-size: 0.84rem;
+}
+
+/* Utility panel buttons: shorter box, bigger label. */
+.emr-utility-actions .clinical-button {
+  min-height: 40px;
+  font-size: 0.84rem;
+}
+
+/* Stream text actions were 11px in a 44px box. */
+.stream-note__head .text-action,
+.stream-day__list .text-action,
+.context-card--stream > .text-action {
+  font-size: 0.79rem;
+}
+
+.rx-source__origin-trigger {
+  font-size: 0.75rem;
+}
+
+
+/* Specificity catch-ups. */
+.clinical-header .emr-utility-actions .clinical-button {
+  min-height: 40px;
+  font-size: 0.84rem;
+}
+
+.encounter-entry-row .event-remove,
+.event-timeline .event-remove,
+.event-timeline .event-confirm {
+  font-size: 0.84rem;
+}
+
+.entry-grid .prescription-launcher .clinical-button {
+  font-size: 0.875rem;
+}
+
+
+/* Final balance pass with explicit boxes. */
+.emr-page button.event-remove,
+.emr-page button.event-confirm {
+  font-size: 0.84rem;
+}
+
+.clinical-header .emr-utility-actions .clinical-button {
+  min-height: 38px;
+  padding-block: 6px;
+  font-size: 0.84rem;
 }

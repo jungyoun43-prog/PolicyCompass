@@ -44,7 +44,6 @@ test("부가 설명은 네이티브 disclosure로 접고 핵심 안전 경고는
     [connections, /문헌 근거 보기/],
     [insights, /최근 변화를 더해 질문 다듬기/],
     [journey, /백업 및 기록 관리/],
-    [emr, /데이터·임상 한계 안내/],
   ]) {
     assert.match(html, /<details/);
     assert.match(html, marker);

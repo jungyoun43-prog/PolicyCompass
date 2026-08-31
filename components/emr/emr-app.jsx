@@ -10,7 +10,7 @@ import {
 } from "../../src/emr-model.js";
 import { claimEvaluationsFor, currentEncounterFor } from "../../lib/emr/selectors.js";
 import { useEmrStore } from "./store.js";
-import { ClinicalFooter, ClinicalHeader, SafetyNotes } from "./chrome.jsx";
+import { ClinicalHeader } from "./chrome.jsx";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { PatientRail } from "./patient-rail.jsx";
@@ -161,7 +161,6 @@ export function EmrApp() {
         <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
         <ClinicalHeader />
         <main className="emr-shell" id="mainContent" aria-busy="true" />
-        <ClinicalFooter />
       </>
     );
   }
@@ -261,9 +260,7 @@ export function EmrApp() {
           </section>
         </div>
 
-        <SafetyNotes />
       </main>
-      <ClinicalFooter />
     </>
   );
 }

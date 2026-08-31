@@ -29,23 +29,3 @@ export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai 
   );
 }
 
-export function ClinicalFooter() {
-  return (
-    <footer className="app-footer clinical-footer">
-      <span>PolicyCompass Clinical</span>
-      <span>확정 기록과 보조 초안을 분리합니다.</span>
-    </footer>
-  );
-}
-
-export function SafetyNotes() {
-  return (
-    <details className="context-disclosure context-disclosure--footer emr-safety-notes">
-      <summary>데이터·임상 한계 안내</summary>
-      <div className="context-disclosure__body">
-        <p>환자 기록은 현재 브라우저에만 저장되며 내보낸 백업 파일은 암호화되지 않습니다. 데이터 작업 전 선택 환자를 다시 확인하세요.</p>
-        <p>AI 초안·급여 사전점검·적정성 예상은 진단, 처방, 서명된 임상 판단이나 보험자의 최종 지급 결정을 대신하지 않습니다.</p>
-      </div>
-    </details>
-  );
-}

@@ -157,7 +157,6 @@ function medicationDetailRows(medication) {
 }
 
 function medicationReviewTransmission(review) {
-  const findings = review.checks.reduce((total, item) => total + item.chart.findings.filter(({ eventId }) => eventId).length, 0);
   return [
     ["약품", `${review.medication.label} · ${review.medication.ingredient}`],
     ["이번 처방", [
@@ -172,7 +171,7 @@ function medicationReviewTransmission(review) {
       INSURANCE_LABELS[review.patient.insuranceType] ?? INSURANCE_LABELS.unknown,
       `확인 상병 ${review.patient.conditionCount}건`,
     ].join(" · ")],
-    ["대조 자료", `등록 기준 ${review.checks.length}개 · 연결된 차트 기록 ${findings}건`],
+    ["대조 자료", `급여 고시 원문 · 구조화 기록 ${(review.records ?? []).length}건`],
     ["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"],
   ];
 }
@@ -382,10 +381,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   };
 
   const cloudLabel = provider === "frontier"
-    ? `클라우드 LLM 규칙 재검토 · ${capability.model || "연결된 모델"}`
+    ? `클라우드 LLM 고시 기준 검토 · ${capability.model || "연결된 모델"}`
     : provider === "local"
-      ? "LLM 규칙 재검토 · 이 기기의 로컬 모델"
-      : "클라우드 LLM 규칙 재검토 · 모델 미설정";
+      ? "LLM 고시 기준 검토 · 이 기기의 로컬 모델"
+      : "클라우드 LLM 고시 기준 검토 · 모델 미설정";
 
   const reviewModeLabel = review && review.generatedBy !== "rule"
     ? `AI 검토 · ${review.model || review.generatedBy}`
@@ -409,10 +408,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               <>
                 <ol className="rx-pipeline">
                   {[
-                    ["1", "이 브라우저에서 규칙 대조", "선택 환자의 확정 차트와 등록된 급여기준을 항목별로 맞춥니다."],
-                    ["2", "대조 결과 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
-                    ["3", cloudLabel, "기준 문구와 환자 기록을 다시 대조해 판정과 근거 문장을 작성합니다."],
-                    ["4", "판정·근거·출처 반환", "규칙 판정보다 관대한 답과 없는 근거 인용은 서버가 되돌립니다."],
+                    ["1", "진료데이터 추출", "환자 구조화 기록에서 판정에 쓰일 검사·처방·진단 기록을 추립니다."],
+                    ["2", "고시·진료데이터 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
+                    ["3", cloudLabel, "급여 고시 기준과 환자 의료데이터만으로 충족 여부를 판정합니다."],
+                    ["4", "판정 보고 반환", "출력 형식(판정·사유·기준별 표)을 지키지 않은 보고는 서버가 되돌립니다."],
                   ].map(([index, title, detail]) => (
                     <li className="rx-pipeline__step" key={index}>
                       <span className="rx-pipeline__index">{index}</span>
@@ -482,13 +481,13 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 <span className="rx-review__spinner" aria-hidden="true"></span>
                 <div className="rx-review__progress-text">
                   <b>AI 검토 중 · {pendingReview.name}</b>
-                  <span>{cloudLabel}이 기준 문구와 환자 기록을 다시 대조하고 있습니다. 검토가 끝나면 판정과 근거를 함께 보여 드립니다.</span>
+                  <span>{cloudLabel}이 급여 고시 기준과 환자 의료데이터를 대조하고 있습니다. 검토가 끝나면 기준별 판정 표를 보여 드립니다.</span>
                   <ol className="rx-pipeline rx-pipeline--progress">
                     {[
-                      ["1", "규칙 대조 완료", "done"],
-                      ["2", "대조 결과 전송", "done"],
-                      ["3", "모델 재검토 중", "active"],
-                      ["4", "판정·근거 반환", "waiting"],
+                      ["1", "진료데이터 추출 완료", "done"],
+                      ["2", "고시·진료데이터 전송", "done"],
+                      ["3", "고시 기준 판정 중", "active"],
+                      ["4", "판정 보고 반환", "waiting"],
                     ].map(([index, title, state]) => (
                       <li className="rx-pipeline__step" data-state={state} key={index}>
                         <span className="rx-pipeline__index">{state === "done" ? "✓" : index}</span>
@@ -499,7 +498,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 </div>
               </div>
             ) : !review ? (
-              <p className="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 환자의 기록과 등록된 급여기준을 항목별로 대조해 삭감 위험을 ○·△·✕로 보여 줍니다.</p>
+              <p className="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 약제의 급여 고시 기준과 환자 의료데이터를 대조해 충족 여부를 ○·△·✕로 보여 줍니다.</p>
             ) : (
               <div className="rx-review__body" id="medicationReviewBody" aria-live="polite">
                 <div className="rx-verdict" id="medicationReviewVerdict" data-tone={review.verdictTone}>

@@ -499,18 +499,15 @@ test("샘플 환자는 명시 진료와 진료명 후보를 같은 영역에서 
   const endocrine = atlas.areas.find(({ id }) => id === "endocrine");
   const respiratory = atlas.areas.find(({ id }) => id === "respiratory");
 
-  assert.deepEqual(
-    endocrine.visits.map(({ id }) => id).sort(),
-    ["kim-encounter", "kim-visit-today"],
-  );
-  assert.equal(endocrine.visits.find(({ id }) => id === "kim-visit-today").lifecycleLabel, "진료 중");
+  assert.deepEqual(endocrine.visits.map(({ id }) => id), ["kim-encounter"]);
+  assert.equal(respiratory.visits.find(({ id }) => id === "kim-visit-today").lifecycleLabel, "진료 중");
   assert.equal(endocrine.visits.find(({ id }) => id === "kim-encounter").association.kind, "classified");
   assert.deepEqual(endocrine.medications.map(({ id }) => id), [], "처방 초안 시드는 제거되었다 — 검토는 데모에서 직접 실행한다");
-  assert.deepEqual(atlas.careAreaIds, ["respiratory", "endocrine"]);
+  assert.deepEqual(atlas.careAreaIds, ["respiratory"]);
   assert.deepEqual(atlas.candidateAreaIds, ["endocrine"]);
-  assert.deepEqual(respiratory.visits.map(({ id }) => id), ["kim-pneumonia-encounter"]);
-  assert.equal(respiratory.declaredVisitCount, 1);
-  assert.equal(endocrine.declaredVisitCount, 1);
+  assert.deepEqual(respiratory.visits.map(({ id }) => id), ["kim-visit-today", "kim-pneumonia-encounter"]);
+  assert.equal(respiratory.declaredVisitCount, 2);
+  assert.equal(endocrine.declaredVisitCount, 0);
   assert.equal(endocrine.classifiedVisitCount, 1);
   assert.deepEqual(atlas.unassigned.visits, []);
   assert.deepEqual(

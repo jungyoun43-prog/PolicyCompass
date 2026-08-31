@@ -1470,12 +1470,12 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     emergencyContact: { name: "김보호", relation: "가족", phone: "010-0000-9001" },
     memo: "예시 환자 · 실제 인물이 아닙니다.",
     events: [
-      demoEvent("kim-visit-today", "encounter", "AMB", "내분비내과 외래", asOf, {
+      demoEvent("kim-visit-today", "encounter", "AMB", "호흡기내과 외래", asOf, {
         recordStatus: "draft",
         status: "in-progress",
         arrivedAt,
         startedAt,
-        department: "내분비내과",
+        department: "호흡기내과",
         clinician: "이선우",
         room: "3진료실",
         chiefComplaint: "천식 악화에 따른 호흡곤란 심화, 생물학적 제제 검토 · 혈압·당뇨 추적 동반",

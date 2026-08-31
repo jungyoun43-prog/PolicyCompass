@@ -14,6 +14,7 @@ import {
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
 } from "../../src/medication-claim-review.js";
+import { FRONTIER_MODEL_CHOICES, FRONTIER_MODEL_GROUPS, frontierModelLabel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewInstructions, medicationReviewNotice, medicationReviewPatientDataText } from "../../src/medication-review-prompt.js";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
@@ -197,6 +198,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [reviewPreview, setReviewPreview] = useState(null);
+  const [expandedField, setExpandedField] = useState("dataText");
+  const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
   const [expandedDetails, setExpandedDetails] = useState(() => new Set());
   const [expandedSources, setExpandedSources] = useState(() => new Set());
@@ -292,6 +295,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       return;
     }
     // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인·수정한다.
+    setExpandedField("dataText");
     setReviewPreview({
       medicationId,
       name: medication.label,
@@ -307,10 +311,19 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setReviewPreview((current) => (current ? { ...current, [field]: value } : current));
   };
 
+  const expandToggle = (field, label) => (
+    <button type="button" className="review-preview__expand" aria-pressed={expandedField === field}
+      onClick={() => setExpandedField((current) => (current === field ? "" : field))}>
+      {expandedField === field ? "접기" : "크게 보기"}
+      <span className="visually-hidden">{label}</span>
+    </button>
+  );
+
   const sendReview = async () => {
     if (!reviewPreview) return;
     const { medicationId, name, base, dataText, noticeText, promptText } = reviewPreview;
     const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
+    if (provider === "frontier" && reviewModel) overrides.model = reviewModel;
     setReviewPreview(null);
     // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
     setReview(null);
@@ -627,22 +640,38 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           title="AI 검토 전송 내용" titleId="reviewPreviewTitle" context={`${reviewPreview.name} · ${cloudLabel}`}
           noticeId="reviewPreviewNotice"
           notice={<p>검토 요청 시 서버로 전송되는 입력을 그대로 보여 줍니다. 이름·등록번호 같은 직접식별자는 포함되지 않습니다.</p>}>
-          <div className="review-preview">
-            <section className="review-preview__section">
-              <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span></h4>
+          <div className="review-preview" data-focus={expandedField || undefined}>
+            <section className="review-preview__section" data-expanded={expandedField === "dataText" || undefined}>
+              <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("dataText", "진료데이터")}</h4>
               <textarea className="review-preview__code" id="reviewPreviewData" rows={12} value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
             </section>
-            <section className="review-preview__section">
-              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span></h4>
+            <section className="review-preview__section" data-expanded={expandedField === "noticeText" || undefined}>
+              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("noticeText", "고시정보")}</h4>
               <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" rows={10} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
             </section>
-            <section className="review-preview__section">
-              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span></h4>
+            <section className="review-preview__section" data-expanded={expandedField === "promptText" || undefined}>
+              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span>{expandToggle("promptText", "프롬프트")}</h4>
               <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
             </section>
             <div className="review-preview__actions">
+              {provider === "frontier" ? (
+                <label className="review-preview__model">검토 모델
+                  <select id="reviewPreviewModel" value={reviewModel} onChange={(event) => setReviewModel(event.target.value)}>
+                    <option value="">서버 기본 · {capability.model || "미설정"}</option>
+                    {FRONTIER_MODEL_GROUPS.map((group) => (
+                      <optgroup key={group} label={group}>
+                        {FRONTIER_MODEL_CHOICES.filter((choice) => choice.group === group).map((choice) => (
+                          <option key={choice.id} value={choice.id}>{choice.label}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>
-              <Button variant="primary" type="button" id="reviewPreviewSend" onClick={sendReview}>이 내용으로 검토 요청</Button>
+              <Button variant="primary" type="button" id="reviewPreviewSend" onClick={sendReview}>
+                {reviewModel ? `${frontierModelLabel(reviewModel)}로 검토 요청` : "이 내용으로 검토 요청"}
+              </Button>
             </div>
           </div>
         </RxDialog>

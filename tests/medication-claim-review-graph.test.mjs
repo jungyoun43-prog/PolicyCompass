@@ -105,6 +105,25 @@ test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그�
   assert.doesNotMatch(user.content, /고시 제2026-92호/);
 });
 
+test("검토 모델은 등록된 목록 안에서만 바꿀 수 있다", async () => {
+  // Given
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const environment = { OPENROUTER_API_KEY: "sk-or-1", POLICYCOMPASS_FRONTIER_MODEL: "openai/gpt-5.6-sol" };
+  const requests = [];
+  const fetchImpl = async (url, options) => {
+    requests.push(JSON.parse(options.body));
+    return { ok: true, json: async () => ({ model: "x", choices: [{ message: { content: REPORT } }] }) };
+  };
+
+  // When
+  await runMedicationClaimReview({ comparison, provider: "frontier", overrides: { model: "anthropic/claude-opus-5" } }, { environment, fetchImpl });
+  await runMedicationClaimReview({ comparison, provider: "frontier", overrides: { model: "evil/expensive-model" } }, { environment, fetchImpl });
+
+  // Then
+  assert.equal(requests[0].model, "anthropic/claude-opus-5");
+  assert.equal(requests[1].model, "openai/gpt-5.6-sol", "목록 밖 모델은 무시하고 서버 기본을 쓴다");
+});
+
 test("판정 헤더가 없는 응답은 규칙 판정으로 되돌린다", async () => {
   // Given
   const comparison = comparisonFor("김비타", "benralizumab-30");

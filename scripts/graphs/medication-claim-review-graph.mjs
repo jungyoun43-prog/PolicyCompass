@@ -1,5 +1,6 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
+import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewInstructions, medicationReviewModelInput } from "../../src/medication-review-prompt.js";
 
 import {
@@ -157,6 +158,8 @@ function sanitizeOverrides(input) {
   if (instructionsText) overrides.instructions = instructionsText;
   if (noticeText) overrides.notice = noticeText;
   if (patientDataText) overrides.patientData = patientDataText;
+  const model = cleanText(input.model, 120);
+  if (model && isAllowedFrontierModel(model)) overrides.model = model;
   return overrides;
 }
 
@@ -303,7 +306,7 @@ export async function runMedicationClaimReview(payload = {}, {
     ? {
       provider,
       overrides,
-      model: status.frontier.configured ? status.frontier.model : "",
+      model: status.frontier.configured ? (overrides.model || status.frontier.model) : "",
       apiKey: frontierCredentials(environment).apiKey,
       environment,
       fetchImpl,

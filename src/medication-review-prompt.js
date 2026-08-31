@@ -48,6 +48,8 @@ export function medicationReviewNotice(medicationId) {
 
 export function medicationReviewModelPayload(comparison) {
   return {
+    reviewDate: comparison.asOf,
+    prescriptionPlannedDate: comparison.asOf,
     medication: comparison.medication,
     prescription: comparison.prescription,
     patient: comparison.patient,

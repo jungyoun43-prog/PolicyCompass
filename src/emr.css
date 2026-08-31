@@ -11035,3 +11035,42 @@ model-viewer::part(default-progress-mask) {
     gap: var(--space-2);
   }
 }
+
+/* Static cards: title, launcher and count sit together; padding collapses. */
+.workflow-disclosure--static > .workflow-disclosure__summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  min-height: 0;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  border-bottom: 0;
+  background: transparent;
+}
+
+.workflow-disclosure--static > .workflow-disclosure__summary:hover {
+  background: transparent;
+}
+
+.workflow-disclosure--static .workflow-disclosure__signals {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.workflow-disclosure--static > .workflow-disclosure__body {
+  padding: 0;
+}
+
+.encounter-main .clinical-card {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+.soap-grid {
+  gap: var(--space-2);
+}
+
+.workflow-disclosure--static .workflow-disclosure__title {
+  font-size: 1rem;
+}

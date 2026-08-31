@@ -61,6 +61,27 @@ test("약품 목록은 benralizumab·durvalumab 둘이고 각자 고시 원문�
   }
 });
 
+test("검토 진료데이터에는 고시 판정에 필요한 구조화 기록 추출이 담긴다", () => {
+  // Given / When
+  const kim = review("김비타", findMedicationInCatalog("benralizumab-30"));
+  const lee = review("이준호", findMedicationInCatalog("durvalumab-500"));
+
+  // Then — benralizumab: 12개월 내 호산구 수치와 전신 스테로이드 처방 이력.
+  assert.equal(kim.records.filter(({ code }) => code === "26449-9").length, 2);
+  assert.equal(kim.records.filter(({ code }) => code === "MED-MPRED").length, 3);
+  assert.ok(kim.records.some(({ code }) => code === "SYM-DYSPNEA"));
+  // durvalumab: stage III·PD-L1·CCRT 종료 시점·백금 기반 항암제 투약 이력.
+  assert.ok(lee.records.some(({ code }) => code === "DEMO-PETCT"));
+  assert.equal(lee.records.find(({ code }) => code === "PDL1-SP263").value, 5);
+  assert.ok(lee.records.some(({ code }) => code === "DEMO-CCRT"));
+  assert.equal(lee.records.filter(({ code }) => code === "MED-TAXOL" || code === "MED-CARBO").length, 4);
+  // 자유 메모·식별자는 추출에 없다.
+  for (const record of [...kim.records, ...lee.records]) {
+    assert.equal("note" in record, false);
+  }
+  assert.doesNotMatch(JSON.stringify(kim.records), /김비타|PC-1001/);
+});
+
 test("차트에 이미 있는 약은 등록된 효능군으로 해석된다", () => {
   // Given / When / Then
   assert.equal(chartMedicationClass({ code: "DEMO-LAMA", label: "LAMA 흡입제" }).class, "LAMA");

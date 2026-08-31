@@ -513,8 +513,11 @@ test("샘플 환자는 명시 진료와 진료명 후보를 같은 영역에서 
   assert.equal(endocrine.declaredVisitCount, 1);
   assert.equal(endocrine.classifiedVisitCount, 1);
   assert.deepEqual(atlas.unassigned.visits, []);
-  assert.deepEqual(atlas.unassigned.medications.map(({ id }) => id), ["kim-med"]);
-  assert.equal(atlas.totals.unassignedMedications, 1);
+  assert.deepEqual(
+    atlas.unassigned.medications.map(({ id }) => id),
+    ["kim-med", "kim-mpred-1", "kim-mpred-2", "kim-mpred-3", "kim-lama", "kim-icslaba"],
+  );
+  assert.equal(atlas.totals.unassignedMedications, 6);
 });
 
 test("저장소의 demo 플래그는 실제 로컬 기록을 비영속 데모로 바꾸지 않는다", async () => {

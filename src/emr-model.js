@@ -1585,6 +1585,36 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         verificationStatus: "confirmed",
         diagnosisRole: "primary",
       }),
+      // Benralizumab 급여기준 시연: 12개월 내 호산구 ≥400 + 급성악화 전신 스테로이드 3회 이상.
+      demoEvent("kim-asthma", "condition", "J45.0", "중증 호산구성 천식", dateBefore(asOf, 420), {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-eos", "observation", "26449-9", "혈중 호산구 수", dateBefore(asOf, 48), { system: "http://loinc.org", value: 430, unit: "cells/µL" }),
+      demoEvent("kim-eos-prev", "observation", "26449-9", "혈중 호산구 수", dateBefore(asOf, 320), { system: "http://loinc.org", value: 380, unit: "cells/µL" }),
+      demoEvent("kim-icslaba", "medication", "MED-ICSLABA", "살메테롤·플루티카손 흡입제 500/50 (고용량 ICS-LABA)", dateBefore(asOf, 400), {
+        status: "active",
+        prescription: { dose: 1, doseUnit: "회", route: "흡입", frequency: "1일 2회", durationDays: 90 },
+      }),
+      demoEvent("kim-lama", "medication", "DEMO-LAMA", "티오트로피움 흡입제 18mcg (LAMA)", dateBefore(asOf, 330), {
+        status: "active",
+        prescription: { dose: 1, doseUnit: "캡슐", route: "흡입", frequency: "1일 1회", durationDays: 90 },
+      }),
+      demoEvent("kim-mpred-1", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 38), {
+        status: "active",
+        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
+      }),
+      demoEvent("kim-mpred-2", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 160), {
+        status: "active",
+        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
+      }),
+      demoEvent("kim-mpred-3", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 270), {
+        status: "active",
+        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
+      }),
+      demoEvent("kim-dyspnea", "symptom", "SYM-DYSPNEA", "호흡곤란 — 야간·운동 시 악화, 흡입제 유지에도 조절 불충분", dateBefore(asOf, 38), { status: "active" }),
     ],
   }, timestamp);
   const second = createPatient({
@@ -1727,6 +1757,37 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         system: "urn:policycompass:demo:drug",
         status: "active",
         note: "흡입기 사용법과 증상 변화를 추적한 예시 기록",
+      }),
+      // Durvalumab 관해공고요법 시연: stage III · PD-L1 ≥1% · CCRT 2주기 후 42일 내.
+      demoEvent("lee-nsclc", "condition", "C34.1", "비소세포폐암, 좌상엽 (편평상피세포암)", dateBefore(asOf, 130), {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("lee-petct", "procedure", "DEMO-PETCT", "PET-CT 판독: 절제 불가능한 국소 진행성 stage IIIA, 원격전이 없음", dateBefore(asOf, 120), {
+        status: "completed",
+        value: "stage IIIA",
+      }),
+      demoEvent("lee-pdl1", "observation", "PDL1-SP263", "병리조직검사 PD-L1 발현율 (SP263)", dateBefore(asOf, 115), { value: 5, unit: "%" }),
+      demoEvent("lee-taxol-1", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 1주기", dateBefore(asOf, 55), {
+        status: "active",
+        prescription: { dose: 50, doseUnit: "mg/m²", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
+      }),
+      demoEvent("lee-carbo-1", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 1주기", dateBefore(asOf, 55), {
+        status: "active",
+        prescription: { dose: 2, doseUnit: "AUC", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
+      }),
+      demoEvent("lee-taxol-2", "medication", "MED-TAXOL", "파클리탁셀(탁솔) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 20), {
+        status: "active",
+        prescription: { dose: 50, doseUnit: "mg/m²", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
+      }),
+      demoEvent("lee-carbo-2", "medication", "MED-CARBO", "카보플라틴(네오플라틴) 주 — CCRT 2주기 (투약 종료)", dateBefore(asOf, 20), {
+        status: "active",
+        prescription: { dose: 2, doseUnit: "AUC", route: "정맥주입", frequency: "주 1회", durationDays: 21 },
+      }),
+      demoEvent("lee-ccrt", "procedure", "DEMO-CCRT", "백금 기반 동시적 항암화학방사선요법(CCRT) 2주기 완료 — 질병진행 없음(안정병변)", dateBefore(asOf, 20), {
+        status: "completed",
       }),
     ],
   }, timestamp);

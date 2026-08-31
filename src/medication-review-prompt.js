@@ -51,7 +51,8 @@ export function medicationReviewModelPayload(comparison) {
     medication: comparison.medication,
     prescription: comparison.prescription,
     patient: comparison.patient,
-    records: comparison.checks.map(({ id, title, chart }) => ({ id, title, chart })),
+    records: comparison.records ?? [],
+    ruleFindings: comparison.checks.map(({ id, title, chart }) => ({ id, title, chart })),
   };
 }
 

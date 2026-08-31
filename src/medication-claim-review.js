@@ -580,6 +580,49 @@ function rationaleFor(checks) {
  * registered criterion at a time. Each returned check carries the criterion and
  * the chart evidence side by side so the UI can show what was compared with what.
  */
+const STRUCTURED_RECORD_TYPES = new Set(["condition", "observation", "medication", "allergy", "procedure", "symptom"]);
+const STRUCTURED_RECORD_LOOKBACK_DAYS = 730;
+const MAX_STRUCTURED_RECORDS = 60;
+
+/**
+ * A de-identified extract of the patient's structured events — codes, dates,
+ * values and prescriptions, never names or free-text memos. This is the
+ * 환자 의료데이터 a notice-based review judges against, so anything the 고시
+ * asks about (검사 수치, 처방 이력, 시술) must be recorded as a structured
+ * event to count.
+ */
+function structuredRecords(events, asOf) {
+  return events
+    .filter((event) => usableEvent(event)
+      && STRUCTURED_RECORD_TYPES.has(cleanText(event.type, 40))
+      && validDate(event.date)
+      && daysBetween(asOf, event.date) !== null
+      && daysBetween(asOf, event.date) <= STRUCTURED_RECORD_LOOKBACK_DAYS)
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, MAX_STRUCTURED_RECORDS)
+    .map((event) => {
+      const record = {
+        type: cleanText(event.type, 40),
+        code: cleanText(event.code, 120),
+        label: cleanText(event.label, 240),
+        date: validDate(event.date),
+        status: cleanText(event.status, 80),
+      };
+      if (typeof event.value === "number" || cleanText(event.value, 200)) record.value = event.value;
+      if (cleanText(event.unit, 80)) record.unit = cleanText(event.unit, 80);
+      if (event.prescription && typeof event.prescription === "object") {
+        record.prescription = {
+          dose: cleanText(String(event.prescription.dose ?? ""), 40),
+          doseUnit: cleanText(event.prescription.doseUnit, 30),
+          route: cleanText(event.prescription.route, 60),
+          frequency: cleanText(event.prescription.frequency, 80),
+          durationDays: positiveInteger(event.prescription.durationDays),
+        };
+      }
+      return record;
+    });
+}
+
 export function buildMedicationClaimComparison({
   patient,
   medication,
@@ -633,6 +676,7 @@ export function buildMedicationClaimComparison({
       conditionCount: conditions.length,
       eventCount: events.length,
     },
+    records: structuredRecords(events, reviewDate),
     checks,
     verdict,
     verdictSymbol: state.symbol,

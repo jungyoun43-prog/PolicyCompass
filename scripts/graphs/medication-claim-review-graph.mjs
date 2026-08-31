@@ -66,6 +66,30 @@ function sanitizeCheck(input) {
   };
 }
 
+const RECORD_TYPES = new Set(["condition", "observation", "medication", "allergy", "procedure", "symptom"]);
+const MAX_RECORDS = 60;
+
+function sanitizeRecord(input) {
+  const type = cleanText(input?.type, 40);
+  const label = cleanText(input?.label, 240);
+  const date = cleanText(input?.date, 10);
+  if (!RECORD_TYPES.has(type) || !label || !date) return null;
+  const record = { type, code: cleanText(input?.code, 120), label, date, status: cleanText(input?.status, 80) };
+  if (typeof input?.value === "number" && Number.isFinite(input.value)) record.value = input.value;
+  else if (cleanText(input?.value, 200)) record.value = cleanText(input.value, 200);
+  if (cleanText(input?.unit, 80)) record.unit = cleanText(input.unit, 80);
+  if (input?.prescription && typeof input.prescription === "object") {
+    record.prescription = {
+      dose: cleanText(input.prescription.dose, 40),
+      doseUnit: cleanText(input.prescription.doseUnit, 30),
+      route: cleanText(input.prescription.route, 60),
+      frequency: cleanText(input.prescription.frequency, 80),
+      durationDays: boundedInteger(input.prescription.durationDays, 365),
+    };
+  }
+  return record;
+}
+
 /**
  * Accepts only the de-identified rule comparison the browser produced. Names, MRNs
  * and free-text memos never appear in that structure, and anything else is dropped here.
@@ -110,6 +134,10 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
       insuranceType: cleanText(source.patient?.insuranceType, 40),
       conditionCount: boundedInteger(source.patient?.conditionCount, 10_000),
     },
+    records: (Array.isArray(source.records) ? source.records : [])
+      .slice(0, MAX_RECORDS)
+      .map(sanitizeRecord)
+      .filter(Boolean),
     checks,
     verdict,
   };

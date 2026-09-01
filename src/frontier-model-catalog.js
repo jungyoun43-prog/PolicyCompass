@@ -22,6 +22,9 @@ export const FRONTIER_MODEL_CHOICES = Object.freeze([
   { group: "로컬급 (오픈모델)", id: "google/gemma-4-31b-it", label: "Gemma 4 31B" },
   { group: "로컬급 (오픈모델)", id: "qwen/qwen3-32b", label: "Qwen3 32B" },
   { group: "로컬급 (오픈모델)", id: "upstage/solar-pro-3", label: "Solar Pro 3 (Upstage)" },
+  { group: "소형 (10B 이하)", id: "qwen/qwen3-8b", label: "Qwen3 8B" },
+  { group: "소형 (10B 이하)", id: "meta-llama/llama-3.1-8b-instruct", label: "Llama 3.1 8B" },
+  { group: "소형 (10B 이하)", id: "google/gemma-3-4b-it", label: "Gemma 3 4B" },
 ]);
 
 export const FRONTIER_MODEL_GROUPS = Object.freeze([...new Set(FRONTIER_MODEL_CHOICES.map(({ group }) => group))]);

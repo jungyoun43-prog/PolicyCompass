@@ -89,7 +89,7 @@ test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그�
   const calls = [];
   const fetchImpl = ollamaStub(REPORT, calls);
   const overrides = {
-    instructions: "수정된 시스템 지시입니다. ## [○/△/✕] 형식으로 답하세요.",
+    instructions: "수정된 템플릿입니다. ## [○/△/✕] 형식으로 답하세요.\n고시: {NOTICE}\n데이터: {PATIENT_DATA}",
     notice: "수정된 고시 본문입니다.",
     patientData: "수정된 환자 의료데이터입니다.",
   };
@@ -97,11 +97,13 @@ test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그�
   // When
   await runMedicationClaimReview({ comparison, overrides }, { environment: localEnvironment, fetchImpl });
 
-  // Then
-  const [system, user] = calls[0].body.messages;
-  assert.equal(system.content, overrides.instructions);
-  assert.match(user.content, /### 급여 고시정보\n\n수정된 고시 본문입니다\./);
-  assert.match(user.content, /### 환자 의료데이터\n\n수정된 환자 의료데이터입니다\./);
+  // Then — 템플릿의 {NOTICE}/{PATIENT_DATA} 자리에 수정본이 그대로 치환된 단일 메시지.
+  assert.equal(calls[0].body.messages.length, 1);
+  const [user] = calls[0].body.messages;
+  assert.equal(user.role, "user");
+  assert.match(user.content, /^수정된 템플릿입니다\./);
+  assert.match(user.content, /고시: 수정된 고시 본문입니다\./);
+  assert.match(user.content, /데이터: 수정된 환자 의료데이터입니다\./);
   assert.doesNotMatch(user.content, /고시 제2026-92호/);
 });
 

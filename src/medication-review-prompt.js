@@ -1,13 +1,6 @@
 import { findMedicationInCatalog } from "./medication-catalog.js";
 
-/**
- * The exact prompt the medication claim review sends to a model, shared so the
- * server graph and the pre-send preview dialog can never drift apart. The
- * system prompt below is the operator-approved 급여기준 검토 지시문; the user
- * message carries the 고시정보(NOTICE) and 환자 의료데이터(PATIENT_DATA).
- */
-export function medicationReviewInstructions() {
-  return `당신은 건강보험 약제 급여기준 검토를 지원하는 시스템입니다.
+const REVIEW_PROMPT_TEMPLATE = `당신은 건강보험 약제 급여기준 검토를 지원하는 시스템입니다.
 
 입력된 **급여 고시정보**와 **환자 의료데이터**만을 이용하여 해당 약제의 급여기준 충족 여부를 판정하십시오.
 
@@ -38,7 +31,26 @@ export function medicationReviewInstructions() {
 | {기준} | ○/△/✕ | {날짜, 값 또는 핵심 내용}   |
 | {기준} | ○/△/✕ | {근거 원문 또는 "정보 없음"} |
 
-**최종 판단:** {의료진이 바로 확인할 수 있도록 핵심 충족/미충족 사유를 간결하게 작성}`;
+**최종 판단:** {의료진이 바로 확인할 수 있도록 핵심 충족/미충족 사유를 간결하게 작성}
+
+---
+
+### 급여 고시정보
+
+{NOTICE}
+
+### 환자 의료데이터
+
+{PATIENT_DATA}`;
+
+/**
+ * The exact prompt the medication claim review sends to a model, shared so the
+ * server graph and the pre-send preview dialog can never drift apart. The
+ * system prompt below is the operator-approved 급여기준 검토 지시문; the user
+ * message carries the 고시정보(NOTICE) and 환자 의료데이터(PATIENT_DATA).
+ */
+export function medicationReviewInstructions() {
+  return REVIEW_PROMPT_TEMPLATE;
 }
 
 export function medicationReviewNotice(medicationId) {
@@ -58,11 +70,24 @@ export function medicationReviewModelPayload(comparison) {
 }
 
 export function medicationReviewPatientDataText(comparison) {
+  // 환자에게 원본 데이터셋이 등록돼 있으면 그 원문이 그대로 {PATIENT_DATA}가 된다.
+  if (typeof comparison.dataset === "string" && comparison.dataset.trim()) return comparison.dataset;
   return JSON.stringify(medicationReviewModelPayload(comparison), null, 1);
 }
 
 export function medicationReviewUserMessage({ notice, patientData }) {
   return ["### 급여 고시정보", "", notice, "", "### 환자 의료데이터", "", patientData].join("\n");
+}
+
+/**
+ * 최종 전송 프롬프트: 운영자 템플릿(수정본 포함)의 {NOTICE}/{PATIENT_DATA}
+ * 자리에 고시 원문과 환자 데이터 원문이 그대로 치환된 단일 메시지.
+ */
+export function medicationReviewPrompt(comparison, overrides = {}) {
+  const template = overrides.instructions || medicationReviewInstructions();
+  return template
+    .replace("{NOTICE}", overrides.notice || medicationReviewNotice(comparison.medication?.id))
+    .replace("{PATIENT_DATA}", overrides.patientData || medicationReviewPatientDataText(comparison));
 }
 
 /**

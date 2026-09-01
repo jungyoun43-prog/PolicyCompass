@@ -677,6 +677,9 @@ export function buildMedicationClaimComparison({
       eventCount: events.length,
     },
     records: structuredRecords(events, reviewDate),
+    ...(typeof patient?.sourceDataset === "string" && patient.sourceDataset.trim()
+      ? { dataset: patient.sourceDataset.slice(0, 100_000) }
+      : {}),
     checks,
     verdict,
     verdictSymbol: state.symbol,

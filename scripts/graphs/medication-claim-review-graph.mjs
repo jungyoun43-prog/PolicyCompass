@@ -1,7 +1,7 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
-import { medicationReviewInstructions, medicationReviewModelInput } from "../../src/medication-review-prompt.js";
+import { medicationReviewPrompt } from "../../src/medication-review-prompt.js";
 
 import {
   callFrontierModel,
@@ -139,14 +139,13 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
       .slice(0, MAX_RECORDS)
       .map(sanitizeRecord)
       .filter(Boolean),
+    ...(typeof source.dataset === "string" && source.dataset.trim()
+      ? { dataset: markdownText(source.dataset, 100_000) }
+      : {}),
     checks,
     verdict,
   };
 }
-
-const instructions = medicationReviewInstructions;
-
-const modelInput = medicationReviewModelInput;
 
 /** Operator-edited 프롬프트/고시정보/진료데이터 from the pre-send preview. */
 function sanitizeOverrides(input) {
@@ -192,8 +191,7 @@ function validateDraft(raw, comparison) {
 
 async function localDraft(comparison, options, feedback) {
   const messages = [
-    { role: "system", content: options.overrides?.instructions || instructions() },
-    { role: "user", content: modelInput(comparison, options.overrides ?? {}) },
+    { role: "user", content: medicationReviewPrompt(comparison, options.overrides ?? {}) },
   ];
   if (feedback) {
     messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 지정된 출력 형식을 지켜 다시 작성하세요.` });
@@ -221,12 +219,12 @@ async function localDraft(comparison, options, feedback) {
 }
 
 async function frontierDraft(comparison, options, feedback) {
-  const base = modelInput(comparison, options.overrides ?? {});
+  const base = medicationReviewPrompt(comparison, options.overrides ?? {});
   const input = feedback ? `${base}\n\n[재시도 안내] ${feedback}` : base;
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
-    instructions: options.overrides?.instructions || instructions(),
+    instructions: "",
     input,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,

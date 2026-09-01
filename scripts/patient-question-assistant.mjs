@@ -340,6 +340,7 @@ export async function callFrontierModel({
 }) {
   const key = cleanText(apiKey, 500);
   const name = cleanText(model, 160);
+  instructions = typeof instructions === "string" ? instructions : "";
   if (!key || !name) throw new Error("프론티어 모델이 서버에 설정되지 않았습니다.");
   const style = frontierApiStyle(environment);
   const baseUrl = frontierBaseUrl(environment);
@@ -348,7 +349,7 @@ export async function callFrontierModel({
     ? {
       model: name,
       messages: [
-        { role: "system", content: instructions },
+        ...(instructions ? [{ role: "system", content: instructions }] : []),
         { role: "user", content: input },
       ],
       max_tokens: maxOutputTokens,
@@ -359,7 +360,7 @@ export async function callFrontierModel({
       model: name,
       store: false,
       reasoning: { effort: "low" },
-      instructions,
+      ...(instructions ? { instructions } : {}),
       input,
       max_output_tokens: maxOutputTokens,
       ...(schema ? { text: { format: { type: "json_schema", name: schemaName, strict: true, schema } } } : {}),

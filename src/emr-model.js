@@ -1,4 +1,5 @@
 import { DEFAULT_CLAIM_RULES, evaluateClaimRule, KCD_SYSTEM, normalizeClaimRule } from "./claim-rules.js";
+import { KIM_CASE_DATASET } from "./kim-case-dataset.js";
 import { createVisitBrief } from "./insight-model.js";
 import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
 import {
@@ -414,6 +415,9 @@ export function createPatient(input = {}, now = new Date().toISOString()) {
     createdAt: validTimestamp(input.createdAt, timestamp),
     updatedAt: validTimestamp(input.updatedAt, timestamp),
     ...(fhirIdentity ? { fhirIdentity } : {}),
+    ...(typeof input.sourceDataset === "string" && input.sourceDataset.trim()
+      ? { sourceDataset: input.sourceDataset.slice(0, 100_000) }
+      : {}),
   };
 }
 
@@ -1790,6 +1794,7 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     name: "김비타",
     birthDate: "1955-06-15",
     sex: "male",
+    sourceDataset: KIM_CASE_DATASET,
     phone: "010-0000-1001",
     address: "서울시 한빛구",
     bloodType: "A+",

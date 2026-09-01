@@ -197,9 +197,10 @@ test("배포 구성은 Next 기본 감지에 맡기고 이전 커스텀 서버�
     "app/api/connection-insights/route.js",
     "app/api/patient-question-assistant/route.js",
     "app/api/patient-question-assistant/refine/route.js",
-    "app/api/medication-claim-review/route.js",
     "app/api/clinical-copilot/route.js",
   ]) {
     assert.match(await readFile(route, "utf8"), /export const maxDuration = 60/, route);
   }
+  // 약제 검토는 느린 로컬급 모델까지 수용하도록 120초 창을 쓴다.
+  assert.match(await readFile("app/api/medication-claim-review/route.js", "utf8"), /export const maxDuration = 120/);
 });

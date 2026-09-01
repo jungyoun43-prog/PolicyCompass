@@ -731,6 +731,6 @@ export function applyMedicationReviewDraft(comparison, draft = {}) {
     ruleVerdict: comparison.verdict,
     note: softened
       ? `모델이 제시한 '${MEDICATION_REVIEW_VERDICTS[proposed]?.label ?? proposed}'보다 규칙 판정을 우선했습니다.`
-      : cleanText(draft.note, 240),
+      : cleanText(draft.note, 600),
   };
 }

@@ -137,6 +137,7 @@ test("판정 헤더가 없는 응답은 규칙 판정으로 되돌린다", async
   // Then
   assert.equal(result.draft.generatedBy, "rule");
   assert.match(result.draft.note, /모델 검토 실패/);
+  assert.match(result.draft.note, /모델 응답 원문\(앞부분\): "판정을 내릴 수 없습니다/);
 });
 
 test("처방 변경을 지시하는 보고는 거부한다", async () => {

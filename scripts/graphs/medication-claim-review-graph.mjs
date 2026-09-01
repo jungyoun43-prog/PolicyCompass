@@ -254,18 +254,25 @@ function medicationClaimReviewGraph() {
         return { draft: { generatedBy: "rule", note: "AI 모델이 설정되지 않아 규칙 판정을 그대로 사용했습니다." } };
       }
       let feedback = "";
+      let rawSample = "";
       for (let attempt = 1; attempt <= 2; attempt += 1) {
+        let raw = null;
         try {
-          const raw = options.provider === "frontier"
+          raw = options.provider === "frontier"
             ? await frontierDraft(state.comparison, options, feedback)
             : await localDraft(state.comparison, options, feedback);
           return { draft: { ...validateDraft(raw.text, state.comparison), model: raw.model, generatedBy: raw.generatedBy } };
         } catch (error) {
           feedback = cleanText(error?.message, 300);
+          // 검증에 걸린 시도의 모델 원문 앞부분을 보존해 실패 사유와 함께 보여 준다.
+          if (raw?.text) rawSample = markdownText(raw.text, 200).replace(/\n+/g, " ");
         }
       }
       return {
-        draft: { generatedBy: "rule", note: `모델 검토 실패로 규칙 판정을 사용했습니다: ${feedback}` },
+        draft: {
+          generatedBy: "rule",
+          note: `모델 검토 실패로 규칙 판정을 사용했습니다: ${feedback}${rawSample ? ` — 모델 응답 원문(앞부분): "${rawSample}"` : ""}`,
+        },
         attempts: [feedback],
       };
     })

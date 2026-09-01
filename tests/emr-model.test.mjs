@@ -512,7 +512,7 @@ test("샘플 환자는 명시 진료와 진료명 후보를 같은 영역에서 
   assert.deepEqual(atlas.unassigned.visits, []);
   assert.deepEqual(
     atlas.unassigned.medications.map(({ id }) => id),
-    ["kim-med", "kim-mpred-1", "kim-mpred-2", "kim-lama", "kim-icslaba"],
+    ["kim-med", "kim-hcort-2", "kim-hcort-1", "kim-lama", "kim-icslaba"],
   );
   assert.equal(atlas.totals.unassignedMedications, 5);
 });

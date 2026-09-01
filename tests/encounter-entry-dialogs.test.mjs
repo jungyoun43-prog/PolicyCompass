@@ -221,7 +221,7 @@ test("규칙 엔진은 기준 문구와 그것을 충족한 차트 값을 짝으
     { rule: "최근 180일 이내 당화혈색소 기록", chart: "4548-4" },
     { rule: "최근 180일 이내", chart: "2026-04-11" },
   ]);
-  assert.deepEqual(byId.age, [{ rule: "만 18세 이상", chart: "만 52세" }]);
+  assert.deepEqual(byId.age, [{ rule: "만 18세 이상", chart: "만 71세" }]);
   assert.deepEqual(byId.duration, [{ rule: "90일분까지 인정", chart: "28일" }]);
   for (const check of review.checks) {
     for (const { rule, chart } of check.source.pairs) {

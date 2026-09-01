@@ -1443,6 +1443,333 @@ export function selectEncounter(stateInput, patientId, encounterId) {
   return { ...state, selectedPatientId: patientId, selectedEncounterId: encounterId };
 }
 
+const KIM_CASE_DOCUMENTS = [
+  [
+    "2025-11-17",
+    "외래 재진기록지_호흡기내과",
+    "검사(Lab)결과",
+    "베트남 병원 ) 응급실 약 aspilets ec 80mg efferegaln 500mg ventolin 100mcg nexium mumps 40mg crestor pyme azi 500mg curam preednisolon familty hospital international clinic pnuemonia COPD, p family general hospital esophageal tumor - post -sutfgery ; susepcted thoracic and abdominal aortica aneurysm , enteritis cimplication 번역본) 70세 남자가 고열과 급성 호흡곤란으로 병원에 입원했습니다. 치료과정은 부준적으로 호전되었고 열은 사라졌고 생체지표는 안정적이였습니다. 환자에게 치료를 지속적으로 해야한다고 했으나 퇴원을 요청하였다."
+  ],
+  [
+    "2025-11-17",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-02-09",
+    "외래 재진기록지_호흡기내과",
+    "검사(Lab)결과",
+    "베트남 병원 ) 응급실 약 aspilets ec 80mg efferegaln 500mg ventolin 100mcg nexium mumps 40mg crestor pyme azi 500mg curam preednisolon familty hospital international clinic pnuemonia COPD, p family general hospital esophageal tumor - post -sutfgery ; susepcted thoracic and abdominal aortica aneurysm , enteritis cimplication 번역본) 70세 남자가 고열과 급성 호흡곤란으로 병원에 입원했습니다. 치료과정은 부준적으로 호전되었고 열은 사라졌고 생체지표는 안정적이였습니다. 환자에게 치료를 지속적으로 해야한다고 했으나 퇴원을 요청하였다."
+  ],
+  [
+    "2026-02-09",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-02-25",
+    "협의진료기록지[의뢰]",
+    "진단",
+    "Chronic obstructive pulmonary disease, unspecified, unspecified {J4499} Asthma, unspecified {J459}"
+  ],
+  [
+    "2026-02-25",
+    "협의진료기록지[의뢰]",
+    "의뢰내용",
+    "<Consultatoin for abdominal artery anerusym, intramural thrombus> # eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma 교수님께 교수님 안녕하세요 상환은 COPD 치료 중인 분입니다. APCT 에서 No change of fusiform aneurysm of infrarenal abdominal aorta (about 4.7cm in diameter) with intramural thrombus. 소견 보여 진료 의뢰드리오니 바쁘신 중 고진선처 부탁드립니다. 감사합니다. 호흡기내과 000 올림."
+  ],
+  [
+    "2026-02-25",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-04-30",
+    "응급센터 전문의 기록지",
+    "Plan",
+    "Dyspnea & Fever origin WU"
+  ],
+  [
+    "2026-04-30",
+    "응급센터 전문의 기록지",
+    "C.C",
+    "Dyspnea"
+  ],
+  [
+    "2026-04-30",
+    "응급센터기록지",
+    "현병력",
+    "Underlying>> #1. AAA on 콩코르정 (2026) #2. COPD #3. asthma #4 Rt. BG-CR infarction (2023/11/27) #5 Rt. pICA near-complete occlusion #6. terminal BPH #7. s/p Lewis op d/t eophageal cancer c lung metz (2020, 0000병원) - 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. open f/u ==================== Current problem>> #A. Dyspnea PI> 택시기사로 평소 일하면서 일상생활 및 일하는 데 dyspnea 없던 분으로 4일 전부터 택시기사 일 하기 힘들 정도로 mMRC2의 dyspnea 발생하여, 4일간 점점 악화됨 뚜렷한 유발, 악화, 완화요인 - (보호자에 의하면 4일 전 회 먹은 후부터 힘들어했다고 함) 3일 전부터 열이 났다고 하나 체온 측정 - ER 내원 하루 전까지 흡입기 사용, 최근 약 변경 없음 allergy - Orthopnea : - F / C / M : + / + / - Chest pain / Palpitation / Syncope : - / - / - C / S / R : + / + / - Dizziness / Diaphoresis : - / - PE> Symmetrical chest expansion Clear breathing sound without weezing and crackle Regular heart beat PTPE : -"
+  ],
+  [
+    "2026-04-30",
+    "응급센터 전문의 기록지",
+    "P.I",
+    "Underlying>> #1. AAA on 콩코르정 (2026) #2. COPD #3. asthma #4 Rt. BG-CR infarction (2023/11/27) #5 Rt. pICA near-complete occlusion #6. terminal BPH #7. s/p Lewis op d/t eophageal cancer c lung metz (2020, 0000병원) - 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. open f/u ================================================== COPD (조터나+포스터) 사용중 Pf 000 선생님 추적중. 1달전 객혈 1회 있다가 호전. 3-4일전부터 기운이 없고 식욕저하 발생. 이후 발열동반. 기침 가래 있고 가래는 노란색. 호흡곤란 심해져 내원함."
+  ],
+  [
+    "2026-04-30",
+    "응급센터 전문의 기록지",
+    "Progress",
+    "#1 혈압저하로 ICU adm 항생제 dual cover W 없으므로 steroid 투여 안합니다. saline loading 후에도 혈압오르지 않으면 C-line 삽입 NE 투여 부탁드립니다. MICU 000 교수님 입원합니다."
+  ],
+  [
+    "2026-04-30",
+    "응급센터 전문의 기록지",
+    "C.C",
+    "4일전부터 발생한 호흡곤란"
+  ],
+  [
+    "2026-04-30",
+    "입원기록지_공통",
+    "현병력",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis 택시기사로 평소 일하면서 일상생활 및 일하는 데 dyspnea 없던 분. 4일 전부터 택시기사 일 하기 힘들 정도로 mMRC2의 dyspnea 발생 4일간 점점 악화 (보호자에 의하면 4일 전 회 먹은 후부터 힘들어했다고 하나, 뚜렷한 유발, 악화, 완화요인 -) 3일 전부터 열이 났다고 하나 체온 측정은 하지 않았음. @ Orthopnea : - F / C / M : + / + / - Chest pain / Palpitation / Syncope : - / - / - C / S / R : + / + / - : 누런 가래가 생겼다고 함. Dizziness / Diaphoresis : - / - @ lung sound : Wheezing(-) PTPE : - @ ER 내원 하루 전까지 흡입기 사용, 최근 약 변경 없음 allergy -"
+  ],
+  [
+    "2026-04-30",
+    "입원기록지_공통",
+    "진단명",
+    "Pneumonia, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified"
+  ],
+  [
+    "2026-04-30",
+    "경과기록지_공통",
+    "Plan",
+    "# pn > W sound 는 없어서 steroid IV는 투여하지 않음. / nebulizer 적용 항생제 FEP+LVX투여 == culture 결과 확인 필요"
+  ],
+  [
+    "2026-04-30",
+    "경과기록지_공통",
+    "Assessment",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis"
+  ],
+  [
+    "2026-05-01",
+    "협의진료기록지[의뢰]",
+    "의뢰내용",
+    "Pneumonia, unspecified {J189} Chronic obstructive pulmonary disease, unspecified, unspecified {J4499} Asthma, unspecified {J459}"
+  ],
+  [
+    "2026-05-03",
+    "Off duty note_공통",
+    "경과요약 및 특이소견",
+    "집에서 거주하며 home O2 적용하는 분. COPD, asthma로 호흡기내과에서 조터나, 포스터넥스트할러 사용중인 분. dyspnea 주소로 내원함. wheezing sound는 없었음. pneumonia(Rt) sepsis 진단하에 FEP+LVX 투약 시작함. 이후 주말간 MRSA cover를 위해 TEC 추가했고, severe CAP, septic shock 진단하에 steroid 추가함. 현재 nepi 중단했고 nasal prong 2L/min 적용중인 상태"
+  ],
+  [
+    "2026-05-03",
+    "Off duty note_공통",
+    "진단명",
+    "Pneumonia, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified"
+  ],
+  [
+    "2026-05-03",
+    "Off duty note_공통",
+    "치료계획",
+    "- culture 결과 확인 및 결과에 따라 항생제 de-escalation 부탁드립니다 - 현재 Nepi 중단한 상태로, pneumonia 호전 소견 보이면 steroid도 감량 부탁드립니다."
+  ],
+  [
+    "2026-05-03",
+    "Off duty note_공통",
+    "병력",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN"
+  ],
+  [
+    "2026-05-04",
+    "경과기록지_공통",
+    "Plan",
+    "#. CRO+LVX (4/30) FEP+LVX #4 (5/1-) : FEP 2g q8h, LVX 750mg q24h TEC (5/1-4) NE 중단 스테로이드 감량고려 == culture 결과 확인 필요"
+  ],
+  [
+    "2026-05-04",
+    "경과기록지_공통",
+    "Assessment",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis"
+  ],
+  [
+    "2026-05-04",
+    "On duty note_공통",
+    "치료계획",
+    "#A FEP/LVO steroid bid tapering"
+  ],
+  [
+    "2026-05-04",
+    "On duty note_공통",
+    "병력",
+    "Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN current> #A pneumonia sepsis"
+  ],
+  [
+    "2026-05-04",
+    "On duty note_공통",
+    "진단명",
+    "Pneumonia, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified"
+  ],
+  [
+    "2026-05-04",
+    "경과기록지_공통",
+    "Plan",
+    "#A FEP/LVO steroid bid tapering"
+  ],
+  [
+    "2026-05-04",
+    "경과기록지_공통",
+    "Assessment",
+    "Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis"
+  ],
+  [
+    "2026-05-06",
+    "경과기록지_공통",
+    "Plan",
+    "#A FEP/LVO steroid bid tapering 내일 lab 확인 후 5/8 퇴원 고려"
+  ],
+  [
+    "2026-05-06",
+    "경과기록지_공통",
+    "Assessment",
+    "Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis"
+  ],
+  [
+    "2026-05-08",
+    "진단서 국문",
+    "치료 내용 및 향후 치료에 대한 소견",
+    "4/30 ct chest 1. 1) Newly seen air space consolidation in RUL and RLL, -> Air space pneumonia. 2) Small right pleural effusion. 2. 1) No remarkable change of multiple nodules in both lungs (less than 8 mm), indetermiante. 2) No change of probable sequelae of previous chronic inflammation in LUL. 3) Confluent emphysema and substantial paraseptal emphysema in both lungs with diffuse bronchial wall thickening. -> Mixed phenotype COPD. 호흡곤란으로 응급실 입원하여 시행한 검사에서 폐렴 소견 보였으며, 중환자실 입실함. 상태 호전되어 일반병실로 이실하여 치료하였고 금일 퇴원함. COPD, Asthma overlap 으로 지속적인 외래 추적관찰 요함."
+  ],
+  [
+    "2026-05-13",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-06-04",
+    "퇴원요약지_호흡기내과",
+    "진단명",
+    "Pneumonia, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified"
+  ],
+  [
+    "2026-06-04",
+    "퇴원요약지_호흡기내과",
+    "입원사유",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis 택시기사로 평소 일하면서 일상생활 및 일하는 데 dyspnea 없던 분. 4일 전부터 택시기사 일 하기 힘들 정도로 mMRC2의 dyspnea 발생 4일간 점점 악화 (보호자에 의하면 4일 전 회 먹은 후부터 힘들어했다고 하나, 뚜렷한 유발, 악화, 완화요인 -) 3일 전부터 열이 났다고 하나 체온 측정은 하지 않았음. @ Orthopnea : - F / C / M : + / + / - Chest pain / Palpitation / Syncope : - / - / - C / S / R : + / + / - : 누런 가래가 생겼다고 함. Dizziness / Diaphoresis : - / - @ lung sound : Wheezing(-) PTPE : - @ ER 내원 하루 전까지 흡입기 사용, 최근 약 변경 없음 allergy -"
+  ],
+  [
+    "2026-06-11",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-06-11",
+    "입원기록지_호흡기내과",
+    "진단명",
+    "Sepsis, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified Pneumonia, unspecified Cerebral infarction, unspecified Other hyperlipidaemia Septic shock"
+  ],
+  [
+    "2026-06-11",
+    "입원기록지_호흡기내과",
+    "기타",
+    "식도암('20), COPD, Asthma, Stroke ('23), AAA, BPH, HTN(no Tx 식도암 수술이후 저혈압와서 중단)"
+  ],
+  [
+    "2026-06-11",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-12",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-15",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-17",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-19",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-22",
+    "협의진료기록지[의뢰]",
+    "진단",
+    "Sepsis, unspecified {A419} Chronic obstructive pulmonary disease, unspecified, unspecified {J4499} Asthma, unspecified {J459} Pneumonia, unspecified {J189} Cerebral infarction, unspecified {I639} Other hyperlipidaemia {E784} Septic shock {R572}"
+  ],
+  [
+    "2026-06-22",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-24",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-26",
+    "협의진료기록지[의뢰]",
+    "진단",
+    "Sepsis, unspecified {A419} Chronic obstructive pulmonary disease, unspecified, unspecified {J4499} Asthma, unspecified {J459} Pneumonia, unspecified {J189} Cerebral infarction, unspecified {I639} Other hyperlipidaemia {E784} Septic shock {R572}"
+  ],
+  [
+    "2026-06-26",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-06-29",
+    "경과기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH current problem > #A. pleual effusion"
+  ],
+  [
+    "2026-07-03",
+    "퇴원요약지_호흡기내과",
+    "진단명",
+    "Sepsis, unspecified Chronic obstructive pulmonary disease, unspecified, unspecified Asthma, unspecified Pneumonia, unspecified Cerebral infarction, unspecified Other hyperlipidaemia Septic shock"
+  ],
+  [
+    "2026-07-06",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ],
+  [
+    "2026-07-11",
+    "경과기록지_공통",
+    "Plan",
+    "# pn > W sound 는 없어서 steroid IV는 투여하지 않음. / nebulizer 적용 > 항생제 FEP+LVX투여 > steroid, TEC 추가한 상태 == culture 결과 확인 필요"
+  ],
+  [
+    "2026-07-11",
+    "경과기록지_공통",
+    "Assessment",
+    "(집에서 거주, home O2 2L/min, 의사소통가능, 거동가능, 운전가능) Underlying> # Rt. BG-CR infarction (2023/11/27) Rt. pICA near-complete occlusion # AAA on 콩코르정 (2026) # COPD # asthma # terminal BPH # s/p Ivor Lewis op ((transthoracic espohagectomy, proximal gastrectomy, intrathoracic esophagogastrostomy, pyloromymectomy, 2-field LN dissection) d/t eophageal cancer c lung metz (2020, 0000병원) -> adjuvant FP -> 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음. # nueropathic pain : r/o PPN Current> # pneumonia (Rt) sepsis"
+  ],
+  [
+    "2026-08-06",
+    "외래 재진기록지_호흡기내과",
+    "Assessment",
+    "# eophageal cancer - 0000병원 Lewis op. 폐전이 의심되는 소견 있었으나 호전양상으로 전이가능성 낮음/ open f/u #COPD # Asthma"
+  ]
+];
+
 function dateBefore(asOf, days) {
   const timestamp = new Date(`${asOf}T00:00:00.000Z`).valueOf();
   return new Date(timestamp - days * 86_400_000).toISOString().slice(0, 10);
@@ -1461,8 +1788,8 @@ export function createDemoEmrState(now = new Date().toISOString()) {
     id: "demo-patient-kim",
     mrn: "PC-1001",
     name: "김비타",
-    birthDate: "1974-04-12",
-    sex: "female",
+    birthDate: "1955-06-15",
+    sex: "male",
     phone: "010-0000-1001",
     address: "서울시 한빛구",
     bloodType: "A+",
@@ -1478,12 +1805,12 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         department: "호흡기내과",
         clinician: "이선우",
         room: "3진료실",
-        chiefComplaint: "천식 악화에 따른 호흡곤란 심화, 생물학적 제제 검토 · 혈압·당뇨 추적 동반",
+        chiefComplaint: "반복되는 호흡곤란·천식 악화 추적, 생물학적 제제(benralizumab) 검토",
         soap: {
-          subjective: "\"흡입약을 두 개나 쓰는데도 밤이면 숨이 차서 깨요. 지난달에도 스테로이드 알약을 먹었어요.\" 흡입제 순응도 양호, 야간 각성 주 2-3회. 혈압·당뇨약은 빠짐없이 복용 중.",
-          objective: "폐음 양측 호기성 천명 청진 · SpO₂ 95% (실내공기) · 최근 혈중 호산구 430 cells/µL · BP 148/94 mmHg · HbA1c 7.1%. 고용량 ICS-LABA + LAMA 유지 중.",
-          assessment: "1. 중증 호산구성 천식(J45.0) - 고용량 ICS-LABA·LAMA에도 조절 불충분. 12개월 내 호산구 430, 전신 스테로이드 급성악화 2회 → 생물학적 제제(benralizumab) 급여기준 검토 대상.\n2. 본태성 고혈압(I10) - 목표 미달, ARB 유지 중.\n3. 제2형 당뇨병(E11) - HbA1c 7.1%, 목표 근접.",
-          plan: "1. 천식: benralizumab 급여기준 AI 사전검토 후 투여 여부 결정, 호산구·악화 이력 재확인.\n2. 혈압: ARB 유지, 4주 뒤 재측정.\n3. 당뇨: 식사·운동 요법 재교육, 3개월 뒤 HbA1c 재검.",
+          subjective: "\"숨이 차서 택시 일을 오래 못 해요. 올해만 폐렴으로 두 번 입원했어요.\" 조터나·포스터 흡입 유지, home O₂ 2L/min. 4-5월·6월 입원 후 회복 중이나 노작성 호흡곤란 지속.",
+          objective: "청진상 천명 없음 · SpO₂ 94% (home O₂ 2L/min) · 6/15 Eosinophil(EM) 6.1% · WBC 8.2×10³/µL · BP 148/94 mmHg · HbA1c 7.1%.",
+          assessment: "1. COPD-천식 중복(J44.9·J45.9) - 흡입제 유지에도 반복 악화: 4/30 폐렴·패혈증 입원(ICU), 6/11 재입원. 입원 중 전신 스테로이드(hydrocortisone IV) 투여 2회. 생물학적 제제(benralizumab) 급여기준 검토 대상.\n2. 본태성 고혈압(I10) - ARB 유지 중.\n3. 제2형 당뇨병(E11) - HbA1c 7.1%, 목표 근접.",
+          plan: "1. 천식: benralizumab 급여기준 AI 사전검토 후 투여 여부 결정 - 호산구 추이·급성악화 횟수 재확인.\n2. 혈압: ARB 유지, 4주 뒤 재측정.\n3. 당뇨: 식사·운동 요법 재교육, 3개월 뒤 HbA1c 재검.",
         },
         signature: { status: "unsigned", signer: "", signedAt: "" },
       }),
@@ -1550,32 +1877,107 @@ export function createDemoEmrState(now = new Date().toISOString()) {
         verificationStatus: "confirmed",
         diagnosisRole: "primary",
       }),
-      // Benralizumab 급여기준 시연: 12개월 내 호산구 ≥400 + 급성악화 전신 스테로이드 3회 이상.
-      demoEvent("kim-asthma", "condition", "J45.0", "중증 호산구성 천식", dateBefore(asOf, 420), {
+      // 실제 사례 기반 시드: 반복 천식 진단, Eos%/WBC 검사, 전신 스테로이드 정주.
+      demoEvent("kim-case-cond-1", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2025-11-17", {
         system: KCD_SYSTEM,
         status: "active",
         clinicalStatus: "active",
         verificationStatus: "confirmed",
       }),
-      demoEvent("kim-eos", "observation", "26449-9", "혈중 호산구 수", dateBefore(asOf, 48), { system: "http://loinc.org", value: 430, unit: "cells/µL" }),
-      demoEvent("kim-eos-prev", "observation", "26449-9", "혈중 호산구 수", dateBefore(asOf, 320), { system: "http://loinc.org", value: 380, unit: "cells/µL" }),
-      demoEvent("kim-icslaba", "medication", "MED-ICSLABA", "살메테롤·플루티카손 흡입제 500/50 (고용량 ICS-LABA)", dateBefore(asOf, 400), {
+      demoEvent("kim-case-cond-2", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-02-09", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-3", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-02-25", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-4", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-04-30", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-5", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-05-13", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-6", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-06-11", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-7", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-07-06", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-cond-8", "condition", "J45.9", "천식, 상세불명 (Asthma, unspecified)", "2026-08-06", {
+        system: KCD_SYSTEM,
+        status: "active",
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+      }),
+      demoEvent("kim-case-lab-1", "observation", "", "Eosinophil", "2026-02-19", { value: 3.4, unit: "%" }),
+      demoEvent("kim-case-lab-2", "observation", "", "WBC", "2026-02-19", { value: 6.4, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-3", "observation", "", "WBC (EM)", "2026-04-30", { value: 20.4, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-4", "observation", "", "WBC", "2026-04-30", { value: "0-1" }),
+      demoEvent("kim-case-lab-5", "observation", "", "Eosinophil (EM)", "2026-04-30", { value: 0.3, unit: "%" }),
+      demoEvent("kim-case-lab-6", "observation", "", "Eosinophil (EM)", "2026-05-01", { value: 0.1, unit: "%" }),
+      demoEvent("kim-case-lab-7", "observation", "", "WBC (EM)", "2026-05-01", { value: 23, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-8", "observation", "", "Eosinophil (EM)", "2026-05-02", { value: "", unit: "%" }),
+      demoEvent("kim-case-lab-9", "observation", "", "WBC (EM)", "2026-05-02", { value: 16.6, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-10", "observation", "", "Eosinophil (EM)", "2026-05-03", { value: "", unit: "%" }),
+      demoEvent("kim-case-lab-11", "observation", "", "WBC (EM)", "2026-05-03", { value: 17.5, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-12", "observation", "", "Eosinophil (EM)", "2026-05-04", { value: "", unit: "%" }),
+      demoEvent("kim-case-lab-13", "observation", "", "WBC (EM)", "2026-05-04", { value: 12.9, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-14", "observation", "", "Eosinophil (EM)", "2026-05-07", { value: 0.1, unit: "%" }),
+      demoEvent("kim-case-lab-15", "observation", "", "WBC (EM)", "2026-05-07", { value: 19.3, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-16", "observation", "", "Eosinophil (CSF \uc774\uc678)", "2026-06-11", { value: 1, unit: "%" }),
+      demoEvent("kim-case-lab-17", "observation", "", "WBC", "2026-06-11", { value: 4000, unit: "/uL" }),
+      demoEvent("kim-case-lab-18", "observation", "", "Eosinophil (EM)", "2026-06-11", { value: 2.8, unit: "%" }),
+      demoEvent("kim-case-lab-19", "observation", "", "WBC (EM)", "2026-06-11", { value: 9.2, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-20", "observation", "", "WBC", "2026-06-12", { value: "1-4" }),
+      demoEvent("kim-case-lab-21", "observation", "", "Eosinophil (EM)", "2026-06-15", { value: 6.1, unit: "%" }),
+      demoEvent("kim-case-lab-22", "observation", "", "WBC (EM)", "2026-06-15", { value: 8.2, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-23", "observation", "", "Eosinophil (EM)", "2026-06-18", { value: 6, unit: "%" }),
+      demoEvent("kim-case-lab-24", "observation", "", "WBC (EM)", "2026-06-18", { value: 10.1, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-25", "observation", "", "Eosinophil (EM)", "2026-06-22", { value: 5, unit: "%" }),
+      demoEvent("kim-case-lab-26", "observation", "", "WBC (EM)", "2026-06-22", { value: 8.6, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-27", "observation", "", "Eosinophil (EM)", "2026-06-25", { value: 3.7, unit: "%" }),
+      demoEvent("kim-case-lab-28", "observation", "", "WBC (EM)", "2026-06-25", { value: 12.7, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-29", "observation", "", "Eosinophil (EM)", "2026-06-29", { value: 4.7, unit: "%" }),
+      demoEvent("kim-case-lab-30", "observation", "", "WBC (EM)", "2026-06-29", { value: 8.1, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-31", "observation", "", "WBC (EM)", "2026-07-06", { value: 9, unit: "\u00d710\u00b3/\u3395" }),
+      demoEvent("kim-case-lab-32", "observation", "", "Eosinophil (EM)", "2026-07-06", { value: 2.9, unit: "%" }),
+      demoEvent("kim-hcort-1", "medication", "MED-HCORT", "hydrocortisone sodium succinate 100mg (코티소루주 100mg(한올))", "2026-05-01", {
+        status: "active",
+        prescription: { dose: 100, doseUnit: "mg", route: "정맥주사", frequency: "1일 1회", durationDays: 1 },
+      }),
+      demoEvent("kim-hcort-2", "medication", "MED-HCORT", "hydrocortisone sodium succinate 100mg (코티소루주 100mg(한올))", "2026-05-05", {
+        status: "active",
+        prescription: { dose: 100, doseUnit: "mg", route: "정맥주사", frequency: "1일 1회", durationDays: 1 },
+      }),
+      demoEvent("kim-icslaba", "medication", "MED-ICSLABA", "포스터 넥스트할러 흡입제 (ICS-LABA)", dateBefore(asOf, 400), {
         status: "active",
         prescription: { dose: 1, doseUnit: "회", route: "흡입", frequency: "1일 2회", durationDays: 90 },
       }),
-      demoEvent("kim-lama", "medication", "DEMO-LAMA", "티오트로피움 흡입제 18mcg (LAMA)", dateBefore(asOf, 330), {
+      demoEvent("kim-lama", "medication", "DEMO-LAMA", "조터나 흡입제 (LAMA)", dateBefore(asOf, 330), {
         status: "active",
         prescription: { dose: 1, doseUnit: "캡슐", route: "흡입", frequency: "1일 1회", durationDays: 90 },
       }),
-      demoEvent("kim-mpred-1", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 38), {
-        status: "active",
-        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
-      }),
-      demoEvent("kim-mpred-2", "medication", "MED-MPRED", "메틸프레드니솔론정 4mg (천식 급성악화)", dateBefore(asOf, 160), {
-        status: "active",
-        prescription: { dose: 4, doseUnit: "mg", route: "경구", frequency: "1일 2회", durationDays: 7 },
-      }),
       demoEvent("kim-dyspnea", "symptom", "SYM-DYSPNEA", "호흡곤란 — 야간·운동 시 악화, 흡입제 유지에도 조절 불충분", dateBefore(asOf, 38), { status: "active" }),
+      ...KIM_CASE_DOCUMENTS.map(([date, title, section, text], index) => demoEvent(
+        `kim-case-doc-${index + 1}`, "note", "", `${title} · ${section}`, date, { note: text },
+      )),
     ],
   }, timestamp);
   const second = createPatient({

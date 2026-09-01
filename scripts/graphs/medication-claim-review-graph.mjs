@@ -226,6 +226,7 @@ async function frontierDraft(comparison, options, feedback) {
     model: options.model,
     instructions: "",
     input,
+    maxOutputTokens: 2_600,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
     environment: options.environment ?? process.env,

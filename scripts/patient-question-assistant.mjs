@@ -354,6 +354,7 @@ export async function callFrontierModel({
       ],
       max_tokens: maxOutputTokens,
       temperature: 0,
+      reasoning: { effort: "low" },
       ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } } } : {}),
     }
     : {

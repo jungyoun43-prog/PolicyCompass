@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 import {
   medicationClaimReviewStatus,
@@ -22,7 +22,7 @@ export const POST = withApiErrors(async (request) => {
     await assertFrontierDailyBudget();
   }
   try {
-    return jsonResponse(200, await runMedicationClaimReview(payload, { timeoutMs: 50_000 }));
+    return jsonResponse(200, await runMedicationClaimReview(payload, { timeoutMs: 100_000 }));
   } catch (error) {
     if (error instanceof TypeError) throw new ApiError(400, "INVALID_MEDICATION_REVIEW", error.message);
     throw new ApiError(502, "MEDICATION_REVIEW_FAILED", "약제 급여 사전점검 초안을 만들지 못했습니다.");

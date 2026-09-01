@@ -258,7 +258,7 @@ function medicationClaimReviewGraph() {
       // 서버리스 함수 한도(60초) 안에서만 재시도한다 — 한도를 넘겨 죽으면
       // 실패 사유조차 내려보낼 수 없다.
       const startedAt = Date.now();
-      const budgetMs = options.budgetMs ?? 55_000;
+      const budgetMs = options.budgetMs ?? 110_000;
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         const remaining = budgetMs - (Date.now() - startedAt);
         if (remaining < 8_000) break;

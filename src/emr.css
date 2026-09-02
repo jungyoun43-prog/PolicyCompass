@@ -48,10 +48,6 @@ body.emr-page {
 
 .clinical-header .app-header__inner {
   width: calc(100% - var(--space-6));
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-  min-height: var(--header-height);
-  padding-block: 0;
 }
 
 .clinical-header .app-brand b {
@@ -75,7 +71,6 @@ body.emr-page {
 .emr-shell {
   width: calc(100% - var(--space-6));
   margin-inline: auto;
-  padding: var(--space-5) 0 var(--space-12);
 }
 
 .clinical-command {
@@ -83,15 +78,11 @@ body.emr-page {
   grid-template-columns: minmax(0, 1fr) minmax(420px, auto);
   gap: var(--space-5);
   align-items: center;
-  margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
-  padding-bottom: var(--space-3);
 }
 
 .clinical-command h1 {
   margin: 2px 0;
-  font-size: clamp(1.35rem, 2vw, 1.85rem);
-  font-weight: 790;
   letter-spacing: -0.045em;
   line-height: 1.15;
   word-break: keep-all;
@@ -182,7 +173,6 @@ body.emr-page {
 .emr-utility-actions .clinical-button {
   width: 100%;
   padding-inline: var(--space-2);
-  text-align: center;
 }
 
 .clinical-button,
@@ -304,14 +294,12 @@ body.emr-page {
 .trust-strip {
   display: flex;
   min-height: 54px;
-  flex-wrap: wrap;
   gap: var(--space-3) var(--space-6);
   align-items: center;
   border-radius: 16px;
   background: var(--ink);
   padding: var(--space-3) var(--space-5);
   color: var(--surface);
-  box-shadow: 0 12px 36px color-mix(in srgb, var(--ink) 15%, transparent);
 }
 
 .fhir-import-report {
@@ -397,9 +385,7 @@ body.emr-page {
 
 .workspace-status {
   min-height: 22px;
-  margin: var(--space-2) 0;
   color: var(--muted);
-  font-size: 0.75rem;
   text-align: right;
 }
 
@@ -413,14 +399,8 @@ body.emr-page {
   font-weight: 700;
 }
 
-.workspace-status:empty {
-  min-height: 0;
-  margin-block: var(--space-1);
-}
-
 .clinical-layout {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
 }
@@ -435,13 +415,8 @@ body.emr-page {
 
 .patient-rail {
   position: sticky;
-  top: calc(var(--header-height) + var(--space-4));
-  overflow-x: hidden;
-  overflow-y: auto;
   max-height: calc(100dvh - var(--header-height) - var(--space-8));
   border-radius: 20px;
-  padding: var(--space-5);
-  scrollbar-color: var(--line) transparent;
 }
 
 .rail-heading,
@@ -546,16 +521,9 @@ body.emr-page {
   background: var(--surface-soft);
   padding: 10px 12px;
   color: var(--ink);
-  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
-}
-
-.emr-page input,
-.emr-page select {
-  min-height: 44px;
 }
 
 .emr-page textarea {
-  min-height: 100px;
   resize: vertical;
 }
 
@@ -671,13 +639,10 @@ body.emr-page {
 
 .patient-list {
   display: grid;
-  gap: var(--space-2);
   max-height: calc(100dvh - 390px);
   margin: 0;
   overflow-y: auto;
   padding: 0 var(--space-1) var(--space-2) 0;
-  list-style: none;
-  scrollbar-color: var(--line) transparent;
 }
 
 .patient-list button {
@@ -688,7 +653,6 @@ body.emr-page {
   border: 1px solid transparent;
   border-radius: 12px;
   background: var(--surface-soft);
-  padding: var(--space-3);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -804,12 +768,6 @@ body.emr-page {
   word-break: keep-all;
 }
 
-.patient-workspace-navigation {
-  position: sticky;
-  z-index: 18;
-  top: calc(var(--header-height) + var(--space-2));
-}
-
 .patient-safety-header {
   min-height: 72px;
   align-items: center;
@@ -922,12 +880,6 @@ body.emr-page {
   color: var(--urgent);
 }
 
-.patient-header-actions {
-  display: grid;
-  gap: var(--space-1);
-  justify-items: end;
-}
-
 .patient-header-actions .clinical-button {
   white-space: nowrap;
 }
@@ -935,13 +887,7 @@ body.emr-page {
 .workspace-tabs {
   display: flex;
   gap: var(--space-1);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-soft) 60%, var(--surface));
-  padding: 0 var(--space-5);
   scroll-padding-inline: var(--space-5);
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
 }
 
 .workspace-tabs::-webkit-scrollbar {
@@ -981,15 +927,6 @@ body.emr-page {
   border-radius: 3px 3px 0 0;
   background: var(--accent);
   content: "";
-}
-
-.workspace-panel {
-  padding: var(--space-5);
-}
-
-.clinical-card.workflow-disclosure {
-  overflow: clip;
-  padding: 0;
 }
 
 .workflow-disclosure > summary {
@@ -1072,10 +1009,6 @@ body.emr-page {
   color: color-mix(in srgb, var(--data-lime) 65%, var(--ink));
 }
 
-.workflow-disclosure__body {
-  padding: var(--space-5);
-}
-
 .workflow-disclosure__body > .entry-boundary:first-child {
   margin-top: 0;
 }
@@ -1086,7 +1019,6 @@ body.emr-page {
 
 .encounter-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
   gap: var(--space-4);
   align-items: start;
 }
@@ -1206,7 +1138,6 @@ body.emr-page {
 .soap-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
 }
 
 .soap-field {
@@ -1497,7 +1428,6 @@ body.emr-page {
 
 .encounter-entry-row__heading {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
 }
@@ -1525,7 +1455,6 @@ body.emr-page {
 
 .encounter-context-rail {
   position: sticky;
-  top: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
 }
 
 .context-card {
@@ -1620,8 +1549,6 @@ body.emr-page {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 .metric-card {
@@ -1672,9 +1599,6 @@ body.emr-page {
 
 .clinical-card {
   min-width: 0;
-  border-radius: 16px;
-  padding: var(--space-5);
-  box-shadow: none;
 }
 
 .clinical-card .card-heading {
@@ -1683,7 +1607,6 @@ body.emr-page {
 
 .summary-sections {
   display: grid;
-  gap: var(--space-4);
 }
 
 .summary-group h4,
@@ -1933,14 +1856,8 @@ body.emr-page {
 
 .chart-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.72fr) minmax(480px, 1.28fr);
   gap: var(--space-4);
   align-items: start;
-}
-
-.event-composer {
-  position: sticky;
-  top: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
 }
 
 .event-composer form {
@@ -1993,10 +1910,8 @@ body.emr-page {
 
 .event-row {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: start;
-  scroll-margin-block: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
   border-radius: 12px;
   background: var(--surface-soft);
   padding: var(--space-3);
@@ -2025,7 +1940,6 @@ body.emr-page {
 }
 
 .event-row > time {
-  color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.65rem;
 }
@@ -2066,9 +1980,7 @@ body.emr-page {
 .event-source {
   display: inline-block;
   margin-top: var(--space-2);
-  color: color-mix(in srgb, var(--data-cyan) 70%, var(--ink));
   font-size: 0.61rem;
-  font-weight: 700;
 }
 
 .event-actions {
@@ -2085,7 +1997,6 @@ body.emr-page {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.62rem;
 }
 
 .event-confirm {
@@ -2657,20 +2568,11 @@ body.emr-page {
 }
 
 .claim-overview-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
-  gap: var(--space-4);
   margin: var(--space-4) 0;
-  align-items: start;
 }
 
 .claim-overview-card {
-  display: flex;
   min-width: 0;
-  height: auto;
-  flex-direction: column;
-  gap: var(--space-2);
-  overflow: hidden;
 }
 
 .claim-overview-card .card-heading,
@@ -2686,11 +2588,7 @@ body.emr-page {
 
 .claim-overview-card__intro {
   margin: 0;
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  line-height: 1.65;
   overflow-wrap: anywhere;
-  word-break: keep-all;
 }
 
 .claim-attention-summary,
@@ -2698,21 +2596,8 @@ body.emr-page {
 .quality-diagnostic-summary {
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
   background: color-mix(in srgb, var(--surface-soft) 76%, var(--surface));
   padding: var(--space-3);
-}
-
-.claim-attention-summary {
-  border-color: color-mix(in srgb, var(--data-amber) 25%, var(--line));
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--data-amber) 6%, var(--surface)), var(--surface) 74%);
-}
-
-.quality-program-summary {
-  border-color: color-mix(in srgb, var(--data-cyan) 26%, var(--line));
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--data-cyan) 6%, var(--surface)), var(--surface) 74%);
 }
 
 .claim-overview-empty {
@@ -2725,12 +2610,9 @@ body.emr-page {
 }
 
 .claim-attention-list {
-  display: grid;
   min-width: 0;
-  gap: var(--space-2);
   margin: 0;
   padding: 0;
-  list-style: none;
 }
 
 .claim-attention-list > li {
@@ -2741,11 +2623,6 @@ body.emr-page {
   padding: var(--space-3);
   font-size: var(--font-size-caption);
   overflow-wrap: anywhere;
-}
-
-.claim-attention-summary__content {
-  display: grid;
-  gap: 4px;
 }
 
 .claim-attention-summary__content strong {
@@ -2770,31 +2647,13 @@ body.emr-page {
   background: linear-gradient(145deg, color-mix(in srgb, var(--claim-attention-tone) 7%, var(--surface)), var(--surface) 72%);
   padding: 0;
 }
-
-.claim-attention-item[data-claim-state="reduced"] { --claim-attention-tone: var(--urgent); }
 .claim-attention-item[data-claim-state="risk"] { --claim-attention-tone: var(--data-amber); }
-.claim-attention-item[data-claim-state="verified"] { --claim-attention-tone: var(--data-lime); }
-
-.claim-attention-item__mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 44%, var(--line));
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--claim-attention-tone) 13%, var(--surface));
-  color: color-mix(in srgb, var(--claim-attention-tone) 80%, var(--ink));
-  font-family: var(--font-mono);
-  font-weight: 850;
-}
 
 .claim-attention-item__disclosure > summary {
   display: grid;
-  min-height: 52px;
   grid-template-columns: 34px minmax(0, 1fr) auto 22px;
   gap: var(--space-2);
   align-items: center;
-  padding: var(--space-2) var(--space-3);
   color: var(--ink);
   cursor: pointer;
   list-style: none;
@@ -2822,10 +2681,6 @@ body.emr-page {
   content: "−";
 }
 
-.claim-attention-item__disclosure > summary:hover {
-  background: color-mix(in srgb, var(--claim-attention-tone) 5%, var(--surface));
-}
-
 .claim-attention-item__disclosure > summary:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: -3px;
@@ -2840,27 +2695,12 @@ body.emr-page {
 }
 
 .claim-attention-item__content {
-  display: grid;
   min-width: 0;
-  gap: 5px;
-  border-top: 1px solid color-mix(in srgb, var(--claim-attention-tone) 22%, var(--line));
-  padding: var(--space-3);
-}
-
-.claim-attention-item__status {
-  flex: none;
-  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 38%, var(--line));
-  border-radius: var(--radius-pill);
-  padding: 3px 7px;
-  color: color-mix(in srgb, var(--claim-attention-tone) 74%, var(--ink));
-  font-size: 0.66rem;
-  font-weight: 820;
 }
 
 .claim-attention-item__content p,
 .claim-attention-item__content small {
   margin: 0;
-  line-height: 1.5;
 }
 
 .claim-attention-item__content p {
@@ -2871,12 +2711,6 @@ body.emr-page {
 .claim-attention-item__content small {
   color: var(--muted);
   font-size: 0.66rem;
-}
-
-.claim-attention-item__missing {
-  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
-  font-size: 0.68rem;
-  font-weight: 720;
 }
 
 .claim-attention-item__boundary {
@@ -2945,32 +2779,9 @@ body.emr-page {
   font-size: 0.68rem;
 }
 
-.claim-attention-all > .claim-attention-list {
-  gap: var(--space-2);
-  border-top: 1px solid var(--line);
-  padding: var(--space-3);
-}
-
 .claim-status-legend {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
   margin-top: 0;
   border-top: 1px solid var(--line);
-  padding: var(--space-3);
-}
-
-.claim-status-legend__item {
-  --claim-legend-tone: var(--muted);
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: var(--space-2);
-  align-items: start;
-  border: 1px solid color-mix(in srgb, var(--claim-legend-tone) 25%, var(--line));
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--claim-legend-tone) 5%, var(--surface));
-  padding: var(--space-2);
 }
 
 .claim-status-legend__item[data-claim-tone="red"] { --claim-legend-tone: var(--urgent); }
@@ -2979,17 +2790,7 @@ body.emr-page {
 .claim-status-legend__item[data-claim-tone="gray"] { --claim-legend-tone: var(--muted); }
 
 .claim-status-legend__mark {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--claim-legend-tone) 40%, var(--line));
-  border-radius: 9px;
   background: color-mix(in srgb, var(--claim-legend-tone) 13%, var(--surface));
-  color: color-mix(in srgb, var(--claim-legend-tone) 78%, var(--ink));
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 850;
 }
 
 .claim-status-legend__item > span:last-child {
@@ -3006,12 +2807,10 @@ body.emr-page {
 
 .claim-status-legend__item b {
   color: var(--ink);
-  font-size: var(--font-size-caption);
 }
 
 .claim-status-legend__item small {
   color: var(--muted);
-  font-size: 0.64rem;
   line-height: 1.45;
 }
 
@@ -3022,42 +2821,7 @@ body.emr-page {
 }
 
 .disease-assessment-tabs {
-  display: flex;
   min-width: 0;
-  gap: var(--space-2);
-  align-items: stretch;
-  overflow-x: auto;
-  padding: 2px;
-  scrollbar-width: thin;
-}
-
-.disease-assessment-tab {
-  display: grid;
-  min-width: 136px;
-  min-height: 48px;
-  flex: 1 0 136px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-2);
-  align-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  background: var(--surface-soft);
-  padding: var(--space-2) var(--space-3);
-  color: var(--muted);
-  cursor: pointer;
-  text-align: left;
-}
-
-.disease-assessment-tab:hover {
-  border-color: color-mix(in srgb, var(--data-cyan) 40%, var(--line));
-  background: color-mix(in srgb, var(--data-cyan) 5%, var(--surface));
-}
-
-.disease-assessment-tab[aria-selected="true"] {
-  border-color: color-mix(in srgb, var(--data-cyan) 56%, var(--line));
-  background: color-mix(in srgb, var(--data-cyan) 9%, var(--surface));
-  color: var(--ink);
-  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--data-cyan) 74%, var(--ink));
 }
 
 .disease-assessment-tab:focus-visible {
@@ -3071,17 +2835,8 @@ body.emr-page {
   overflow-wrap: anywhere;
 }
 
-.disease-assessment-tab b {
-  font-size: 0.9375rem;
-  font-weight: 800;
-}
-
 .disease-assessment-tab small {
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  padding: 3px 7px;
   color: var(--muted);
-  font-size: 0.8125rem;
   font-weight: 760;
   line-height: 1.25;
 }
@@ -3096,10 +2851,6 @@ body.emr-page {
 
 .disease-program-heading h4 {
   margin: var(--space-1) 0 0;
-  color: var(--ink);
-  font-size: clamp(1.3rem, calc(1.16rem + 0.35vw), 1.55rem);
-  letter-spacing: -0.025em;
-  line-height: 1.2;
 }
 
 .disease-program-heading > span {
@@ -3121,10 +2872,7 @@ body.emr-page {
 }
 
 .quality-program-metrics {
-  display: grid;
   min-width: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
 }
 
 .quality-program-metrics > * {
@@ -3195,29 +2943,6 @@ body.emr-page {
 .quality-program-metric[data-metric-status="insufficient"] { --quality-tone: var(--data-cyan); }
 .quality-program-metric[data-metric-status="not-applicable"] { --quality-tone: var(--muted); }
 
-.quality-program-metric__mark {
-  display: grid;
-  width: 25px;
-  height: 25px;
-  place-items: center;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--quality-tone) 14%, var(--surface));
-  color: color-mix(in srgb, var(--quality-tone) 75%, var(--ink));
-  font-family: var(--font-mono);
-  font-weight: 850;
-}
-
-.quality-program-metric__summary {
-  display: grid;
-  min-height: 62px;
-  grid-template-columns: 25px minmax(0, 1fr) auto 20px;
-  gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-2);
-  cursor: pointer;
-  list-style: none;
-}
-
 .quality-program-metric__summary::-webkit-details-marker {
   display: none;
 }
@@ -3240,10 +2965,6 @@ body.emr-page {
   content: "−";
 }
 
-.quality-program-metric__summary:hover {
-  background: color-mix(in srgb, var(--quality-tone) 5%, var(--surface));
-}
-
 .quality-program-metric__summary:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: -3px;
@@ -3257,10 +2978,8 @@ body.emr-page {
 
 .quality-program-metric__label b {
   color: var(--ink);
-  font-size: 0.78rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
-  word-break: keep-all;
 }
 
 .quality-program-metric__status {
@@ -3272,19 +2991,6 @@ body.emr-page {
 .quality-program-metric p,
 .quality-program-metric small {
   margin: 0;
-}
-
-.quality-program-metric__value {
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 1rem;
-}
-
-.quality-program-metric__detail {
-  display: grid;
-  gap: var(--space-2);
-  border-top: 1px solid color-mix(in srgb, var(--quality-tone) 22%, var(--line));
-  padding: var(--space-3);
 }
 
 .quality-program-metric__detail small {
@@ -3386,13 +3092,7 @@ body.emr-page {
 }
 
 .claim-overview-disclosure__body {
-  min-width: 0;
   border-top: 1px solid var(--line);
-  padding: var(--space-3);
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  line-height: 1.6;
-  overflow-wrap: anywhere;
 }
 
 .quality-detail-section {
@@ -3468,21 +3168,15 @@ body.emr-page {
 }
 
 .quality-diagnostic-panel {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--data-violet) 22%, var(--line));
   border-radius: 14px;
-  background: color-mix(in srgb, var(--data-violet) 4%, var(--surface));
 }
 
 .quality-diagnostic-panel > summary {
   display: grid;
-  min-height: 64px;
   grid-template-columns: minmax(0, 1fr) auto 24px;
   gap: var(--space-3);
   align-items: center;
-  padding: var(--space-3);
   cursor: pointer;
   list-style: none;
 }
@@ -3525,8 +3219,6 @@ body.emr-page {
 
 .quality-diagnostic-panel__label b {
   color: var(--ink);
-  font-size: 0.9rem;
-  letter-spacing: -0.018em;
 }
 
 .quality-diagnostic-panel__label small {
@@ -3545,13 +3237,6 @@ body.emr-page {
   color: color-mix(in srgb, var(--data-violet) 74%, var(--ink));
   font-size: 0.6rem;
   font-weight: 750;
-}
-
-.quality-diagnostic-panel__body {
-  display: grid;
-  gap: var(--space-3);
-  border-top: 1px solid color-mix(in srgb, var(--data-violet) 18%, var(--line));
-  padding: var(--space-3);
 }
 
 .quality-diagnostic-summary {
@@ -3684,12 +3369,9 @@ body.emr-page {
 
 .claim-workflow-disclosure > summary {
   display: grid;
-  min-height: 64px;
   grid-template-columns: minmax(0, 1fr) auto 28px;
   gap: var(--space-3);
   align-items: center;
-  cursor: pointer;
-  list-style: none;
 }
 
 .claim-workflow-disclosure > summary::-webkit-details-marker {
@@ -3770,14 +3452,11 @@ body.emr-page {
 
 .claim-review-guide b {
   display: block;
-  font-size: 0.7rem;
 }
 
 .claim-review-guide p {
   margin: 3px 0 0;
   color: var(--muted);
-  font-size: 0.63rem;
-  line-height: 1.5;
 }
 
 .claim-result-summary {
@@ -3785,23 +3464,6 @@ body.emr-page {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-
-.claim-result-chip {
-  --claim-status-tone: var(--muted);
-  display: flex;
-  min-width: 0;
-  min-height: 40px;
-  gap: var(--space-2);
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid color-mix(in srgb, var(--claim-status-tone) 28%, var(--line));
-  border-radius: 9px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 6%, var(--surface)), var(--surface) 72%);
-  padding: var(--space-2);
-  color: var(--muted);
-  font-size: 0.61rem;
 }
 
 .claim-result-chip[data-status="missing-evidence"] { --claim-status-tone: var(--data-amber); }
@@ -3818,23 +3480,6 @@ body.emr-page {
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.7rem;
-}
-
-.claim-board {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin: var(--space-4) 0;
-  align-items: start;
-}
-
-.claim-lane {
-  min-height: 310px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface-soft);
-  padding: var(--space-3);
-  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 
 .claim-lane.is-drop-target {
@@ -3884,18 +3529,6 @@ body.emr-page {
   min-height: 230px;
 }
 
-.claim-card {
-  --claim-status-tone: var(--muted);
-  min-width: 0;
-  overflow: clip;
-  border: 1px solid color-mix(in srgb, var(--claim-status-tone) 24%, var(--line));
-  border-radius: 11px;
-  background:
-    radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--claim-status-tone) 8%, transparent), transparent 48%),
-    var(--surface);
-  transition: border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, transform 150ms ease;
-}
-
 .claim-card[data-claim-detail-open="true"] {
   border-color: color-mix(in srgb, var(--claim-status-tone) 44%, var(--line));
   box-shadow: 0 8px 22px color-mix(in srgb, var(--claim-status-tone) 10%, transparent);
@@ -3904,25 +3537,6 @@ body.emr-page {
 .claim-card.is-dragging {
   opacity: 0.42;
   transform: scale(0.985);
-}
-
-.claim-card__summary {
-  display: block;
-  width: 100%;
-  appearance: none;
-  border: 0;
-  border-radius: inherit;
-  outline: none;
-  background: transparent;
-  padding: var(--space-3);
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.claim-card__summary:hover {
-  background: color-mix(in srgb, var(--claim-status-tone) 5%, transparent);
 }
 
 .claim-card__summary:focus-visible {
@@ -4001,7 +3615,6 @@ body.emr-page {
 }
 
 .claim-card b {
-  font-size: 0.72rem;
   line-height: 1.4;
 }
 
@@ -4018,13 +3631,6 @@ body.emr-page {
   font-size: 0.62rem;
 }
 
-.claim-missing {
-  display: block;
-  margin-top: var(--space-2);
-  font-size: 0.65rem;
-  line-height: 1.5;
-}
-
 .claim-card p {
   margin: var(--space-2) 0;
   color: var(--muted);
@@ -4033,6 +3639,10 @@ body.emr-page {
 }
 
 .claim-missing {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 0.65rem;
+  line-height: 1.5;
   color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
   font-weight: 700;
 }
@@ -4081,43 +3691,10 @@ body.emr-page {
   transform: rotate(225deg);
 }
 
-.claim-card__details {
-  position: fixed;
-  inset: 0;
-  width: min(calc(100% - var(--space-8)), 680px);
-  max-width: none;
-  max-height: min(82vh, 760px);
-  overflow: hidden;
-  margin: auto;
-  border: 1px solid color-mix(in srgb, var(--data-cyan) 30%, var(--line));
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: 0 28px 90px color-mix(in srgb, var(--ink) 28%, transparent);
-  padding: 0;
-  color: var(--ink);
-}
-
 .claim-card__details:is([open], [data-claim-detail-open]),
 .claim-card__details[data-claim-detail-open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-}
-
-.claim-card__details::backdrop {
-  background: color-mix(in srgb, var(--ink) 34%, transparent);
-  backdrop-filter: blur(4px);
-}
-
-.claim-card__details-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-4);
-  align-items: start;
-  border-bottom: 1px solid var(--line);
-  background:
-    radial-gradient(circle at 92% 0, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 15rem),
-    var(--surface);
-  padding: var(--space-5);
 }
 
 .claim-card__details-eyebrow {
@@ -4130,31 +3707,8 @@ body.emr-page {
   letter-spacing: 0.08em;
 }
 
-.claim-card__details-header h5 {
-  margin: 0 0 var(--space-2);
-  font-size: 1.35rem;
-  letter-spacing: -0.035em;
-  line-height: 1.25;
-  word-break: keep-all;
-}
-
 .claim-card__details-close {
   min-width: 68px;
-}
-
-.claim-card__details-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
-  gap: var(--space-4);
-  overflow: auto;
-  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
-  padding: var(--space-5);
-}
-
-.claim-card__details-aside {
-  display: grid;
-  gap: var(--space-3);
-  align-content: start;
 }
 
 .claim-auto-calculation {
@@ -4660,24 +4214,9 @@ body.emr-page {
 }
 
 /* Claims workbench: a quiet, row-based review surface with evidence on demand. */
-#panel-claims {
-  --claim-row-radius: 8px;
-  --claim-row-divider: color-mix(in srgb, var(--ink) 10%, var(--line));
-}
 
 #panel-claims details:not([open]) > :not(summary) {
   display: none;
-}
-
-.claim-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr);
-  gap: var(--space-1) var(--space-6);
-  align-items: center;
-  border-radius: 12px;
-  background: var(--surface);
-  padding: var(--space-5) var(--space-6);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 .claim-intro .card-heading {
@@ -4685,16 +4224,11 @@ body.emr-page {
 }
 
 .claim-intro .card-heading h3 {
-  font-size: clamp(1.35rem, calc(1.18rem + 0.45vw), 1.65rem);
   letter-spacing: -0.035em;
 }
 
 .claim-intro > p {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.55;
-  word-break: keep-all;
 }
 
 .claim-intro .rule-trust-note {
@@ -4717,25 +4251,6 @@ body.emr-page {
   white-space: nowrap;
 }
 
-.claim-overview-grid {
-  grid-template-columns: minmax(0, 1.22fr) minmax(360px, 0.78fr);
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--claim-row-divider);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
-.claim-overview-card {
-  gap: var(--space-3);
-  border: 0;
-  border-radius: 0;
-  background: var(--surface);
-  padding: var(--space-6);
-  box-shadow: none;
-}
-
 .disease-assessment-card {
   border-left: 1px solid var(--claim-row-divider);
 }
@@ -4744,30 +4259,14 @@ body.emr-page {
   align-items: flex-start;
 }
 
-.claim-overview-card .card-heading h3 {
-  font-size: clamp(1.2rem, calc(1.08rem + 0.35vw), 1.42rem);
-  letter-spacing: -0.03em;
-}
-
 .claim-overview-card .source-badge {
   border: 1px solid var(--line);
   background: var(--surface-soft);
   color: var(--muted);
 }
 
-.claim-overview-card__intro {
-  max-width: 58ch;
-  color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.55;
-}
-
 .claim-attention-summary {
-  overflow: hidden;
-  border: 1px solid var(--claim-row-divider);
   border-radius: var(--claim-row-radius);
-  background: var(--surface-soft);
-  padding: 0;
 }
 
 .claim-attention-summary__content {
@@ -4855,14 +4354,6 @@ body.emr-page {
   text-align: right;
 }
 
-.claim-attention-list {
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--claim-row-divider);
-  border-radius: var(--claim-row-radius);
-  background: var(--surface);
-}
-
 .claim-attention-list > li,
 .claim-attention-list > .claim-attention-item {
   border: 0;
@@ -4896,6 +4387,11 @@ body.emr-page {
 }
 
 .claim-attention-item__mark {
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--claim-attention-tone) 80%, var(--ink));
+  font-family: var(--font-mono);
+  font-weight: 850;
   width: 28px;
   height: 28px;
   border: 0;
@@ -4912,7 +4408,6 @@ body.emr-page {
 
 .claim-attention-item__identity strong {
   color: var(--ink);
-  font-size: 0.86rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
   word-break: keep-all;
@@ -4929,12 +4424,7 @@ body.emr-page {
 
 .claim-attention-item__status {
   justify-self: end;
-  border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--claim-attention-tone) 11%, var(--surface));
-  padding: 4px 8px;
   font-size: 0.64rem;
-  white-space: nowrap;
 }
 
 .claim-attention-item__disclosure > summary::after,
@@ -4965,20 +4455,7 @@ body.emr-page {
 .claim-attention-item__content {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
-  border-top: 1px solid color-mix(in srgb, var(--claim-attention-tone) 28%, var(--claim-row-divider));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--ink) 7%, var(--surface)) 0%, color-mix(in srgb, var(--claim-attention-tone) 10%, var(--surface)) 100%);
   padding: var(--space-4) var(--space-5) var(--space-4) calc(28px + var(--space-6));
-}
-
-.claim-attention-item__detail {
-  display: grid;
-  min-width: 0;
-  align-content: start;
-  gap: var(--space-1);
-  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 18%, var(--line));
-  border-radius: 8px;
-  background: var(--surface);
-  padding: var(--space-3);
 }
 
 .claim-attention-item__detail--boundary {
@@ -4998,6 +4475,8 @@ body.emr-page {
 }
 
 .claim-attention-item__missing {
+  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
+  font-weight: 720;
   font-size: 0.68rem;
 }
 
@@ -5042,6 +4521,7 @@ body.emr-page {
 }
 
 .claim-status-legend {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-5);
@@ -5049,18 +4529,12 @@ body.emr-page {
   padding: var(--space-4);
 }
 
-.claim-status-legend__item {
-  min-width: min(210px, 100%);
-  flex: 1 1 210px;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: var(--space-2);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
-}
-
 .claim-status-legend__mark {
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--claim-legend-tone) 78%, var(--ink));
+  font-family: var(--font-mono);
+  font-weight: 850;
   width: 18px;
   height: 18px;
   border: 0;
@@ -5077,6 +4551,9 @@ body.emr-page {
 }
 
 .disease-assessment-tabs {
+  display: flex;
+  align-items: stretch;
+  scrollbar-width: thin;
   gap: 2px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -5087,6 +4564,13 @@ body.emr-page {
 }
 
 .disease-assessment-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
   min-width: 126px;
   min-height: 48px;
   flex: 1 0 126px;
@@ -5102,6 +4586,7 @@ body.emr-page {
 }
 
 .disease-assessment-tab[aria-selected="true"] {
+  color: var(--ink);
   border-color: transparent;
   background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--data-cyan) 8%, var(--surface)));
   box-shadow:
@@ -5110,10 +4595,12 @@ body.emr-page {
 }
 
 .disease-assessment-tab b {
+  font-weight: 800;
   font-size: 0.9375rem;
 }
 
 .disease-assessment-tab small {
+  border-radius: var(--radius-pill);
   border: 0;
   background: transparent;
   padding: 0;
@@ -5121,6 +4608,9 @@ body.emr-page {
 }
 
 .disease-program-heading h4 {
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
   font-size: clamp(1.3rem, calc(1.16rem + 0.35vw), 1.55rem);
 }
 
@@ -5186,6 +4676,7 @@ body.emr-page {
 }
 
 .quality-program-metrics {
+  display: grid;
   grid-template-columns: 1fr;
   gap: 0;
   overflow: hidden;
@@ -5208,6 +4699,12 @@ body.emr-page {
 }
 
 .quality-program-metric__summary {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) auto 20px;
+  gap: var(--space-2);
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
   min-height: 56px;
   padding: var(--space-3);
 }
@@ -5221,24 +4718,45 @@ body.emr-page {
 }
 
 .quality-program-metric__mark {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  background: color-mix(in srgb, var(--quality-tone) 14%, var(--surface));
+  color: color-mix(in srgb, var(--quality-tone) 75%, var(--ink));
+  font-family: var(--font-mono);
+  font-weight: 850;
   border-radius: 50%;
 }
 
 .quality-program-metric__label b {
+  word-break: keep-all;
   font-size: 0.79rem;
 }
 
 .quality-program-metric__value {
+  color: var(--ink);
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
 }
 
 .quality-program-metric__detail {
+  display: grid;
+  gap: var(--space-2);
+  border-top: 1px solid color-mix(in srgb, var(--quality-tone) 22%, var(--line));
+  padding: var(--space-3);
   border-top-color: color-mix(in srgb, var(--quality-tone) 30%, var(--claim-row-divider));
   background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--quality-tone) 10%, var(--surface)));
 }
 
 .claim-overview-disclosure__body {
+  min-width: 0;
+  padding: var(--space-3);
+  color: var(--muted);
+  font-size: var(--font-size-caption);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
   border-top-color: color-mix(in srgb, var(--data-cyan) 24%, var(--claim-row-divider));
   background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--data-cyan) 8%, var(--surface)));
 }
@@ -5248,6 +4766,9 @@ body.emr-page {
 }
 
 .quality-diagnostic-panel {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
   background: var(--surface);
 }
 
@@ -5257,10 +4778,15 @@ body.emr-page {
 }
 
 .quality-diagnostic-panel__label b {
+  letter-spacing: -0.018em;
   font-size: 0.86rem;
 }
 
 .quality-diagnostic-panel__body {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--data-violet) 18%, var(--line));
+  padding: var(--space-3);
   border-top-color: color-mix(in srgb, var(--data-violet) 26%, var(--claim-row-divider));
   background: linear-gradient(140deg, color-mix(in srgb, var(--ink) 7%, var(--surface)), color-mix(in srgb, var(--data-violet) 9%, var(--surface)));
 }
@@ -5292,16 +4818,32 @@ body.emr-page {
 }
 
 .claim-workflow-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
   min-height: 62px;
 }
 
 .claim-result-chip {
+  --claim-status-tone: var(--muted);
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2);
+  color: var(--muted);
+  font-size: 0.61rem;
   border: 1px solid color-mix(in srgb, var(--claim-status-tone) 24%, var(--claim-row-divider));
   border-radius: 7px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 9%, var(--surface)), color-mix(in srgb, var(--claim-status-tone) 3%, var(--surface)) 70%, var(--surface));
 }
 
 .claim-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: var(--space-4) 0;
+  align-items: start;
   gap: 0;
   overflow: hidden;
   border: 1px solid var(--claim-row-divider);
@@ -5310,6 +4852,9 @@ body.emr-page {
 }
 
 .claim-lane {
+  min-height: 310px;
+  padding: var(--space-3);
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
   border: 0;
   border-right: 1px solid var(--claim-row-divider);
   border-radius: 0;
@@ -5321,6 +4866,11 @@ body.emr-page {
 }
 
 .claim-card {
+  --claim-status-tone: var(--muted);
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--claim-status-tone) 24%, var(--line));
+  transition: border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease, transform 150ms ease;
   border-color: color-mix(in srgb, var(--claim-status-tone) 24%, var(--claim-row-divider));
   border-radius: 7px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--claim-status-tone) 10%, var(--surface)), color-mix(in srgb, var(--claim-status-tone) 4%, var(--surface)) 68%, var(--surface));
@@ -5328,10 +4878,6 @@ body.emr-page {
 
 .claim-card__summary:hover {
   background: color-mix(in srgb, var(--claim-status-tone) 8%, transparent);
-}
-
-.claim-card b {
-  font-size: 0.78rem;
 }
 
 .claim-card p,
@@ -5401,9 +4947,6 @@ body.emr-page {
 }
 
 @media (max-width: 1180px) {
-  .claim-overview-grid {
-    grid-template-columns: 1fr;
-  }
 
   .disease-assessment-card {
     border-top: 1px solid var(--claim-row-divider);
@@ -5427,18 +4970,10 @@ body.emr-page {
     justify-content: flex-start;
   }
 
-  .clinical-layout {
-    grid-template-columns: 240px minmax(0, 1fr);
-  }
-
   .overview-grid,
   .journey-layout,
   .data-layout,
   .chart-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .encounter-layout {
     grid-template-columns: 1fr;
   }
 
@@ -5470,9 +5005,6 @@ body.emr-page {
 }
 
 @media (max-width: 1080px) {
-  .clinical-layout {
-    grid-template-columns: 1fr;
-  }
 
   .encounter-context-rail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5539,10 +5071,6 @@ body.emr-page {
 
   .clinical-header .app-header__inner {
     width: calc(100% - var(--space-4));
-  }
-
-  .clinical-command h1 {
-    font-size: 1.45rem;
   }
 
   .command-actions {
@@ -5840,14 +5368,6 @@ body.emr-page {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .claim-board {
-    grid-template-columns: 1fr;
-  }
-
-  .claim-lane {
-    min-height: 0;
-  }
-
   .claim-lane__cards {
     min-height: 118px;
   }
@@ -5858,17 +5378,6 @@ body.emr-page {
 
   .claim-card__top {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .claim-card__details {
-    width: calc(100% - var(--space-4));
-    max-height: calc(100dvh - var(--space-4));
-    border-radius: 16px;
-  }
-
-  .claim-card__details-header,
-  .claim-card__details-content {
-    padding: var(--space-4);
   }
 
   .claim-card__details-content {
@@ -5933,10 +5442,12 @@ body.emr-page {
   }
 
   .claim-board {
+    grid-template-columns: 1fr;
     border-radius: var(--claim-row-radius);
   }
 
   .claim-lane {
+    min-height: 0;
     border-right: 0;
     border-bottom: 1px solid var(--claim-row-divider);
   }
@@ -6009,6 +5520,8 @@ body.emr-page {
 
 /* Claims decision architecture: preflight, adjudication and quality stay visibly separate. */
 #panel-claims {
+  --claim-row-radius: 8px;
+  --claim-row-divider: color-mix(in srgb, var(--ink) 10%, var(--line));
   --claim-high-risk: #b84545;
   --claim-adjudicated: #7f2834;
   --claim-review: #b87819;
@@ -6018,6 +5531,8 @@ body.emr-page {
 }
 
 .claim-intro {
+  align-items: center;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
@@ -6034,6 +5549,7 @@ body.emr-page {
 }
 
 .claim-intro > p {
+  word-break: keep-all;
   max-width: 68ch;
   color: color-mix(in srgb, var(--muted) 88%, var(--ink));
   font-size: 0.9375rem;
@@ -6171,6 +5687,8 @@ body.emr-page {
 }
 
 .claim-overview-grid {
+  display: grid;
+  align-items: start;
   grid-template-columns: minmax(0, 1.16fr) minmax(370px, 0.84fr);
   gap: var(--space-4);
   overflow: visible;
@@ -6181,6 +5699,11 @@ body.emr-page {
 }
 
 .claim-overview-card {
+  display: flex;
+  height: auto;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
   gap: var(--space-3);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -6202,10 +5725,13 @@ body.emr-page {
 }
 
 .claim-overview-card .card-heading h3 {
+  letter-spacing: -0.03em;
   font-size: clamp(1.35rem, calc(1.15rem + 0.5vw), 1.65rem);
 }
 
 .claim-overview-card__intro {
+  word-break: keep-all;
+  color: var(--muted);
   max-width: 66ch;
   font-size: 0.875rem;
   line-height: 1.65;
@@ -6239,11 +5765,20 @@ body.emr-page {
 }
 
 .claim-attention-summary {
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  padding: 0;
   border-color: color-mix(in srgb, var(--claim-review) 22%, var(--line));
   background: linear-gradient(135deg, color-mix(in srgb, var(--claim-review) 9%, var(--surface)), color-mix(in srgb, var(--claim-review) 3%, var(--surface)) 74%, var(--surface));
 }
 
 .claim-attention-list {
+  display: grid;
+  list-style: none;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--claim-row-divider);
+  background: var(--surface);
   border-radius: 11px;
 }
 
@@ -6308,15 +5843,30 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-attention-item__status {
+  flex: none;
+  color: color-mix(in srgb, var(--claim-attention-tone) 74%, var(--ink));
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--claim-attention-tone) 11%, var(--surface));
+  white-space: nowrap;
   padding: 6px 10px;
   font-weight: 780;
 }
 
 .claim-attention-item__content {
+  display: grid;
+  border-top: 1px solid color-mix(in srgb, var(--claim-attention-tone) 28%, var(--claim-row-divider));
   background: linear-gradient(135deg, color-mix(in srgb, var(--claim-attention-tone) 12%, var(--surface-soft)), color-mix(in srgb, var(--ink) 4%, var(--surface)) 78%);
 }
 
 .claim-attention-item__detail {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--claim-attention-tone) 18%, var(--line));
+  border-radius: 8px;
+  padding: var(--space-3);
   background: color-mix(in srgb, var(--surface) 95%, var(--claim-attention-tone));
 }
 
@@ -6520,6 +6070,16 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-status-legend__item {
+  --claim-legend-tone: var(--muted);
+  display: grid;
+  align-items: start;
+  flex: 1 1 210px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--space-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   min-width: min(230px, 100%);
 }
 
@@ -6535,6 +6095,17 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-card__summary {
+  display: block;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   padding: var(--space-4);
 }
 
@@ -6578,6 +6149,12 @@ button.claim-attention-item__summary:focus-visible {
 
 /* XAI review drawer: rationale first, human decision last. */
 .claim-card__details {
+  position: fixed;
+  max-width: none;
+  overflow: hidden;
+  background: var(--surface);
+  padding: 0;
+  color: var(--ink);
   inset: 0 0 0 auto;
   width: min(760px, calc(100vw - var(--space-8)));
   height: 100dvh;
@@ -6605,6 +6182,14 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-card__details-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 92% 0, color-mix(in srgb, var(--data-cyan) 10%, transparent), transparent 15rem),
+    var(--surface);
   position: sticky;
   z-index: 2;
   top: 0;
@@ -6612,10 +6197,16 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-card__details-header h5 {
+  margin: 0 0 var(--space-2);
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  word-break: keep-all;
   font-size: clamp(1.45rem, calc(1.25rem + 0.55vw), 1.8rem);
 }
 
 .claim-card__details-content {
+  overflow: auto;
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
@@ -6624,6 +6215,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .claim-card__details-aside {
+  align-content: start;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
@@ -7859,32 +7451,7 @@ button.claim-attention-item__summary:focus-visible {
   background: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 
-.rx-dialog__panel {
-  text-wrap: pretty;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-height: min(92vh, 900px);
-  padding: 0 var(--space-5) var(--space-5);
-  overflow-y: auto;
-}
-
 /* The title, the process peek and the way out stay reachable at any scroll depth. */
-.rx-dialog__header {
-  position: sticky;
-  z-index: 6;
-  top: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-inline: calc(-1 * var(--space-5));
-  border-bottom: var(--border-subtle);
-  background: var(--surface-raised);
-  padding: var(--space-5) var(--space-5) var(--space-3);
-}
 
 .rx-dialog__header .text-action {
   flex: none;
@@ -7918,16 +7485,6 @@ button.claim-attention-item__summary:focus-visible {
   background: var(--accent-wash);
 }
 
-.rx-dialog__title {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
-.rx-dialog__context {
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-}
-
 .rx-search {
   display: flex;
   flex-wrap: wrap;
@@ -7936,21 +7493,7 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .rx-search__field {
-  display: flex;
   flex: 1 1 320px;
-  flex-direction: column;
-  gap: var(--space-1);
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-}
-
-.rx-search__field input {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-control);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--font-size-body);
 }
 
 .rx-dialog__columns {
@@ -7960,20 +7503,6 @@ button.claim-attention-item__summary:focus-visible {
   grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
   gap: var(--space-4);
   align-items: start;
-}
-
-.rx-section-title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
-  font-size: 0.9375rem;
-}
-
-.rx-count {
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  font-weight: 500;
 }
 
 .rx-result-list,
@@ -7986,26 +7515,9 @@ button.claim-attention-item__summary:focus-visible {
   list-style: none;
 }
 
-.rx-result {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-control);
-  background: var(--surface);
-}
-
 .rx-result.is-selected {
   border-color: var(--accent);
   background: var(--accent-wash);
-}
-
-.rx-result__heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .rx-result__meta,
@@ -8015,31 +7527,13 @@ button.claim-attention-item__summary:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.rx-result__details {
-  margin-top: var(--space-2);
-  border-top: var(--border-subtle);
-  padding-top: var(--space-2);
-}
-
 .rx-result__details-summary {
-  color: var(--accent);
   font-size: var(--font-size-caption);
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .rx-result__details-summary:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
-}
-
-.rx-detail-list {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-1) var(--space-3);
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-caption);
-  line-height: 1.55;
 }
 
 .rx-detail-list dt {
@@ -8124,40 +7618,10 @@ button.claim-attention-item__summary:focus-visible {
 /* The decision takes the row's slack; the check keeps only its own label, so the
    pair fills the card without reading as two equal choices. */
 .rx-result__actions {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.rx-result__actions > .clinical-button:first-child {
-  width: 100%;
-  justify-content: center;
 }
 
 /* 처방 담기 is the decision; AI 검토 is a check beside it, not a peer. */
-.rx-result__actions-divider {
-  width: 1px;
-  height: 22px;
-  flex: none;
-  background: var(--line);
-}
-
-.rx-result__review {
-  border-style: dashed;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.rx-result__review:not(:disabled):hover,
-.rx-result__review:not(:disabled):focus-visible {
-  border-style: solid;
-  border-color: var(--accent);
-  background: var(--accent-wash);
-  color: var(--accent);
-}
 
 .rx-result-empty,
 .rx-source__findings-empty {
@@ -8210,24 +7674,6 @@ button.claim-attention-item__summary:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.rx-notice__summary {
-  /* The button draws the one and only circle; the glyph is a plain "i". */
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--muted);
-  font-family: var(--font-serif, Georgia, serif);
-  font-size: 0.8rem;
-  font-style: italic;
-  font-weight: 700;
-  line-height: 1;
-  cursor: help;
 }
 
 .rx-notice__summary:hover,
@@ -8364,29 +7810,7 @@ button.claim-attention-item__summary:focus-visible {
   padding-top: var(--space-2);
 }
 
-.rx-source {
-  cursor: pointer;
-}
-
 /* One control reveals the pair, then each side stands in its own pane. */
-.rx-source__origin-trigger {
-  display: flex;
-  width: 100%;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-control);
-  background: var(--accent);
-  padding: var(--space-2) var(--space-4);
-  color: var(--on-inverse);
-  font-size: 0.875rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: filter 140ms ease-out;
-}
 
 .rx-source__origin-trigger::after {
   content: "▾";
@@ -8398,20 +7822,13 @@ button.claim-attention-item__summary:focus-visible {
   transform: rotate(180deg);
 }
 
-.rx-source__origin-trigger:hover {
-  filter: brightness(1.18);
-}
-
 .rx-source__origin-trigger:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
 .rx-source__origins {
-  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
 }
 
 .rx-source__origins > :only-child {
@@ -8420,22 +7837,6 @@ button.claim-attention-item__summary:focus-visible {
 
 /* Supporting text: flatter surface, dashed edge, dimmer body. The coloured pair
    marks stay at full strength so the matched parts still carry the eye. */
-.rx-source__pane {
-  min-width: 0;
-  border: 1px dashed color-mix(in srgb, var(--rx-source-tone) 30%, var(--line));
-  border-radius: var(--radius-control);
-  padding: var(--space-3);
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
-}
-
-.rx-source__pane-title {
-  margin: 0 0 var(--space-2);
-  color: var(--muted);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 
 .rx-source__record {
   margin-top: var(--space-1);
@@ -8587,28 +7988,6 @@ button.claim-attention-item__summary:focus-visible {
   line-height: 1.6;
 }
 
-.rx-review__body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.rx-verdict {
-  --rx-tone: var(--line-strong);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--rx-tone);
-  border-radius: var(--radius-control);
-  background: linear-gradient(
-    125deg,
-    color-mix(in srgb, var(--rx-tone) 12%, var(--surface)) 0%,
-    color-mix(in srgb, var(--rx-tone) 4%, var(--surface)) 62%,
-    var(--surface) 100%
-  );
-}
-
 .rx-verdict__symbol {
   font-size: 2rem;
   line-height: 1;
@@ -8633,78 +8012,18 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-2);
 }
 
-.rx-review__heading {
-  margin: 0;
-  font-size: var(--font-size-caption);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .rx-verdict__note {
   color: var(--data-amber);
   font-size: var(--font-size-caption);
   font-weight: 600;
 }
 
-.rx-source {
-  --rx-source-tone: var(--line-strong);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 40%, var(--line));
-  border-radius: var(--radius-control);
-  background: linear-gradient(
-    125deg,
-    color-mix(in srgb, var(--rx-source-tone) 12%, var(--surface)) 0%,
-    color-mix(in srgb, var(--rx-source-tone) 4%, var(--surface)) 62%,
-    var(--surface) 100%
-  );
-}
-
 .rx-source[data-verdict="circle"] { --rx-source-tone: var(--status-success-text); }
 .rx-source[data-verdict="triangle"] { --rx-source-tone: var(--data-amber); }
 .rx-source[data-verdict="cross"] { --rx-source-tone: var(--urgent); }
 
-.rx-source__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--rx-source-tone);
-  font-size: 0.9375rem;
-  font-weight: 700;
-}
-
-.rx-source__mark {
-  font-size: 1.375rem;
-  line-height: 1;
-}
-
 .rx-source__grid {
-  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.rx-source__cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 32%, var(--line));
-  border-radius: var(--radius-control);
-  background: var(--surface-raised);
-  font-size: 0.875rem;
-  line-height: 1.65;
-}
-
-.rx-source__cell-label {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .rx-source__cell-detail {
@@ -8728,18 +8047,6 @@ button.claim-attention-item__summary:focus-visible {
 .rx-source__findings li span {
   color: var(--muted);
   font-size: 0.8125rem;
-}
-
-.rx-source__document {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.6875rem;
-  line-height: 1.5;
-}
-
-.rx-form {
-  padding-top: var(--space-4);
-  border-top: var(--border-subtle);
 }
 
 .rx-form__selected {
@@ -8833,62 +8140,23 @@ button.claim-attention-item__summary:focus-visible {
   }
 }
 
-
 /* --- Design pass: hierarchy, density, polish -------------------------------- */
 
 /* 원문 확인 is a disclosure, not the page's main action: quiet outline. */
-.rx-source__origin-trigger {
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.rx-source__origin-trigger:hover {
-  filter: none;
-  border-color: var(--accent);
-  background: var(--accent-wash);
-  color: var(--accent);
-}
 
 /* AI 검토 is the signature action: solid, alive, accent-forward. */
-.rx-result__review {
-  border-style: solid;
-  border-color: var(--accent);
-  background: var(--accent-wash);
-  color: var(--accent);
-}
 
 .rx-result__review:not(:disabled):hover,
 .rx-result__review:not(:disabled):focus-visible {
+  border-style: solid;
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--on-inverse);
 }
 
 /* Verdict must outrank everything around it: solid surface, heavy tone edge. */
-.rx-verdict {
-  border-width: 2px;
-  background: var(--surface-raised);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--rx-tone) 22%, transparent);
-}
-
-.rx-verdict .rx-verdict__symbol {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--rx-tone) 16%, var(--surface));
-  color: var(--rx-tone);
-  font-size: 1.05rem;
-  font-weight: 800;
-}
 
 /* Workstation pacing: shave the command block and trust strip. */
-.clinical-command h1 {
-  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
-}
 
 .clinical-command {
   margin-bottom: var(--space-2);
@@ -8896,6 +8164,8 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .trust-strip {
+  flex-wrap: wrap;
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--ink) 15%, transparent);
   padding-block: var(--space-2);
 }
 
@@ -8905,6 +8175,8 @@ button.claim-attention-item__summary:focus-visible {
 }
 
 .patient-list {
+  list-style: none;
+  scrollbar-color: var(--line) transparent;
   gap: var(--space-2);
 }
 
@@ -8940,27 +8212,16 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.72rem;
 }
 
-
 /* --- Compact pass: search results + AI review panel ------------------------- */
 
 /* One result = one tight row: name/ingredient left, actions right. */
-.rx-result {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "heading actions"
-    "ingredient actions"
-    "details details";
-  gap: 1px var(--space-3);
-  padding: 6px var(--space-3);
-}
 
 .rx-result__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   grid-area: heading;
-}
-
-.rx-result__ingredient {
-  grid-area: ingredient;
 }
 
 .rx-result__actions {
@@ -8973,19 +8234,20 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-result__actions-divider {
+  width: 1px;
+  height: 22px;
+  flex: none;
+  background: var(--line);
   display: none;
 }
 
 .rx-result__actions > .clinical-button:first-child {
+  justify-content: center;
   width: auto;
 }
 
-.rx-result__actions .clinical-button {
-  min-height: 32px;
-  padding-block: 2px;
-}
-
 .rx-result__details {
+  border-top: var(--border-subtle);
   grid-area: details;
   margin-top: 2px;
   padding-top: 2px;
@@ -8993,69 +8255,31 @@ model-viewer::part(default-progress-mask) {
 
 /* Review panel: same content, less air. */
 .rx-review__body {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
-.rx-verdict {
-  padding: var(--space-2) var(--space-3);
-}
-
-.rx-verdict .rx-verdict__symbol {
-  width: 28px;
-  height: 28px;
-  font-size: 0.95rem;
-}
-
-.rx-source {
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-}
-
-.rx-source__title {
-  font-size: 0.875rem;
-}
-
-.rx-source__mark {
-  font-size: 1.15rem;
-}
-
 .rx-source__grid {
+  display: grid;
   gap: var(--space-2);
-}
-
-.rx-source__cell {
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.83rem;
-}
-
-.rx-source__origin-trigger {
-  min-height: 34px;
-  margin-top: var(--space-2);
-  padding-block: 4px;
-  font-size: var(--font-size-caption);
 }
 
 .rx-source__origins {
+  display: grid;
+  margin-top: var(--space-2);
   gap: var(--space-2);
 }
 
-.rx-source__pane {
-  padding: var(--space-2) var(--space-3);
-}
-
 .rx-source__document {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
   margin-top: var(--space-1);
   font-size: 0.68rem;
 }
 
-
 /* --- Type-scale pass: one notch smaller across the EMR ---------------------- */
-
-.emr-page {
-  --font-size-body: 0.875rem;
-  --font-size-caption: 0.71rem;
-  font-size: var(--font-size-body);
-}
 
 /* Card and section headings sized for a dense tool. */
 .emr-page .card-heading h3 {
@@ -9075,56 +8299,11 @@ model-viewer::part(default-progress-mask) {
 .emr-page input,
 .emr-page select,
 .emr-page textarea {
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
   font-size: 0.875rem;
 }
 
 /* Prescription dialog: search, results, review one notch down. */
-.rx-dialog__title {
-  font-size: 1.05rem;
-}
-
-.rx-section-title {
-  font-size: 0.875rem;
-}
-
-.rx-result__label {
-  font-size: 0.9rem;
-}
-
-.rx-verdict .rx-verdict__text b {
-  font-size: 0.9375rem;
-}
-
-.rx-verdict .rx-verdict__text span {
-  font-size: 0.8125rem;
-}
-
-.rx-source__cell {
-  font-size: 0.8rem;
-}
-
-.rx-source__cell b {
-  font-size: 0.845rem;
-}
-
-.rx-detail-list {
-  font-size: 0.78rem;
-}
-
-.rx-source__pane {
-  font-size: 0.78rem;
-}
-
-.rx-review__empty,
-.rx-review__progress-text {
-  font-size: 0.78rem;
-}
-
-
-.rx-result-list {
-  gap: var(--space-2);
-}
-
 
 /* --- Follow-up polish: chart layout, timeline meta, danger spacing ---------- */
 
@@ -9134,6 +8313,7 @@ model-viewer::part(default-progress-mask) {
 }
 
 .event-composer {
+  top: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
   position: static;
 }
 
@@ -9143,6 +8323,7 @@ model-viewer::part(default-progress-mask) {
 
 /* Dates never wrap; repeated provenance reads as a caption, not a headline. */
 .event-row {
+  scroll-margin-block: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
@@ -9169,28 +8350,44 @@ model-viewer::part(default-progress-mask) {
   gap: 2px;
 }
 
-
 /* --- Prescription dialog: extra-compact pass -------------------------------- */
 
-.rx-dialog__panel {
-  gap: var(--space-3);
-  padding: 0 var(--space-4) var(--space-4);
-}
-
 .rx-dialog__header {
+  position: sticky;
+  z-index: 6;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: var(--border-subtle);
+  background: var(--surface-raised);
   margin-inline: calc(-1 * var(--space-4));
   padding: var(--space-3) var(--space-4) var(--space-2);
 }
 
 .rx-dialog__title {
+  font-weight: 700;
   font-size: 0.95rem;
 }
 
 .rx-dialog__context {
+  color: var(--muted);
   font-size: 0.68rem;
 }
 
 .rx-notice__summary {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-serif, Georgia, serif);
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
   width: 20px;
   height: 20px;
   font-size: 0.72rem;
@@ -9203,25 +8400,51 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-search__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--muted);
   font-size: 0.71rem;
 }
 
 .rx-search__field input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
   min-height: 34px;
   padding-block: 4px;
   font-size: 0.8rem;
 }
 
 .rx-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
   font-size: 0.8rem;
 }
 
 .rx-count {
+  color: var(--muted);
+  font-weight: 500;
   font-size: 0.68rem;
 }
 
 /* Results: another notch down. */
 .rx-result {
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "heading actions"
+    "ingredient actions"
+    "details details";
+  gap: 1px var(--space-3);
   padding: 4px var(--space-3);
 }
 
@@ -9251,13 +8474,16 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-verdict {
+  --rx-tone: var(--line-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--rx-tone);
+  border-radius: var(--radius-control);
+  border-width: 2px;
+  background: var(--surface-raised);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--rx-tone) 22%, transparent);
   padding: var(--space-2) var(--space-3);
-}
-
-.rx-verdict .rx-verdict__symbol {
-  width: 24px;
-  height: 24px;
-  font-size: 0.85rem;
 }
 
 .rx-verdict .rx-verdict__text b {
@@ -9269,54 +8495,73 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-review__heading {
+  margin: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
   font-size: 0.76rem;
 }
 
 .rx-source {
+  cursor: pointer;
+  --rx-source-tone: var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 40%, var(--line));
+  border-radius: var(--radius-control);
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--rx-source-tone) 12%, var(--surface)) 0%,
+    color-mix(in srgb, var(--rx-source-tone) 4%, var(--surface)) 62%,
+    var(--surface) 100%
+  );
+  gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
 }
 
 .rx-source__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--rx-source-tone);
+  font-weight: 700;
   font-size: 0.8rem;
-}
-
-.rx-source__mark {
-  font-size: 1rem;
-}
-
-.rx-source__cell {
-  padding: var(--space-1) var(--space-2);
-  font-size: 0.74rem;
 }
 
 .rx-source__cell b {
   font-size: 0.78rem;
 }
 
-.rx-source__cell-label {
-  font-size: 0.62rem;
-}
-
-.rx-source__origin-trigger {
-  min-height: 28px;
-  margin-top: var(--space-1);
-  font-size: 0.7rem;
-}
-
 .rx-source__pane {
+  min-width: 0;
+  border: 1px dashed color-mix(in srgb, var(--rx-source-tone) 30%, var(--line));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  padding: var(--space-2) var(--space-3);
   font-size: 0.73rem;
 }
 
 .rx-source__pane-title {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   font-size: 0.66rem;
 }
 
 .rx-detail-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+  line-height: 1.55;
   font-size: 0.73rem;
 }
 
 /* Dosing form: shorter fields, tighter grid. */
 .rx-form {
+  border-top: var(--border-subtle);
   padding-top: var(--space-3);
 }
 
@@ -9337,42 +8582,14 @@ model-viewer::part(default-progress-mask) {
   min-height: 56px;
 }
 
-
 /* --- Patient context moves to the rail; the sticky bar is tabs only --------- */
 
-.patient-workspace-navigation {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--patient-navigation-height);
-  padding-block: var(--space-1);
-}
-
-
-
-
 /* Selected-patient summary card at the top of the rail. */
-.rail-selected-patient {
-  display: grid;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  background: var(--surface);
-  padding: var(--space-3);
-}
 
 .rail-selected-patient h2 {
   margin: 0;
   font-size: 1.1rem;
   letter-spacing: -0.03em;
-}
-
-.rail-selected-patient #selectedPatientMeta {
-  display: block;
-  color: var(--muted);
-  font-size: 0.68rem;
-  line-height: 1.5;
 }
 
 .rail-selected-patient .patient-identity {
@@ -9390,40 +8607,36 @@ model-viewer::part(default-progress-mask) {
   gap: var(--space-1);
 }
 
-.rail-selected-patient .patient-header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  justify-items: stretch;
-}
-
 .rail-selected-patient .patient-header-actions > span {
   text-align: right;
 }
-
 
 /* --- Sticky tab bar polish -------------------------------------------------- */
 
 /* 2) Breathing room before the name; 3) the bar keeps its rounded shape
    whether or not it is stuck; 4) the tab strip loses its tinted box. */
-.patient-workspace-navigation {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding-inline: var(--space-3);
-}
-
 
 .workspace-tabs {
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
   border-bottom: 0;
   background: transparent;
   padding: 0 var(--space-2);
 }
 
-
 /* --- Floating tab bar + rail identity card ---------------------------------- */
 
 .patient-workspace-navigation {
+  position: sticky;
+  z-index: 18;
+  top: calc(var(--header-height) + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--patient-navigation-height);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
   border-radius: 999px;
   background: var(--surface-raised);
@@ -9453,19 +8666,7 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.78rem;
 }
 
-
 /* Rail identity card: branded, left-aligned, essentials only. */
-.rail-selected-patient {
-  position: relative;
-  justify-items: start;
-  overflow: hidden;
-  text-align: left;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 9rem),
-    var(--surface-raised);
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent);
-}
 
 .rail-selected-patient::before {
   content: "";
@@ -9475,29 +8676,19 @@ model-viewer::part(default-progress-mask) {
   background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--data-cyan)));
 }
 
-.patient-identity__row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.rail-selected-patient .patient-identity__row h1 {
-  font-size: 1.15rem;
-}
-
-.rail-selected-patient #selectedPatientMeta {
-  font-size: 0.74rem;
-}
-
 .rail-selected-patient .safety-alerts,
 .rail-selected-patient .patient-condition-summary {
   justify-content: flex-start;
 }
 
 .rail-selected-patient .patient-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  justify-items: stretch;
   width: 100%;
 }
-
 
 /* The avatar glyph must beat the muted identity-span rule. */
 .rail-selected-patient .patient-avatar,
@@ -9505,17 +8696,14 @@ model-viewer::part(default-progress-mask) {
   color: var(--on-inverse);
 }
 
-
 /* Identity hierarchy: essentials read first, condition chips step back. */
 .rail-selected-patient #selectedPatientMeta {
+  display: block;
+  line-height: 1.5;
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 650;
   letter-spacing: -0.01em;
-}
-
-.rail-selected-patient .patient-identity__row h1 {
-  font-size: 1.05rem;
 }
 
 .rail-selected-patient .patient-condition-summary__label {
@@ -9543,9 +8731,11 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.64rem;
 }
 
-
 /* Final verdict-symbol treatment: no tinted circle, a big heavy glyph. */
 .rx-verdict .rx-verdict__symbol {
+  display: grid;
+  flex: none;
+  place-items: center;
   width: auto;
   height: auto;
   border-radius: 0;
@@ -9559,6 +8749,8 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-source__mark {
+  line-height: 1;
+  font-size: 1rem;
   font-weight: 900;
   -webkit-text-stroke: 1.1px currentColor;
   paint-order: stroke fill;
@@ -9582,9 +8774,10 @@ model-viewer::part(default-progress-mask) {
   background: var(--accent);
 }
 
-
 /* Bigger name; a small edit control in the card's top-right corner. */
 .patient-identity__row {
+  display: flex;
+  gap: var(--space-2);
   width: 100%;
   align-items: flex-start;
   justify-content: space-between;
@@ -9602,9 +8795,9 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.7rem;
 }
 
-
 /* Verdict chip rides the ingredient line — the row never grows. */
 .rx-result__ingredient {
+  grid-area: ingredient;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -9619,28 +8812,40 @@ model-viewer::part(default-progress-mask) {
 
 /* Inside a check card, every control follows the verdict tone — a red ✕
    check gets red-tinted panes and reveal control, not leftover green. */
-.rx-source__origin-trigger {
-  border-color: color-mix(in srgb, var(--rx-source-tone) 45%, var(--line));
-  color: var(--rx-source-tone);
-}
 
 .rx-source__origin-trigger:hover {
+  filter: none;
   border-color: var(--rx-source-tone);
   background: color-mix(in srgb, var(--rx-source-tone) 10%, var(--surface));
   color: var(--rx-source-tone);
 }
 
 .rx-source__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--rx-source-tone) 32%, var(--line));
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  line-height: 1.65;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.74rem;
   border-color: color-mix(in srgb, var(--rx-source-tone) 38%, var(--line));
 }
 
 .rx-source__cell-label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
   color: color-mix(in srgb, var(--rx-source-tone) 75%, var(--ink));
 }
 
-
 /* The chip rides the always-present 자세히 보기 line at its exact height. */
 .rx-result__details-summary {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -9654,9 +8859,13 @@ model-viewer::part(default-progress-mask) {
   line-height: 16px;
 }
 
-
 /* Review button keeps one width in both states — no row reflow. */
 .rx-result__review {
+  font-weight: 600;
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
   min-width: 84px;
   justify-content: center;
 }
@@ -9672,21 +8881,24 @@ model-viewer::part(default-progress-mask) {
 .rx-result[data-review-tone="amber"] { --rx-row-tone: var(--data-amber); }
 .rx-result[data-review-tone="red"] { --rx-row-tone: var(--urgent); }
 
-
 /* Reserve the scrollbar gutter so appearing content never reflows the rows. */
 .rx-dialog__panel {
+  text-wrap: pretty;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
   scrollbar-gutter: stable;
 }
 
-
 /* --- Density pass: tighter cards and gaps across the EMR -------------------- */
 
-.clinical-card {
-  border-radius: 12px;
-  padding: var(--space-3) var(--space-4);
-}
-
 .clinical-card.workflow-disclosure {
+  overflow: clip;
   padding: 0;
 }
 
@@ -9713,11 +8925,20 @@ model-viewer::part(default-progress-mask) {
   gap: var(--space-3);
 }
 
-.patient-rail {
-  padding: var(--space-3);
-}
-
 .rail-selected-patient {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-radius: 12px;
+  position: relative;
+  justify-items: start;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 9rem),
+    var(--surface-raised);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent);
   padding: var(--space-3);
 }
 
@@ -9732,10 +8953,6 @@ model-viewer::part(default-progress-mask) {
   padding-block: 4px;
 }
 
-.emr-page textarea {
-  padding-block: 6px;
-}
-
 .emr-page label {
   gap: 2px;
 }
@@ -9745,14 +8962,9 @@ model-viewer::part(default-progress-mask) {
   gap: var(--space-3);
 }
 
-.encounter-context-rail {
-  gap: var(--space-3);
-}
-
 .summary-sections {
   gap: var(--space-3);
 }
-
 
 /* Wide screens: the form column reads at a sane measure; extra width goes to
    the context rail instead of stretching textareas across the monitor. */
@@ -9761,7 +8973,6 @@ model-viewer::part(default-progress-mask) {
     grid-template-columns: minmax(0, 1fr) minmax(340px, 27%);
   }
 }
-
 
 /* --- Command header: one confident row -------------------------------------- */
 
@@ -9772,6 +8983,7 @@ model-viewer::part(default-progress-mask) {
 }
 
 .clinical-command h1 {
+  font-weight: 790;
   font-size: clamp(1.5rem, 1.8vw, 1.8rem);
 }
 
@@ -9786,12 +8998,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 /* --- Patient stream rail card ------------------------------------------------ */
-
-.stream-tabs {
-  display: flex;
-  gap: var(--space-1);
-  margin-bottom: var(--space-2);
-}
 
 .stream-tab {
   display: inline-flex;
@@ -9866,7 +9072,6 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.74rem;
 }
 
-
 /* --- Note stream + lab viewer ------------------------------------------------ */
 
 .stream-note {
@@ -9898,14 +9103,6 @@ model-viewer::part(default-progress-mask) {
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 0.73rem;
-}
-
-.stream-note__soap {
-  display: flex;
-  gap: var(--space-1);
-  margin: 3px 0 0;
-  font-size: 0.73rem;
-  line-height: 1.55;
 }
 
 .stream-note__soap > b {
@@ -10031,25 +9228,38 @@ model-viewer::part(default-progress-mask) {
 .lab-trend li[data-flag="L"] em { color: var(--data-cyan); }
 .lab-trend em { font-style: normal; font-weight: 800; }
 
-
 /* SOAP text keeps its numbered line breaks in the stream. */
 .stream-note__soap {
+  display: flex;
+  gap: var(--space-1);
+  margin: 3px 0 0;
+  font-size: 0.73rem;
+  line-height: 1.55;
   white-space: pre-line;
 }
 
 /* --- Zoning: white worksheets in the center, tinted context rails ----------- */
 
 .clinical-card {
+  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
   background: var(--surface-raised);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
 .patient-rail {
+  top: calc(var(--header-height) + var(--space-4));
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: var(--line) transparent;
+  padding: var(--space-3);
   border-color: color-mix(in srgb, var(--accent) 16%, var(--line));
   background: color-mix(in srgb, var(--accent) 5%, var(--surface-soft));
 }
 
 .encounter-context-rail {
+  top: calc(var(--header-height) + var(--patient-navigation-height) + var(--space-4));
+  gap: var(--space-3);
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
   border-radius: 14px;
   background: color-mix(in srgb, var(--accent) 5%, var(--surface-soft));
@@ -10059,7 +9269,6 @@ model-viewer::part(default-progress-mask) {
 .encounter-context-rail > .clinical-card {
   border-color: color-mix(in srgb, var(--line) 60%, transparent);
 }
-
 
 /* --- Radix dialog positioning: reproduces the native <dialog> modal look --- */
 
@@ -10080,7 +9289,6 @@ model-viewer::part(default-progress-mask) {
   outline: none;
 }
 
-
 /* Radix keeps inactive panels mounted (forceMount); hide them by state. */
 .workspace-panel[data-state="inactive"] {
   display: none;
@@ -10091,19 +9299,16 @@ model-viewer::part(default-progress-mask) {
   color: var(--ink);
 }
 
-
 /* --- Header-hosted data actions; the hero section is gone ------------------- */
 
 .clinical-header .app-header__inner {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding-block: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.clinical-header .command-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .clinical-header .command-actions .clinical-button {
@@ -10114,9 +9319,9 @@ model-viewer::part(default-progress-mask) {
 
 /* Empty boxes stop advertising their emptiness: shorter unfilled fields. */
 .emr-page textarea {
+  padding-block: 6px;
   min-height: 0;
 }
-
 
 /* Passing checks collapse to one line; the title itself is the toggle. */
 .rx-source__title--toggle {
@@ -10155,13 +9360,7 @@ model-viewer::part(default-progress-mask) {
   padding-block: 4px;
 }
 
-
 /* --- Visit context lives in the rail; entry cards pack 2×2 ------------------- */
-
-.entry-grid {
-  display: grid;
-  gap: var(--space-3);
-}
 
 @media (min-width: 900px) {
   .entry-grid {
@@ -10188,7 +9387,6 @@ model-viewer::part(default-progress-mask) {
 .encounter-context-rail .encounter-details .workflow-disclosure__body {
   padding: var(--space-2) var(--space-3);
 }
-
 
 /* Entry cards: launcher + list only — the how-to prose goes away. */
 .entry-grid .prescription-launcher__hint {
@@ -10221,9 +9419,11 @@ model-viewer::part(default-progress-mask) {
 }
 
 .stream-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
   align-items: center;
 }
-
 
 /* Narrow entry columns: the title never letter-wraps; signals drop below. */
 .entry-grid .workflow-disclosure__summary {
@@ -10240,13 +9440,11 @@ model-viewer::part(default-progress-mask) {
   flex: none;
 }
 
-
 /* Narrow entry columns drop the decorative source badges — title, count,
    caret are the signal. */
 .entry-grid .workflow-disclosure__summary .source-badge {
   display: none;
 }
-
 
 /* Entry rows wrap uniformly: title line, then badges/chips on their own line. */
 .encounter-entry-row__heading {
@@ -10288,21 +9486,11 @@ model-viewer::part(default-progress-mask) {
   grid-column: 1 / -1;
 }
 
-
 /* Rail visit card: no room for the CLINICIAN ENTRY badge; title stays on one line. */
-.rail-visit-slot .workflow-disclosure__title {
-  white-space: nowrap;
-}
 
 .rail-visit-slot .source-badge {
   display: none;
 }
-
-.rail-visit-slot .workflow-disclosure__summary {
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
-}
-
 
 /* AI status rides the header beside the brand. */
 .header-ai-status {
@@ -10326,10 +9514,20 @@ model-viewer::part(default-progress-mask) {
 }
 
 .clinical-header .command-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-left: auto;
 }
 
 /* The status line floats as a toast instead of holding a text row. */
+
+.workspace-status:empty {
+  min-height: 0;
+  margin-block: var(--space-1);
+  display: none;
+}
+
 .workspace-status {
   position: fixed;
   right: var(--space-4);
@@ -10343,17 +9541,8 @@ model-viewer::part(default-progress-mask) {
   box-shadow: 0 12px 30px color-mix(in srgb, var(--ink) 18%, transparent);
   padding: var(--space-2) var(--space-3);
   font-size: 0.78rem;
-}
-
-.workspace-status:empty {
-  display: none;
-}
-
-
-.workspace-status {
   cursor: pointer;
 }
-
 
 /* --- Button type balances its box ------------------------------------------- */
 
@@ -10370,6 +9559,7 @@ model-viewer::part(default-progress-mask) {
 
 /* Utility panel buttons: shorter box, bigger label. */
 .emr-utility-actions .clinical-button {
+  text-align: center;
   min-height: 40px;
   font-size: 0.84rem;
 }
@@ -10382,15 +9572,27 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rx-source__origin-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: filter 140ms ease-out;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  font-weight: 600;
+  padding-block: 4px;
+  min-height: 28px;
+  margin-top: var(--space-1);
+  border-color: color-mix(in srgb, var(--rx-source-tone) 45%, var(--line));
+  color: var(--rx-source-tone);
   font-size: 0.75rem;
 }
 
-
 /* Specificity catch-ups. */
-.clinical-header .emr-utility-actions .clinical-button {
-  min-height: 40px;
-  font-size: 0.84rem;
-}
 
 .encounter-entry-row .event-remove,
 .event-timeline .event-remove,
@@ -10401,7 +9603,6 @@ model-viewer::part(default-progress-mask) {
 .entry-grid .prescription-launcher .clinical-button {
   font-size: 0.875rem;
 }
-
 
 /* Final balance pass with explicit boxes. */
 .emr-page button.event-remove,
@@ -10525,11 +9726,6 @@ model-viewer::part(default-progress-mask) {
   vertical-align: top;
 }
 
-.rx-model-report__table th {
-  background: var(--surface);
-  font-weight: 600;
-}
-
 /* Pre-send preview fields are editable; keep the document look. */
 .review-preview textarea.review-preview__code,
 .review-preview textarea.review-preview__prose {
@@ -10545,14 +9741,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 /* 약 처방하기: use more of the screen. */
-#prescriptionDialog {
-  width: min(100% - var(--space-6), 1380px);
-  max-height: min(94vh, 1060px);
-}
-
-#prescriptionDialog .rx-dialog__panel {
-  max-height: min(94vh, 1060px);
-}
 
 /* 검토 전송 미리보기: the whole popup fits the viewport — only the three
    fields scroll internally, never the dialog itself. */
@@ -10631,10 +9819,6 @@ model-viewer::part(default-progress-mask) {
   font-size: 1rem;
 }
 
-#prescriptionDialog .rx-section-title {
-  font-size: 1.05rem;
-}
-
 #prescriptionDialog .rx-result__label {
   font-size: 1rem;
 }
@@ -10656,16 +9840,8 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.88rem;
 }
 
-#prescriptionDialog .rx-verdict .rx-verdict__text b {
-  font-size: 1.05rem;
-}
-
 #prescriptionDialog .rx-model-report {
   font-size: 0.88rem;
-}
-
-#prescriptionDialog .rx-model-report__heading {
-  font-size: 0.98rem;
 }
 
 #prescriptionDialog .rx-model-report__table {
@@ -10712,16 +9888,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 /* Preview fields: one field can take the stage; the others stay reachable. */
-#reviewPreviewDialog .review-preview__section > h4 {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-#reviewPreviewDialog .review-preview__section > h4 > span {
-  flex: 1;
-  min-width: 0;
-}
 
 .review-preview__expand {
   flex: 0 0 auto;
@@ -10891,10 +10057,6 @@ model-viewer::part(default-progress-mask) {
   line-height: 1.4;
 }
 
-.rail-visit-slot .encounter-state {
-  font-size: 0.78rem;
-}
-
 .rail-visit-slot .encounter-quick-actions {
   display: grid;
   gap: var(--space-2);
@@ -10943,18 +10105,7 @@ model-viewer::part(default-progress-mask) {
   min-height: 0;
 }
 
-.clinical-header .workspace-tabs {
-  border-bottom: 0;
-  background: transparent;
-  padding: 0;
-}
-
-
 /* Entry launchers live in the card title row; cards no longer collapse. */
-.workflow-disclosure--static > .workflow-disclosure__summary {
-  cursor: default;
-  list-style: none;
-}
 
 .workflow-disclosure--static > .workflow-disclosure__summary::after {
   display: none;
@@ -10977,15 +10128,8 @@ model-viewer::part(default-progress-mask) {
 
 /* Density: cards sit closer and pad tighter. */
 .entry-grid {
+  display: grid;
   gap: var(--space-2);
-}
-
-.encounter-main .clinical-card {
-  padding: var(--space-3) var(--space-4);
-}
-
-.workflow-disclosure--static > .workflow-disclosure__summary {
-  margin-bottom: var(--space-2);
 }
 
 @media (min-width: 1180px) {
@@ -11002,6 +10146,8 @@ model-viewer::part(default-progress-mask) {
 
 /* Static cards: title, launcher and count sit together; padding collapses. */
 .workflow-disclosure--static > .workflow-disclosure__summary {
+  cursor: default;
+  list-style: none;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -11015,12 +10161,6 @@ model-viewer::part(default-progress-mask) {
 
 .workflow-disclosure--static > .workflow-disclosure__summary:hover {
   background: transparent;
-}
-
-.workflow-disclosure--static .workflow-disclosure__signals {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  gap: var(--space-2);
 }
 
 .workflow-disclosure--static > .workflow-disclosure__body {
@@ -11046,6 +10186,9 @@ model-viewer::part(default-progress-mask) {
 
 /* 추가 버튼은 제목행 오른쪽 끝에 정렬 — 건수는 제목 옆에 남는다. */
 .workflow-disclosure--static .workflow-disclosure__signals {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: var(--space-2);
   display: contents;
 }
 
@@ -11059,9 +10202,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 /* 접힌 진료 기본정보 한 줄: 제목이 잘리지 않게 칩과 메타를 축소. */
-.rail-visit-slot .workflow-disclosure__summary {
-  gap: var(--space-2);
-}
 
 .rail-visit-slot .encounter-state {
   font-size: 0.72rem;
@@ -11069,6 +10209,7 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rail-visit-slot .workflow-disclosure__title {
+  white-space: nowrap;
   font-size: 0.95rem;
 }
 
@@ -11083,6 +10224,7 @@ model-viewer::part(default-progress-mask) {
 
 /* 레일 요약 줄은 flex: 제목은 절대 줄지 않고 칩·메타가 오른쪽에 붙는다. */
 .rail-visit-slot .workflow-disclosure__summary {
+  gap: var(--space-2);
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
@@ -11147,15 +10289,22 @@ model-viewer::part(default-progress-mask) {
 }
 
 #reviewPreviewDialog .review-preview__section > h4 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
   font-weight: 700;
 }
 
 #reviewPreviewDialog .review-preview__section > h4 > span {
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
 }
 
 /* 판정 표 헤더는 한 줄. */
 .rx-model-report__table th {
+  background: var(--surface);
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -11173,7 +10322,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 .clinical-header .header-ai-status {
-  white-space: nowrap;
   flex: 0 0 auto;
 }
 
@@ -11183,6 +10331,9 @@ model-viewer::part(default-progress-mask) {
    the note into 1,500px lines: the shell caps at a reading width and the side
    columns scale with the viewport instead of stepping between fixed sizes. */
 .emr-page {
+  --font-size-body: 0.875rem;
+  --font-size-caption: 0.71rem;
+  font-size: var(--font-size-body);
   --emr-max-width: 1720px;
   --emr-rail-width: clamp(16rem, 23vw, 21.25rem);
   --emr-context-width: clamp(17rem, 23vw, 25rem);
@@ -11325,6 +10476,9 @@ model-viewer::part(default-progress-mask) {
 
 /* --- Tab bar: the tabs share the whole width ------------------------------- */
 .clinical-header .workspace-tabs {
+  border-bottom: 0;
+  background: transparent;
+  padding: 0;
   flex: 1 1 0;
   min-width: 0;
 }
@@ -11382,5 +10536,6 @@ model-viewer::part(default-progress-mask) {
 }
 
 .clinical-header .header-ai-status {
+  white-space: nowrap;
   margin-left: 0;
 }

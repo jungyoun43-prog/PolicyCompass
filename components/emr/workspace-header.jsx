@@ -4,7 +4,6 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
 import { patientAgeLabel, SEX_LABELS } from "../../lib/emr/format.js";
-import { finalizedPatient } from "../../lib/emr/selectors.js";
 
 const TABS = [
   ["encounter", "오늘 진료"],
@@ -23,15 +22,12 @@ const TABS = [
  */
 export function WorkspaceHeader({ patient, onSelectTab }) {
   const tabListRef = useHorizontalScrollPosition();
-  const chart = finalizedPatient(patient);
-  const firstAllergy = chart.events.find((event) => event.type === "allergy");
 
   return (
     <div className="patient-workspace-navigation">
       <span className="workspace-tabs__context" aria-hidden="true">
         <b>{patient.name}</b>
         <span>{[patientAgeLabel(patient).replace(/^만\s*/, ""), SEX_LABELS[patient.sex]].filter(Boolean).join(" · ")}</span>
-        {firstAllergy ? <em className="workspace-tabs__allergy">알레르기</em> : null}
       </span>
       <TabsPrimitive.List className="workspace-tabs" aria-label="선택 환자 화면" ref={tabListRef} loop>
         {TABS.map(([key, label]) => (

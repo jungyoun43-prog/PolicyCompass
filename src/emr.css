@@ -9370,16 +9370,6 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.71rem;
 }
 
-.workspace-tabs__allergy {
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--urgent) 12%, var(--surface));
-  padding: 1px 7px;
-  color: var(--urgent);
-  font-size: 0.62rem;
-  font-style: normal;
-  font-weight: 700;
-}
-
 /* Selected-patient summary card at the top of the rail. */
 .rail-selected-patient {
   display: grid;

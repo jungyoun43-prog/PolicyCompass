@@ -251,6 +251,17 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   assert.match(rx, /from "\.\.\/\.\.\/src\/medication-claim-review\.js"/);
 });
 
+test("검토 화면은 서버 기본이 아니라 실제로 요청한·응답한 모델을 이름으로 보여 준다", async () => {
+  // Given
+  const rx = await readFile("components/emr/prescription-dialog.jsx", "utf8");
+
+  // When / Then — 진행 중엔 선택한 모델, 완료 뒤엔 서버가 응답한 모델 id를 표시한다.
+  assert.match(rx, /setPendingReview\(\{ medicationId, name, model: requestedModelLabel \}\)/);
+  assert.match(rx, /cloudLabelFor\(pendingReview\.model\)/);
+  assert.match(rx, /reviewedModelLabel = review\?\.model \? frontierModelLabel\(review\.model\)/);
+  assert.match(rx, /cloudLabelFor\(reviewedModelLabel\)/);
+});
+
 test("배포 서버는 약제 AI 검토 경로를 같은 출처로만 열어 둔다", async () => {
   // Given
   const [route, api] = await Promise.all([

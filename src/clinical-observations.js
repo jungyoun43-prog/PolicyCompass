@@ -26,7 +26,7 @@ export function normalizeClinicalObservationValue(value, specOrCode) {
   const raw = typeof value === "string" ? value.trim() : value;
   if (raw === undefined || raw === null || raw === "") throw new TypeError(`${spec.label} 값을 입력하세요.`);
   if (spec.kind === "blood-pressure") {
-    const match = typeof raw === "string" ? raw.match(/^(\d{2,3})\s*[\/／]\s*(\d{2,3})$/) : null;
+    const match = typeof raw === "string" ? raw.match(/^(\d{2,3})\s*[/／]\s*(\d{2,3})$/) : null;
     if (!match) throw new TypeError("혈압은 수축기/이완기 형식으로 입력하세요. 예: 120/80");
     const systolic = Number(match[1]);
     const diastolic = Number(match[2]);

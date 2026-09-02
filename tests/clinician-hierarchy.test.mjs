@@ -12,7 +12,7 @@ test("등록된 정보 중심 화면은 공유 밀도 계층 모듈을 조합한
 
     assert.match(html, /import "[^"]*clinician-hierarchy\.css"/, route);
     assert.match(html, /bodyClassName=.[^'"]*clinician-hierarchy/, route);
-    assert.match(html, /<main class="[^"]*clinician-hierarchy__workspace(?:\s|\")/, route);
+    assert.match(html, /<main class="[^"]*clinician-hierarchy__workspace(?:\s|")/, route);
     assert.match(html, /clinician-hierarchy__summary/, route);
     assert.match(html, /clinician-hierarchy__groups/, route);
   }

@@ -11,7 +11,7 @@ test("환자 진입 화면은 공유 지원형 프레젠테이션 모듈을 사�
     const html = await pageMarkup(route);
 
     assert.match(html, /import "[^"]*patient-presentation\.css"/, route);
-    assert.match(html, /class="[^"]*patient-presentation(?:\s|\")/, route);
+    assert.match(html, /class="[^"]*patient-presentation(?:\s|")/, route);
     assert.match(html, /patient-presentation__identity/, route);
     assert.match(html, /patient-presentation__assurance/, route);
   }

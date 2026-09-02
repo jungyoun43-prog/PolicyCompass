@@ -207,7 +207,7 @@ export function settleExplorerScene(scene, width = baseWidth, height = baseHeigh
   separateOverlaps(nodes, width, height);
   return {
     ...scene,
-    nodes: nodes.map(({ vx, vy, ...node }) => node),
+    nodes: nodes.map(({ vx: _vx, vy: _vy, ...node }) => node),
   };
 }
 

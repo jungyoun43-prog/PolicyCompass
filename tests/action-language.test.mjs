@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
 
-const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey, journeyCss, landing, gateway, gatewayCss, shellCss, emr, emrCss] = await Promise.all([
+const [controls, mapHtml, mapScript, connections, insights, insightsCss, journey, journeyCss, landing, gateway, gatewayCss, shellCss, _emr, emrCss] = await Promise.all([
   readFile("src/controls.css", "utf8"),
   pageMarkup("/map"),
   readFile("src/app.js", "utf8"),

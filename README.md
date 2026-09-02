@@ -28,6 +28,15 @@ npm run dev
 
 프로덕션 실행은 `npm run build && npm start`입니다.
 
+### 검증
+
+```bash
+npm run lint
+npm test
+```
+
+`npm run lint`는 ESLint(핵심 권장 규칙 + React hooks)로 소스·스크립트·테스트를 검사하고, `npm test`는 Node 내장 테스트 러너로 순수 로직·API 계약·컴포넌트 렌더링 마크업을 검증합니다. 두 명령과 `npm run build`는 `.github/workflows/ci.yml`에서 모든 push와 PR마다 실행됩니다. 컴포넌트 테스트는 `tests/helpers/render.mjs`(`renderComponent`, `renderPage`, `openingTag`)로 실제 React 컴포넌트와 페이지를 서버 렌더링해 나온 HTML을 검사하고, CSS 계약은 `tests/helpers/css.mjs`로 파싱된 스타일시트에서 선택자가 최종적으로 갖는 선언을 조회해 검사합니다. 소스 텍스트를 직접 읽는 단언은 `// source-check:` 주석으로 그 이유(포털 전용 마크업, 브라우저가 필요한 동작 등)를 남깁니다.
+
 기본 진료 흐름은 `오늘 대기열 → 환자 선택/등록 → Encounter 시작 → SOAP → KCD 진단 → 처방(약 처방하기 팝업에서 검색·AI 삭감 사전검토) → 검사·영상·처치 오더 → 완료 → 로컬 서명 → 현재 환자 재확인 → 환자 전달 파일 내보내기`입니다. 환자 기록에는 차트번호, 이름, 생년월일과 진료일 기준 계산 나이(생년월일 미상 시 만 나이 직접 입력), 성별, 연락처, 주소, 보험 정보, 비상연락처를 입력할 수 있습니다. EMR의 신체·진료과 지도, 모델/규칙 기반 지원, Journey, 청구 전 적합성 칸반은 같은 선택 환자와 Encounter를 보조합니다.
 
 ## 두 앱의 데이터 경계

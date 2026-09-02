@@ -391,7 +391,6 @@ test("FHIR Bundle을 환자와 임상 이벤트로 변환하고 출처를 보존
 test("용법 없는 외부 MedicationRequest는 손실 없이 재내보내고 미해결 참조 약물은 거부한다", () => {
   const result = parseEmrFhirBundle({
     resourceType: "Bundle", type: "collection",
-    type: "collection",
     entry: [
       { fullUrl: "Patient/p1", resource: { resourceType: "Patient", id: "p1", name: [{ text: "외부 환자" }] } },
       { fullUrl: "Encounter/e1", resource: { resourceType: "Encounter", id: "e1", subject: { reference: "Patient/p1" }, status: "finished", class: { code: "AMB" }, period: { start: "2026-07-19T09:00:00Z", end: "2026-07-19T09:10:00Z" } } },
@@ -849,7 +848,6 @@ test("독립 FHIR 문제·약물·오더·알레르기·관찰·처치는 원출
   const originBase = "https://origin.example/fhir";
   const initial = parseEmrFhirBundle({
     resourceType: "Bundle", type: "collection",
-    type: "collection",
     entry: [
       { fullUrl: `${originBase}/Patient/p1`, resource: { resourceType: "Patient", id: "p1", name: [{ text: "독립 기록 환자" }] } },
       { fullUrl: `${originBase}/Condition/c1`, resource: { resourceType: "Condition", id: "c1", subject: { reference: `${originBase}/Patient/p1` }, clinicalStatus: coding("active", "Active"), verificationStatus: coding("confirmed", "Confirmed"), code: coding("DX", "독립 진단"), recordedDate: "2026-07-01" } },
@@ -900,7 +898,6 @@ test("FHIR meta.source와 원본 리소스 식별자가 달라도 각각 보존�
   const sourceIdentity = "https://origin.example/fhir/Observation/B";
   const imported = parseEmrFhirBundle({
     resourceType: "Bundle", type: "collection",
-    type: "collection",
     entry: [
       {
         fullUrl: "https://origin.example/fhir/Patient/p1",

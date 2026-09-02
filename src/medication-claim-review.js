@@ -76,7 +76,7 @@ const RECORD_TYPE_LABELS = {
  * the record itself rather than a rendered summary. Free-text notes stay out:
  * this structure is what leaves the browser when a model reviews the comparison.
  */
-function recordRows(event, encounterId) {
+function recordRows(event, _encounterId) {
   const value = event.value === undefined || event.value === null || event.value === ""
     ? ""
     : `${event.value}${cleanText(event.unit, 24) ? ` ${cleanText(event.unit, 24)}` : ""}`;

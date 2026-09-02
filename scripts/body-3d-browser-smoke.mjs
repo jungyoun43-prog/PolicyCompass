@@ -32,7 +32,7 @@ try {
     appUrl: app.appUrl,
     profilePrefix: "policycompass-body-3d-",
     initialViewport: { width: 1440, height: 1100, mobile: false },
-  }, async ({ client, delay, evaluate, navigate, setViewport, waitFor }) => {
+  }, async ({ client, evaluate, navigate, setViewport, waitFor }) => {
     await navigate("/map?sample=1", "Boolean(document.querySelector('[data-body-3d]'))");
     await evaluate("document.querySelector('[data-body-3d]').scrollIntoView({ block: 'center' })");
     await waitFor(

@@ -162,6 +162,7 @@ try {
       await rm(profile, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });
       break;
     } catch (error) {
+      // eslint-disable-next-line no-unsafe-finally -- profile cleanup failure surfaces after the last retry
       if (attempt === 2) throw error;
       await delay(100);
     }

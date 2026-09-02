@@ -176,7 +176,7 @@ function markdownText(value, maximum = 8_000) {
     .slice(0, maximum);
 }
 
-function validateDraft(raw, comparison) {
+function validateDraft(raw, _comparison) {
   const markdown = markdownText(raw);
   if (!markdown) throw new Error("모델 응답이 비었습니다.");
   const heading = markdown.match(/##\s*\[\s*(.)\s*\]/u);

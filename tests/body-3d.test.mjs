@@ -69,7 +69,7 @@ test("환자 지도와 EMR은 같은 자체 호스팅 3D 전신 뷰어를 사용
 });
 
 test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보존한다", () => {
-  const mappedAreas = [...adapterSource.matchAll(/^  ([a-z]+): Object\.freeze\(/gm)].map((match) => match[1]);
+  const mappedAreas = [...adapterSource.matchAll(/^ {2}([a-z]+): Object\.freeze\(/gm)].map((match) => match[1]);
   assert.deepEqual(mappedAreas, [
     "neuro",
     "mental",

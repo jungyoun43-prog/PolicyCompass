@@ -626,7 +626,7 @@ function patientQuestionGraph() {
     .addNode("validate", (state) => {
       if (!state.draft) return {};
       try {
-        const { parsed, raw, ...meta } = state.draft;
+        const { parsed, raw: _raw, ...meta } = state.draft;
         return { result: { ...meta, ...validateOutput(parsed, state.context.evidenceIds) }, failure: null };
       } catch (error) {
         return {

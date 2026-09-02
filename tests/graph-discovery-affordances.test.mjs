@@ -104,7 +104,7 @@ test("Connections는 개인 기록 근거와 문헌 기반 추론 관계를 시�
   assert.match(connectionsJs, /"data-evidence-source": provenance\.source/);
   assert.match(connectionsJs, /elements\.evidenceKind\.dataset\.provenance = provenance\.source/);
   const clinicalProvenance = connectionsJs.match(
-    /if \(state\.clinicalConditionIds\.includes\(id\)\) \{[\s\S]*?\n  \}/,
+    /if \(state\.clinicalConditionIds\.includes\(id\)\) \{[\s\S]*?\n {2}\}/,
   )?.[0] ?? "";
   assert.match(clinicalProvenance, /파일에 의료진 확정으로 표시/);
   assert.doesNotMatch(clinicalProvenance, /진단(?:으로 기록된 사실이| 사실) 아님|확정 진단 아님/);

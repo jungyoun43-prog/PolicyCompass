@@ -71,7 +71,7 @@ export function ClaimsTab({ state, patient, store }) {
   const onSearchPick = (entry) => {
     if (!entry) return;
     if (entry.target.targetType === "workflow") openWorkItem(entry.target.evaluationId);
-    if (entry.target.targetType === "quality") setSelectedDiseaseId(entry.target.diseaseId);
+    if (entry.target.targetType === "quality") onSelectDisease(entry.target.diseaseId);
     if (entry.target.targetType === "adjudication") {
       requestAnimationFrame(() => document.querySelector(`[data-claim-adjudication-id="${CSS.escape(entry.target.adjudicationId)}"]`)?.scrollIntoView({ block: "center" }));
     }

@@ -729,6 +729,7 @@ export async function runBrowserSmoke({
     try {
       await removeProfile(profile);
     } catch (cleanupError) {
+      // eslint-disable-next-line no-unsafe-finally -- cleanup failure is the only error when the run itself succeeded
       if (!runError) throw cleanupError;
       console.error(`Failed to clean Chrome profile ${profile}: ${cleanupError.message}`);
     }

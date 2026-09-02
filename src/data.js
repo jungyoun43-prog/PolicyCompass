@@ -140,7 +140,7 @@ const measurementSignalRules = Object.freeze([
     key: "blood-pressure",
     label: "혈압 측정 입력",
     unit: "mmHg",
-    pattern: /혈압\s*:?\s*(\d{2,3})\s*[\/／-]\s*(\d{2,3})/i,
+    pattern: /혈압\s*:?\s*(\d{2,3})\s*[/／-]\s*(\d{2,3})/i,
     value: (match) => `${match[1]}/${match[2]}`,
   }),
   Object.freeze({

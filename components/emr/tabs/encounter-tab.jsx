@@ -132,7 +132,7 @@ function ClaimMiniSummary({ evaluations, attention }) {
   );
 }
 
-export function EncounterTab({ state, patient, encounter, preflightEvaluations, store, viewedEncounterId, setViewedEncounterId, selectTab, dirtyGuardsRef, blockClinicalContextChange }) {
+export function EncounterTab({ patient, encounter, preflightEvaluations, store, viewedEncounterId, setViewedEncounterId, selectTab, dirtyGuardsRef, blockClinicalContextChange }) {
   const { applyMutation, setStatus } = store;
   const [form, setForm] = useState(EMPTY_FORM);
   const [formMessage, setFormMessage] = useState("");

@@ -1,5 +1,5 @@
 import { encounterSigningOmissions } from "./emr-encounter.js";
-import { sha256Hex } from "./emr-model.js";
+import { sha256Hex } from "./sha256.js";
 
 const text = (value) => String(value ?? "").trim();
 const UNVERIFIED_SOURCE_KINDS = new Set(["fhir", "import"]);

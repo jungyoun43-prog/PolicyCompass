@@ -4,6 +4,7 @@ import {
   isCanonicalClinicalObservation,
   LOINC_SYSTEM,
 } from "./clinical-observations.js";
+import { textCleaner } from "./text.js";
 
 const FHIR_BASE_URL = "https://policycompass.local/fhir";
 const SOURCE_PATIENT_IDENTITY_SYSTEM = `${FHIR_BASE_URL}/identifier/source-patient`;
@@ -24,11 +25,7 @@ const SOAP_SECTIONS = [
   { field: "plan", title: "P · 계획", code: "18776-5", display: "Plan of care note" },
 ];
 
-function cleanText(value, maximum = 4_000) {
-  return typeof value === "string"
-    ? value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim().slice(0, maximum)
-    : "";
-}
+const cleanText = textCleaner({ maxLength: 4_000, stripControl: "keep-line-breaks", controlReplacement: "" });
 
 function finitePositiveNumber(value) {
   if (typeof value === "string" && !value.trim()) return null;

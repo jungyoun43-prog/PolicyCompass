@@ -1,4 +1,5 @@
 import { chartMedicationClass, MEDICATION_CLAIM_SOURCES } from "./medication-catalog.js";
+import { textCleaner } from "./text.js";
 
 export const MEDICATION_REVIEW_BOUNDARY = "등록 기준과 이 환자의 확정 기록을 대조한 청구 전 사전점검입니다. 급여 인정·삭감을 확정하지 않고 처방 여부를 대신 결정하지 않으며, 최종 판단은 의료진과 심사 절차에 있습니다.";
 
@@ -14,9 +15,7 @@ const CONFIRMED_CONDITION_STATUSES = new Set(["active", "recurrence", "relapse"]
 const ACTIVE_MEDICATION_STATUSES = new Set(["active", "on-hold"]);
 const UNVERIFIED_SOURCE_KINDS = new Set(["fhir", "import"]);
 
-function cleanText(value, maximum = 240) {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, maximum) : "";
-}
+const cleanText = textCleaner({ maxLength: 240, collapseWhitespace: true });
 
 function validDate(value) {
   const normalized = cleanText(value, 10);

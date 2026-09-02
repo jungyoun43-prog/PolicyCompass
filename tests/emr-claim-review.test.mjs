@@ -16,8 +16,8 @@ import {
   reconcileClaimReviews,
   resolveClaimReview,
   setClaimReviewStage,
-  sha256Hex,
 } from "../src/emr-model.js";
+import { sha256Hex } from "../src/sha256.js";
 import { evaluateClaimRule } from "../src/claim-rules.js";
 
 import { componentMarkup } from "./helpers/markup.mjs";

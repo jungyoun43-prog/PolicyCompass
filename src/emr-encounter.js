@@ -11,15 +11,14 @@ import {
   LOINC_SYSTEM,
   normalizeClinicalObservationValue,
 } from "./clinical-observations.js";
+import { textCleaner } from "./text.js";
 
 const ACTIVE_ENCOUNTER_STATUSES = new Set(["arrived", "in-progress"]);
 const ENCOUNTER_CHILD_TYPES = new Set(["condition", "observation", "medication", "service-request"]);
 
 export const ENCOUNTER_OBSERVATION_PRESETS = CLINICAL_OBSERVATION_SPECS;
 
-function cleanText(value, maximum = 2_000) {
-  return typeof value === "string" ? value.trim().slice(0, maximum) : "";
-}
+const cleanText = textCleaner({ maxLength: 2_000 });
 
 function uniqueId(prefix) {
   const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;

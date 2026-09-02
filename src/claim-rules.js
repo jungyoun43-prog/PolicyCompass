@@ -1,4 +1,5 @@
 import { clinicalObservationSpec, isCanonicalClinicalObservation, LOINC_SYSTEM } from "./clinical-observations.js";
+import { textCleaner } from "./text.js";
 
 const DAY_MS = 86_400_000;
 const MAX_RULE_DAYS = 3_650;
@@ -110,9 +111,7 @@ export const DEFAULT_CLAIM_RULES = [
   },
 ];
 
-function cleanText(value, fallback = "") {
-  return typeof value === "string" ? value.trim() : fallback;
-}
+const cleanText = textCleaner({ fallbackSecond: true });
 
 function boundedInteger(value, fallback, { minimum, maximum }) {
   if (value === undefined || value === null || value === "") return fallback;

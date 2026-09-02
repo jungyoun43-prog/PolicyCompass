@@ -1,4 +1,5 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+import { textCleaner } from "../src/text.js";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -68,10 +69,7 @@ const UNSAFE_GENERATED_CLAIM = new RegExp([
   "응급실에?\\s*가지\\s*마세요",
 ].join("|"), "i");
 
-export function cleanText(value, maximum = 500) {
-  if (typeof value !== "string") return "";
-  return value.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, maximum);
-}
+export const cleanText = textCleaner({ maxLength: 500, stripControl: "c0", collapseWhitespace: true });
 
 export function scrubDirectIdentifiers(value, maximum = 500) {
   let text = cleanText(value, maximum * 2);

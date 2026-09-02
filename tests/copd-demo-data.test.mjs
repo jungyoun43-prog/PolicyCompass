@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { getCopdDemoProfile } from "../src/copd-demo-data.js";
-import { createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 
 const EVALUATED_AT = "2026-11-01T09:00:00.000Z";
 const PROFILE_IDS = ["demo-patient-lee", "demo-patient-park", "demo-patient-jung"];

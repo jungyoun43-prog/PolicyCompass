@@ -9,11 +9,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  createDemoEmrState,
   initializeEmrState,
   reconcileClaimReviews,
   saveEmrState,
 } from "../../src/emr-model.js";
+import { createDemoEmrState } from "../../src/emr-demo-state.js";
 import { claimEvaluationsForState } from "../../lib/emr/selectors.js";
 
 export function useEmrStore() {

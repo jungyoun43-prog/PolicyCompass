@@ -1,3 +1,5 @@
+import { textCleaner } from "./text.js";
+
 const HIRA_PNEUMONIA_SOURCE_URL = "https://www.hira.or.kr/bbs/bbsCDownLoad.do?apndNo=1&apndBrdBltNo=12191&apndBrdTyNo=2&apndBltNo=157";
 const KDCA_PNEUMONIA_SOURCE_URL = "https://www.kdca.go.kr/bbs/kdca/263/306697/download.do";
 
@@ -59,9 +61,7 @@ const HOSPITAL_TYPES = new Set([
 ]);
 const NURSING_HOSPITAL_TYPES = new Set(["NURSING_HOSPITAL", "LONG_TERM_CARE_HOSPITAL", "요양병원"]);
 
-function cleanText(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
+const cleanText = textCleaner();
 
 function normalizedToken(value) {
   return cleanText(value).toUpperCase().replace(/[\s./-]+/g, "_");
@@ -613,7 +613,7 @@ function infectionEvidenceAssessment(input) {
   ].filter(([, value]) => value === true).map(([type]) => ({ type, documented: true }));
   const recognized = symptoms.filter((symptom) => {
     if (typeof symptom === "string") return /발열|고열|화농성.*객담|백혈구.*증가|산소포화도.*감소|fever|purulent.*sputum|leukocytosis|desaturation/i.test(symptom);
-    const text = [symptom?.type, symptom?.code, symptom?.label, symptom?.name].map(cleanText).join(" ");
+    const text = [symptom?.type, symptom?.code, symptom?.label, symptom?.name].map((value) => cleanText(value)).join(" ");
     return symptom?.documented !== false && /발열|고열|화농성.*객담|백혈구.*증가|산소포화도.*감소|fever|purulent.*sputum|leukocytosis|desaturation/i.test(text);
   });
   const evidence = [...flags, ...recognized];

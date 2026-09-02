@@ -1,3 +1,5 @@
+import { textCleaner } from "./text.js";
+
 export const CLAIM_PRESENTATION_STATES = Object.freeze({
   "high-risk": Object.freeze({ tone: "red", label: "내부 규칙상 근거 누락" }),
   "needs-review": Object.freeze({ tone: "orange", label: "등록 규칙 확인 필요" }),
@@ -25,9 +27,7 @@ const RECOGNIZED_OUTCOMES = new Set(["approved", "paid", "allowed", "accepted", 
 const RISK_EVALUATION_STATUSES = new Set(["missing-evidence", "due-soon", "waiting"]);
 const INSUFFICIENT_EVALUATION_STATUSES = new Set(["unknown", "not-applicable"]);
 
-function cleanText(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
+const cleanText = textCleaner();
 
 function validInstant(value) {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -111,7 +111,7 @@ export function resolveClaimAdjudicationPresentation(adjudication) {
 
 export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} } = {}) {
   const missingData = Array.isArray(claimItem.missingData)
-    ? claimItem.missingData.map(cleanText).filter(Boolean)
+    ? claimItem.missingData.map((value) => cleanText(value)).filter(Boolean)
     : [];
   const evaluationStatus = cleanText(evaluation?.status);
   const riskEvaluable = claimItem.riskEvaluable !== false && Boolean(evaluationStatus || claimItem.riskReason);

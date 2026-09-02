@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { findMedicationInCatalog } from "../src/medication-catalog.js";
 import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
-import { createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 import {
   medicationClaimReviewStatus,
   runMedicationClaimReview,

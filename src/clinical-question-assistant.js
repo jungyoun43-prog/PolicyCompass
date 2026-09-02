@@ -1,3 +1,5 @@
+import { textCleaner } from "./text.js";
+
 export const CLINICAL_PATIENT_BRIEF_SCHEMA = "policycompass-clinical-patient-brief";
 export const CLINICAL_PATIENT_BRIEF_VERSION = 1;
 
@@ -10,9 +12,7 @@ const PATIENT_BRIEF_SOURCE_LABELS = {
 const ACE_INHIBITOR_PATTERN = /\bC09AA[A-Z0-9]*\b|captopril|enalapril|lisinopril|perindopril|ramipril|imidapril|benazepril|cilazapril|fosinopril|quinapril|trandolapril|캅토프릴|에날라프릴|리시노프릴|페린도프릴|라미프릴|이미다프릴|베나제프릴|실라자프릴|포시노프릴|퀴나프릴|트란돌라프릴/i;
 const COUGH_PATTERN = /기침|마른기침|야간\s*해수|해수|cough/i;
 
-function cleanText(value, maximum = 500) {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maximum) : "";
-}
+const cleanText = textCleaner({ maxLength: 500, collapseWhitespace: true });
 
 function validDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";

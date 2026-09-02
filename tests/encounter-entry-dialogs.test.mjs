@@ -15,7 +15,7 @@ import {
 } from "../src/order-catalog.js";
 import { findMedicationInCatalog, MEDICATION_CATALOG } from "../src/medication-catalog.js";
 import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
-import { createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 
 const AS_OF = "2026-07-20";
 const demo = createDemoEmrState(AS_OF);

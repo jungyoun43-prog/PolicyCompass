@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   addPatient,
-  createDemoEmrState,
   selectPatient,
   updatePatient,
 } from "../../src/emr-model.js";
+import { createDemoEmrState } from "../../src/emr-demo-state.js";
 import { frontierModelLabel } from "../../src/frontier-model-catalog.js";
 import { claimEvaluationsFor, currentEncounterFor } from "../../lib/emr/selectors.js";
 import { useEmrStore } from "./store.js";

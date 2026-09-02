@@ -17,7 +17,7 @@ import {
   MEDICATION_REVIEW_VERDICTS,
   worstVerdict,
 } from "../src/medication-claim-review.js";
-import { createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 import { AMLODIPINE, AMOXICLAV, PANTOPRAZOLE, TIOTROPIUM } from "./helpers/medication-fixtures.mjs";
 import { sanitizeMedicationClaimComparison } from "../scripts/graphs/medication-claim-review-graph.mjs";
 

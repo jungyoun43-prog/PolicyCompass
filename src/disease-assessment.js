@@ -8,6 +8,7 @@ import {
   evaluatePneumoniaConcordance,
 } from "./pneumonia-assessment.js";
 import { getPneumoniaDemoProfile } from "./pneumonia-demo-data.js";
+import { textCleaner } from "./text.js";
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -87,9 +88,7 @@ function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
 }
 
-function cleanText(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
+const cleanText = textCleaner();
 
 function validInstant(value) {
   const text = cleanText(value);
@@ -184,11 +183,11 @@ function dedupeKey(value, kind, index, assessmentId = "") {
   const id = cleanText(value?.id);
   if (id) return `${scope}:id:${id}`;
   if (kind === "claim") {
-    const composite = [value?.code, value?.serviceDate, value?.label].map(cleanText).join("|");
+    const composite = [value?.code, value?.serviceDate, value?.label].map((value) => cleanText(value)).join("|");
     return composite.replaceAll("|", "") ? `${scope}:claim:${composite}` : `${scope}:claim-index:${index}`;
   }
   const composite = [value?.claimItemId, value?.sourceId, value?.decidedAt, value?.reasonCode]
-    .map(cleanText)
+    .map((value) => cleanText(value))
     .join("|");
   return composite.replaceAll("|", "") ? `${scope}:adjudication:${composite}` : `${scope}:adjudication-index:${index}`;
 }

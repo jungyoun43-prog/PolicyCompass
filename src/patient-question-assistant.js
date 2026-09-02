@@ -3,6 +3,7 @@ import {
   normalizeClinicalObservationValue,
 } from "./clinical-observations.js";
 import { CONDITIONS } from "./data.js";
+import { textCleaner } from "./text.js";
 
 export const PATIENT_QUESTION_REQUEST_SCHEMA = "policycompass-patient-question-request";
 export const PATIENT_QUESTION_REQUEST_VERSION = 1;
@@ -161,15 +162,7 @@ const unsafeGeneratedClaim = new RegExp([
   "응급실에?\\s*가지\\s*마세요",
 ].join("|"), "i");
 
-function cleanText(value, maximum = 1_000) {
-  if (typeof value !== "string") return "";
-  return value
-    .normalize("NFKC")
-    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\u2060\uFEFF]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maximum);
-}
+const cleanText = textCleaner({ maxLength: 1_000, normalizeUnicode: true, stripControl: "invisible", collapseWhitespace: true });
 
 function safeDate(value) {
   const text = cleanText(value, 32);

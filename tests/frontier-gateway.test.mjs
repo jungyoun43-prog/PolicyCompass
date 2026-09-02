@@ -9,7 +9,7 @@ import {
 import { findMedicationInCatalog } from "../src/medication-catalog.js";
 import { markdownReviewReport } from "./helpers/medication-fixtures.mjs";
 import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
-import { createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 import { runMedicationClaimReview } from "../scripts/graphs/medication-claim-review-graph.mjs";
 
 const SCHEMA = {

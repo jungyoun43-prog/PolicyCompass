@@ -1,3 +1,5 @@
+import { textCleaner } from "./text.js";
+
 const HIRA_SOURCE_URL = "https://www.hira.or.kr/bbs/157/2025/10/BZ202510302440715.pdf";
 const GOLD_SOURCE_URL = "https://goldcopd.org/wp-content/uploads/2026/01/GOLD-REPORT-2026-v1.3-8Dec2025_WMV2.pdf";
 
@@ -29,9 +31,7 @@ export const HIRA_COPD_2026_RULESET = Object.freeze({
 const ACCEPTABLE_QUALITY = new Set(["acceptable", "accepted", "verified", "valid", "a"]);
 const VERIFIED = new Set(["verified", "confirmed", "final"]);
 
-function cleanText(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
+const cleanText = textCleaner();
 
 function validDate(value) {
   const normalized = cleanText(value).slice(0, 10);

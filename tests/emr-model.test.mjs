@@ -10,7 +10,6 @@ import {
   confirmPatientEvent,
   createClinicalBodyAtlas,
   createCopilotRequest,
-  createDemoEmrState,
   createEmptyEmrState,
   createLocalCopilotBrief,
   createPatient,
@@ -26,6 +25,7 @@ import {
   saveEmrState,
   updatePatient,
 } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
 
 function memoryStorage() {
   const memory = new Map();

@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { parseEmrFhirBundle } from "../src/emr-fhir.js";
-import { createClinicalBodyAtlas, createDemoEmrState } from "../src/emr-model.js";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
+import { createClinicalBodyAtlas } from "../src/emr-model.js";
 import { startManagedAppServer } from "./browser-smoke-harness.mjs";
 
 /**

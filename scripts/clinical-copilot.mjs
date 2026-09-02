@@ -1,4 +1,5 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+import { textCleaner } from "../src/text.js";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -83,9 +84,7 @@ const UNSAFE_GENERATED_CLAIM = new RegExp([
   "응급실에?\\s*가지\\s*마세요",
 ].join("|"), "i");
 
-function cleanText(value, maxLength = 1_000) {
-  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
+const cleanText = textCleaner({ maxLength: 1_000 });
 
 function safeGeneratedText(value, maxLength = 1_000) {
   const text = cleanText(value, maxLength);

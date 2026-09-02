@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -55,7 +55,7 @@ export const CANONICAL_STEPS = Object.freeze([
   Object.freeze({
     id: "clinician-emr",
     route: "/emr",
-    selectors: [".clinical-command", ".trust-strip", ".patient-rail", ".patient-workspace"],
+    selectors: [".clinical-header", ".patient-workspace-navigation", ".patient-rail", ".patient-workspace"],
   }),
 ]);
 
@@ -102,22 +102,29 @@ async function prepareRoute(api, route) {
     return;
   }
   if (patientStateRoutes.has(route)) {
-    await api.navigate(
-      "/map?sample=1",
-      "document.getElementById('conditionCount')?.textContent !== '0개'",
-    );
+    // Every Personal route reads ?sample=1 itself, so only the map cell pays
+    // for the 3D atlas load; the others navigate straight to their fixture.
+    if (route === "/map") {
+      await api.navigate(
+        "/map?sample=1",
+        "document.getElementById('conditionCount')?.textContent !== '0개'",
+      );
+      await api.waitFor(
+        "sessionStorage.getItem('policycompass-scene') === null",
+        "The patient sample scene crossed into real session storage.",
+      );
+      return;
+    }
+    const ready = route === "/connections"
+      ? "Boolean(document.querySelector('[data-graph-discovery=\"connections\"]'))"
+      : route === "/insights"
+        ? "document.querySelectorAll('#questions [data-question-id]').length > 0"
+        : "Boolean(document.querySelector('[data-story-section=\"changed\"]'))";
+    await api.navigate(`${route}?sample=1`, ready);
     await api.waitFor(
       "sessionStorage.getItem('policycompass-scene') === null",
       "The patient sample scene crossed into real session storage.",
     );
-    if (route !== "/map") {
-      const ready = route === "/connections"
-        ? "Boolean(document.querySelector('[data-graph-discovery=\"connections\"]'))"
-        : route === "/insights"
-          ? "document.querySelectorAll('#questions [data-question-id]').length > 0"
-          : "Boolean(document.querySelector('[data-story-section=\"changed\"]'))";
-      await api.navigate(`${route}?sample=1`, ready);
-    }
   }
 }
 
@@ -220,11 +227,11 @@ export async function observeResponsiveRoute(api, {
         && localStorage.getItem('policycompass-journey') === null;
     } else if (route === '/emr') {
       const patientName = document.getElementById('selectedPatientName')?.textContent.trim() ?? '';
-      const patientMeta = document.getElementById('selectedPatientMeta')?.textContent ?? '';
+      const patientMeta = document.querySelector('[data-patient-id][aria-current="true"]')?.textContent ?? '';
       const encounter = document.getElementById('encounterStatusText')?.textContent.trim() ?? '';
       product['patient-encounter-context-preserved'] = patientName === '김비타'
         && /PC-1001/.test(patientMeta) && encounter.length > 0;
-      product['sign-review-complete'] = Boolean(document.getElementById('encounterSignoffSummary')?.textContent.trim())
+      product['sign-review-complete'] = Boolean(document.querySelector('.encounter-save-bar #signEncounter, .encounter-save-bar #completeEncounter'))
         && Boolean(document.querySelector('.patient-workspace-navigation'));
     }
     return {

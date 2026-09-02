@@ -190,7 +190,7 @@ npm run smoke:claims
 ```
 
 - `npm test`: 모델, FHIR, 급여 규칙, 백업, 라우트, 보안 헤더 검증. 서버 계약 테스트는 `.next` 빌드가 없으면 자동으로 `next build`를 먼저 실행합니다
-- `npm run smoke:emr`: 실행 중인 로컬 서버와 Chrome을 사용해 데모, 환자 인구정보, Encounter 진료기록, 신체·진료과 지도, 칸반, 동시 저장 충돌·복구를 실제 브라우저에서 검증
+- `npm run smoke:emr`: Chrome으로 React EMR을 실제로 조작해 데모 차트, 신체·진료과 지도, 급여 보드, FHIR 가져오기, 환자 인구정보, 진단·처방·오더 팝업과 서명 전 검토를 거친 Encounter 서명, 미저장 입력 보호, 저장 실패·손상 복구, 백업 내보내기·복원 차단과 탭 간 전체 삭제를 검증
 - `npm run smoke:handoff`: EMR 환자 전달 파일 생성, 별도 코드 확인, 명시적 Personal 교체와 두 앱 저장소 격리를 실제 브라우저에서 검증
 - `npm run smoke:first-use-patient`: 개인 첫 화면부터 Map, Connections, Insights, Journey까지 키보드·세션 유지·앱 경계를 네 가지 화면 크기로 검증
 - `npm run smoke:first-use-clinician`: 얇은 임상 헤더, 단일 환자 탭, 환자 안전 맥락과 점진적 노출을 네 가지 화면 크기로 검증

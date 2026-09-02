@@ -7,7 +7,7 @@ import { AUDIT_LABELS, downloadJson, downloadText, isClearedEmrState } from "../
 import { displayTimestamp, today } from "../../../lib/emr/format.js";
 
 export function DataTab({ state, store, dirtyGuardsRef }) {
-  const { setStatus, withTransition, bumpGeneration, replaceState } = store;
+  const { setStatus, bumpGeneration, replaceState } = store;
 
   const exportBackup = () => {
     const exportState = state.demo ? store.savedState : state;
@@ -40,12 +40,11 @@ export function DataTab({ state, store, dirtyGuardsRef }) {
   const onWipe = async () => {
     if (!window.confirm("이 브라우저의 PolicyCompass EMR 환자 기록과 기관 규칙을 모두 삭제할까요? 백업 없이는 복구할 수 없습니다.")) return;
     try {
-      await withTransition(async () => {
+      await replaceState(async () => {
         const cleared = await clearEmrState();
         bumpGeneration();
-        await replaceState(() => cleared, { persist: false, message: "이 브라우저의 PolicyCompass EMR 기록을 모두 삭제했습니다." })
-          .catch(() => {});
-      });
+        return cleared;
+      }, { persist: false, message: "이 브라우저의 PolicyCompass EMR 기록을 모두 삭제했습니다." });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "로컬 기록을 삭제하지 못했습니다.", "error");
     }

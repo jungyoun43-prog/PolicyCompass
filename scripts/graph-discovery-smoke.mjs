@@ -26,6 +26,8 @@ await runBrowserSmoke({
     for (const [route, kind] of [["/map", "map"], ["/connections", "connections"]]) {
       await setViewport(viewport);
       await navigate(`${route}?sample=1`, `Boolean(document.querySelector('[data-graph-discovery="${kind}"]'))`);
+      // The page controller boots after hydration; wait for it to name the selection.
+      await waitFor("/선택|보고|현재/.test(document.querySelector('[data-selection-state]')?.textContent ?? '')", `${route}: selection state did not settle`);
       const state = await evaluate(`(() => {
         const visible = (selector) => {
           const element = document.querySelector(selector);

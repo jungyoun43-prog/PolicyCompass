@@ -14,7 +14,7 @@ const identities = [
   { route: "/connections", selector: "#explorerTitle", text: "기록과 추론을 나눠 보기" },
   { route: "/insights", selector: "#insightTitle", text: "진료실에서 바로 꺼내 보는 질문 브리프" },
   { route: "/journey", selector: "#journeyPageTitle", text: "한 장면이 아니라 변화를 봅니다." },
-  { route: "/emr", selector: "#emrTitle", text: "오늘 진료" },
+  { route: "/emr", selector: "#selectedPatientName", text: "김비타" },
 ];
 
 const profile = await mkdtemp(join(tmpdir(), "policycompass-route-identity-"));

@@ -143,7 +143,14 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   const [visitSlot, setVisitSlot] = useState(null);
   useEffect(() => { setVisitSlot(document.getElementById("visitContextSlot")); }, []);
   const [activeDialog, setActiveDialog] = useState("");
-  const dialogsDirtyRef = useRef(() => false);
+  // Each entry dialog keeps its own dirty probe; the encounter is dirty when any
+  // of them still holds unsubmitted input.
+  const dialogProbesRef = useRef(new Map());
+  const dialogsDirtyRef = useRef(() => [...dialogProbesRef.current.values()].some((probe) => probe()));
+  const registerDirty = useMemo(() => Object.fromEntries(["diagnosis", "prescription", "order"].map((name) => [
+    name,
+    (probe) => { dialogProbesRef.current.set(name, probe); },
+  ])), []);
   const formRef = useRef(form);
   formRef.current = form;
 
@@ -174,6 +181,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   }, [encounter]);
 
   useEffect(() => {
+    dirtyGuardsRef.current.composer = () => dialogsDirtyRef.current();
     dirtyGuardsRef.current.encounter = () => dialogsDirtyRef.current() || draftDiffers(formRef.current, encounter);
   }, [dirtyGuardsRef, encounter]);
 
@@ -229,7 +237,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
   });
 
   const onComplete = guard(async () => {
-    if (blockClinicalContextChange()) return;
+    if (blockClinicalContextChange({ composersOnly: true })) return;
     await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, draftFromForm(formRef.current)), "진료를 완료했습니다. 최종 검토 후 서명하세요.");
     queueMicrotask(() => {
       const title = document.getElementById("encounterSignReviewTitle");
@@ -381,7 +389,6 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
     setStatus,
     activeDialog,
     setActiveDialog,
-    registerDirty: (probe) => { dialogsDirtyRef.current = probe; },
   };
 
   return (
@@ -410,7 +417,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         <div className="entry-grid">
 
         <WorkflowDisclosure name="diagnoses" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""}>
-          <DiagnosisDialog {...dialogShared} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />
+          <DiagnosisDialog {...dialogShared} registerDirty={registerDirty.diagnosis} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="diagnosisList" ariaLabel="이번 진료 진단 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "이번 진료 진단을 추가하세요." : "이번 진료 진단 없음"}
             entries={records.filter((event) => event.type === "condition").map((diagnosis) => ({
@@ -424,7 +431,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         </WorkflowDisclosure>
 
         <WorkflowDisclosure name="prescriptions" title="처방 기록" titleId="prescriptionTitle" summaryText={`${entryCounts.prescriptions}건`} summaryTone={entryCounts.prescriptions ? "ready" : ""}>
-          <PrescriptionDialog {...dialogShared} key={`rx:${patient.id}:${encounter?.id ?? ""}`} />
+          <PrescriptionDialog {...dialogShared} registerDirty={registerDirty.prescription} key={`rx:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="prescriptionList" ariaLabel="이번 진료 처방 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "처방이 필요한 경우 구조화해 추가하세요." : "이번 진료 처방 없음"}
             entries={records.filter((event) => event.type === "medication").map((medication) => {
@@ -442,7 +449,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
         </WorkflowDisclosure>
 
         <WorkflowDisclosure name="orders" title="검사·처치·의뢰 오더" titleId="orderTitle" summaryText={`${entryCounts.orders}건`} summaryTone={entryCounts.orders ? "ready" : ""}>
-          <OrderDialog {...dialogShared} key={`order:${patient.id}:${encounter?.id ?? ""}`} />
+          <OrderDialog {...dialogShared} registerDirty={registerDirty.order} key={`order:${patient.id}:${encounter?.id ?? ""}`} />
           <EncounterEntryList id="orderList" ariaLabel="이번 진료 오더 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"}
             entries={records.filter((event) => event.type === "service-request").map((order) => {
@@ -540,14 +547,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
 
         <section className="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
           <h3 className="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
-          <div className="encounter-save-context">
-            <p className="encounter-signoff-summary" id="encounterSignoffSummary" data-tone={attention.length ? "attention" : "ready"}>
-              {attention.length
-                ? `서명 전 확인 ${attention.length}건 · 급여 점검에서 기간·횟수·근거를 검토하세요.`
-                : "즉시 보완 항목 없음 · 서명 전 기록과 실제 청구 기준을 다시 확인하세요."}
-            </p>
-            <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
-          </div>
+          <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
           <div className="encounter-save-actions">
             <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
             <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
@@ -574,7 +574,7 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           <details className="clinical-card encounter-details workflow-disclosure" aria-labelledby="encounterDetailsTitle" data-workflow-disclosure="visit-context" open={disclosureOpen("visit-context")} onToggle={(event) => onDisclosureToggle("visit-context", event.currentTarget.open)}>
             <summary className="workflow-disclosure__summary">
               <span className="workflow-disclosure__heading"><span className="rail-eyebrow">VISIT CONTEXT</span><span className="workflow-disclosure__title" id="encounterDetailsTitle" role="heading" aria-level={3}>진료 기본정보</span></span>
-              <span className="workflow-disclosure__signals"><span className="encounter-state" id="encounterStatus" data-status={status} aria-live="polite" tabIndex={-1}><span className="encounter-state__dot" aria-hidden="true"></span><b id="encounterStatusText">{QUEUE_LABELS[status]}</b></span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
+              <span className="workflow-disclosure__signals"><span className="encounter-state" id="encounterStatus" data-status={status} role="status" aria-label="진료 상태" aria-live="polite" tabIndex={-1}><span className="encounter-state__dot" aria-hidden="true"></span><b id="encounterStatusText">{QUEUE_LABELS[status]}</b></span><span className="workflow-disclosure__meta" data-disclosure-summary="visit-context" data-tone={status === "in-progress" && contextCount < 2 ? "attention" : contextCount > 1 ? "ready" : undefined}>{status === "none" ? "접수 후 입력" : `${contextCount}/5 작성`}</span></span>
             </summary>
             <div className="workflow-disclosure__body">
               <fieldset className="form-fieldset form-fieldset--plain" disabled={!editable}>

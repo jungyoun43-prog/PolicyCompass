@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { CLAIM_LANE_LABELS, CLAIM_LANE_ORDER } from "../../../src/claim-rules.js";
+import { CLAIM_LANE_ORDER } from "../../../src/claim-rules.js";
 import { searchClaimIndex } from "../../../src/claim-search.js";
 import {
   evaluateDiseaseAssessment,
@@ -265,7 +265,7 @@ export function ClaimsTab({ state, patient, store }) {
           </section>
         </section>
 
-        <p className="visually-hidden" id="claimBoardLive" role="status" aria-live="polite">{diseaseLiveMessage}</p>
+        <p className="visually-hidden" id="diseaseAssessmentLive" role="status" aria-live="polite">{diseaseLiveMessage}</p>
         <DiseaseAssessmentCard state={state} patient={patient} selectedDiseaseId={selectedDiseaseId} onSelectDisease={onSelectDisease} />
       </div>
 

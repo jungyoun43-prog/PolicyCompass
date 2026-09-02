@@ -28,7 +28,7 @@ import { today } from "../../lib/emr/format.js";
  * or cross-tab drift, and the transfer confirm shows the one-time code.
  */
 export function DataUtilities({ state, patient, store, setFhirReport, setViewedEncounterId, selectTab, dirtyGuardsRef, blockClinicalContextChange }) {
-  const { setStatus, withTransition, replaceState } = store;
+  const { setStatus, replaceState } = store;
   const [transferStatus, setTransferStatus] = useState({ message: "", tone: "" });
   const fhirInputRef = useRef(null);
   const backupInputRef = useRef(null);
@@ -64,7 +64,9 @@ export function DataUtilities({ state, patient, store, setFhirReport, setViewedE
     try {
       if (blockClinicalContextChange({ patientChanged: true })) return;
       const file = input.files?.[0];
-      await withTransition(async () => {
+      // replaceState is the transition itself: nesting it inside withTransition
+      // would trip the busy gate and leave the workspace showing stale state.
+      await replaceState(async () => {
         const bundle = await readJsonFile(file, 2 * 1024 * 1024);
         const result = parseEmrFhirBundle(bundle);
         setFhirReport(result.provenance);
@@ -84,12 +86,12 @@ export function DataUtilities({ state, patient, store, setFhirReport, setViewedE
           importedPatient.id,
         );
         const saved = await saveEmrState(candidate, undefined, expectedRevision);
-        await replaceState(() => saved, { persist: false }).catch(() => {});
         store.setSavedState(saved);
         setViewedEncounterId("");
         selectTab("encounter");
         setStatus("FHIR R4에서 환자 1명과 임상기록 " + importedPatient.events.length + "건을 가져왔습니다. 외부 미검증 기록은 확정 요약·AI·급여 근거에서 제외하며 미지원 " + result.provenance.unsupported + "건입니다.", "success");
-      });
+        return saved;
+      }, { persist: false });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "FHIR 가져오기에 실패했습니다.", "error");
     } finally {
@@ -106,12 +108,12 @@ export function DataUtilities({ state, patient, store, setFhirReport, setViewedE
     }
     try {
       const file = input.files?.[0];
-      await withTransition(async () => {
+      await replaceState(async () => {
         const backup = await readJsonFile(file);
         const parsed = parseEmrBackup(backup);
         if (!window.confirm("이 JSON 백업은 암호화·전자서명·원본 기관을 검증하지 않습니다. 복원된 모든 임상 기록은 출처 미검증으로 격리되어 AI·급여 근거·FHIR 내보내기·환자용 정제 연결에서 제외되며, 복원 초안도 로컬 확정·서명할 수 없습니다. 백업의 기관 규칙·감사 이력·담당자 검토 단계도 신뢰하지 않고 복원하지 않습니다. 현재 기록 교체는 별도 백업 없이는 복구할 수 없습니다.")) {
           setStatus("백업 복원을 취소했습니다.");
-          return;
+          return null;
         }
         const persistedState = state.demo ? store.savedState : state;
         const restoredAt = new Date().toISOString();
@@ -124,12 +126,12 @@ export function DataUtilities({ state, patient, store, setFhirReport, setViewedE
         } else {
           saved = await restoreEmrBackupState(parsed, persistedState, undefined, restoredAt);
         }
-        await replaceState(() => saved, { persist: false }).catch(() => {});
         store.setSavedState(saved);
         setViewedEncounterId("");
         setFhirReport(null);
         setStatus("백업의 모든 임상 기록을 출처 미검증 상태로 복원·격리했습니다. 이 로컬 샌드박스에서는 AI·급여·FHIR·환자용 정제 연결·로컬 서명의 근거에서 제외합니다.", "success");
-      });
+        return saved;
+      }, { persist: false });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "백업 복원에 실패했습니다.", "error");
     } finally {

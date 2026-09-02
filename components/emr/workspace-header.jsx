@@ -21,7 +21,7 @@ const TABS = [
  * know whose chart is open while scrolled. Arrow/Home/End keyboard handling
  * comes from the primitive; the full identity lives in the patient rail.
  */
-export function WorkspaceHeader({ patient }) {
+export function WorkspaceHeader({ patient, onSelectTab }) {
   const tabListRef = useHorizontalScrollPosition();
   const chart = finalizedPatient(patient);
   const firstAllergy = chart.events.find((event) => event.type === "allergy");
@@ -35,7 +35,7 @@ export function WorkspaceHeader({ patient }) {
       </span>
       <TabsPrimitive.List className="workspace-tabs" aria-label="선택 환자 화면" ref={tabListRef} loop>
         {TABS.map(([key, label]) => (
-          <TabsPrimitive.Trigger key={key} value={key} id={`tab-${key}`} data-tab={key}>{label}</TabsPrimitive.Trigger>
+          <TabsPrimitive.Trigger key={key} value={key} id={`tab-${key}`} data-tab={key} onClick={() => onSelectTab?.(key)}>{label}</TabsPrimitive.Trigger>
         ))}
       </TabsPrimitive.List>
     </div>

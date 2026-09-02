@@ -22,7 +22,7 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
         <p className="rail-eyebrow">SELECTED PATIENT</p>
         <div className="patient-identity__row">
           <div>
-            <h2 id="selectedPatientName">{patient.name}</h2>
+            <h1 id="selectedPatientName">{patient.name}</h1>
             <span id="selectedPatientMeta">{[
               patientAgeLabel(patient).replace(/^만\s*/, ""),
               SEX_LABELS[patient.sex],

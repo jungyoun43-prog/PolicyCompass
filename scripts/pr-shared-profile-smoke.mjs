@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { assert, runBrowserSmoke, writeSmokeReport } from "./browser-smoke-harness.mjs";
 
 const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
@@ -31,7 +31,7 @@ try {
       await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", "Clinician sample workspace did not open.");
       const context = await evaluate(`({
         patient: document.getElementById('selectedPatientName')?.textContent.trim(),
-        mrn: document.getElementById('selectedPatientMeta')?.textContent.trim(),
+        mrn: document.querySelector('[data-patient-id][aria-current="true"]')?.textContent.trim(),
         encounter: document.getElementById('encounterStatusText')?.textContent.trim(),
         patientRouteLinks: [...document.querySelectorAll('a[href]')]
           .filter((link) => ['/patient','/map','/connections','/insights','/journey'].includes(new URL(link.href).pathname)).length
@@ -61,6 +61,7 @@ try {
       await navigate("/map?sample=1", "document.getElementById('conditionCount')?.textContent !== '0개'");
       assert(await evaluate("sessionStorage.getItem('policycompass-scene') === null"), "Patient sample wrote a real Personal scene.");
       await navigate("/journey?sample=1", "Boolean(document.querySelector('[data-story-section=\"changed\"]'))");
+      await waitFor("document.getElementById('journeyTimeline')?.hidden === true", "Sample Journey did not settle into its synthetic fixture.");
       assert(await evaluate("new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('journeyTimeline').hidden && sessionStorage.getItem('policycompass-scene') === null"), "Patient sample crossed into real Journey or persisted a scene.");
     });
 

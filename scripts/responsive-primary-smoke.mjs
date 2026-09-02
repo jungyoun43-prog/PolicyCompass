@@ -13,7 +13,7 @@ const routes = [
   { route: "/connections", selector: "#connectionsPrimaryEntry", text: "관계 지도 바로 보기", beforeSelector: ".explorer-first-use" },
   { route: "/insights", selector: "#refreshClinicalSnapshot", text: "가져온 기록 다시 확인" },
   { route: "/journey", selector: "#journeyEmpty .journey-first-action--primary", text: "첫 지도 만들기", beforeSelector: ".journey-data-tools" },
-  { route: "/emr", selector: "#loadDemo", text: "예시 환자 불러오기" },
+  { route: "/emr", selector: "#completeEncounter", text: "진료 완료" },
 ];
 const profile = await mkdtemp(join(tmpdir(), "policycompass-responsive-primary-"));
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -89,7 +89,7 @@ try {
     await client.call("Page.navigate", { url: `${appUrl}${expectation.route}` });
     for (let attempt = 0; attempt < 100; attempt += 1) {
       const ready = await client.call("Runtime.evaluate", {
-        expression: `document.readyState === 'complete' && Boolean(document.querySelector(${JSON.stringify(expectation.selector)}))`,
+        expression: `document.readyState === 'complete' && (document.querySelector(${JSON.stringify(expectation.selector)})?.getBoundingClientRect().width ?? 0) > 0`,
         returnByValue: true,
       }).catch(() => ({ result: { value: false } }));
       if (ready.result.value) break;

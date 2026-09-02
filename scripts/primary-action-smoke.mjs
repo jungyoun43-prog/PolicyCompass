@@ -114,8 +114,13 @@ try {
   }
 
   await navigate("/map");
-  await evaluate("document.getElementById('analyzeButton').click()");
-  await waitFor("!document.getElementById('formError').hidden", "/map empty primary action did not expose validation");
+  // The map controller boots after hydration: a synthetic submit is only
+  // handled (and refused) once its listener is attached.
+  await waitFor(`(() => {
+    const event = new Event('submit', { cancelable: true });
+    document.getElementById('healthForm').dispatchEvent(event);
+    return event.defaultPrevented && !document.getElementById('formError').hidden;
+  })()`, "/map empty primary action did not expose validation");
   await evaluate(`document.getElementById('healthNote').value='혈압 148/94';document.getElementById('healthNote').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('analyzeButton').click()`);
   await waitFor("document.getElementById('miniConditionList').children.length > 0", "/map valid primary action did not update state");
   assert(await evaluate("document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님')"), "/map promoted a text pattern without marking it as a non-diagnostic signal");

@@ -114,8 +114,16 @@ await runBrowserSmoke({
     ["/insights?sample=1", "#questionCount", "insights"],
     ["/journey?sample=1", "#journeyComparison", "journey"],
   ];
+  // Each Personal controller boots after hydration; wait for its first render.
+  const settledExpressions = {
+    map: "Boolean(document.querySelector('[data-selection-state]')?.textContent.trim())",
+    connections: "Boolean(document.querySelector('[data-selection-state]')?.textContent.trim())",
+    insights: "document.getElementById('questions')?.getBoundingClientRect().height > 0 && document.querySelector('.signal-card > summary')?.getBoundingClientRect().height > 0",
+    journey: "document.getElementById('journeyComparison')?.getBoundingClientRect().height > 0 && document.getElementById('journeyComparisonDetail')?.hidden === true && document.querySelector('[data-first-use]')?.getBoundingClientRect().height > 0",
+  };
   for (const [route, readySelector, name] of routeExpectations) {
     await navigate(route, `Boolean(document.querySelector(${JSON.stringify(readySelector)}))`);
+    await waitFor(settledExpressions[name], `${route}: page controller did not settle`);
     const result = await evaluate(`(() => {
       const visible = (selector) => {
         const element = document.querySelector(selector);
@@ -172,10 +180,15 @@ await runBrowserSmoke({
     const note = document.getElementById('healthNote');
     note.value = '혈압 148/94';
     note.dispatchEvent(new Event('input', { bubbles: true }));
-    document.getElementById('analyzeButton').click();
   })()`);
+  // The map controller boots after hydration; a synthetic submit is only
+  // handled once its listener is attached (a native click would reload).
   await waitFor(
-    "document.getElementById('formError').hidden && document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님')",
+    `(() => {
+      const event = new Event('submit', { cancelable: true });
+      document.getElementById('healthForm').dispatchEvent(event);
+      return event.defaultPrevented && document.getElementById('formError').hidden && document.getElementById('miniConditionList').textContent.includes('패턴 신호 · 진단 아님');
+    })()`,
     "Text-only measurement did not render as a non-diagnostic pattern signal.",
   );
   const patternSignal = await evaluate(`(() => ({

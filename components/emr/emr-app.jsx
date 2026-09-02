@@ -40,7 +40,7 @@ export function EmrApp() {
   const [editRequest, setEditRequest] = useState(null);
   const [ai, setAi] = useState({ checked: false, configured: false, label: "규칙 기반 모드", detail: "연결 확인 중" });
   const [fhirReport, setFhirReport] = useState(null);
-  const dirtyGuardsRef = useRef({ encounter: () => false, patientForm: () => false, manualEvent: () => false });
+  const dirtyGuardsRef = useRef({ encounter: () => false, composer: () => false, patientForm: () => false, manualEvent: () => false });
 
   useEffect(() => {
     let cancelled = false;
@@ -85,10 +85,15 @@ export function EmrApp() {
     [patient, state, encounter],
   );
 
-  /** The pre-React guard: pending clinical input blocks patient/context switches. */
-  const blockClinicalContextChange = useCallback(({ patientChanged = false } = {}) => {
+  /**
+   * The pre-React guard: pending clinical input blocks patient/context switches.
+   * Completing the encounter folds unsaved SOAP text into the record, so it
+   * only asks about the dialog composers (composersOnly); every other switch
+   * would drop an unsaved SOAP draft and checks the whole encounter form.
+   */
+  const blockClinicalContextChange = useCallback(({ patientChanged = false, composersOnly = false } = {}) => {
     const guards = dirtyGuardsRef.current;
-    const hasClinicalComposer = guards.encounter();
+    const hasClinicalComposer = composersOnly ? guards.composer() : guards.encounter();
     const hasManualEvent = patientChanged && guards.manualEvent();
     if (!hasClinicalComposer && !hasManualEvent) return false;
     setStatus(hasManualEvent
@@ -185,7 +190,7 @@ export function EmrApp() {
   return (
     <>
       <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
-      <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="manual">
+      <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="automatic">
       <div className="emr-frame">
       <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai}
         nav={patient ? <WorkspaceHeader patient={patient} activeTab={activeTab} onSelectTab={selectTab} /> : null} />
@@ -225,30 +230,31 @@ export function EmrApp() {
             {!patient ? (
               <div className="workspace-empty" id="workspaceEmpty">
                 <img className="workspace-empty__mark" src="/assets/clinical-workspace-empty.png" width={176} height={176} alt="" aria-hidden="true" />
-                <h2>환자를 선택하면 진료 화면이 열립니다.</h2>
+                <h1>환자를 선택하면 진료 화면이 열립니다.</h1>
                 <p>차트·신체 지도·급여 보드를 한 화면에서 확인합니다.</p>
               </div>
             ) : (
               <div id="workspaceContent">
-                <TabsPrimitive.Content asChild forceMount value="encounter"><section className="workspace-panel encounter-panel" id="panel-encounter" data-panel="encounter" hidden={activeTab !== "encounter"}>
+                {/* Triggers carry their own ids (tab-*), so each panel names its tab explicitly. */}
+                <TabsPrimitive.Content asChild forceMount value="encounter"><section className="workspace-panel encounter-panel" id="panel-encounter" data-panel="encounter" aria-labelledby="tab-encounter" hidden={activeTab !== "encounter"}>
                   <EncounterTab {...tabProps} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="overview"><section className="workspace-panel" id="panel-overview" data-panel="overview" hidden={activeTab !== "overview"}>
+                <TabsPrimitive.Content asChild forceMount value="overview"><section className="workspace-panel" id="panel-overview" data-panel="overview" aria-labelledby="tab-overview" hidden={activeTab !== "overview"}>
                   <OverviewTab {...tabProps} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="chart"><section className="workspace-panel" id="panel-chart" data-panel="chart" hidden={activeTab !== "chart"}>
+                <TabsPrimitive.Content asChild forceMount value="chart"><section className="workspace-panel" id="panel-chart" data-panel="chart" aria-labelledby="tab-chart" hidden={activeTab !== "chart"}>
                   <ChartTab {...tabProps} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="graph"><section className="workspace-panel" id="panel-graph" data-panel="graph" hidden={activeTab !== "graph"}>
+                <TabsPrimitive.Content asChild forceMount value="graph"><section className="workspace-panel" id="panel-graph" data-panel="graph" aria-labelledby="tab-graph" hidden={activeTab !== "graph"}>
                   <BodyTab {...tabProps} active={activeTab === "graph"} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="claims"><section className="workspace-panel" id="panel-claims" data-panel="claims" hidden={activeTab !== "claims"}>
+                <TabsPrimitive.Content asChild forceMount value="claims"><section className="workspace-panel" id="panel-claims" data-panel="claims" aria-labelledby="tab-claims" hidden={activeTab !== "claims"}>
                   <ClaimsTab {...tabProps} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="journey"><section className="workspace-panel" id="panel-journey" data-panel="journey" hidden={activeTab !== "journey"}>
+                <TabsPrimitive.Content asChild forceMount value="journey"><section className="workspace-panel" id="panel-journey" data-panel="journey" aria-labelledby="tab-journey" hidden={activeTab !== "journey"}>
                   <JourneyTab {...tabProps} />
                 </section></TabsPrimitive.Content>
-                <TabsPrimitive.Content asChild forceMount value="data"><section className="workspace-panel" id="panel-data" data-panel="data" hidden={activeTab !== "data"}>
+                <TabsPrimitive.Content asChild forceMount value="data"><section className="workspace-panel" id="panel-data" data-panel="data" aria-labelledby="tab-data" hidden={activeTab !== "data"}>
                   <DataTab {...tabProps} />
                 </section></TabsPrimitive.Content>
               </div>

@@ -219,14 +219,15 @@ export function DiseaseAssessmentCard({ state, patient, selectedDiseaseId, onSel
         <TabsPrimitive.List className="disease-assessment-tabs" id="diseaseAssessmentTabs" aria-label="질환 평가 선택" loop>
           {options.length === 0 ? <span className="claim-overview-empty">{emptyMessage || "연결된 질환을 확인하는 중입니다."}</span> : options.map((option) => (
             <TabsPrimitive.Trigger className="disease-assessment-tab" key={option.id} value={option.id}
-              data-disease-assessment-id={option.id} aria-controls="diseaseAssessmentPanel">
+              data-disease-assessment-id={option.id} aria-controls="diseaseAssessmentPanel" onClick={() => onSelectDisease(option.id)}>
               <b>{option.label}</b><small>{option.shortLabel}</small>
             </TabsPrimitive.Trigger>
           ))}
         </TabsPrimitive.List>
       </TabsPrimitive.Root>
 
-      <div className="disease-assessment-panel" id="diseaseAssessmentPanel" role="tabpanel" aria-labelledby="diseaseAssessmentTitle" tabIndex={0}>
+      {/* Keyed by disease so its native disclosures remount closed on every switch. */}
+      <div className="disease-assessment-panel" id="diseaseAssessmentPanel" role="tabpanel" aria-labelledby="diseaseAssessmentTitle" tabIndex={0} key={activeId}>
         <div className="disease-program-heading">
           <div>
             <p className="rail-eyebrow" id="diseaseProgramEyebrow">{result ? result.program.eyebrow : "SUPPORTED PROGRAM"}</p>

@@ -788,7 +788,7 @@ body.emr-page {
   filter: drop-shadow(0 18px 28px color-mix(in srgb, var(--ink) 12%, transparent));
 }
 
-.workspace-empty h2 {
+.workspace-empty h1 {
   max-width: 20ch;
   margin: var(--space-2) 0;
   font-size: 1.75rem;
@@ -823,7 +823,7 @@ body.emr-page {
   gap: var(--space-1);
 }
 
-.patient-identity h2 {
+.patient-identity h1 {
   margin: 0;
   font-size: 1.45rem;
   letter-spacing: -0.05em;
@@ -1247,19 +1247,27 @@ body.emr-page {
   border-color: var(--accent);
 }
 
+/* A floating action dock: it rides the bottom edge while the note scrolls. */
 .encounter-save-bar {
-  position: static;
+  position: sticky;
+  bottom: var(--space-3);
   z-index: 8;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--ink) 18%, var(--line));
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  padding: var(--space-3);
-  box-shadow: 0 14px 40px color-mix(in srgb, var(--ink) 13%, transparent);
-  backdrop-filter: blur(14px);
+  justify-content: flex-end;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, var(--line));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  padding: var(--space-2);
+  box-shadow:
+    0 1.125rem 2.75rem color-mix(in srgb, var(--ink) 20%, transparent),
+    0 0.125rem 0.375rem color-mix(in srgb, var(--ink) 8%, transparent);
+  backdrop-filter: blur(1.125rem);
 }
 
 .encounter-mobile-claim {
@@ -1269,25 +1277,14 @@ body.emr-page {
 }
 
 .encounter-save-bar .form-message {
+  flex: 1 1 15rem;
+  min-width: 0;
+  min-height: 0;
   padding-inline: var(--space-2);
 }
 
-.encounter-save-context {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-1);
-}
-
-.encounter-signoff-summary {
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--font-size-caption);
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.encounter-signoff-summary[data-tone="attention"] {
-  color: color-mix(in srgb, var(--data-amber) 72%, var(--ink));
+.encounter-save-bar .form-message:empty {
+  display: none;
 }
 
 .sign-review {
@@ -4106,7 +4103,7 @@ body.emr-page {
   color: var(--ink);
 }
 
-.claim-card__details[open],
+.claim-card__details:is([open], [data-claim-detail-open]),
 .claim-card__details[data-claim-detail-open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -5478,7 +5475,7 @@ body.emr-page {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
   .clinical-layout {
     grid-template-columns: 1fr;
   }
@@ -5697,9 +5694,13 @@ body.emr-page {
     grid-template-columns: 1fr;
   }
 
-  .encounter-command-card,
-  .encounter-save-bar {
+  .encounter-command-card {
     grid-template-columns: 1fr;
+  }
+
+  .encounter-save-bar {
+    width: 100%;
+    border-radius: var(--radius-panel);
   }
 
   .encounter-command-heading {
@@ -5711,9 +5712,16 @@ body.emr-page {
     justify-content: stretch;
   }
 
-  .encounter-quick-actions .clinical-button,
-  .encounter-save-actions .clinical-button {
+  .encounter-quick-actions .clinical-button {
     flex: 1 1 130px;
+  }
+
+  .encounter-save-actions {
+    flex: 1 1 100%;
+  }
+
+  .encounter-save-actions .clinical-button {
+    flex: 1 1 5.5rem;
   }
 
   .diagnosis-form-grid .clinical-system-field,
@@ -6583,7 +6591,7 @@ button.claim-attention-item__summary:focus-visible {
   box-shadow: -28px 0 90px color-mix(in srgb, var(--ink) 26%, transparent);
 }
 
-.claim-card__details[open] {
+.claim-card__details:is([open], [data-claim-detail-open]) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   animation: claim-drawer-enter 180ms ease-out both;
@@ -7643,7 +7651,7 @@ button.claim-attention-item__summary:focus-visible {
   line-height: 1.65;
 }
 
-.claim-review-detail-host:has(.claim-card__details[open]) .claim-review-detail-empty {
+.claim-review-detail-host:has(.claim-card__details:is([open], [data-claim-detail-open])) .claim-review-detail-empty {
   display: none;
 }
 
@@ -7663,7 +7671,7 @@ button.claim-attention-item__summary:focus-visible {
   animation: none;
 }
 
-.claim-review-detail-host .claim-card__details[open] {
+.claim-review-detail-host .claim-card__details:is([open], [data-claim-detail-open]) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   transform: none;
@@ -7729,11 +7737,11 @@ button.claim-attention-item__summary:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .claim-review-detail-host:not(:has(.claim-card__details[open])) {
+  .claim-review-detail-host:not(:has(.claim-card__details:is([open], [data-claim-detail-open]))) {
     display: none;
   }
 
-  .claim-review-detail-host:has(.claim-card__details[open]) {
+  .claim-review-detail-host:has(.claim-card__details:is([open], [data-claim-detail-open])) {
     position: static;
     min-height: 0;
     max-height: none;
@@ -7757,7 +7765,7 @@ button.claim-attention-item__summary:focus-visible {
     border-radius: 0;
   }
 
-  .claim-review-detail-host .claim-card__details[open] {
+  .claim-review-detail-host .claim-card__details:is([open], [data-claim-detail-open]) {
     display: grid;
   }
 
@@ -9513,7 +9521,7 @@ model-viewer::part(default-progress-mask) {
   gap: var(--space-2);
 }
 
-.rail-selected-patient .patient-identity__row h2 {
+.rail-selected-patient .patient-identity__row h1 {
   font-size: 1.15rem;
 }
 
@@ -9547,7 +9555,7 @@ model-viewer::part(default-progress-mask) {
   letter-spacing: -0.01em;
 }
 
-.rail-selected-patient .patient-identity__row h2 {
+.rail-selected-patient .patient-identity__row h1 {
   font-size: 1.05rem;
 }
 
@@ -9623,7 +9631,7 @@ model-viewer::part(default-progress-mask) {
   justify-content: space-between;
 }
 
-.rail-selected-patient .patient-identity__row h2 {
+.rail-selected-patient .patient-identity__row h1 {
   font-size: 1.4rem;
   letter-spacing: -0.04em;
 }
@@ -11218,4 +11226,128 @@ model-viewer::part(default-progress-mask) {
 .clinical-header .header-ai-status {
   white-space: nowrap;
   flex: 0 0 auto;
+}
+
+/* --- Fluid width envelope --------------------------------------------------- */
+
+/* The workspace is fluid, but a zoomed-out or ultra-wide window must not turn
+   the note into 1,500px lines: the shell caps at a reading width and the side
+   columns scale with the viewport instead of stepping between fixed sizes. */
+.emr-page {
+  --emr-max-width: 1720px;
+  --emr-rail-width: clamp(16rem, 23vw, 21.25rem);
+  --emr-context-width: clamp(17rem, 23vw, 25rem);
+}
+
+.emr-shell,
+.clinical-header .app-header__inner {
+  width: min(calc(100% - var(--space-6)), var(--emr-max-width));
+}
+
+.clinical-layout {
+  grid-template-columns: var(--emr-rail-width) minmax(0, 1fr);
+}
+
+.encounter-layout {
+  grid-template-columns: minmax(0, 1fr) var(--emr-context-width);
+}
+
+/* Above phone widths the header never grows a second row: actions stay on
+   one line and the patient chip yields before the scrolling tab list does. */
+@media (min-width: 621px) {
+  .clinical-header .command-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  .clinical-header .command-actions .clinical-button {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1180px) {
+  .clinical-layout {
+    grid-template-columns: var(--emr-rail-width) minmax(0, 1fr);
+  }
+
+  .encounter-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .clinical-header .workspace-tabs__context {
+    display: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .clinical-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .emr-shell,
+  .clinical-header .app-header__inner {
+    width: min(calc(100% - var(--space-4)), var(--emr-max-width));
+  }
+}
+
+/* --- Phone header: two rows, tabs on their own line ------------------------- */
+
+/* The slim single row survives on a phone by shedding identity text: the
+   brand keeps its mark, the AI status keeps its dot, actions stay compact and
+   the tab list scrolls in whatever width remains. */
+@media (max-width: 620px) {
+  .clinical-header .app-brand {
+    flex: 0 0 auto;
+  }
+
+  .clinical-header .app-brand > span:not(.app-brand__mark) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .clinical-header .header-ai-status {
+    flex: 0 0 auto;
+  }
+
+  .clinical-header .header-ai-status #aiStatusLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .clinical-header .patient-workspace-navigation {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .clinical-header .command-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    width: auto;
+  }
+
+  .clinical-header .command-actions .clinical-button {
+    width: auto;
+    padding-inline: var(--space-2);
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+}
+
+/* --- Phone drawer: review controls are touch targets ------------------------ */
+@media (max-width: 900px) {
+  .claim-review-control select,
+  .claim-review-control input {
+    min-height: 44px;
+  }
 }

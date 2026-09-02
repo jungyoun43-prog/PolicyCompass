@@ -22,7 +22,7 @@ await runBrowserSmoke({
   debugPort,
   profilePrefix: "policycompass-quality-ui-",
   initialViewport: { width: 1440, height: 1200, mobile: false },
-}, async ({ client, evaluate, navigate, setViewport, tabTo, waitFor }) => {
+}, async ({ client, evaluate, navigate, press, setViewport, tabTo, waitFor }) => {
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
 
   async function selectPatient(patientId, name, metricCount) {
@@ -55,7 +55,7 @@ await runBrowserSmoke({
           countsBelowHeadline: Boolean(headlineRect && countsRect && countsRect.top >= headlineRect.bottom - 1),
         };
       })(),
-      claimText: [document.getElementById('claimAttentionList'), document.getElementById('claimAttentionAllList')].map((node) => node.textContent).join(' '),
+      claimText: [document.getElementById('claimAttentionList'), document.getElementById('claimAttentionAllList')].map((node) => node?.textContent ?? '').join(' '),
       adjudicationSummary: document.getElementById('claimAdjudicationSummary').textContent,
       adjudicationText: document.getElementById('claimAdjudicationList').textContent,
       adjustedCount: document.querySelectorAll('.claim-adjudication-item[data-adjudication-state="adjusted"]').length,
@@ -154,7 +154,9 @@ await runBrowserSmoke({
   assert(jungPneumonia.claimSummary === jungCopd.claimSummary && jungPneumonia.claimText === jungCopd.claimText, "질환 전환으로 전체 청구 주의사항이 바뀌었습니다.");
   const closedOnSwitch = await evaluate("!document.getElementById('diseaseQualityDisclosure').open && !document.getElementById('diseaseDiagnosticDisclosure').open && !document.getElementById('diseaseAssessmentSources').open");
   assert(closedOnSwitch, "질환 전환 시 이전 상세 패널이 닫히지 않았습니다.");
-  await evaluate("document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').focus(); document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))");
+  // Radix selects on a real keyboard event, so the arrow goes through CDP.
+  await evaluate("document.querySelector('[data-disease-assessment-id=\"pneumonia\"]').focus()");
+  await press("ArrowRight", "ArrowRight");
   await waitFor("document.querySelector('[data-disease-assessment-id=\"copd\"]')?.getAttribute('aria-selected') === 'true'", "질환 탭 키보드 순환 실패");
   const keyFocus = await evaluate("document.activeElement?.dataset?.diseaseAssessmentId");
   assert(keyFocus === "copd", `질환 탭 roving focus 오류: ${keyFocus}`);

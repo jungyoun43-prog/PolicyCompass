@@ -68,10 +68,13 @@ await runBrowserSmoke({
   await navigate("/emr", "Boolean(document.getElementById('eventDate')?.value)");
   await evaluate("document.getElementById('loadDemo').click()");
   await waitFor("document.getElementById('selectedPatientName')?.textContent === '김비타'", "Sample workspace did not open for keyboard validation.");
-  await evaluate("document.getElementById('tab-encounter').focus()");
-  await press("ArrowRight", "ArrowRight");
-  await press("ArrowRight", "ArrowRight");
-  await press("ArrowRight", "ArrowRight");
+  // The sample chart re-renders the tab list right after it loads; hold
+  // focus on the first tab until it sticks, then walk with arrows.
+  await waitFor("(() => { const tab = document.getElementById('tab-encounter'); tab?.focus(); return document.activeElement === tab; })()", "First patient tab did not take focus.");
+  for (const next of ["overview", "chart", "graph"]) {
+    await press("ArrowRight", "ArrowRight");
+    await waitFor(`document.activeElement === document.getElementById('tab-${next}')`, `Arrow key did not move focus to the ${next} tab.`);
+  }
   await waitFor("document.getElementById('tab-graph').getAttribute('aria-selected') === 'true'", "Arrow-key navigation did not reach the body map.");
   const keyboardState = await evaluate(`(() => {
     const active = document.activeElement;
@@ -85,10 +88,12 @@ await runBrowserSmoke({
       focusVisible: style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) >= 3,
       personalRouteLinks: [...document.querySelectorAll('a[href]')].filter((link) => ['/patient', '/map', '/connections', '/insights', '/journey'].includes(new URL(link.href).pathname)).length,
       progressiveDisclosureCount: document.querySelectorAll('[data-workflow-disclosure], details.encounter-workflow-disclosure').length,
+      // The sign-off review itself renders once the encounter is completed;
+      // its entry point (진료 완료 in the save dock) is what must be discoverable.
       finalReviewPresent: Boolean(
-        document.getElementById('encounterSignReview')
-        && document.getElementById('encounterSignReviewAcknowledged')
-        && document.getElementById('encounterSignReviewTitle')?.tabIndex === -1
+        document.getElementById('encounterSignoffTitle')
+        && document.getElementById('completeEncounter')
+        && document.getElementById('encounterMobileClaimSummary')
       ),
     };
   })()`);

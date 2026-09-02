@@ -4,8 +4,22 @@ import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { startManagedAppServer } from "./browser-smoke-harness.mjs";
+
+/**
+ * EMR → Personal handoff: a signed encounter becomes an explicit transfer
+ * file, the Personal pages import it only with the separately delivered
+ * code, and the two apps' storage stays isolated. The EMR side drives the
+ * React workspace (controlled inputs, catalogue dialogs); the Personal pages
+ * are the proven static controllers. Runs `next start` itself unless
+ * APP_URL/EMR_URL points at a server that is already up.
+ */
 const chrome = process.env.CHROME_BIN ?? "/usr/bin/google-chrome";
-const appUrl = process.env.APP_URL ?? "http://127.0.0.1:4173";
+const app = await startManagedAppServer({
+  appUrl: process.env.APP_URL?.trim() || process.env.EMR_URL?.trim() || "",
+  healthPath: "/emr",
+});
+const appUrl = app.appUrl;
 const debugPort = Number.parseInt(process.env.HANDOFF_CHROME_DEBUG_PORT ?? "9226", 10);
 const profile = await mkdtemp(join(tmpdir(), "policycompass-handoff-smoke-"));
 const reportPath = process.env.HANDOFF_SMOKE_REPORT ?? join("artifacts", "smoke", "handoff-smoke-report.json");
@@ -43,6 +57,36 @@ const browser = spawn(chrome, [
 ], { stdio: ["ignore", "ignore", "pipe"] });
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+/** React-owned controls take values through the native setter plus events. */
+const HELPERS = `(() => {
+  if (window.__smoke) return;
+  const setNative = (element, value) => {
+    const proto = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype
+      : element instanceof HTMLSelectElement ? HTMLSelectElement.prototype
+        : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(element, value);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  window.__smoke = {
+    set(id, value) {
+      const element = document.getElementById(id);
+      if (!element) throw new Error('missing #' + id);
+      setNative(element, value);
+    },
+    tab(key) {
+      const trigger = document.getElementById('tab-' + key);
+      trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      trigger.click();
+    },
+    pick(listId, label) {
+      const item = [...document.querySelectorAll('#' + listId + ' li')].find((li) => li.textContent.includes(label));
+      if (!item) throw new Error('no search result for ' + label);
+      item.querySelector('button').click();
+    },
+  };
+})();`;
 
 async function waitForEndpoint() {
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -106,6 +150,7 @@ try {
   client = new CdpClient(target.webSocketDebuggerUrl);
   await client.call("Page.enable");
   await client.call("Runtime.enable");
+  await client.call("Page.addScriptToEvaluateOnNewDocument", { source: HELPERS });
 
   async function evaluate(expression) {
     const response = await client.call("Runtime.evaluate", {
@@ -139,18 +184,25 @@ try {
     await waitFor(`document.readyState === "complete" && (${readyExpression})`, `${path} did not become ready.`);
   }
 
+  // A first visit opens the sample chart; the real (empty) record is one click away.
   await waitFor(
-    "document.getElementById('selectedPatientName')?.textContent === ''",
+    "document.getElementById('selectedPatientName')?.textContent === '김비타'",
     "EMR application did not finish initializing.",
+  );
+  await evaluate(HELPERS);
+  await evaluate("document.getElementById('exitDemo').click()");
+  await waitFor(
+    "document.getElementById('selectedPatientName') === null && document.getElementById('patientListEmpty').hidden === false",
+    "EMR did not open the empty local record.",
   );
   const initialPersonalSceneText = JSON.stringify(initialPersonalScene);
   const existingJourneyText = JSON.stringify(existingJourney);
   await evaluate(`sessionStorage.setItem("policycompass-scene", ${JSON.stringify(initialPersonalSceneText)});localStorage.setItem("policycompass-journey", ${JSON.stringify(existingJourneyText)})`);
   await evaluate(`
-    document.getElementById("patientMrn").value = "HANDOFF-001";
-    document.getElementById("patientName").value = "전달검증환자";
-    document.getElementById("patientBirthDate").value = "1980-02-03";
-    document.getElementById("patientSex").value = "female";
+    __smoke.set("patientMrn", "HANDOFF-001");
+    __smoke.set("patientName", "전달검증환자");
+    __smoke.set("patientBirthDate", "1980-02-03");
+    __smoke.set("patientSex", "female");
     document.getElementById("patientForm").requestSubmit();
   `);
   await waitFor(
@@ -163,52 +215,54 @@ try {
   await evaluate("document.getElementById('startEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '진료 중'", "Encounter did not start.");
   await evaluate(`
-    document.getElementById("encounterDepartment").value = "내과";
-    document.getElementById("encounterClinician").value = "전달검증의사";
-    document.getElementById("chiefComplaint").value = "고혈압과 당화혈색소 추적";
-    document.getElementById("soapSubjective").value = "복약 중이며 특이 증상 없음";
-    document.getElementById("soapObjective").value = "당화혈색소 결과 확인";
-    document.getElementById("soapAssessment").value = "고혈압 추적 평가";
-    document.getElementById("soapPlan").value = "복약 유지 및 추적 검사";
+    __smoke.set("encounterDepartment", "내과");
+    __smoke.set("encounterClinician", "전달검증의사");
+    __smoke.set("chiefComplaint", "고혈압과 당화혈색소 추적");
+    __smoke.set("soapSubjective", "복약 중이며 특이 증상 없음");
+    __smoke.set("soapObjective", "당화혈색소 결과 확인");
+    __smoke.set("soapAssessment", "고혈압 추적 평가");
+    __smoke.set("soapPlan", "복약 유지 및 추적 검사");
     document.getElementById("encounterForm").requestSubmit();
   `);
   await waitFor("document.getElementById('workspaceStatus').textContent.includes('초안을 저장')", "Encounter draft did not save.");
+  // Measurements are nursing workflow: the clinician chart takes a reviewed
+  // historical result, which becomes final once confirmed.
   await evaluate(`
-    document.getElementById("vitalPreset").value = "4548-4";
-    document.getElementById("vitalPreset").dispatchEvent(new Event("change", { bubbles: true }));
-    document.getElementById("vitalValue").value = "7.1";
-    document.getElementById("vitalNote").value = "당일 검사";
-    document.getElementById("vitalForm").requestSubmit();
+    __smoke.tab("chart");
+    __smoke.set("eventType", "observation");
+    __smoke.set("eventCode", "4548-4");
+    __smoke.set("eventLabel", "당화혈색소");
+    __smoke.set("eventSystem", "http://loinc.org");
+    __smoke.set("eventValue", "7.1");
+    __smoke.set("eventUnit", "%");
+    document.getElementById("eventForm").requestSubmit();
   `);
-  await waitFor("document.getElementById('vitalList').textContent.includes('7.1 %')", "Encounter observation did not render.");
+  await waitFor("[...document.querySelectorAll('#eventTimeline .event-row')].some((row) => row.textContent.includes('당화혈색소'))", "Chart observation did not render.");
   await evaluate(`
-    document.getElementById("diagnosisRole").value = "primary";
-    document.getElementById("diagnosisSystem").value = "urn:kr:kcd";
-    document.getElementById("diagnosisCode").value = "I10";
-    document.getElementById("diagnosisLabel").value = "본태성 고혈압";
-    document.getElementById("diagnosisForm").requestSubmit();
+    window.confirm = () => true;
+    [...document.querySelectorAll('#eventTimeline .event-row')].find((row) => row.textContent.includes('당화혈색소')).querySelector('.event-confirm').click();
   `);
-  await waitFor("document.getElementById('diagnosisList').textContent.includes('본태성 고혈압')", "Encounter diagnosis did not render.");
-  await evaluate(`
-    document.getElementById("medicationCode").value = "C09AA02";
-    document.getElementById("medicationSystem").value = "http://www.whocc.no/atc";
-    document.getElementById("medicationName").value = "에날라프릴";
-    document.getElementById("medicationDose").value = "5";
-    document.getElementById("medicationDoseUnit").value = "mg";
-    document.getElementById("medicationRoute").value = "경구";
-    document.getElementById("medicationFrequency").value = "1일 1회";
-    document.getElementById("medicationDurationDays").value = "30";
-    document.getElementById("medicationQuantity").value = "30";
-    document.getElementById("prescriptionForm").requestSubmit();
-  `);
-  await waitFor("document.getElementById('prescriptionList').textContent.includes('에날라프릴')", "Encounter prescription did not render.");
+  await waitFor("document.getElementById('workspaceStatus').textContent.includes('검토 완료 기록으로 확정')", "Chart observation was not confirmed.");
+  await evaluate(`__smoke.tab("encounter"); document.getElementById("openDiagnosisDialog").click()`);
+  await waitFor("Boolean(document.getElementById('diagnosisSearchInput'))", "Diagnosis dialog did not open.");
+  await evaluate(`__smoke.set("diagnosisSearchInput", "고혈압")`);
+  await waitFor("[...document.querySelectorAll('#diagnosisResultList li')].some((li) => li.textContent.includes('본태성 고혈압'))", "Diagnosis search did not list 본태성 고혈압.");
+  await evaluate(`__smoke.pick("diagnosisResultList", "본태성 고혈압")`);
+  await waitFor("document.getElementById('diagnosisCode').value === 'I10'", "Picking the diagnosis did not fix its KCD code.");
+  await evaluate(`document.getElementById("diagnosisForm").requestSubmit()`);
+  await waitFor("document.getElementById('diagnosisList').textContent.includes('고혈압')", "Encounter diagnosis did not render.");
+  await evaluate(`document.getElementById("openPrescriptionDialog").click()`);
+  await waitFor("Boolean(document.getElementById('medicationSearchInput'))", "Prescription dialog did not open.");
+  await evaluate(`__smoke.set("medicationSearchInput", "벤라")`);
+  await waitFor("[...document.querySelectorAll('#medicationResultList li')].some((li) => li.textContent.includes('벤라리주맙'))", "Medication search did not list 벤라리주맙.");
+  await evaluate(`__smoke.pick("medicationResultList", "벤라리주맙")`);
+  await waitFor("document.getElementById('medicationName').value.includes('벤라리주맙')", "Picking the medication did not fill the prescription form.");
+  await evaluate(`document.getElementById("prescriptionForm").requestSubmit()`);
+  await waitFor("document.getElementById('prescriptionList').textContent.includes('벤라리주맙')", "Encounter prescription did not render.");
   await evaluate("document.getElementById('completeEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '서명 대기'", "Encounter did not complete.");
   await waitFor("document.getElementById('encounterSignReviewAcknowledged').disabled === false", "Pre-sign review did not become available.");
-  await evaluate(`
-    document.getElementById("encounterSignReviewAcknowledged").checked = true;
-    document.getElementById("encounterSignReviewAcknowledged").dispatchEvent(new Event("change", { bubbles: true }));
-  `);
+  await evaluate(`document.getElementById("encounterSignReviewAcknowledged").click()`);
   await waitFor("document.getElementById('signEncounter').disabled === false", "Explicit pre-sign acknowledgement did not enable signing.");
   await evaluate("window.confirm = () => true; document.getElementById('signEncounter').click();");
   await waitFor("document.getElementById('encounterStatusText').textContent === '완료·서명'", "Encounter did not sign.");
@@ -234,7 +288,7 @@ try {
   assert(transferPackage.healthMap.conditions.some(({ id }) => id === "hypertension"), "Explicit transfer omitted the confirmed condition.");
   assert(transferPackage.healthMap.measurements.some(({ key, value }) => key === "hba1c" && value === 7.1), "Explicit transfer omitted the final observation.");
   assert(!("medications" in transferPackage.healthMap) && !("medications" in transferPackage), "Explicit transfer included unsupported medication scope.");
-  assert(!/전달검증환자|HANDOFF-001|1980-02-03|에날라프릴|특이 증상 없음|복약 유지/.test(transferJsonText), "Patient transfer exposed an identifier, medication, or raw clinical note.");
+  assert(!/전달검증환자|HANDOFF-001|1980-02-03|벤라리주맙|특이 증상 없음|복약 유지/.test(transferJsonText), "Patient transfer exposed an identifier, medication, or raw clinical note.");
   assert(await evaluate("window.__transferConfirmMessage.includes('전달검증환자') && window.__transferConfirmMessage.includes('전달 확인 코드')"), "EMR did not require local patient/code confirmation before export.");
 
   await navigate("/emr?demo=1", "document.getElementById('selectedPatientName')?.textContent === '김비타'");
@@ -343,7 +397,7 @@ try {
   assert(patientAssistantRequest.clinicalSnapshot.healthMap.conditions.length === 1, "Model payload omitted or expanded imported conditions.");
   assert(patientAssistantRequest.clinicalSnapshot.healthMap.measurements.some(({ key, value }) => key === "hba1c" && value === 7.1), "Model payload omitted the imported final measurement.");
   assert(!("medications" in patientAssistantRequest.clinicalSnapshot), "Personal model payload attempted unsupported medication transmission.");
-  assert(!/홍길동|010-1234-5678|전달검증환자|HANDOFF-001|에날라프릴/.test(requestText), "Personal model payload exposed a direct identifier, EMR identity, or medication.");
+  assert(!/홍길동|010-1234-5678|전달검증환자|HANDOFF-001|벤라리주맙/.test(requestText), "Personal model payload exposed a direct identifier, EMR identity, or medication.");
 
   await navigate("/emr", "document.getElementById('selectedPatientName')?.textContent === '전달검증환자'");
   assert(await evaluate("!document.querySelector('.copilot-bridge-status') && !/환자가 공유한|공유 브리프/.test(document.getElementById('copilotContent').textContent)"), "EMR exposed a retired automatic patient-brief path.");
@@ -358,20 +412,21 @@ try {
   await evaluate(`sessionStorage.setItem("policycompass-scene", ${JSON.stringify(validImportedSceneText)});localStorage.setItem("policycompass-care-bridge-v1", "legacy-secret-snapshot")`);
   await navigate("/map?sample=1", "Boolean(document.getElementById('healthForm'))");
   assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample map mutated the real imported session.");
-  assert(await evaluate("document.getElementById('transferCode').disabled && document.getElementById('importRecordButton').disabled && document.getElementById('saveJourney').disabled"), "Sample map enabled import or Journey actions.");
+  // The Personal controllers boot after hydration, so sample-mode state settles a beat after navigation.
+  await waitFor("document.getElementById('transferCode').disabled && document.getElementById('importRecordButton').disabled && document.getElementById('saveJourney').disabled", "Sample map enabled import or Journey actions.");
   assert(await evaluate("!document.body.textContent.includes('7.1') && localStorage.getItem('policycompass-care-bridge-v1') === null"), "Sample map exposed imported/legacy clinical detail.");
   await navigate("/insights?sample=1", "Boolean(document.getElementById('questionCount'))");
-  assert(await evaluate(`(() => {
+  await waitFor(`(() => {
     const note = document.getElementById("exportClinicalSnapshot");
     return document.getElementById("clinicalConnectionBadge").textContent === "예시 모드"
       && document.getElementById("runPatientAssistant").disabled
       && document.getElementById("sharePatientBrief").disabled
       && note?.tagName === "P"
       && !note.matches("button, a, input, [role='button']");
-  })()`), "Sample insights enabled real-data actions.");
+  })()`, "Sample insights enabled real-data actions.");
   assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)} && !document.body.textContent.includes('7.1')`), "Sample insights exposed or mutated imported detail.");
   await navigate("/connections?sample=1", "Boolean(document.getElementById('networkScene'))");
-  assert(await evaluate("!document.getElementById('personalDemoMode').hidden && document.querySelectorAll('[data-node-id]').length === 5"), "Sample connections did not stay in the synthetic fixture.");
+  await waitFor("!document.getElementById('personalDemoMode').hidden && document.querySelectorAll('[data-node-id]').length === 5", "Sample connections did not stay in the synthetic fixture.");
   assert(await evaluate(`sessionStorage.getItem("policycompass-scene") === ${JSON.stringify(validImportedSceneText)}`), "Sample connections mutated the real imported session.");
   await evaluate(`document.querySelector('.app-nav a[href^="/insights"]').click()`);
   await waitFor("location.pathname === '/insights' && new URLSearchParams(location.search).get('sample') === '1' && document.getElementById('clinicalConnectionBadge')?.textContent === '예시 모드'", "Sample navigation dropped its boundary from Connections to Insights.");
@@ -447,4 +502,5 @@ try {
     await Promise.race([once(browser, "exit"), delay(2_000)]);
   }
   await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  await app.stop();
 }

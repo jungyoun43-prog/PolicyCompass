@@ -37,7 +37,7 @@ export default function Page() {
                   <span className="signal-kicker__label">POLICYCOMPASS PERSONAL · 내 기록 공간</span>
                 </p>
                 <h1 id="landingTitle">
-                  <span>내 건강 기록을</span>
+                  <span>내 건강 기록을</span>{" "}
                   <span><em>내가 이어 보는</em> 공간.</span>
                 </h1>
                 <p className="landing-hero__lead">

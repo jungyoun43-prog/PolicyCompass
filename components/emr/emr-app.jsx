@@ -38,7 +38,11 @@ export function EmrApp() {
   }, [status.message, status.tone, setStatus]);
   const [activeTab, setActiveTab] = useState("encounter");
   const [viewedEncounterId, setViewedEncounterId] = useState("");
+  // Each 편집 click is a fresh request object, so the rail sees the same patient
+  // edited twice in a row as two requests and needs no "consumed" hand-back.
   const [editRequest, setEditRequest] = useState(null);
+  // The rail owns the visit-context slot element; the encounter tab portals into it.
+  const [visitSlot, setVisitSlot] = useState(null);
   // `configured` drives the header dot; `copilot` is the loopback model the
   // overview brief actually calls, which a cloud review model does not satisfy.
   const [ai, setAi] = useState({ checked: false, configured: false, copilot: false, mode: "checking", detail: "확인 중" });
@@ -188,6 +192,7 @@ export function EmrApp() {
     blockClinicalContextChange,
     fhirReport,
     setFhirReport,
+    visitSlot,
   };
 
   return (
@@ -220,13 +225,13 @@ export function EmrApp() {
             selectedPatientId={state.selectedPatientId}
             demo={state.demo}
             updatedAt={state.updatedAt}
-            onEditPatient={() => patient && setEditRequest(patient)}
+            onEditPatient={() => patient && setEditRequest({ patient })}
             onSelectPatient={handleSelectPatient}
             onLoadDemo={handleLoadDemo}
             onSavePatient={handleSavePatient}
             editRequest={editRequest}
-            onEditConsumed={() => setEditRequest(null)}
             onFormStateChange={({ pending }) => { dirtyGuardsRef.current.patientForm = () => pending; }}
+            visitSlotRef={setVisitSlot}
           />
 
           <section className="patient-workspace" aria-label="선택 환자 차트">

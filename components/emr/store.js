@@ -17,14 +17,21 @@ import { createDemoEmrState } from "../../src/emr-demo-state.js";
 import { claimEvaluationsForState } from "../../lib/emr/selectors.js";
 
 export function useEmrStore() {
-  const [state, setState] = useState(null);
+  // Only commitState may call the raw setter: stateRef must always equal the latest state handed to React.
+  const [state, setStateRaw] = useState(null);
   const [savedState, setSavedState] = useState(null);
   const [status, setStatusState] = useState({ message: "", tone: "" });
   const [busy, setBusy] = useState(false);
   const stateRef = useRef(null);
   const generationRef = useRef(0);
   const busyRef = useRef(false);
-  stateRef.current = state;
+
+  // Every state change funnels through here so the ref the async handlers
+  // read is never behind the state React will render, even before a commit.
+  const commitState = useCallback((next) => {
+    stateRef.current = next;
+    setStateRaw(next);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +44,7 @@ export function useEmrStore() {
       // and an empty list teaches nothing. A stored chart always wins.
       const next = demoRequested || empty ? createDemoEmrState() : loaded;
       setSavedState(loaded);
-      setState(next);
+      commitState(next);
       if (!next.demo && next.storageError) {
         setStatusState({
           message: "로컬 저장을 읽지 못했습니다. 손상 원본을 내보낸 뒤 백업 복원 또는 전체 삭제로 정리하세요.",
@@ -46,7 +53,7 @@ export function useEmrStore() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [commitState]);
 
   const setStatus = useCallback((message, tone = "") => {
     setStatusState({ message, tone });
@@ -77,19 +84,19 @@ export function useEmrStore() {
       const candidate = await producer(current);
       if (candidate === null || candidate === undefined) return null;
       if (!persist || candidate.demo) {
-        setState(candidate);
+        commitState(candidate);
       } else {
         const saved = await saveEmrState(candidate, undefined, expectedRevision);
         if (generationRef.current !== expectedGeneration) {
           throw new Error("다른 탭 또는 창에서 기록이 바뀌어 이 작업을 적용하지 않았습니다.");
         }
-        setState(saved);
+        commitState(saved);
         setSavedState(saved);
       }
       if (message) setStatusState({ message, tone });
       return candidate;
     });
-  }, [withTransition]);
+  }, [withTransition, commitState]);
 
   const applyMutation = useCallback(async (mutator, message, { announce = true } = {}) => {
     return withTransition(async () => {
@@ -103,20 +110,20 @@ export function useEmrStore() {
       const mutated = mutator(current);
       const candidate = reconcileClaimReviews(mutated, claimEvaluationsForState(mutated), new Date().toISOString());
       if (wasDemo) {
-        setState({ ...candidate, demo: true });
+        commitState({ ...candidate, demo: true });
       } else {
         const saved = await saveEmrState(candidate, undefined, expectedRevision);
         if (generationRef.current !== expectedGeneration) {
           throw new Error("다른 탭 또는 창에서 기록이 바뀌어 이 작업을 적용하지 않았습니다.");
         }
-        setState(saved);
+        commitState(saved);
         setSavedState(saved);
       }
       if (announce) {
         setStatusState({ message: message + (wasDemo ? " · 예시 환자 변경은 저장되지 않습니다." : ""), tone: "success" });
       }
     });
-  }, [withTransition]);
+  }, [withTransition, commitState]);
 
   const bumpGeneration = useCallback(() => { generationRef.current += 1; }, []);
 

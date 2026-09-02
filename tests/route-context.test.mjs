@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { componentMarkup, pageMarkup } from "./helpers/markup.mjs";
+import { ClinicalHeader } from "../components/emr/chrome.jsx";
+import { pageMarkup } from "./helpers/markup.mjs";
+import { renderComponent } from "./helpers/render.mjs";
 
 const routes = new Map([
   ["/", [() => pageMarkup("/"), /데이터 입력 없음/]],
@@ -10,7 +12,7 @@ const routes = new Map([
   ["/connections", [() => pageMarkup("/connections"), /0개 질환/]],
   ["/insights", [() => pageMarkup("/insights"), /현재 브리프/]],
   ["/journey", [() => pageMarkup("/journey"), /현재 브라우저의 이 기기에만 저장/]],
-  ["/emr", [() => componentMarkup("components/emr/chrome.jsx"), /aiStatusDot/]],
+  ["/emr", [() => renderComponent(ClinicalHeader, { ai: { mode: "none", configured: false, detail: "미연결" } }), /data-ai-mode="none"/]],
 ]);
 
 function assertExposedRouteContext(html, route, expected) {

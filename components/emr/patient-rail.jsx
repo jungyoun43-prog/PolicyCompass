@@ -40,8 +40,8 @@ export function PatientRail({
   onSavePatient,
   onEditPatient,
   editRequest,
-  onEditConsumed,
   onFormStateChange,
+  visitSlotRef,
 }) {
   const selectedPatient = patients.find(({ id }) => id === selectedPatientId) ?? null;
   const [query, setQuery] = useState("");
@@ -56,10 +56,15 @@ export function PatientRail({
     centerSelectedPatientCard(patientListRef.current, selectedPatientId);
   }, [patientListRef, selectedPatientId]);
 
-  // 환자 정보 편집 buttons elsewhere in the workspace hand the patient here.
-  useEffect(() => {
-    if (!editRequest) return;
-    const patient = editRequest;
+  // 환자 정보 편집 buttons elsewhere in the workspace hand the patient here as a
+  // fresh `{ patient }` request per click, so the same patient can be edited
+  // twice in a row; a request this form has not adopted yet is applied while
+  // rendering, before anything is committed.
+  // Seeded from the prop so a remount does not re-adopt a request that predates it.
+  const [handledRequest, setHandledRequest] = useState(editRequest);
+  if (editRequest && editRequest !== handledRequest) {
+    const { patient } = editRequest;
+    setHandledRequest(editRequest);
     setMode(patient.id);
     setForm({
       mrn: patient.mrn ?? "",
@@ -80,8 +85,7 @@ export function PatientRail({
     });
     setMessage("");
     setComposerOpen(true);
-    onEditConsumed?.();
-  }, [editRequest, onEditConsumed]);
+  }
 
   useEffect(() => {
     onFormStateChange?.({ pending: patientFormHasPendingInput(form, mode), mode });
@@ -151,7 +155,9 @@ export function PatientRail({
       {selectedPatient ? (
         <PatientSummaryCard patient={selectedPatient} demo={demo} updatedAt={updatedAt} onEditPatient={onEditPatient} />
       ) : null}
-      <div id="visitContextSlot" className="rail-visit-slot" />
+      {/* The encounter tab portals its visit-context cards here; the parent
+          receives the element through this ref instead of looking up the id. */}
+      <div id="visitContextSlot" className="rail-visit-slot" ref={visitSlotRef} />
       <div className="rail-heading">
         <div>
           <p className="rail-eyebrow">TODAY&apos;S WORKLIST</p>

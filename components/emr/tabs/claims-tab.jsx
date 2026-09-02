@@ -39,7 +39,7 @@ export function ClaimsTab({ state, patient, store }) {
     setDiseaseLiveMessage(`${label} 적정성·진단 근거를 표시했습니다. 왼쪽 급여 주의사항은 전체 질환 기준으로 유지됩니다.`);
   };
 
-  const patients = boardScope === "all" ? state.patients : [patient];
+  const patients = useMemo(() => (boardScope === "all" ? state.patients : [patient]), [boardScope, state.patients, patient]);
   const evaluations = useMemo(() => claimReviewEvaluationsForPatients(state, patients), [state, patients]);
   const selectedEvaluations = evaluations.filter((evaluation) => evaluation.patientId === patient.id);
   const profile = state.demo ? getCombinedDiseaseClaimProfile(patient) : null;

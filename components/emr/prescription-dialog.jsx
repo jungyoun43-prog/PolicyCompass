@@ -194,7 +194,9 @@ function DetailList({ rows }) {
   );
 }
 
-export function PrescriptionDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty }) {
+// `launcherSlot` is the disclosure header's #entryLauncher-prescriptions element,
+// handed down by the parent that renders it; the launcher button portals there.
+export function PrescriptionDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot }) {
   const open = activeDialog === "prescription";
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(EMPTY_RX_FORM);
@@ -203,8 +205,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [reviewPreview, setReviewPreview] = useState(null);
-  const [launcherSlot, setLauncherSlot] = useState(null);
-  useEffect(() => { setLauncherSlot(document.getElementById("entryLauncher-prescriptions")); }, []);
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });

@@ -133,7 +133,7 @@ export default function Page() {
                         type="text"
                         inputMode="text"
                         autoComplete="off"
-                        autocapitalize="characters"
+                        autoCapitalize="characters"
                         spellCheck="false"
                         maxLength="33"
                         pattern="VG-[0-9A-HJKMNP-TV-Z]{5}(?:-[0-9A-HJKMNP-TV-Z]{5}){3}-[0-9A-HJKMNP-TV-Z]{6}"

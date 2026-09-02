@@ -31,11 +31,6 @@ import { labPanel, labPresentation } from "../../../lib/emr/lab-reference.js";
 import { DiagnosisDialog, OrderDialog } from "../entry-dialogs.jsx";
 import { PrescriptionDialog } from "../prescription-dialog.jsx";
 
-const EMPTY_FORM = {
-  date: "", department: "", clinician: "", room: "", chiefComplaint: "",
-  subjective: "", objective: "", assessment: "", plan: "",
-};
-
 function formFromEncounter(encounter) {
   return {
     date: encounter?.date || today(),
@@ -98,14 +93,18 @@ function EncounterEntryList({ id, ariaLabel, entries, emptyLabel, onRemove }) {
   );
 }
 
-function WorkflowDisclosure({ name, title, titleId, summaryText, summaryTone, children }) {
+function WorkflowDisclosure({ name, title, titleId, summaryText, summaryTone, dialog, children }) {
+  // The entry dialog portals its launcher button into the header slot; the slot
+  // element reaches it through React (callback ref → render prop) rather than a
+  // post-mount id lookup, so the button is there on the first committed frame.
+  const [launcherSlot, setLauncherSlot] = useState(null);
   return (
     <section className="clinical-card clinical-entry-card workflow-disclosure workflow-disclosure--static" aria-labelledby={titleId} data-workflow-disclosure={name}>
       <div className="workflow-disclosure__summary">
         <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id={titleId} role="heading" aria-level={3}>{title}</span></span>
-        <span className="workflow-disclosure__signals"><span className="entry-launcher-slot" id={`entryLauncher-${name}`}></span><span className="workflow-disclosure__meta" data-disclosure-summary={name} data-tone={summaryTone || undefined}>{summaryText}</span></span>
+        <span className="workflow-disclosure__signals"><span className="entry-launcher-slot" id={`entryLauncher-${name}`} ref={setLauncherSlot}></span><span className="workflow-disclosure__meta" data-disclosure-summary={name} data-tone={summaryTone || undefined}>{summaryText}</span></span>
       </div>
-      <div className="workflow-disclosure__body">{children}</div>
+      <div className="workflow-disclosure__body">{dialog(launcherSlot)}{children}</div>
     </section>
   );
 }
@@ -132,31 +131,48 @@ function ClaimMiniSummary({ evaluations, attention }) {
   );
 }
 
-export function EncounterTab({ patient, encounter, preflightEvaluations, store, viewedEncounterId, setViewedEncounterId, selectTab, dirtyGuardsRef, blockClinicalContextChange }) {
+export function EncounterTab({ patient, encounter, preflightEvaluations, store, viewedEncounterId, setViewedEncounterId, selectTab, dirtyGuardsRef, blockClinicalContextChange, visitSlot }) {
   const { applyMutation, setStatus } = store;
-  const [form, setForm] = useState(EMPTY_FORM);
+  // The draft form belongs to one encounter object: whenever the chart moves it
+  // is derived afresh from the record, exactly as the pre-React render() did,
+  // and edits stay keyed to the encounter they were typed against. Dialog
+  // mutations preserve unsaved form edits into state first, so nothing typed is lost.
+  const [formState, setFormState] = useState(() => ({ encounter, form: formFromEncounter(encounter) }));
+  const form = useMemo(
+    () => (formState.encounter === encounter ? formState.form : formFromEncounter(encounter)),
+    [formState, encounter],
+  );
+  const setForm = (update) => setFormState((current) => {
+    const base = current.encounter === encounter ? current.form : formFromEncounter(encounter);
+    return { encounter, form: typeof update === "function" ? update(base) : update };
+  });
   const [formMessage, setFormMessage] = useState("");
   const [signAck, setSignAck] = useState({ identity: null, fingerprint: "", checked: false });
   const [openDisclosures, setOpenDisclosures] = useState(() => new Map());
   const [railTab, setRailTab] = useState("notes");
   const [trendRowId, setTrendRowId] = useState("");
-  const [visitSlot, setVisitSlot] = useState(null);
-  useEffect(() => { setVisitSlot(document.getElementById("visitContextSlot")); }, []);
-  const [activeDialog, setActiveDialog] = useState("");
   // Each entry dialog keeps its own dirty probe; the encounter is dirty when any
   // of them still holds unsubmitted input.
   const dialogProbesRef = useRef(new Map());
   const dialogsDirtyRef = useRef(() => [...dialogProbesRef.current.values()].some((probe) => probe()));
-  const registerDirty = useMemo(() => Object.fromEntries(["diagnosis", "prescription", "order"].map((name) => [
-    name,
-    (probe) => { dialogProbesRef.current.set(name, probe); },
-  ])), []);
-  const formRef = useRef(form);
-  formRef.current = form;
+  const registerDirty = useMemo(() => ({
+    diagnosis: (probe) => { dialogProbesRef.current.set("diagnosis", probe); },
+    prescription: (probe) => { dialogProbesRef.current.set("prescription", probe); },
+    order: (probe) => { dialogProbesRef.current.set("order", probe); },
+  }), []);
 
   const status = encounterQueueStatus(encounter);
   const unverifiedBackup = encounter?.source?.kind === "import";
   const editable = status === "in-progress" && encounter?.recordStatus === "draft" && !unverifiedBackup;
+  // An open dialog is scoped to the patient/encounter/editability it was opened
+  // under; when any of those move the dialog is simply no longer open.
+  const dialogContext = `${patient?.id ?? ""}:${encounter?.id ?? ""}:${editable}`;
+  const [dialogState, setDialogState] = useState({ context: dialogContext, name: "" });
+  const activeDialog = dialogState.context === dialogContext ? dialogState.name : "";
+  const setActiveDialog = (update) => setDialogState((current) => ({
+    context: dialogContext,
+    name: typeof update === "function" ? update(current.context === dialogContext ? current.name : "") : update,
+  }));
   const completed = status === "completed" && !unverifiedBackup;
   const finalized = ["signed", "legacy", "external"].includes(status);
   const records = useMemo(
@@ -164,26 +180,20 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
     [patient, encounter],
   );
 
-  // The workspace re-syncs the draft form from state whenever the chart moves,
-  // exactly as the pre-React render() did; dialog mutations preserve unsaved
-  // form edits into state first, so nothing typed is lost.
-  useEffect(() => { setForm(formFromEncounter(encounter)); }, [encounter]);
-  useEffect(() => { setActiveDialog(""); }, [patient?.id, encounter?.id, editable]);
-
   /** A mutation from a dialog first folds unsaved form edits into the chart. */
   const withDraftPreserved = useCallback((mutator) => (current) => {
     const activePatient = current.patients.find((item) => item.id === current.selectedPatientId);
     const activeEncounter = activePatient?.events.find(({ id }) => id === encounter?.id);
-    const base = activeEncounter && draftDiffers(formRef.current, activeEncounter)
-      ? saveEncounterDraft(current, activePatient.id, activeEncounter.id, draftFromForm(formRef.current))
+    const base = activeEncounter && draftDiffers(form, activeEncounter)
+      ? saveEncounterDraft(current, activePatient.id, activeEncounter.id, draftFromForm(form))
       : current;
     return mutator(base);
-  }, [encounter]);
+  }, [encounter, form]);
 
   useEffect(() => {
     dirtyGuardsRef.current.composer = () => dialogsDirtyRef.current();
-    dirtyGuardsRef.current.encounter = () => dialogsDirtyRef.current() || draftDiffers(formRef.current, encounter);
-  }, [dirtyGuardsRef, encounter]);
+    dirtyGuardsRef.current.encounter = () => dialogsDirtyRef.current() || draftDiffers(form, encounter);
+  }, [dirtyGuardsRef, encounter, form]);
 
   const review = useMemo(
     () => (completed ? buildEncounterSignReview(patient, encounter, records) : null),
@@ -218,9 +228,9 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
       setViewedEncounterId("");
       await applyMutation((current) => checkInPatient(current, patient.id, {
         date: today(),
-        department: formRef.current.department,
-        clinician: formRef.current.clinician,
-        room: formRef.current.room,
+        department: form.department,
+        clinician: form.clinician,
+        room: form.room,
       }), "오늘 진료에 접수했습니다.");
     } catch (error) {
       setFormMessage(error instanceof Error ? error.message : "접수에 실패했습니다.");
@@ -233,12 +243,12 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
   });
 
   const onSaveDraft = guard(async () => {
-    await applyMutation((current) => saveEncounterDraft(current, patient.id, encounter.id, draftFromForm(formRef.current)), "SOAP·진료 초안을 저장했습니다.");
+    await applyMutation((current) => saveEncounterDraft(current, patient.id, encounter.id, draftFromForm(form)), "SOAP·진료 초안을 저장했습니다.");
   });
 
   const onComplete = guard(async () => {
     if (blockClinicalContextChange({ composersOnly: true })) return;
-    await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, draftFromForm(formRef.current)), "진료를 완료했습니다. 최종 검토 후 서명하세요.");
+    await applyMutation((current) => completeEncounter(current, patient.id, encounter.id, draftFromForm(form)), "진료를 완료했습니다. 최종 검토 후 서명하세요.");
     queueMicrotask(() => {
       const title = document.getElementById("encounterSignReviewTitle");
       if (!title || title.getClientRects().length === 0) return;
@@ -427,8 +437,8 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
 
         <div className="entry-grid">
 
-        <WorkflowDisclosure name="diagnoses" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""}>
-          <DiagnosisDialog {...dialogShared} registerDirty={registerDirty.diagnosis} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />
+        <WorkflowDisclosure name="diagnoses" title="진단" titleId="diagnosisTitle" badge="KCD · MANUAL" summaryText={`${entryCounts.diagnoses}건`} summaryTone={entryCounts.diagnoses ? "ready" : ""}
+          dialog={(launcherSlot) => <DiagnosisDialog {...dialogShared} launcherSlot={launcherSlot} registerDirty={registerDirty.diagnosis} key={`dx:${patient.id}:${encounter?.id ?? ""}`} />}>
           <EncounterEntryList id="diagnosisList" ariaLabel="이번 진료 진단 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "이번 진료 진단을 추가하세요." : "이번 진료 진단 없음"}
             entries={records.filter((event) => event.type === "condition").map((diagnosis) => ({
@@ -441,8 +451,8 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
             }))} />
         </WorkflowDisclosure>
 
-        <WorkflowDisclosure name="prescriptions" title="처방 기록" titleId="prescriptionTitle" summaryText={`${entryCounts.prescriptions}건`} summaryTone={entryCounts.prescriptions ? "ready" : ""}>
-          <PrescriptionDialog {...dialogShared} registerDirty={registerDirty.prescription} key={`rx:${patient.id}:${encounter?.id ?? ""}`} />
+        <WorkflowDisclosure name="prescriptions" title="처방 기록" titleId="prescriptionTitle" summaryText={`${entryCounts.prescriptions}건`} summaryTone={entryCounts.prescriptions ? "ready" : ""}
+          dialog={(launcherSlot) => <PrescriptionDialog {...dialogShared} launcherSlot={launcherSlot} registerDirty={registerDirty.prescription} key={`rx:${patient.id}:${encounter?.id ?? ""}`} />}>
           <EncounterEntryList id="prescriptionList" ariaLabel="이번 진료 처방 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "처방이 필요한 경우 구조화해 추가하세요." : "이번 진료 처방 없음"}
             entries={records.filter((event) => event.type === "medication").map((medication) => {
@@ -459,8 +469,8 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
             })} />
         </WorkflowDisclosure>
 
-        <WorkflowDisclosure name="orders" title="검사·처치·의뢰 오더" titleId="orderTitle" summaryText={`${entryCounts.orders}건`} summaryTone={entryCounts.orders ? "ready" : ""}>
-          <OrderDialog {...dialogShared} registerDirty={registerDirty.order} key={`order:${patient.id}:${encounter?.id ?? ""}`} />
+        <WorkflowDisclosure name="orders" title="검사·처치·의뢰 오더" titleId="orderTitle" summaryText={`${entryCounts.orders}건`} summaryTone={entryCounts.orders ? "ready" : ""}
+          dialog={(launcherSlot) => <OrderDialog {...dialogShared} launcherSlot={launcherSlot} registerDirty={registerDirty.order} key={`order:${patient.id}:${encounter?.id ?? ""}`} />}>
           <EncounterEntryList id="orderList" ariaLabel="이번 진료 오더 목록" onRemove={onRemoveItem}
             emptyLabel={editable ? "검사·영상·처치·의뢰 오더를 추가하세요." : "이번 진료 오더 없음"}
             entries={records.filter((event) => event.type === "service-request").map((order) => {

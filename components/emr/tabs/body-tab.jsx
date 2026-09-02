@@ -76,7 +76,13 @@ function BodyRecord({ record, statusText, meta, association, onOpenChart }) {
 
 export function BodyTab({ patient, selectTab, active }) {
   const atlas = useMemo(() => createClinicalBodyAtlas(patient), [patient]);
-  const [selectedAreaId, setSelectedAreaId] = useState("");
+  // The selection remembers which patient it belongs to and is cleared during
+  // render when the patient changes, so every switch falls back to the
+  // preferred area (also when returning to a patient) without an effect.
+  const [selection, setSelection] = useState({ patientId: patient.id, areaId: "" });
+  if (selection.patientId !== patient.id) setSelection({ patientId: patient.id, areaId: "" });
+  const selectedAreaId = selection.patientId === patient.id ? selection.areaId : "";
+  const selectArea = (areaId) => setSelection({ patientId: patient.id, areaId });
   const stageRef = useRef(null);
   const initializedRef = useRef(false);
 
@@ -85,8 +91,6 @@ export function BodyTab({ patient, selectTab, active }) {
     || atlas.areas.find(({ active: isActive }) => isActive)
     || atlas.areas[0];
   const area = atlas.areas.find(({ id }) => id === selectedAreaId) || preferred;
-
-  useEffect(() => { setSelectedAreaId(""); }, [patient.id]);
 
   // The 3D controller is framework-agnostic; mount it once when the tab first
   // shows, after the bundled model-viewer runtime registers its element.
@@ -176,7 +180,7 @@ export function BodyTab({ patient, selectTab, active }) {
                     type="button"
                     aria-pressed={areaData ? areaData.id === area?.id : false}
                     title={areaData ? `${areaData.department} · ${bodyAreaStatus(areaData)}` : undefined}
-                    onClick={() => setSelectedAreaId(areaId)}>
+                    onClick={() => selectArea(areaId)}>
                     <span className="body-hotspot__core" aria-hidden="true"></span>
                     <span className="visually-hidden">{department} 기록 보기</span>
                   </button>
@@ -197,7 +201,7 @@ export function BodyTab({ patient, selectTab, active }) {
                   aria-pressed={areaData ? areaData.id === area?.id : false}
                   aria-label={areaData ? `${areaData.department}: ${bodyAreaStatus(areaData)}${areaData.id === area?.id ? ". 현재 선택됨" : ". 상세 보기"}` : undefined}
                   title={areaData ? `${areaData.department} · ${bodyAreaStatus(areaData)}` : undefined}
-                  onClick={() => setSelectedAreaId(areaId)}>
+                  onClick={() => selectArea(areaId)}>
                   <span className="body-caption__title">{title}</span>
                   <span className="body-caption__department">{department}</span>
                   <span className="body-caption__status">{areaData ? bodyAreaStatus(areaData) : "기록 확인 중"}</span>

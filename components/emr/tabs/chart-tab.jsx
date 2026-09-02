@@ -15,11 +15,16 @@ const EMPTY_EVENT = { type: "condition", date: "", code: "", label: "", system: 
 
 export function ChartTab({ state, patient, store, dirtyGuardsRef }) {
   const { applyMutation, setStatus } = store;
-  const [eventFilter, setEventFilter] = useState("all");
+  // The filter remembers which patient it belongs to and is cleared during
+  // render when the patient changes, so every switch shows all events again
+  // (also when returning to a patient) without an effect.
+  const [filter, setFilter] = useState({ patientId: patient.id, type: "all" });
+  if (filter.patientId !== patient.id) setFilter({ patientId: patient.id, type: "all" });
+  const eventFilter = filter.patientId === patient.id ? filter.type : "all";
+  const setEventFilter = (type) => setFilter({ patientId: patient.id, type });
   const [form, setForm] = useState(() => ({ ...EMPTY_EVENT, date: today() }));
   const [message, setMessage] = useState("");
 
-  useEffect(() => { setEventFilter("all"); }, [patient.id]);
   useEffect(() => {
     dirtyGuardsRef.current.manualEvent = () => (
       form.type !== "condition"

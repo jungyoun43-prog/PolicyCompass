@@ -11261,7 +11261,7 @@ model-viewer::part(default-progress-mask) {
     flex: 0 0 auto;
   }
 
-  .clinical-header .header-ai-status #aiStatusLabel {
+  .clinical-header .header-ai-status > b {
     position: absolute;
     width: 1px;
     height: 1px;

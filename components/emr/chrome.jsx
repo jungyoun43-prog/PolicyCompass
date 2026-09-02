@@ -15,8 +15,8 @@ export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai 
           </a>
           {ai ? (
             <span className="header-ai-status" data-route-context data-ai-mode={ai.mode}>
-              <span className={`trust-dot${ai.configured ? " is-ready" : ""}`} id="aiStatusDot" aria-hidden="true"></span>
-              <b id="aiStatusLabel">모델</b>
+              <span className={`trust-dot${ai.configured ? " is-ready" : ""}`} aria-hidden="true"></span>
+              <b>모델</b>
               <span id="aiStatusDetail">{ai.detail}</span>
             </span>
           ) : null}

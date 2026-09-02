@@ -382,9 +382,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
   // The model named in the UI is the one this request actually uses: the
   // reviewer's pick before sending, and the id the server reports afterwards.
+  const defaultModelLabel = capability.model ? frontierModelLabel(capability.model) : "";
   const requestedModelLabel = provider === "frontier" && reviewModel
     ? frontierModelLabel(reviewModel)
-    : capability.model;
+    : defaultModelLabel;
   const cloudLabelFor = (modelText) => (provider === "frontier"
     ? `클라우드 LLM 고시 기준 검토 · ${modelText || "연결된 모델"}`
     : provider === "local"
@@ -395,9 +396,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
   const reviewModeLabel = review && review.generatedBy !== "rule"
     ? `AI 검토 · ${reviewedModelLabel || review.generatedBy}`
-    : provider
-      ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : capability.model || "연결된 모델"}`
-      : "규칙 기반 · 모델 미설정";
+    : pendingReview
+      ? `AI 검토 중 · ${provider === "local" ? "로컬 모델" : pendingReview.model || "연결된 모델"}`
+      : provider
+        ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : requestedModelLabel || "연결된 모델"}`
+        : "규칙 기반 · 모델 미설정";
 
   const pairCounter = { next: 0 };
 
@@ -665,7 +668,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               {provider === "frontier" ? (
                 <label className="review-preview__model">검토 모델
                   <select id="reviewPreviewModel" value={reviewModel} onChange={(event) => setReviewModel(event.target.value)}>
-                    <option value="">서버 기본 · {capability.model || "미설정"}</option>
+                    <option value="">서버 기본 · {defaultModelLabel || "미설정"}</option>
                     {FRONTIER_MODEL_GROUPS.map((group) => (
                       <optgroup key={group} label={group}>
                         {FRONTIER_MODEL_CHOICES.filter((choice) => choice.group === group).map((choice) => (

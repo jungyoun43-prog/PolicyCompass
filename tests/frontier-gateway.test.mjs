@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { register } from "node:module";
 import test from "node:test";
 
 import {
@@ -11,6 +12,36 @@ import { markdownReviewReport } from "./helpers/medication-fixtures.mjs";
 import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
 import { createDemoEmrState } from "../src/emr-demo-state.js";
 import { runMedicationClaimReview } from "../scripts/graphs/medication-claim-review-graph.mjs";
+import { currentEncounterFor } from "../lib/emr/selectors.js";
+import { componentMarkup } from "./helpers/markup.mjs";
+import { renderComponent } from "./helpers/render.mjs";
+
+/**
+ * The prescription dialog body lives in a Radix portal and its launcher in a
+ * createPortal slot; the server renderer cannot place either. This hook makes
+ * both portals render their children inline so the dialog markup can be read.
+ */
+const PORTAL_INLINE_HOOK = `
+export async function load(url, context, nextLoad) {
+  if (url.endsWith("/node_modules/radix-ui/dist/index.mjs")) {
+    return { format: "module", shortCircuit: true, source: \`
+      import * as real from "\${url}?real";
+      export * from "\${url}?real";
+      export const Dialog = { ...real.Dialog, Portal: ({ children }) => children };
+    \` };
+  }
+  if (url.endsWith("/node_modules/react-dom/index.js")) {
+    return { format: "module", shortCircuit: true, source: \`
+      import real from "\${url}?real";
+      export * from "\${url}?real";
+      export default real;
+      export const createPortal = (children) => children;
+    \` };
+  }
+  return nextLoad(url, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(PORTAL_INLINE_HOOK)}`);
+const { PrescriptionDialog } = await import("../components/emr/prescription-dialog.jsx");
 
 const SCHEMA = {
   type: "object",
@@ -227,12 +258,20 @@ test("설정 상태는 어떤 환경변수가 서버에 도달했는지 이름�
 });
 
 test("모델이 설정되지 않으면 화면이 규칙 기반임을 밝히고 전송하지 않는다", async () => {
-  // Given
-  const { componentMarkup } = await import("./helpers/markup.mjs");
+  // Given — 서버 상태 조회 전(모델 미설정)의 열린 처방 팝업.
+  const demo = createDemoEmrState("2026-09-02T00:00:00.000Z");
+  const patient = demo.patients[0];
+  const noop = () => {};
+  const html = renderComponent(PrescriptionDialog, {
+    patient, encounter: currentEncounterFor(patient), editable: true, applyMutation: noop, withDraftPreserved: (mutate) => mutate,
+    setStatus: noop, activeDialog: "prescription", setActiveDialog: noop, registerDirty: noop, launcherSlot: {},
+  });
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When / Then
-  assert.match(rx, /"규칙 기반 · 모델 미설정"/);
+  assert.match(html, /<span class="rx-count" id="medicationReviewMode">규칙 기반 · 모델 미설정<\/span>/);
+  assert.doesNotMatch(html, /medicationFrontierConsent|rxConsentField/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
+  // source-check: 전송 생략 안내는 검토 결과가 있을 때만 그려지고, 전송 확인 팝업은 검토 요청 뒤에만 열려 서버 렌더가 재현할 수 없다.
   assert.match(rx, /환자 자료를 전송하지 않고 규칙 판정만 표시합니다/);
   assert.doesNotMatch(rx, /medicationFrontierConsent/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
   assert.doesNotMatch(rx, /rxConsentField/);

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { declarationsFor, stylesheet } from "./helpers/css.mjs";
+import { renderComponent } from "./helpers/render.mjs";
+
 import {
   createCareBridgePatientBriefInput,
   createModelPatientBrief,
@@ -355,27 +358,40 @@ test("자기보고 정리는 길이와 흔한 직접식별자 마스킹 경계�
 });
 
 test("진료 준비 화면은 명시적으로 가져온 기록·모델 동의·로컬 질문 복사 흐름만 노출한다", async () => {
-  const { pageMarkup } = await import("./helpers/markup.mjs");
+  const { default: InsightsPage } = await import("../app/(insights)/insights/page.jsx");
   const [html, client, css] = await Promise.all([
-    pageMarkup("/insights"),
+    renderComponent(InsightsPage),
+    // source-check: insights.js queries the document and binds listeners on import, so its request/clipboard flow needs a browser.
     readFile(new URL("../src/insights.js", import.meta.url), "utf8"),
-    readFile(new URL("../src/insights.css", import.meta.url), "utf8"),
+    stylesheet("src/insights.css"),
   ]);
+  /** The opening tag of the rendered element carrying `attribute`. */
+  const openingTag = (attribute) => {
+    const match = html.match(new RegExp(`<[a-z][^>]*\\s${attribute}[^>]*>`));
+    assert.ok(match, `렌더링된 요소가 있어야 합니다: ${attribute}`);
+    return match[0];
+  };
+  const providerRadio = (value) => html.match(new RegExp(`<input[^>]*\\svalue="${value}"[^>]*>`))?.[0] ?? "";
 
   assert.match(html, /환자용 기록을 직접 가져오면 질문 브리프가 시작됩니다/);
   assert.match(html, /파일과 별도 확인 코드를 대조/);
-  assert.match(html, /id="patientSelfReport"[^>]*maxlength="1000"/);
+  // HTML attribute names are case-insensitive; React serialises this one as maxLength.
+  assert.match(openingTag('id="patientSelfReport"'), /^<textarea[^>]*\smaxlength="1000"/i);
   assert.match(html, /질문 예시 보기/);
   assert.match(html, /식사, 운동 횟수·시간, 약 복용 시점, 검사 준비/);
-  assert.match(html, /name="question-provider" value="local" checked/);
+  assert.match(providerRadio("local"), /^<input[^>]*\stype="radio"/);
+  assert.match(providerRadio("local"), /\sname="question-provider"/);
+  assert.match(providerRadio("local"), /\schecked=""/);
   assert.match(html, /이 기기 모델/);
-  assert.match(html, /name="question-provider" value="frontier"/);
+  assert.match(providerRadio("frontier"), /^<input[^>]*\stype="radio"/);
+  assert.match(providerRadio("frontier"), /\sname="question-provider"/);
+  assert.doesNotMatch(providerRadio("frontier"), /\schecked/);
   assert.match(html, /외부 모델/);
-  assert.match(html, /id="frontierConsent"/);
+  assert.match(openingTag('id="frontierConsent"'), /^<input[^>]*\stype="checkbox"/);
   assert.match(html, /외부 모델에는 파일에 확정으로 표시된 질환·최종 측정값과 직접 적은 최근 변화가 전송/);
   assert.match(html, /파일 발행기관·변조 여부는 검증되지 않/);
   assert.doesNotMatch(html, /서명 처방.*모델 서비스로 전송/);
-  assert.match(html, /id="sharePatientBrief"[^>]*disabled/);
+  assert.match(openingTag('id="sharePatientBrief"'), /^<button[^>]*\sdisabled=""/);
   assert.match(html, /선택 질문 복사/);
   assert.match(html, /<p class="action-note" id="exportClinicalSnapshot">별도 JSON은 만들지 않습니다<\/p>/);
   assert.doesNotMatch(html, /<button[^>]*id="exportClinicalSnapshot"/);
@@ -389,6 +405,10 @@ test("진료 준비 화면은 명시적으로 가져온 기록·모델 동의·�
   assert.doesNotMatch(client, /publishPatientBrief|readCareBridge|subscribeCareBridge|createPatientOwnedJson/);
   assert.match(client, /session\.isDemo[\s\S]*?shareBrief\.disabled/);
   assert.match(client, /예시 모드에서는 이 기기 모델·외부 모델로 데이터를 전송하지 않습니다/);
-  assert.match(css, /\.frontier-consent\[hidden\]/);
-  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.assistant-provider/);
+
+  assert.equal(declarationsFor(css, ".frontier-consent[hidden]").display, "none");
+  assert.equal(
+    declarationsFor(css, ".assistant-provider", { container: "@media (max-width: 620px)" })["grid-template-columns"],
+    "1fr",
+  );
 });

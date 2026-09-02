@@ -2,18 +2,24 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { pageMarkup } from "./helpers/markup.mjs";
+import { declarationsFor, stylesheet } from "./helpers/css.mjs";
+import { renderComponent } from "./helpers/render.mjs";
 
 test("Journey 변화는 저장 데이터를 수정하지 않는 하나의 명시적 기본 동작으로 연다", async () => {
-  const [html, client, css] = await Promise.all([
-    pageMarkup("/journey"),
+  const [{ default: Page }, client, css] = await Promise.all([
+    import("../app/(journey)/journey/page.jsx"),
     readFile(new URL("../src/journey.js", import.meta.url), "utf8"),
-    readFile(new URL("../src/journey.css", import.meta.url), "utf8"),
+    stylesheet("src/journey.css"),
   ]);
+  const html = renderComponent(Page);
 
   assert.equal((html.match(/id="reviewJourneyChanges"/g) ?? []).length, 1);
-  assert.match(html, /id="reviewJourneyChanges"[\s\S]*?aria-controls="journeyComparison"[\s\S]*?최근 변화 살펴보기/);
-  assert.match(html, /id="comparisonTitle" tabindex="-1"/);
+  assert.match(html, /<button class="primary-button" id="reviewJourneyChanges" type="button" aria-controls="journeyComparison">최근 변화 살펴보기<\/button>/);
+  assert.match(html, /<section class="journey-comparison" id="journeyComparison"/);
+  assert.match(html, /<h2 id="comparisonTitle" tabindex="-1">/);
+  // With no stored snapshots the review action ships hidden; the controller only reveals it for two or more records.
+  assert.match(html, /<div class="journey-review-action" id="journeyReviewAction" hidden="">/);
+  // source-check: the reveal threshold, date rendering, reduced-motion scroll and delete confirmation run in the journey controller, which needs a document.
   assert.match(client, /elements\.reviewAction\.hidden = journey\.length < 2/);
   assert.match(client, /value\.replaceAll\("-", "\\u2011"\)/);
   assert.match(
@@ -22,10 +28,12 @@ test("Journey 변화는 저장 데이터를 수정하지 않는 하나의 명시
   );
   assert.match(client, /window\.confirm\(`\$\{snapshot\.date\} Journey 기록을 삭제할까요\?/);
 
+  // source-check: the click handler must stay read-only over stored Journey data; only its body can show that.
   const reviewHandler = client.match(
     /elements\.reviewChanges\.addEventListener\("click",[\s\S]*?\n\}\);/,
   )?.[0] ?? "";
+  assert.notEqual(reviewHandler, "");
   assert.doesNotMatch(reviewHandler, /persistJourney|localStorage|journey\s*=/);
-  assert.match(css, /\.journey-review-action \.primary-button \{ min-height: 44px; \}/);
-  assert.match(css, /#comparisonTitle:focus-visible/);
+  assert.equal(declarationsFor(css, ".journey-review-action .primary-button")["min-height"], "44px");
+  assert.ok(declarationsFor(css, "#comparisonTitle:focus-visible").outline, "the comparison title shows a focus ring when focus lands on it");
 });

@@ -14,7 +14,16 @@ import {
   preferredDiagnosisCode,
   searchDiagnosisCatalog,
 } from "../src/diagnosis-catalog.js";
+import * as entryDialogs from "../components/emr/entry-dialogs.jsx";
+import { renderEncounterTab } from "./helpers/emr-fixtures.mjs";
 
+/**
+ * The entry dialogs open through Radix `Dialog.Portal`, which renders nothing
+ * on the server, and their launcher buttons portal into a slot the parent
+ * hands over after mount. renderToStaticMarkup therefore cannot reach the
+ * dialog body; the tab around it renders fine and shows what the clinician
+ * sees before opening a popup.
+ */
 test("예시 상병 목록은 진단명·코드·증상으로 검색된다", () => {
   // Given / When
   const byName = searchDiagnosisCatalog("고혈압");
@@ -59,13 +68,20 @@ test("코드 시스템과 주·부상병 구분은 선택지로 제공된다", (
 
 test("진단 입력은 팝업에서 검색·코드 선택·주상병 구분을 거친다", async () => {
   // Given
+  const tab = renderEncounterTab();
   const dialogs = await componentMarkup("components/emr/entry-dialogs.jsx");
 
   // When
   const launcherFirst = dialogs.indexOf('id="openDiagnosisDialog"') < dialogs.indexOf('id="diagnosisDialog"');
   const searchBeforeCodes = dialogs.indexOf('id="diagnosisSearchInput"') < dialogs.indexOf('id="diagnosisCodeOptions"');
 
-  // Then
+  // Then — 진단 카드는 런처 슬롯만 내놓고, 검색·코드 선택·폼은 팝업이 열릴 때까지 화면에 없다.
+  assert.match(tab, /<span class="entry-launcher-slot" id="entryLauncher-diagnoses">/);
+  assert.doesNotMatch(tab, /id="diagnosisForm"|id="diagnosisSearchInput"|id="diagnosisCodeOptions"/);
+  // 팝업 모듈은 카탈로그의 경계 문구를 그대로 넘긴다 — 같은 상병 목록을 쓴다는 뜻이다.
+  assert.equal(entryDialogs.DIAGNOSIS_CATALOG_BOUNDARY, DIAGNOSIS_CATALOG_BOUNDARY);
+  assert.equal(typeof entryDialogs.DiagnosisDialog, "function");
+  // source-check: 팝업 본문은 Radix Dialog.Portal 안에 있고 런처는 마운트 뒤 슬롯으로 portal되어 서버 렌더에 나오지 않는다.
   assert.match(dialogs, /<Button[^>]*id="openDiagnosisDialog"[^>]*>진단 추가<\/Button>/);
   assert.match(dialogs, /id="diagnosisDialog"/);
   assert.ok(dialogs.includes('id="diagnosisForm"'), "진단 입력 폼은 팝업 안에 있다");
@@ -73,7 +89,6 @@ test("진단 입력은 팝업에서 검색·코드 선택·주상병 구분을 �
   assert.equal(searchBeforeCodes, true);
   assert.match(dialogs, /id="diagnosisRole"[\s\S]*?주상병[\s\S]*?부상병[\s\S]*?<\/select>/);
   assert.match(dialogs, /id="diagnosisSystem"[\s\S]*?urn:kr:kcd[\s\S]*?<\/select>/);
-  assert.match(dialogs, /from "\.\.\/\.\.\/src\/diagnosis-catalog\.js"/);
 });
 
 test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 접어 둔다", async () => {
@@ -84,8 +99,9 @@ test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 
   const showsIngredient = dialog.includes('class="rx-result__ingredient"');
 
   // Then
+  // source-check: 검색 결과 목록은 Radix Dialog.Portal 안에서만 렌더되어 서버 렌더로 닿을 수 없다.
   assert.equal(showsIngredient, true);
   assert.doesNotMatch(dialog, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
   assert.match(dialog, /class="rx-result__details-summary">\s*자세히 보기/);
-  assert.match(dialog, /function medicationDetailRows\(medication\)/);
+  assert.match(dialog, /<details class="rx-result__details"[\s\S]*?<DetailList rows=/, "상세 행은 접힌 details 안에 있다");
 });

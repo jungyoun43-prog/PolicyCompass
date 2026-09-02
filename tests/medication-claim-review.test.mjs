@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { register } from "node:module";
 import test from "node:test";
 
 import {
@@ -20,6 +20,56 @@ import {
 import { createDemoEmrState } from "../src/emr-demo-state.js";
 import { AMLODIPINE, AMOXICLAV, PANTOPRAZOLE, TIOTROPIUM } from "./helpers/medication-fixtures.mjs";
 import { sanitizeMedicationClaimComparison } from "../scripts/graphs/medication-claim-review-graph.mjs";
+import { currentEncounterFor } from "../lib/emr/selectors.js";
+import { componentMarkup } from "./helpers/markup.mjs";
+import { renderComponent } from "./helpers/render.mjs";
+
+/**
+ * The prescription dialog body lives in a Radix portal and its launcher in a
+ * createPortal slot; the server renderer cannot place either. This hook makes
+ * both portals render their children inline, so the dialog markup the browser
+ * gets can be asserted on. Everything else in the tree stays real.
+ */
+const PORTAL_INLINE_HOOK = `
+export async function load(url, context, nextLoad) {
+  if (url.endsWith("/node_modules/radix-ui/dist/index.mjs")) {
+    return { format: "module", shortCircuit: true, source: \`
+      import * as real from "\${url}?real";
+      export * from "\${url}?real";
+      export const Dialog = { ...real.Dialog, Portal: ({ children }) => children };
+    \` };
+  }
+  if (url.endsWith("/node_modules/react-dom/index.js")) {
+    return { format: "module", shortCircuit: true, source: \`
+      import real from "\${url}?real";
+      export * from "\${url}?real";
+      export default real;
+      export const createPortal = (children) => children;
+    \` };
+  }
+  return nextLoad(url, context);
+}`;
+register(`data:text/javascript,${encodeURIComponent(PORTAL_INLINE_HOOK)}`);
+const { PrescriptionDialog } = await import("../components/emr/prescription-dialog.jsx");
+
+/** The open 약 처방하기 dialog for a demo patient, as first painted (no search, no review yet). */
+function renderPrescriptionDialog(props = {}) {
+  const patient = demo.patients[0];
+  const noop = () => {};
+  return renderComponent(PrescriptionDialog, {
+    patient,
+    encounter: currentEncounterFor(patient),
+    editable: true,
+    applyMutation: noop,
+    withDraftPreserved: (mutate) => mutate,
+    setStatus: noop,
+    activeDialog: "prescription",
+    setActiveDialog: noop,
+    registerDirty: noop,
+    launcherSlot: {},
+    ...props,
+  });
+}
 
 const AS_OF = "2026-07-20";
 const demo = createDemoEmrState(AS_OF);
@@ -230,22 +280,29 @@ test("서버는 브라우저가 보낸 비교 결과만 받아들인다", () => 
 
 test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조표를 보여 준다", async () => {
   // Given
-  const { componentMarkup } = await import("./helpers/markup.mjs");
+  const html = renderPrescriptionDialog();
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When
-  const launcherFirst = rx.indexOf('id="openPrescriptionDialog"') < rx.indexOf('id="prescriptionDialog"');
-  const verdictBeforeSources = rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"');
+  const launcherAt = html.indexOf('id="openPrescriptionDialog"');
+  const dialogAt = html.indexOf('id="prescriptionDialog"');
+  const formAt = html.indexOf('id="prescriptionForm"');
 
-  // Then
-  assert.match(rx, /<Button[^>]*id="openPrescriptionDialog"[^>]*>약 처방하기<\/Button>/);
-  assert.match(rx, /id="prescriptionDialog"/);
-  assert.match(rx, /inputId="medicationSearchInput"/);
-  assert.ok(rx.includes('id="prescriptionForm"'), "처방 입력 폼은 팝업 안에 있다");
-  assert.equal(launcherFirst, true);
-  assert.equal(verdictBeforeSources, true);
+  // Then — 런처 버튼, 팝업, 검색 입력, 처방 입력 폼이 실제 마크업에 있다.
+  assert.match(html, /<button[^>]*id="openPrescriptionDialog"[^>]*aria-haspopup="dialog"[^>]*>약 처방하기<\/button>/);
+  assert.match(html, /<div[^>]*role="dialog"[^>]*id="prescriptionDialog"[^>]*aria-labelledby="rxDialogTitle"/);
+  assert.match(html, /<label[^>]*for="medicationSearchInput">약품 검색<input id="medicationSearchInput"[^>]*type="search"/);
+  assert.ok(launcherAt > -1 && dialogAt > -1 && formAt > -1);
+  assert.ok(launcherAt < dialogAt, "런처가 팝업보다 앞선다");
+  assert.ok(formAt > dialogAt, "처방 입력 폼은 팝업 안에 있다");
+  assert.match(html, /<\/form><\/div><\/div>$/, "처방 입력 폼은 팝업 패널의 마지막 자식이다");
+  assert.match(html, /id="medicationResultCount">0건</, "검색 전에는 결과가 없다");
+  assert.match(html, /id="medicationReviewEmpty">검색 결과에서 <b>AI 검토<\/b>를 누르면/);
+  // source-check: 판정 카드와 판정 근거 대조표는 AI 검토 클릭·응답 뒤에만 그려지므로 서버 렌더로는 도달할 수 없다.
+  assert.equal(rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"'), true);
   assert.match(rx, /판정 근거 · 삭감 근거와 환자 정보 대조/);
   assert.doesNotMatch(rx, /medicationReviewRationale/, "판정 근거 대조표가 있으므로 줄글 근거는 중복이다");
+  // source-check: 검색 결과·판정은 사용자의 검색·검토 요청 뒤에만 나타나므로 팝업이 공유 약품 목록·규칙 엔진·검토 API를 쓰는지는 원문으로만 확인한다.
   assert.match(rx, /"\/api\/medication-claim-review"/);
   assert.match(rx, /from "\.\.\/\.\.\/src\/medication-catalog\.js"/);
   assert.match(rx, /from "\.\.\/\.\.\/src\/medication-claim-review\.js"/);
@@ -253,9 +310,10 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
 
 test("검토 화면은 서버 기본이 아니라 실제로 요청한·응답한 모델을 이름으로 보여 준다", async () => {
   // Given
-  const rx = await readFile("components/emr/prescription-dialog.jsx", "utf8");
+  const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
 
   // When / Then — 진행 중엔 선택한 모델, 완료 뒤엔 서버가 응답한 모델 id를 표시한다.
+  // source-check: 진행 중·완료 상태는 검토 요청 클릭과 서버 응답으로만 만들어져 서버 렌더가 재현할 수 없다.
   assert.match(rx, /setPendingReview\(\{ medicationId, name, model: requestedModelLabel \}\)/);
   assert.match(rx, /cloudLabelFor\(pendingReview\.model\)/);
   assert.match(rx, /reviewedModelLabel = review\?\.model \? frontierModelLabel\(review\.model\)/);
@@ -264,12 +322,24 @@ test("검토 화면은 서버 기본이 아니라 실제로 요청한·응답한
 
 test("배포 서버는 약제 AI 검토 경로를 같은 출처로만 열어 둔다", async () => {
   // Given
-  const [route, api] = await Promise.all([
-    readFile("app/api/medication-claim-review/route.js", "utf8"),
-    readFile("lib/api.js", "utf8"),
-  ]);
+  const { POST } = await import("../app/api/medication-claim-review/route.js");
+  const request = (headers) => new Request("https://policycompass.test/api/medication-claim-review", {
+    method: "POST",
+    headers: { "content-type": "application/json", host: "policycompass.test", ...headers },
+    body: JSON.stringify({ comparison: review("이준호", TIOTROPIUM) }),
+  });
 
-  // When / Then
-  assert.match(route, /assertSameOrigin\(request\)/);
-  assert.match(api, /ORIGIN_NOT_ALLOWED/);
+  // When
+  const crossSite = await POST(request({ "sec-fetch-site": "cross-site" }));
+  const foreignOrigin = await POST(request({ origin: "https://elsewhere.test" }));
+  // 같은 출처는 출처 검사를 지나 다음 검사(JSON 형식)에서 멈춘다 — 환경에 모델이 설정돼 있어도 모델 호출은 일어나지 않는다.
+  const sameOrigin = await POST(request({ "sec-fetch-site": "same-origin", origin: "https://policycompass.test", "content-type": "text/plain" }));
+
+  // Then — 다른 출처는 모델 작업 전에 403으로 막히고, 같은 출처는 출처 검사를 통과한다.
+  for (const response of [crossSite, foreignOrigin]) {
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), { code: "ORIGIN_NOT_ALLOWED", message: "같은 PolicyCompass 출처의 요청만 허용합니다." });
+  }
+  assert.equal(sameOrigin.status, 415);
+  assert.equal((await sameOrigin.json()).code, "JSON_REQUIRED");
 });

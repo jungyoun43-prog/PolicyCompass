@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
 
-import { pageMarkup } from "./helpers/markup.mjs";
+import PatientPage from "../app/(landing)/patient/page.jsx";
+import MapPage from "../app/(map)/map/page.jsx";
+import ConnectionsPage from "../app/(connections)/connections/page.jsx";
+import { declarationsFor, stylesheet } from "./helpers/css.mjs";
+import { renderComponent } from "./helpers/render.mjs";
+
+/** The HTML the server sends for a route's page (effects do not run). */
+const pages = { "/patient": PatientPage, "/map": MapPage, "/connections": ConnectionsPage };
+const renderPage = (route) => renderComponent(pages[route]);
 
 function findElementEnd(source, start, tagName) {
   const tags = new RegExp(`<\\/?${tagName}\\b[^>]*>`, "g");
@@ -18,10 +25,17 @@ function findElementEnd(source, start, tagName) {
   return -1;
 }
 
-test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", async () => {
-  const html = await pageMarkup("/patient");
-  const preview = html.match(/<article class="brief-preview"[\s\S]*?<\/article>/)?.[0] ?? "";
+/** The outer HTML of the first element carrying `className` (no same-tag nesting inside). */
+function elementByClass(html, tagName, className) {
+  const start = html.search(new RegExp(`<${tagName} class="${className}"`));
+  if (start < 0) return "";
+  return html.slice(start, findElementEnd(html, start, tagName));
+}
 
+test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", () => {
+  const preview = elementByClass(renderPage("/patient"), "article", "brief-preview");
+
+  assert.notEqual(preview, "", "brief-preview 미리보기가 렌더링되어야 한다.");
   assert.match(preview, /예시 데이터/);
   assert.match(preview, /다음 진료에서 확인할 질문/);
   assert.match(preview, /가정 혈압/);
@@ -29,18 +43,18 @@ test("랜딩 미리보기는 실제 진료 준비 결과물을 보여 준다", a
   assert.doesNotMatch(preview, /AI|LLM/);
 });
 
-test("메인 히어로는 생성 이미지와 의미 있는 대체 텍스트를 사용한다", async () => {
-  const html = await pageMarkup("/patient");
-  const hero = html.match(/<figure class="landing-hero__visual"[\s\S]*?<\/figure>/)?.[0] ?? "";
+test("메인 히어로는 생성 이미지와 의미 있는 대체 텍스트를 사용한다", () => {
+  const hero = elementByClass(renderPage("/patient"), "figure", "landing-hero__visual");
 
-  assert.match(hero, /src="\/assets\/visit-prep-hero\.png"/);
-  assert.match(hero, /width="1586"/);
-  assert.match(hero, /height="992"/);
-  assert.match(hero, /alt="[^"]+"/);
+  assert.notEqual(hero, "", "히어로 figure가 렌더링되어야 한다.");
+  assert.match(hero, /<img\b[^>]*\bsrc="\/assets\/visit-prep-hero\.png"/);
+  assert.match(hero, /<img\b[^>]*\bwidth="1586"/);
+  assert.match(hero, /<img\b[^>]*\bheight="992"/);
+  assert.match(hero, /<img\b[^>]*\balt="[^"]+"/);
 });
 
-test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", async () => {
-  const html = await pageMarkup("/connections");
+test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", () => {
+  const html = renderPage("/connections");
 
   assert.match(html, /id="explorerDetailChecks"/);
   assert.match(html, /id="explorerDetailNutrition"/);
@@ -48,11 +62,11 @@ test("Connections는 관리 메모를 그래프 밖 상세 패널에 둔다", as
   assert.doesNotMatch(html, /관리 가지/);
 });
 
-test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분한다", async () => {
-  const html = await pageMarkup("/map");
+test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분한다", () => {
+  const html = renderPage("/map");
 
-  assert.match(html, /class="human-figure__image"/);
-  assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
+  assert.match(html, /<img class="human-figure__image"/);
+  assert.match(html, /<img class="human-figure__image"[^>]*\bsrc="\/assets\/body-atlas-v5\.webp"/);
   assert.doesNotMatch(html, /class="human-figure__svg"/);
   assert.equal((html.match(/<button class="body-hotspot /g) ?? []).length, 12);
   assert.match(html, /신경과/);
@@ -62,16 +76,16 @@ test("Health Map은 12개 진료과 영역의 활성·비활성 상태를 구분
   assert.match(html, /류마티스내과/);
   assert.match(html, /기록과 연결됨/);
   assert.match(html, /현재 기록에 없음/);
-  assert.match(html, /data-body-context="patient"/);
-  assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v4\.glb"/);
+  assert.match(html, /<div class="body-stage"[^>]*\bdata-body-context="patient"/);
+  assert.match(html, /<div class="body-stage"[^>]*\bdata-body-model="\/assets\/body-atlas-3d-v4\.glb"/);
 });
 
 test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 분리되고 반응형 폭을 넘지 않는다", async () => {
-  const [html, bodyMapCss, controlsCss, responsiveCss] = await Promise.all([
-    pageMarkup("/map"),
-    readFile("src/body-map.css", "utf8"),
-    readFile("src/controls.css", "utf8"),
-    readFile("src/responsive.css", "utf8"),
+  const html = renderPage("/map");
+  const [bodyMapCss, controlsCss, responsiveCss] = await Promise.all([
+    stylesheet("src/body-map.css"),
+    stylesheet("src/controls.css"),
+    stylesheet("src/responsive.css"),
   ]);
   const stageStart = html.indexOf('<div class="body-stage"');
   const stageEnd = findElementEnd(html, stageStart, "div");
@@ -90,12 +104,38 @@ test("Health Map 상세는 신체 지도와 겹치지 않는 다음 형제로 �
     assert.equal((html.match(new RegExp(`id="${id}"`, "g")) ?? []).length, 1, `${id}는 한 번만 유지되어야 한다.`);
   }
 
-  assert.match(bodyMapCss, /\.body-stage\s*\{[^}]*display:\s*grid[^}]*min-width:\s*0[^}]*overflow:\s*hidden/s);
-  assert.match(bodyMapCss, /\.human-figure\s*\{[^}]*position:\s*relative[^}]*width:\s*min\(78%, 360px\)[^}]*height:\s*auto[^}]*aspect-ratio:\s*2 \/ 3/s);
-  assert.match(bodyMapCss, /\.body-panel > \.detail-panel\s*\{[^}]*max-width:\s*100%[^}]*min-width:\s*0[^}]*border:[^}]*box-shadow:\s*none[^}]*overflow:\s*hidden/s);
-  assert.match(bodyMapCss, /\.body-panel > \.detail-panel :where\(h2, h3, p, li\)\s*\{[^}]*overflow-wrap:\s*anywhere/s);
-  assert.match(bodyMapCss, /@media \(max-width: 780px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*min\(84%, 340px\)[^}]*height:\s*auto/s);
-  assert.match(bodyMapCss, /@media \(max-width: 520px\)[\s\S]*?\.human-figure\s*\{[^}]*width:\s*min\(92%, 308px\)[^}]*height:\s*auto/s);
-  assert.match(controlsCss, /\.map-page \.body-stage\s*\{\s*flex:\s*0 0 auto;\s*min-height:\s*0;\s*\}/);
-  assert.match(responsiveCss, /@media \(max-width: 780px\)[\s\S]*?\.detail-panel\s*\{[^}]*grid-template-columns:\s*1fr/s);
+  const stage = declarationsFor(bodyMapCss, ".body-stage");
+  assert.equal(stage.display, "grid");
+  assert.equal(stage["min-width"], "0");
+  assert.equal(stage.overflow, "hidden");
+
+  const figure = declarationsFor(bodyMapCss, ".human-figure");
+  assert.equal(figure.position, "relative");
+  assert.equal(figure.width, "min(78%, 360px)");
+  assert.equal(figure.height, "auto");
+  assert.equal(figure["aspect-ratio"], "2 / 3");
+
+  const detail = declarationsFor(bodyMapCss, ".body-panel > .detail-panel");
+  assert.equal(detail["max-width"], "100%");
+  assert.equal(detail["min-width"], "0");
+  assert.ok(detail.border, "상세 패널은 테두리로 경계를 드러내야 한다.");
+  assert.equal(detail["box-shadow"], "none");
+  assert.equal(detail.overflow, "hidden");
+  assert.equal(
+    declarationsFor(bodyMapCss, ".body-panel > .detail-panel :where(h2, h3, p, li)")["overflow-wrap"],
+    "anywhere",
+  );
+
+  const tabletFigure = declarationsFor(bodyMapCss, ".human-figure", { container: "@media (max-width: 780px)" });
+  assert.equal(tabletFigure.width, "min(84%, 340px)");
+  assert.equal(tabletFigure.height, "auto");
+  const phoneFigure = declarationsFor(bodyMapCss, ".human-figure", { container: "@media (max-width: 520px)" });
+  assert.equal(phoneFigure.width, "min(92%, 308px)");
+  assert.equal(phoneFigure.height, "auto");
+
+  assert.deepEqual(declarationsFor(controlsCss, ".map-page .body-stage"), { flex: "0 0 auto", "min-height": "0" });
+  assert.equal(
+    declarationsFor(responsiveCss, ".detail-panel", { container: "@media (max-width: 780px)" })["grid-template-columns"],
+    "1fr",
+  );
 });

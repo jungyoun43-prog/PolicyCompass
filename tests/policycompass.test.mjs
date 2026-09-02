@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import GatewayPage from "../app/(gateway)/page.jsx";
+import PatientPage from "../app/(landing)/patient/page.jsx";
+import MapPage from "../app/(map)/map/page.jsx";
+import ConnectionsPage from "../app/(connections)/connections/page.jsx";
 import { CONDITIONS, extractInputSignals, inferConditionIds } from "../src/data.js";
-import { pageMarkup } from "./helpers/markup.mjs";
+import { renderComponent } from "./helpers/render.mjs";
+
+/** The HTML the server sends for a route's page (effects do not run). */
+const pages = { "/": GatewayPage, "/patient": PatientPage, "/map": MapPage, "/connections": ConnectionsPage };
+const renderPage = (route) => renderComponent(pages[route]);
 
 test("입력한 수치·증상은 질환이 아닌 미검증 패턴 신호로 분리한다", () => {
   // Given
@@ -35,7 +43,7 @@ test("부정된 증상은 패턴 신호에도 포함하지 않는다", () => {
   assert.deepEqual(inferConditionIds("당뇨 아님, 고혈압 없음", []), []);
 });
 
-test("COPD와 폐렴은 호흡기 모델에 등록하되 환자 입력이나 문구만으로 추론하지 않는다", async () => {
+test("COPD와 폐렴은 호흡기 모델에 등록하되 환자 입력이나 문구만으로 추론하지 않는다", () => {
   assert.deepEqual(Object.keys(CONDITIONS), [
     "hypertension",
     "diabetes",
@@ -53,34 +61,34 @@ test("COPD와 폐렴은 호흡기 모델에 등록하되 환자 입력이나 문
   assert.deepEqual(inferConditionIds("COPD 같고 숨이 찹니다", []), []);
   assert.deepEqual(inferConditionIds("폐렴 같고 열이 납니다", []), []);
 
-  const html = await pageMarkup("/map");
+  const html = renderPage("/map");
   assert.doesNotMatch(html, /data-condition="copd"/);
   assert.match(html, /확인 필요 신호 · 진단 아님/);
   assert.match(html, /입력값만으로 질환을 확정하지 않습니다/);
   assert.match(html, /반복 검사와 의료진 판단이 필요/);
 });
 
-test("게이트웨이는 역할 선택과 두 진입점을 제공한다", async () => {
-  const html = await pageMarkup("/");
+test("게이트웨이는 역할 선택과 두 진입점을 제공한다", () => {
+  const html = renderPage("/");
 
   assert.match(html, /PolicyCompass/);
   assert.match(html, /사용할 공간을 선택하세요/);
-  assert.match(html, /href="\/emr"[^>]*>\s*의료진 EMR 열기/s);
-  assert.match(html, /href="\/patient"[^>]*>\s*개인 PolicyCompass 열기/s);
+  assert.match(html, /<a\b[^>]*\bhref="\/emr"[^>]*>\s*의료진 EMR 열기/);
+  assert.match(html, /<a\b[^>]*\bhref="\/patient"[^>]*>\s*개인 PolicyCompass 열기/);
   assert.doesNotMatch(html, /id="fhirFile"/);
 });
 
-test("개인 PolicyCompass 홈은 /patient에서 EMR 없이 제공된다", async () => {
-  const html = await pageMarkup("/patient");
+test("개인 PolicyCompass 홈은 /patient에서 EMR 없이 제공된다", () => {
+  const html = renderPage("/patient");
 
   assert.match(html, /PolicyCompass Personal/);
-  assert.match(html, /내 건강 기록을.*내가 이어 보는/s);
+  assert.match(html, /<h1\b[^>]*>[\s\S]*?내 건강 기록을[\s\S]*?내가 이어 보는[\s\S]*?<\/h1>/);
   assert.doesNotMatch(html, /id="patientList"|id="encounterForm"|id="claimBoard"/);
 });
 
-test("연결 탐색 전용 페이지를 제공한다", async () => {
-  const html = await pageMarkup("/connections");
+test("연결 탐색 전용 페이지를 제공한다", () => {
+  const html = renderPage("/connections");
 
-  assert.match(html, /기록과 추론을 나눠 보기/);
-  assert.match(html, /networkScene/);
+  assert.match(html, /<h1\b[^>]*>기록과 추론을 나눠 보기<\/h1>/);
+  assert.match(html, /<svg\b[^>]*\bid="networkScene"/);
 });

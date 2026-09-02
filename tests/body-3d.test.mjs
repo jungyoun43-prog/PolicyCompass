@@ -2,23 +2,121 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
-import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+import MapPage from "../app/(map)/map/page.jsx";
+import { BodyTab } from "../components/emr/tabs/body-tab.jsx";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
+import { renderComponent } from "./helpers/render.mjs";
 
-const [patientHtml, emrHtml, adapterSource, loaderSource, middlewareSource, packageJson] = await Promise.all([
-  pageMarkup("/map"),
-  emrMarkup(),
+const [adapterSource, loaderSource, bodyTabSource, middlewareSource, packageJson] = await Promise.all([
   readFile(new URL("../src/body-3d.js", import.meta.url), "utf8"),
   readFile(new URL("../components/legacy-script.jsx", import.meta.url), "utf8"),
+  readFile(new URL("../components/emr/tabs/body-tab.jsx", import.meta.url), "utf8"),
   readFile(new URL("../middleware.js", import.meta.url), "utf8"),
   readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
 ]);
 const {
+  Body3DController,
   CLINICAL_BODY_PALETTE,
   CLINICAL_ORGAN_NODES,
   DEFAULT_BODY_HOTSPOTS,
   classifyClinicalPartName,
   collectClinicalMaterialRoles,
 } = await import(new URL("../src/body-3d.js", import.meta.url));
+
+const demoState = createDemoEmrState("2026-09-02T00:00:00.000Z");
+const demoPatient = demoState.patients.find(({ id }) => id === demoState.selectedPatientId);
+const patientHtml = renderComponent(MapPage);
+const emrHtml = renderComponent(BodyTab, { patient: demoPatient, selectTab: () => {}, active: false });
+
+/** The opening tag of the first element carrying `attribute` (a data-* name), or "". */
+function tagWithAttribute(html, attribute) {
+  return html.match(new RegExp(`<[a-z0-9]+[^>]*\\b${attribute}(?:="[^"]*")?[^>]*>`))?.[0] ?? "";
+}
+const attributeOf = (tag, name) => tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? null;
+
+/**
+ * Enough of a DOM element for the controller's viewer/hotspot code paths:
+ * attributes, dataset, children and listeners are recorded, nothing renders.
+ */
+class FakeElement {
+  constructor(tagName) {
+    this.tagName = tagName;
+    this.attributes = new Map();
+    this.dataset = {};
+    this.children = [];
+    this.listeners = [];
+    this.hidden = false;
+  }
+
+  setAttribute(name, value) { this.attributes.set(name, String(value)); }
+
+  getAttribute(name) { return this.attributes.has(name) ? this.attributes.get(name) : null; }
+
+  hasAttribute(name) { return this.attributes.has(name); }
+
+  append(...nodes) { this.children.push(...nodes); }
+
+  addEventListener(type) { this.listeners.push(type); }
+}
+
+const hexToRgb = (hex) => [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255);
+
+/** A model-viewer material double that records the PBR and alpha calls the controller makes. */
+function fakeMaterial(name) {
+  const pbr = {
+    baseColorFactor: [0.5, 0.5, 0.5, 1],
+    metallicFactor: 0.4,
+    roughnessFactor: 0.5,
+    setBaseColorFactor(value) {
+      pbr.baseColorFactor = typeof value === "string" ? [...hexToRgb(value), 1] : [...value];
+    },
+    setMetallicFactor(value) { pbr.metallicFactor = value; },
+    setRoughnessFactor(value) { pbr.roughnessFactor = value; },
+  };
+  const material = {
+    name,
+    alphaMode: "OPAQUE",
+    alphaCutoff: 0.5,
+    pbrMetallicRoughness: pbr,
+    getAlphaMode: () => material.alphaMode,
+    getAlphaCutoff: () => material.alphaCutoff,
+    setAlphaMode(value) { material.alphaMode = value; },
+    setAlphaCutoff(value) { material.alphaCutoff = value; },
+  };
+  return material;
+}
+
+/**
+ * A controller whose constructor never ran (that needs a browser): the given
+ * fields stand in for what the real one collects from the stage element.
+ */
+function bareController(fields) {
+  return Object.assign(Object.create(Body3DController.prototype), fields);
+}
+
+/** A loaded scene: one body shell plus the organ nodes, each with its own material. */
+function loadedScene({ organs = true, options = {} } = {}) {
+  const nodeNames = organs ? ["ClinicalBody", ...CLINICAL_ORGAN_NODES] : ["ClinicalBody"];
+  const materials = nodeNames.map((name) => fakeMaterial(`${name}_Material`));
+  const controller = bareController({
+    options,
+    stage: { dataset: {} },
+    viewer: {
+      dataset: {},
+      model: { materials },
+      originalGltfJson: {
+        nodes: nodeNames.map((name, mesh) => ({ name, mesh })),
+        meshes: nodeNames.map((_, material) => ({ primitives: [{ material }] })),
+        materials: materials.map(({ name }) => ({ name })),
+      },
+    },
+    bodyMaterials: [],
+    organMaterials: [],
+    clinicalMaterialStates: new Map(),
+    materialTreatment: "clinical-neutral",
+  });
+  return { controller, materials, nodeNames };
+}
 
 function parseBinaryGltf(buffer) {
   const jsonLength = buffer.readUInt32LE(12);
@@ -54,23 +152,26 @@ function parseBinaryGltf(buffer) {
 
 test("환자 지도와 EMR은 같은 자체 호스팅 3D 전신 뷰어를 사용한다", () => {
   for (const [html, context] of [[patientHtml, "patient"], [emrHtml, "emr"]]) {
-    assert.match(html, /data-body-3d/);
-    assert.match(html, /data-body-model="\/assets\/body-atlas-3d-v4\.glb"/);
-    assert.match(html, new RegExp(`data-body-context="${context}"`));
-    assert.match(html, /src="\/assets\/body-atlas-v5\.webp"/);
+    const stage = tagWithAttribute(html, "data-body-3d");
+    assert.ok(stage, `${context} 화면에 data-body-3d 무대가 렌더링되어야 합니다.`);
+    assert.match(attributeOf(stage, "class"), /\bbody-stage\b/);
+    assert.equal(attributeOf(stage, "data-body-model"), "/assets/body-atlas-3d-v4.glb");
+    assert.equal(attributeOf(stage, "data-body-context"), context);
+    const poster = html.match(/<img[^>]*\bclass="human-figure__image"[^>]*>/)?.[0] ?? "";
+    assert.equal(attributeOf(poster, "src"), "/assets/body-atlas-v5.webp");
   }
-  // 런타임은 CDN이 아니라 번들에서 로드한다.
+  // source-check: the runtime is loaded inside useEffect (browser only); SSR never runs it, so only the source shows the bundle imports replace a CDN.
   assert.match(loaderSource, /import\("@google\/model-viewer"\)/);
   assert.match(loaderSource, /import\("\.\.\/src\/body-3d\.js"\)/);
-  assert.match(emrHtml, /import\("@google\/model-viewer"\)/);
+  assert.match(bodyTabSource, /import\("@google\/model-viewer"\)/);
   assert.equal(packageJson.dependencies["@google/model-viewer"], "4.3.1");
+  // source-check: middleware.js imports "next/server", which Node cannot resolve outside the Next bundler, so the CSP cannot be exercised here.
   assert.match(middlewareSource, /wasm-unsafe-eval/);
   assert.match(middlewareSource, /\["\/emr", "\/map"\]/);
 });
 
-test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보존한다", () => {
-  const mappedAreas = [...adapterSource.matchAll(/^ {2}([a-z]+): Object\.freeze\(/gm)].map((match) => match[1]);
-  assert.deepEqual(mappedAreas, [
+test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보존한다", async () => {
+  assert.deepEqual(Object.keys(DEFAULT_BODY_HOTSPOTS), [
     "neuro",
     "mental",
     "sensory",
@@ -84,26 +185,129 @@ test("3D 어댑터는 12개 영역, 자동 3D 표시와 안전한 폴백을 보�
     "rheumatology",
     "dermatology",
   ]);
+  // source-check: the controller only builds its DOM inside a browser, so "no mode/reset/organ buttons" is a negative contract on generated markup that needs one.
   assert.doesNotMatch(adapterSource, /createButton\([^\n]*body-3d-mode-(?:2d|3d)/);
   assert.doesNotMatch(adapterSource, /body-3d-control|body-3d-reset|정면/);
-  assert.match(adapterSource, /set2D\(\{ announce: false, reason \}\)/);
-  assert.match(adapterSource, /prefers-reduced-motion: reduce/);
-  assert.doesNotMatch(adapterSource, /policycompass-body-view|saveData/);
-  assert.match(adapterSource, /setAttribute\("loading", "eager"\)/);
-  assert.match(adapterSource, /touch-action: pan-y/);
-  assert.match(adapterSource, /data-visibility-attribute/);
-  assert.match(adapterSource, /CLINICAL_BODY_PALETTE/);
   assert.doesNotMatch(adapterSource, /createButton\([^\n]*body-3d-organs/);
-  assert.match(adapterSource, /alpha < 1 \? "BLEND"/);
-  assert.match(adapterSource, /discard \? "MASK"/);
-  assert.match(adapterSource, /setAlphaCutoff\(discard \? 1/);
-  assert.match(adapterSource, /bodyOpacity.*0\.54/s);
-  assert.match(adapterSource, /setMaterialAppearance\(state, bodyColor, bodyOpacity, 0\.78\)/);
-  assert.match(adapterSource, /state,\s+color,\s+1,\s+0\.7/);
-  assert.match(adapterSource, /"shadow-softness"/);
-  assert.match(adapterSource, /"tone-mapping"/);
-  assert.match(adapterSource, /"disable-tap"/);
+
+  // 오류는 안내 없이 2D로 되돌리고, 상태와 이벤트로만 알린다.
+  const set2DCalls = [];
+  const stageEvents = [];
+  const errorStage = {
+    dataset: {},
+    classList: { added: [], add(...names) { this.added.push(...names); } },
+    ownerDocument: { defaultView: null },
+    dispatchEvent(event) { stageEvents.push(event); },
+  };
+  const failing = bareController({
+    stage: errorStage,
+    status: { textContent: "" },
+    context: "patient",
+    set2D(args) { set2DCalls.push(args); },
+  });
+  failing.handleError(new Error("WebGL 컨텍스트가 끊어졌습니다."), "model-error");
+  assert.deepEqual(set2DCalls, [{ announce: false, reason: "model-error" }]);
+  assert.equal(errorStage.dataset.body3dState, "error");
+  assert.ok(errorStage.classList.added.includes("has-body-3d-error"));
+  assert.equal(failing.status.textContent, "WebGL 컨텍스트가 끊어졌습니다. 2D 신체 지도를 표시합니다.");
+  assert.deepEqual(stageEvents.map(({ type }) => type), ["body-3d:error"]);
+  assert.equal(stageEvents[0].detail.reason, "model-error");
+
+  // source-check: reduced-motion is read from window.matchMedia in the constructor, which needs a real stage element.
+  assert.match(adapterSource, /prefers-reduced-motion: reduce/);
+  // source-check: "never persists a view preference" is a negative contract on browser storage calls.
+  assert.doesNotMatch(adapterSource, /policycompass-body-view|saveData/);
+
+  // 뷰어는 즉시 로드하고 세로 스크롤을 막지 않으며, 탭 선택과 자동 회전은 끈다.
+  const figure = new FakeElement("div");
+  const mounting = bareController({
+    viewer: null,
+    ownerDocument: { baseURI: "http://localhost:3000/map", createElement: (tag) => new FakeElement(tag) },
+    modelSource: "/assets/body-atlas-3d-v4.glb",
+    poster: "/assets/body-atlas-v5.webp",
+    options: {},
+    stage: { dataset: { bodyAlt: "회전 가능한 3D 건강 지도" } },
+    figure,
+    initialOrbit: "0deg 87deg 4.45m",
+    frontTarget: "0m 0.91m 0m",
+    frontFieldOfView: "24deg",
+    shadowIntensity: "1.12",
+    shadowSoftness: "0.68",
+    exposure: "0.9",
+    toneMapping: "neutral",
+    reducedMotion: false,
+    abortController: new AbortController(),
+  });
+  mounting.mountViewer();
+  const viewer = mounting.viewer;
+  assert.equal(viewer.tagName, "model-viewer");
+  assert.equal(viewer.getAttribute("src"), "http://localhost:3000/assets/body-atlas-3d-v4.glb");
+  assert.equal(viewer.getAttribute("poster"), "/assets/body-atlas-v5.webp");
+  assert.equal(viewer.getAttribute("alt"), "회전 가능한 3D 건강 지도");
+  assert.equal(viewer.getAttribute("loading"), "eager");
+  assert.equal(viewer.getAttribute("touch-action"), "pan-y");
+  assert.ok(viewer.hasAttribute("disable-tap"));
+  assert.ok(viewer.hasAttribute("camera-controls"));
+  assert.equal(viewer.getAttribute("shadow-softness"), "0.68");
+  assert.equal(viewer.getAttribute("tone-mapping"), "neutral");
+  assert.equal(viewer.hasAttribute("auto-rotate"), false);
+  assert.equal(viewer.hidden, true, "뷰어는 모델이 준비될 때까지 숨겨 둡니다.");
+  assert.ok(figure.children.includes(viewer));
+  assert.deepEqual(viewer.listeners, ["load", "error"]);
+  // 외부 호스트의 모델은 같은 출처 검사에서 거부된다.
+  const external = bareController({ ...mounting, viewer: null, modelSource: "https://sketchfab.com/models/body.glb" });
+  assert.throws(() => external.mountViewer(), /같은 출처/);
+
+  // 표식은 기본 좌표와 함께 가시성 속성을 받아 모델 뒤에서 숨겨진다.
+  const hotspot = new FakeElement("button");
+  hotspot.dataset = { area: "cardio" };
+  const placing = bareController({ hotspotMap: {}, originalAttributes: new Map(), viewer: null });
+  placing.placeHotspot(hotspot);
+  assert.equal(hotspot.getAttribute("slot"), "hotspot-cardio");
+  assert.equal(hotspot.getAttribute("data-position"), DEFAULT_BODY_HOTSPOTS.cardio.position);
+  assert.equal(hotspot.getAttribute("data-normal"), DEFAULT_BODY_HOTSPOTS.cardio.normal);
+  assert.equal(hotspot.getAttribute("data-visibility-attribute"), "visible");
+
+  // 임상 재질: 외피는 반투명 회색, 장기는 불투명 팔레트 색.
+  const { controller, materials } = loadedScene();
+  const changed = await controller.applyClinicalMaterials();
+  assert.equal(changed, materials.length);
+  const [body, ...organs] = materials;
+  assert.equal(body.alphaMode, "BLEND");
+  assert.deepEqual(body.pbrMetallicRoughness.baseColorFactor, [...hexToRgb(CLINICAL_BODY_PALETTE.body), 0.54]);
+  assert.equal(body.pbrMetallicRoughness.roughnessFactor, 0.78);
+  assert.equal(body.pbrMetallicRoughness.metallicFactor, 0);
+  for (const [index, organ] of organs.entries()) {
+    const role = classifyClinicalPartName(CLINICAL_ORGAN_NODES[index]);
+    assert.equal(organ.alphaMode, "OPAQUE", `${organ.name}는 불투명해야 합니다.`);
+    assert.deepEqual(organ.pbrMetallicRoughness.baseColorFactor, [...hexToRgb(CLINICAL_BODY_PALETTE[role]), 1]);
+    assert.equal(organ.pbrMetallicRoughness.roughnessFactor, 0.7);
+  }
+  assert.equal(controller.stage.dataset.body3dOrgans, "visible");
+  assert.equal(controller.viewer.dataset.bodyMaterialTreatment, "clinical-layered");
+  // 외피 불투명도 설정은 안전 범위로 잘린다.
+  const configured = loadedScene({ options: { bodyOpacity: 0.1 } });
+  await configured.controller.applyClinicalMaterials();
+  assert.equal(configured.materials[0].pbrMetallicRoughness.baseColorFactor[3], 0.34);
+  // 장기가 없는 모델은 외피를 불투명하게 두고 장기 미지원을 표시한다.
+  const shellOnly = loadedScene({ organs: false });
+  await shellOnly.controller.applyClinicalMaterials();
+  assert.equal(shellOnly.materials[0].alphaMode, "OPAQUE");
+  assert.equal(shellOnly.materials[0].pbrMetallicRoughness.baseColorFactor[3], 1);
+  assert.equal(shellOnly.controller.stage.dataset.body3dOrgans, "unsupported");
+  // 폐기(discard) 재질은 MASK와 cutoff 1로 완전히 숨긴다.
+  const discarded = fakeMaterial("Organ_Heart_Material");
+  const state = { material: discarded, originalAlphaMode: "OPAQUE", originalAlphaCutoff: 0.5 };
+  assert.ok(controller.setMaterialAppearance(state, CLINICAL_BODY_PALETTE.heart, 1, 0.7, { discard: true }));
+  assert.equal(discarded.alphaMode, "MASK");
+  assert.equal(discarded.alphaCutoff, 1);
+  assert.ok(controller.setMaterialAppearance(state, CLINICAL_BODY_PALETTE.heart, 1, 0.7));
+  assert.equal(discarded.alphaMode, "OPAQUE");
+  assert.equal(discarded.alphaCutoff, 0.5);
+
+  // source-check: the stage backdrop lives in a stylesheet string the controller injects at runtime; no export exposes it.
   assert.match(adapterSource, /linear-gradient\(180deg, #f2f6f4/);
+  // source-check: "no external runtime or model host" is a negative contract over every URL in the module.
   assert.doesNotMatch(adapterSource, /auto-rotate|https:\/\/modelviewer|sketchfab\.com\/models/);
 });
 

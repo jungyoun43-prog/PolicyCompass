@@ -3,7 +3,9 @@ import { execFile } from "node:child_process";
 import test from "node:test";
 import { promisify } from "node:util";
 
-import { pageMarkup } from "./helpers/markup.mjs";
+import InsightsPage from "../app/(insights)/insights/page.jsx";
+import JourneyPage from "../app/(journey)/journey/page.jsx";
+import { renderComponent } from "./helpers/render.mjs";
 
 import { createJourneyNarrative, createJourneySnapshot } from "../src/journey-model.js";
 
@@ -71,32 +73,31 @@ test("가능한 맥락은 근거 링크와 비인과 가드레일을 항상 함�
   assert.ok(story.nextReviews.length <= 3);
 });
 
-test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리프에 집중한다", async () => {
-  const [insights, journey] = await Promise.all([
-    pageMarkup("/insights"),
-    pageMarkup("/journey"),
-  ]);
+test("Journey는 스토리 단계를 유지하고 진료 준비는 질문 브리프에 집중한다", () => {
+  // The HTML the server sends for each page (effects do not run).
+  const insights = renderComponent(InsightsPage);
+  const journey = renderComponent(JourneyPage);
 
   assert.doesNotMatch(insights, /visit-story|data-story-section/);
-  assert.match(insights, /class="question-panel"/);
-  assert.match(insights, /data-first-use/);
-  assert.match(insights, /id="refreshClinicalSnapshotEmpty"/);
+  assert.match(insights, /<section class="question-panel"/);
+  assert.match(insights, /<div\b[^>]*\bid="briefEmpty"[^>]*\bdata-first-use\b/);
+  assert.match(insights, /<a\b[^>]*\bid="refreshClinicalSnapshotEmpty"[^>]*\bhref="\/map#import-record"/);
   assert.match(insights, /파일과 별도 확인 코드를 대조해 가져오세요/);
-  assert.match(insights, /href="\/map\?sample=1"/);
+  assert.match(insights, /<a\b[^>]*\bhref="\/map\?sample=1"/);
   assert.match(insights, /Journey 저장 안 됨/);
   assert.match(insights, /원본 전달 파일이 개인 보관 사본/);
-  assert.match(insights, /id="sharePatientBrief"/);
-  assert.match(insights, /href="\/map#import-record"/);
+  assert.match(insights, /<button\b[^>]*\bid="sharePatientBrief"/);
   assert.doesNotMatch(insights, /id="fhirFile"/);
 
-  assert.match(journey, /data-story-section="changed"/);
-  assert.match(journey, /data-story-section="context"/);
-  assert.match(journey, /data-story-section="next"/);
-  assert.match(journey, /data-story-section="comparison"/);
+  for (const section of ["changed", "context", "next", "comparison"]) {
+    assert.match(journey, new RegExp(`<article\\b[^>]*\\bdata-story-section="${section}"`), `${section} 단계 카드가 있어야 한다.`);
+  }
   assert.match(journey, /인과관계[^<]*(?:아님|원인)/);
 });
 
 test("두 화면의 브라우저 모듈은 정적 구문 검사를 통과한다", async () => {
+  // source-check: these controllers touch document/window on import, so a
+  // browser-free static syntax check is the strongest load-time contract here.
   for (const file of ["insights.js", "journey.js"]) {
     const path = new URL(`../src/${file}`, import.meta.url);
     await assert.doesNotReject(execFileAsync(process.execPath, ["--check", path.pathname]));

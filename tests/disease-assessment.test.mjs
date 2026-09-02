@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -11,7 +10,14 @@ import {
   getPreferredDiseaseAssessmentId,
 } from "../src/disease-assessment.js";
 
-const diseaseAssessmentSource = readFileSync(new URL("../src/disease-assessment.js", import.meta.url), "utf8");
+const DEMO_PATIENTS = ["demo-patient-lee", "demo-patient-kim", "demo-patient-choi", "demo-patient-jung"];
+
+/** Every string reachable inside a value, so wording contracts cover nested metadata. */
+function stringsOf(value, found = []) {
+  if (typeof value === "string") found.push(value);
+  else if (value && typeof value === "object") for (const child of Object.values(value)) stringsOf(child, found);
+  return found;
+}
 
 test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 empty guard를 제공한다", () => {
   assert.deepEqual(Object.keys(DISEASE_ASSESSMENT_PROGRAMS), ["copd", "pneumonia"]);
@@ -35,7 +41,14 @@ test("질환 평가 registry는 COPD와 폐렴의 중립적인 표시 메타와 
     assert.equal(Object.isFrozen(program.quality), true);
     assert.equal(Object.isFrozen(program.diagnostic), true);
   }
-  assert.doesNotMatch(diseaseAssessmentSource, /확정 기록에 연결된/);
+  // The registry and the options built from it never present the synthetic
+  // examples as linked to confirmed chart records.
+  const presented = [
+    ...stringsOf(DISEASE_ASSESSMENT_PROGRAMS),
+    ...DEMO_PATIENTS.flatMap((patient) => stringsOf(getDiseaseAssessmentOptions(patient))),
+  ];
+  assert.ok(presented.length > 0);
+  for (const text of presented) assert.doesNotMatch(text, /확정 기록에 연결된/);
 });
 
 test("프로필이 있는 환자에게만 관련 질환 옵션을 만들고 profile 선호도를 우선한다", () => {
@@ -119,8 +132,26 @@ test("모든 관련 질환의 청구와 심사결과를 병합하면서 식별�
   );
   assert.ok(combined.claimItems.every(({ assessmentId }) => ["copd", "pneumonia"].includes(assessmentId)));
   assert.ok(combined.adjudications.every(({ assessmentId }) => ["copd", "pneumonia"].includes(assessmentId)));
-  assert.match(diseaseAssessmentSource, /merged\.push\(\{[\s\S]*?assessmentId:\s*profile\.assessmentId/);
-  assert.doesNotMatch(diseaseAssessmentSource, /assessmentId:\s*cleanText\(value\.assessmentId\)/);
+  // Every merged item is the profile's item tagged with the OWNING profile's
+  // assessmentId (the items themselves carry none), and appears exactly once.
+  for (const patient of DEMO_PATIENTS) {
+    const patientProfiles = getDiseaseAssessmentProfiles(patient);
+    const patientCombined = getCombinedDiseaseClaimProfile(patient);
+    assert.ok(patientProfiles.length > 0);
+    for (const field of ["claimItems", "adjudications"]) {
+      let expected = 0;
+      for (const profile of patientProfiles) {
+        for (const item of profile[field]) {
+          assert.equal(item.assessmentId, undefined, `${patient} ${field} source items carry no assessmentId`);
+          const matches = patientCombined[field].filter(({ id }) => id === item.id);
+          assert.equal(matches.length, 1, `${patient} ${field} ${item.id} merged once`);
+          assert.deepEqual(matches[0], { ...item, assessmentId: profile.assessmentId });
+          expected += 1;
+        }
+      }
+      assert.equal(patientCombined[field].length, expected);
+    }
+  }
   assert.equal(getCombinedDiseaseClaimProfile("not-a-demo-patient"), null);
 });
 

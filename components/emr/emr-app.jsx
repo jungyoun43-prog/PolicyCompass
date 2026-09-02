@@ -196,7 +196,7 @@ export function EmrApp() {
       <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="automatic">
       <div className="emr-frame">
       <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai}
-        nav={patient ? <WorkspaceHeader patient={patient} activeTab={activeTab} onSelectTab={selectTab} /> : null} />
+        nav={patient ? <WorkspaceHeader onSelectTab={selectTab} /> : null} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">

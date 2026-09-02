@@ -134,7 +134,7 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
     if (busy) return;
     const localBrief = createLocalCopilotBrief(patient, evaluations, today());
     setBriefByPatient((current) => new Map(current).set(patient.id, localBrief));
-    if (!ai.configured) {
+    if (!ai.copilot) {
       setStatus("규칙 기반 초안을 만들었습니다. 로컬 AI가 설정되지 않아 환자 데이터를 전송하지 않았습니다.", "success");
       return;
     }

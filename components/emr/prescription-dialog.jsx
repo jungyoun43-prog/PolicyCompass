@@ -171,8 +171,13 @@ function medicationReviewTransmission(review) {
       INSURANCE_LABELS[review.patient.insuranceType] ?? INSURANCE_LABELS.unknown,
       `확인 상병 ${review.patient.conditionCount}건`,
     ].join(" · ")],
-    ["대조 자료", `급여 고시 원문 · 구조화 기록 ${(review.records ?? []).length}건`],
-    ["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"],
+    // With a source dataset on the chart, {PATIENT_DATA} is that raw text, not the structured extract.
+    ["대조 자료", review.dataset
+      ? `급여 고시 원문 · 등록된 원본 익명화 데이터셋 원문 ${review.dataset.length.toLocaleString("ko-KR")}자`
+      : `급여 고시 원문 · 구조화 기록 ${(review.records ?? []).length}건`],
+    ["전송하지 않음", review.dataset
+      ? "차트의 환자 이름·등록번호·연락처·주소·메모 (데이터셋 원문은 등록된 그대로 전송)"
+      : "환자 이름·등록번호·연락처·주소·자유 메모"],
   ];
 }
 
@@ -341,7 +346,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
       const merged = applyMedicationReviewDraft(base, result.draft ?? {});
       setReview({ medicationId, ...merged });
-      setStatus("AI 검토를 완료했습니다.", "success");
+      if (merged.generatedBy === "rule") {
+        setStatus(merged.note || "모델 검토가 실패해 규칙 기반 사전점검을 표시합니다.", "error");
+      } else {
+        setStatus(`${reviewedModelLabelFor(merged.model)} 검토를 완료했습니다.`, "success");
+      }
     } catch (error) {
       setReview({ medicationId, ...base });
       setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
@@ -392,6 +401,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       ? "LLM 고시 기준 검토 · 이 기기의 로컬 모델"
       : "클라우드 LLM 고시 기준 검토 · 모델 미설정");
   const cloudLabel = cloudLabelFor(requestedModelLabel);
+  const reviewedModelLabelFor = (model) => (model ? frontierModelLabel(model) : "AI");
   const reviewedModelLabel = review?.model ? frontierModelLabel(review.model) : "";
 
   const reviewModeLabel = review && review.generatedBy !== "rule"
@@ -435,6 +445,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 </details>
                 {!provider ? (
                   <p className="rx-review__boundary">지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.</p>
+                ) : review.generatedBy === "rule" ? (
+                  <p className="rx-review__boundary">모델 검토가 실패해 4단계의 판정 보고 대신 규칙 판정을 표시합니다. {review.note}</p>
                 ) : null}
               </>
             )} />

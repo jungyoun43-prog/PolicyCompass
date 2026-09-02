@@ -349,6 +349,13 @@ try {
       && detail.textContent.includes("파일에 의료진 확정으로 표시 · 발행기관·변조 미검증");
   })()`), "Connections overstated or lost unsigned-import provenance.");
 
+  // The brief asks the server whether an external model is configured and
+  // disables the option otherwise; this run simulates a deployment that has one.
+  await client.call("Page.addScriptToEvaluateOnNewDocument", { source: `
+    const smokeNativeFetch = window.fetch.bind(window);
+    window.fetch = async (input, init = {}) => String(input).includes('/api/patient-question-assistant/status')
+      ? new Response(JSON.stringify({ local: { configured: false, model: '' }, frontier: { configured: true, model: 'smoke-model', api: 'chat', endpoint: 'smoke' } }), { status: 200, headers: { 'content-type': 'application/json' } })
+      : smokeNativeFetch(input, init);` });
   await navigate("/insights", "Boolean(document.getElementById('questionCount'))");
   await waitFor("document.getElementById('questionCount')?.textContent !== '0개 질문'", "Visit brief did not receive the explicit imported state.");
   assert(await evaluate("document.getElementById('clinicalSnapshotStatus').textContent.includes('파일에 의료진 확정으로 표시 · 발행기관·변조 미검증')"), "Visit brief did not identify unsigned-import provenance.");

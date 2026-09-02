@@ -19,6 +19,9 @@ const demoConditionIds = ["hypertension", "diabetes", "dyslipidemia", "reflux", 
 const restoredTransferCode = "VG-00000-00000-00000-00000-000000";
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 const localAssistantAvailable = loopbackHosts.has(window.location.hostname);
+// The server says whether an external model is configured; until it answers
+// the option stays selectable so a slow status call never hides it.
+let frontierAssistantAvailable = true;
 
 const refs = {
   coverage: document.querySelector("#coverage"),
@@ -490,7 +493,7 @@ function updateActionAvailability() {
     hasEvidence = false;
   }
   const frontierReady = provider !== "frontier" || refs.frontierConsent.checked;
-  const providerReady = provider !== "local" || localAssistantAvailable;
+  const providerReady = provider === "local" ? localAssistantAvailable : frontierAssistantAvailable;
   refs.runAssistant.disabled = session.isDemo || assistantBusy || !hasEvidence || !frontierReady || !providerReady;
   refs.runAssistant.textContent = assistantBusy
     ? `${providerLabel(provider)} 질문 생성 중…`
@@ -513,9 +516,11 @@ function syncProviderControls({ announce = false } = {}) {
   const provider = selectedProvider();
   refs.frontierConsentPanel.hidden = provider !== "frontier";
   if (provider !== "frontier") refs.frontierConsent.checked = false;
-  if (announce || (provider === "local" && !localAssistantAvailable)) {
+  if (announce || (provider === "local" && !localAssistantAvailable) || (provider === "frontier" && !frontierAssistantAvailable)) {
     setAssistantStatus(provider === "frontier"
-      ? "가져온 확정 표시 질환·최종 측정값과 직접 적은 최근 변화의 외부 전송 범위를 확인하고 동의한 뒤에만 외부 모델 요청을 보냅니다."
+      ? frontierAssistantAvailable
+        ? "가져온 확정 표시 질환·최종 측정값과 직접 적은 최근 변화의 외부 전송 범위를 확인하고 동의한 뒤에만 외부 모델 요청을 보냅니다."
+        : "이 배포에는 외부 모델이 설정되지 않아 외부 모델 요청을 보내지 않습니다. 규칙 기반 질문을 사용하세요."
       : localAssistantAvailable
         ? "정제 항목은 이 기기에서 실행하는 Ollama에만 전달하며, 실패하면 규칙 질문을 유지합니다."
         : "공개 미리보기에서는 이 기기 모델 요청을 차단합니다. 규칙 기반 질문을 사용하거나, 동의 후 외부 모델을 선택하세요.");
@@ -702,3 +707,23 @@ window.addEventListener("pagehide", () => {
 renderSnapshot();
 renderBrief(brief, "");
 syncProviderControls();
+
+// Reflect the server's actual external-model configuration in the provider
+// choice instead of discovering it on the first (failed) request.
+{
+  fetch("/api/patient-question-assistant/status", { headers: { accept: "application/json" } })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((status) => {
+      if (!status || typeof status !== "object") return;
+      frontierAssistantAvailable = status.frontier?.configured === true;
+      const frontierInput = refs.providerInputs.find(({ value }) => value === "frontier");
+      if (frontierInput && !frontierAssistantAvailable) {
+        frontierInput.disabled = true;
+        frontierInput.title = "이 배포에는 외부 모델이 설정되지 않았습니다.";
+      }
+      syncProviderControls({ announce: selectedProvider() === "frontier" });
+    })
+    .catch(() => {
+      // The option stays usable; a request will report the real state.
+    });
+}

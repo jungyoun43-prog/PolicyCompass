@@ -137,7 +137,9 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(kit, /onMouseEnter/);
   assert.match(kit, /onMouseLeave/);
   assert.match(rx, /function medicationReviewTransmission\(review\)/);
-  assert.match(rx, /\["전송하지 않음", "환자 이름·등록번호·연락처·주소·자유 메모"\]/);
+  // 전송 내역은 실제로 보낸 것을 말한다: 원본 데이터셋이 있으면 그 원문, 없으면 구조화 추출.
+  assert.match(rx, /\["대조 자료", review\.dataset[\s\S]*원본 익명화 데이터셋 원문[\s\S]*구조화 기록 \$\{\(review\.records \?\? \[\]\)\.length\}건/);
+  assert.match(rx, /\["전송하지 않음", review\.dataset[\s\S]*"환자 이름·등록번호·연락처·주소·자유 메모"\]/);
   assert.match(rx, /function HighlightedText\(/);
   assert.match(rx, /function buildHighlightPairs\(check, counter\)/);
   assert.match(rx, /data-source-origin/);

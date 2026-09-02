@@ -291,7 +291,7 @@ try {
     "window.fetch = (input, init = {}) => { if ((init.method || 'GET').toUpperCase() === 'POST' && String(input).includes('/api/clinical-copilot')) window.__clinicalPosts.push(init.body || ''); return window.__originalFetch(input, init); }",
     "document.getElementById('runCopilot').click()",
   ].join(";"));
-  const aiConnected = await evaluate("document.getElementById('aiStatusLabel').textContent === '로컬 AI 연결'");
+  const aiConnected = await evaluate("document.querySelector('.header-ai-status')?.dataset.aiMode === 'local'");
   await waitFor(aiConnected
     ? "document.getElementById('runCopilot').disabled === false && document.getElementById('copilotMode').textContent === '로컬 AI' && window.__clinicalPosts.length === 1"
     : "document.getElementById('runCopilot').disabled === false && document.getElementById('workspaceStatus').textContent.includes('전송하지 않았습니다')",

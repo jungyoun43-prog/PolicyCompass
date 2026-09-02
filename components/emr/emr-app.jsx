@@ -41,7 +41,7 @@ export function EmrApp() {
   const [editRequest, setEditRequest] = useState(null);
   // `configured` drives the header dot; `copilot` is the loopback model the
   // overview brief actually calls, which a cloud review model does not satisfy.
-  const [ai, setAi] = useState({ checked: false, configured: false, copilot: false, label: "규칙 기반 모드", detail: "연결 확인 중" });
+  const [ai, setAi] = useState({ checked: false, configured: false, copilot: false, mode: "checking", detail: "확인 중" });
   const [fhirReport, setFhirReport] = useState(null);
   const dirtyGuardsRef = useRef({ encounter: () => false, composer: () => false, patientForm: () => false, manualEvent: () => false });
 
@@ -58,12 +58,12 @@ export function EmrApp() {
         const localConfigured = loopback && copilotResult.configured === true;
         const frontierConfigured = reviewResult.frontier?.configured === true;
         setAi(localConfigured
-          ? { checked: true, configured: true, copilot: true, label: "로컬 AI 연결", detail: copilotResult.model }
+          ? { checked: true, configured: true, copilot: true, mode: "local", detail: copilotResult.model }
           : frontierConfigured
-            ? { checked: true, configured: true, copilot: false, label: "AI 검토 모델 연결", detail: frontierModelLabel(reviewResult.frontier.model) }
-            : { checked: true, configured: false, copilot: false, label: "규칙 기반 모드", detail: "모델 미연결" });
+            ? { checked: true, configured: true, copilot: false, mode: "frontier", detail: frontierModelLabel(reviewResult.frontier.model) }
+            : { checked: true, configured: false, copilot: false, mode: "none", detail: "미연결" });
       } catch {
-        if (!cancelled) setAi({ checked: true, configured: false, copilot: false, label: "규칙 기반 모드", detail: "모델 미연결" });
+        if (!cancelled) setAi({ checked: true, configured: false, copilot: false, mode: "none", detail: "미연결" });
       }
     })();
     return () => { cancelled = true; };

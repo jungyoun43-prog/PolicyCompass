@@ -11161,10 +11161,6 @@ model-viewer::part(default-progress-mask) {
 
 /* 좁은 헤더(노트북): 모델 상세는 숨기고 브랜드는 온전히 보인다. */
 @media (max-width: 1520px) {
-  .clinical-header .header-ai-status #aiStatusDetail {
-    display: none;
-  }
-
   .clinical-header .app-brand {
     flex: 0 0 auto;
     font-size: 0.82rem;
@@ -11338,4 +11334,53 @@ model-viewer::part(default-progress-mask) {
   justify-content: center;
   min-width: max-content;
   text-align: center;
+}
+
+/* --- Header mirrors the workspace grid ------------------------------------- */
+
+/* Brand and model status share the rail column; the tab bar and actions
+   share the chart column, so the tabs start on the same x as 진료 기록. */
+@media (min-width: 1081px) {
+  .clinical-header .app-header__inner {
+    display: grid;
+    grid-template-columns: var(--emr-rail-width) minmax(0, 1fr);
+    column-gap: var(--space-4);
+    align-items: center;
+  }
+}
+
+/* The workspace grid tightens its gap on wide screens; the header follows. */
+@media (min-width: 1180px) {
+  .clinical-header .app-header__inner {
+    column-gap: var(--space-2);
+  }
+}
+
+.app-header__identity,
+.app-header__workspace {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.app-header__identity {
+  flex: 0 0 auto;
+}
+
+.app-header__workspace {
+  flex: 1 1 0;
+}
+
+.app-header__workspace .patient-workspace-navigation {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.app-header__workspace .command-actions {
+  margin-left: auto;
+}
+
+.clinical-header .header-ai-status {
+  margin-left: 0;
 }

@@ -5,12 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
-import {
-  addEncounterDiagnosis,
-  addEncounterObservation,
-  addEncounterOrder,
-  ENCOUNTER_OBSERVATION_PRESETS,
-} from "../../src/emr-encounter.js";
+import { addEncounterDiagnosis, addEncounterOrder } from "../../src/emr-encounter.js";
 import {
   DIAGNOSIS_CATALOG_BOUNDARY,
   findDiagnosisInCatalog,
@@ -19,7 +14,6 @@ import {
   searchDiagnosisCatalog,
 } from "../../src/diagnosis-catalog.js";
 import {
-  findOrderInCatalog,
   ORDER_CATALOG_BOUNDARY,
   orderKindLabel,
   searchOrderCatalog,
@@ -61,77 +55,6 @@ function ResultItem({ heading, category, sub, selected, action, onPick, extra })
       </div>
       {extra}
     </li>
-  );
-}
-
-export function VitalDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty }) {
-  const { open, requestOpen, close, context } = useOpenGuard({
-    patient, encounter, editable, setStatus, activeDialog, setActiveDialog,
-    name: "vital", blockedMessage: "진료를 시작한 뒤 측정을 담을 수 있습니다.",
-  });
-  const [query, setQuery] = useState("");
-  const [presetCode, setPresetCode] = useState(ENCOUNTER_OBSERVATION_PRESETS[0]?.code ?? "");
-  const [value, setValue] = useState("");
-  const [note, setNote] = useState("");
-  const preset = ENCOUNTER_OBSERVATION_PRESETS.find(({ code }) => code === presetCode) ?? ENCOUNTER_OBSERVATION_PRESETS[0];
-
-  useEffect(() => {
-    registerDirty(() => Boolean(value.trim() || note.trim()));
-  }, [registerDirty, value, note]);
-
-  const results = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return [...ENCOUNTER_OBSERVATION_PRESETS];
-    return ENCOUNTER_OBSERVATION_PRESETS.filter((candidate) => (
-      [candidate.label, candidate.code, candidate.unit, candidate.key].join(" ").toLowerCase().includes(normalized)
-    ));
-  }, [query]);
-
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!patient || !encounter) return;
-    try {
-      await applyMutation(withDraftPreserved((current) => addEncounterObservation(current, patient.id, encounter.id, {
-        code: preset.code, value, note,
-      })), "진료 측정 초안을 추가했습니다.");
-      setValue("");
-      setNote("");
-      close();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "진료 측정을 추가하지 못했습니다.", "error");
-    }
-  };
-
-  return (
-    <>
-      <div className="prescription-launcher">
-        <Button variant="primary" id="openVitalDialog" type="button" aria-haspopup="dialog" disabled={!editable && false} onClick={requestOpen}>측정 추가</Button>
-        <p className="prescription-launcher__hint">측정 항목을 검색해 고르면 LOINC 코드와 단위가 고정되고, 결과값만 입력하면 됩니다.</p>
-      </div>
-      <RxDialog id="vitalDialog" open={open} onClose={close} eyebrow="MEASUREMENT SEARCH" title="측정 추가" titleId="vitalDialogTitle" context={context}
-        notice="이번 진료에서 직접 확인한 결과만 기록합니다. 항목별 코드와 단위는 고정되며 서명 전까지 초안입니다." noticeId="vitalNotice">
-        <RxSearch id="vitalSearchForm" inputId="vitalSearchInput" label="측정 항목 검색" placeholder="항목명·단위·LOINC 코드 (예: 혈압, 당화, 8867-4)" value={query} onChange={setQuery} />
-        <section className="dx-results" aria-labelledby="vitalResultsTitle">
-          <h4 className="rx-section-title" id="vitalResultsTitle">측정 항목 <span className="rx-count" id="vitalResultCount">{results.length}건</span></h4>
-          <ul className="rx-result-list" id="vitalResultList" aria-label="측정 항목 검색 결과" aria-live="polite">
-            {results.length === 0 ? <li className="rx-result-empty">검색어와 맞는 측정 항목이 없습니다.</li> : results.map((candidate) => (
-              <ResultItem key={candidate.code} heading={candidate.label} sub={`LOINC ${candidate.code} · ${candidate.unit}`}
-                selected={candidate.code === presetCode} action="이 항목 선택"
-                onPick={() => { setPresetCode(candidate.code); requestAnimationFrame(() => document.getElementById("vitalValue")?.focus()); }} />
-            ))}
-          </ul>
-        </section>
-        <form className="inline-clinical-form rx-form" id="vitalForm" noValidate autoComplete="off" spellCheck="false" onSubmit={submit}>
-          <p className="rx-form__selected" id="vitalSelectedSummary">{preset ? `${preset.label} · LOINC ${preset.code} · ${preset.unit}` : "측정 항목을 선택하면 코드와 단위가 고정됩니다."}</p>
-          <div className="vital-form-grid">
-            <label>결과<input id="vitalValue" name="value" maxLength={40} required inputMode={preset?.kind === "blood-pressure" ? "text" : "decimal"} placeholder={preset?.placeholder} aria-label={`${preset?.label} 결과`} value={value} onChange={(event) => setValue(event.target.value)} /></label>
-            <label>단위<input id="vitalUnit" name="unit" readOnly tabIndex={-1} value={preset?.unit ?? ""} onChange={() => {}} /></label>
-            <label className="clinical-vital-note">측정 메모<input id="vitalNote" name="note" maxLength={500} placeholder="예: 좌측 상완, 공복" value={note} onChange={(event) => setNote(event.target.value)} /></label>
-            <Button variant="primary" className="rx-form__submit" type="submit">측정 추가</Button>
-          </div>
-        </form>
-      </RxDialog>
-    </>
   );
 }
 

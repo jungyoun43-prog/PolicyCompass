@@ -6,11 +6,9 @@ import { medicationReviewPrompt } from "../../src/medication-review-prompt.js";
 import {
   callFrontierModel,
   cleanText,
-  frontierApiStyle,
+  clinicalLocalModel,
   frontierCredentials,
-  frontierEndpoint,
-  frontierKeyMismatch,
-  frontierVariablesPresent,
+  frontierStatus,
   ollamaEndpoint,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
@@ -290,19 +288,10 @@ function medicationClaimReviewGraph() {
 }
 
 export function medicationClaimReviewStatus(environment = process.env) {
+  const local = clinicalLocalModel(environment);
   return {
-    local: {
-      configured: Boolean(environment.POLICYCOMPASS_OLLAMA_MODEL),
-      model: environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
-    },
-    frontier: (({ configured, model, reason }) => ({
-      configured,
-      model,
-      api: frontierApiStyle(environment),
-      endpoint: frontierEndpoint(environment),
-      ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
-      ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
-    }))(frontierCredentials(environment)),
+    local: { configured: Boolean(local.model), model: local.model },
+    frontier: frontierStatus(environment),
   };
 }
 
@@ -329,7 +318,7 @@ export async function runMedicationClaimReview(payload = {}, {
       provider,
       overrides,
       model: status.local.configured ? status.local.model : "",
-      endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
+      endpoint: clinicalLocalModel(environment).endpoint,
       fetchImpl,
       timeoutMs,
     };

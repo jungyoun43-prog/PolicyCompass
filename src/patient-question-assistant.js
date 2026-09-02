@@ -767,14 +767,6 @@ export function createPatientQuestionHandoff(session = {}, brief = {}, selection
   };
 }
 
-export function publishPatientQuestionHandoff(
-  publish,
-  { session = {}, brief = {}, selection = "" } = {},
-) {
-  if (typeof publish !== "function") throw new TypeError("환자 브리프 공유 기능을 사용할 수 없습니다.");
-  return publish(createCareBridgePatientBriefInput(session, brief, selection));
-}
-
 export function createCareBridgePatientBriefInput(session = {}, brief = {}, selection = "") {
   const handoff = createPatientQuestionHandoff(session, brief, selection);
   const selected = handoff.questions.find(({ id }) => id === handoff.selectedQuestionId);

@@ -135,17 +135,6 @@ export function relationsFor(id, visibleIds = Object.keys(CONDITIONS)) {
   return RELATIONS.filter(({ a, b }) => (a === id || b === id) && visible.has(a) && visible.has(b));
 }
 
-export const POSITIONS = {
-  hypertension: [260, 86],
-  diabetes: [505, 100],
-  dyslipidemia: [390, 218],
-  migraine: [110, 208],
-  reflux: [650, 250],
-  asthma: [690, 92],
-  mood: [205, 350],
-  arthritis: [480, 360],
-};
-
 const measurementSignalRules = Object.freeze([
   Object.freeze({
     key: "blood-pressure",

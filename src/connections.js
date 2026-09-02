@@ -507,15 +507,6 @@ function renderGraph() {
   renderConditionDetail(state.activeId);
 }
 
-function refreshFromSession() {
-  const next = readSession();
-  Object.assign(state, next);
-  state.selectedNodeId = state.activeId;
-  if (elements.demoMode) elements.demoMode.hidden = !state.isDemo;
-  saveSession();
-  renderGraph();
-}
-
 function applyViewportTransform() {
   const offsetX = sceneSize.width * (1 - state.zoom) / 2;
   const offsetY = sceneSize.height * (1 - state.zoom) / 2;

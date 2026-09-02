@@ -8,6 +8,12 @@ import "../app/globals.css";
  * request nonce here lets Next stamp it onto its bootstrap scripts, which is
  * what allows the strict CSP in middleware.js.
  */
+/** Every page is a private workspace, so its metadata never invites indexing. */
+export function pageMetadata({ title, description }) {
+  return { title, description, robots: { index: false, follow: false } };
+}
+
+
 export async function RootShell({ bodyClassName, children }) {
   await headers();
   return (

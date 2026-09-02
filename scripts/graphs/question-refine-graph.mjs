@@ -15,6 +15,7 @@ import {
   cleanText,
   frontierCredentials,
   ollamaEndpoint,
+  patientLocalModel,
   safeGeneratedText,
   scrubDirectIdentifiers,
 } from "../patient-question-assistant.mjs";
@@ -216,6 +217,7 @@ export async function runQuestionRefine(payload = {}, {
   }
   const instruction = scrubDirectIdentifiers(payload?.instruction, 500);
   if (!instruction) throw new TypeError("질문을 어떻게 바꿀지 지시가 필요합니다.");
+  const local = patientLocalModel(environment);
   const options = provider === "frontier"
     ? {
       provider,
@@ -228,12 +230,8 @@ export async function runQuestionRefine(payload = {}, {
     }
     : {
       provider,
-      endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
-        ?? environment.POLICYCOMPASS_OLLAMA_URL
-        ?? "http://127.0.0.1:11434",
-      model: cleanText(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL
-        ?? environment.POLICYCOMPASS_OLLAMA_MODEL
-        ?? "", 160),
+      endpoint: local.endpoint,
+      model: cleanText(local.model, 160),
       fetchImpl,
       timeoutMs,
       maxAttempts,

@@ -897,10 +897,6 @@ export function initBody3d(root = document, options = {}) {
   return stages.map((stage) => enhanceBodyStage(stage, options)).filter(Boolean);
 }
 
-export function getBody3dController(stage) {
-  return controllers.get(stage) || null;
-}
-
 function autoInit() {
   if (typeof document === "undefined") return;
   const run = () => initBody3d(document);

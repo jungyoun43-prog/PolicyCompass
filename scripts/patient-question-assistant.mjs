@@ -181,6 +181,28 @@ export function ollamaEndpoint(value) {
   return url.origin;
 }
 
+const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
+
+/** The clinician-side loopback model: one pair of variables, no fallback. */
+export function clinicalLocalModel(environment = process.env) {
+  return {
+    endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? DEFAULT_OLLAMA_URL,
+    model: environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
+  };
+}
+
+/** The patient-side model can be pinned separately and otherwise shares the clinician's. */
+export function patientLocalModel(environment = process.env) {
+  return {
+    endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
+      ?? environment.POLICYCOMPASS_OLLAMA_URL
+      ?? DEFAULT_OLLAMA_URL,
+    model: environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL
+      ?? environment.POLICYCOMPASS_OLLAMA_MODEL
+      ?? "",
+  };
+}
+
 const OPENAI_RESPONSES_BASE = "https://api.openai.com/v1";
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 
@@ -638,20 +660,24 @@ function patientQuestionGraph() {
   return compiledPatientQuestionGraph;
 }
 
-export function patientQuestionAssistantStatus(environment = process.env) {
+/** The frontier half of every status endpoint: credentials plus the gateway they resolve to. */
+export function frontierStatus(environment = process.env) {
+  const { configured, model, reason } = frontierCredentials(environment);
   return {
-    local: {
-      configured: Boolean(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL),
-      model: environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
-    },
-    frontier: (({ configured, model, reason }) => ({
-      configured,
-      model,
-      api: frontierApiStyle(environment),
-      endpoint: frontierEndpoint(environment),
-      ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
-      ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
-    }))(frontierCredentials(environment)),
+    configured,
+    model,
+    api: frontierApiStyle(environment),
+    endpoint: frontierEndpoint(environment),
+    ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
+    ...(reason ? { reason, detected: frontierVariablesPresent(environment) } : {}),
+  };
+}
+
+export function patientQuestionAssistantStatus(environment = process.env) {
+  const local = patientLocalModel(environment);
+  return {
+    local: { configured: Boolean(local.model), model: local.model },
+    frontier: frontierStatus(environment),
   };
 }
 
@@ -682,12 +708,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
     }
     : {
       provider,
-      endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
-        ?? environment.POLICYCOMPASS_OLLAMA_URL
-        ?? "http://127.0.0.1:11434",
-      model: environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL
-        ?? environment.POLICYCOMPASS_OLLAMA_MODEL
-        ?? "",
+      ...patientLocalModel(environment),
       fetchImpl,
       timeoutMs,
       maxAttempts,

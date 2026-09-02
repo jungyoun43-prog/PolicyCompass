@@ -1,6 +1,5 @@
 export const CLINICAL_PATIENT_BRIEF_SCHEMA = "policycompass-clinical-patient-brief";
 export const CLINICAL_PATIENT_BRIEF_VERSION = 1;
-export const CLINICAL_PATIENT_BRIEF_EVENT = "policycompass:clinical-patient-brief";
 
 const PATIENT_BRIEF_KINDS = new Set(["summary", "concern", "question"]);
 const PATIENT_BRIEF_SOURCE_LABELS = {

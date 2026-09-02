@@ -75,10 +75,6 @@ export function medicationReviewPatientDataText(comparison) {
   return JSON.stringify(medicationReviewModelPayload(comparison), null, 1);
 }
 
-export function medicationReviewUserMessage({ notice, patientData }) {
-  return ["### 급여 고시정보", "", notice, "", "### 환자 의료데이터", "", patientData].join("\n");
-}
-
 /**
  * 최종 전송 프롬프트: 운영자 템플릿(수정본 포함)의 {NOTICE}/{PATIENT_DATA}
  * 자리에 고시 원문과 환자 데이터 원문이 그대로 치환된 단일 메시지.
@@ -88,15 +84,4 @@ export function medicationReviewPrompt(comparison, overrides = {}) {
   return template
     .replace("{NOTICE}", overrides.notice || medicationReviewNotice(comparison.medication?.id))
     .replace("{PATIENT_DATA}", overrides.patientData || medicationReviewPatientDataText(comparison));
-}
-
-/**
- * `overrides` carries operator-edited 고시정보/환자 의료데이터 from the pre-send
- * preview; absent fields fall back to the canonical catalogue/extract values.
- */
-export function medicationReviewModelInput(comparison, overrides = {}) {
-  return medicationReviewUserMessage({
-    notice: overrides.notice || medicationReviewNotice(comparison.medication?.id),
-    patientData: overrides.patientData || medicationReviewPatientDataText(comparison),
-  });
 }

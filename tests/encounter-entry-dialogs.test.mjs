@@ -89,7 +89,7 @@ test("모든 대조 항목은 확인할 수 있는 기준 원문과 강조 구�
   assert.ok(allergy.source.highlights.includes("페니실린"));
 });
 
-test("측정·진단·처방·오더는 모두 팝업에서 입력한다", async () => {
+test("진단·처방·오더는 모두 팝업에서 입력한다", async () => {
   // Given
   const dialogs = [
     await componentMarkup("components/emr/entry-dialogs.jsx"),
@@ -97,8 +97,9 @@ test("측정·진단·처방·오더는 모두 팝업에서 입력한다", async
   ].join("\n");
 
   // When / Then
+  // 측정(활력징후) 입력은 간호 워크플로로 의료진 화면에서 제외됐다(531f035).
+  assert.doesNotMatch(dialogs, /VitalDialog|id="vitalForm"/);
   for (const [step, launcher, dialog, form] of [
-    ["measurements", "openVitalDialog", "vitalDialog", "vitalForm"],
     ["diagnoses", "openDiagnosisDialog", "diagnosisDialog", "diagnosisForm"],
     ["prescriptions", "openPrescriptionDialog", "prescriptionDialog", "prescriptionForm"],
     ["orders", "openOrderDialog", "orderDialog", "orderForm"],

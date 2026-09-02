@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { componentMarkup, emrMarkup, pageMarkup } from "./helpers/markup.mjs";
+import { emrMarkup, pageMarkup } from "./helpers/markup.mjs";
 
 const routes = ["/", "/patient", "/map", "/connections", "/insights", "/journey"];
 const layouts = {

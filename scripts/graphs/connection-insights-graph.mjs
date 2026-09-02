@@ -4,6 +4,7 @@ import {
   buildPatientQuestionContext,
   cleanText,
   ollamaEndpoint,
+  patientLocalModel,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
 
@@ -202,13 +203,12 @@ export async function runConnectionInsights(payload = {}, {
   maxInsights = 8,
 } = {}) {
   const context = buildPatientQuestionContext(payload);
+  const local = patientLocalModel(environment);
   const state = await connectionGraph().invoke({
     context,
     options: {
-      model: cleanText(environment.POLICYCOMPASS_PATIENT_OLLAMA_MODEL ?? environment.POLICYCOMPASS_OLLAMA_MODEL ?? "", 160),
-      endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
-        ?? environment.POLICYCOMPASS_OLLAMA_URL
-        ?? "http://127.0.0.1:11434",
+      model: cleanText(local.model, 160),
+      endpoint: local.endpoint,
       fetchImpl,
       timeoutMs,
       maxCandidates,

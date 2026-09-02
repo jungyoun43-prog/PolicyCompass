@@ -76,14 +76,6 @@ export function assertEncounterSignReviewContext(reviewedIdentity, patient, enco
   return activeIdentity;
 }
 
-export function assertEncounterSignReviewHasNoConflicts(review) {
-  const conflicts = Array.isArray(review?.conflicts) ? review.conflicts : [];
-  if (conflicts.length) {
-    throw new Error(`해결되지 않은 충돌 ${conflicts.length}건이 있어 로컬 서명할 수 없습니다. 충돌 항목을 수정한 뒤 다시 완료·검토하세요.`);
-  }
-  return review;
-}
-
 export function assertEncounterSignReviewReady(review) {
   const omissions = Array.isArray(review?.omissions) ? review.omissions : [];
   const conflicts = Array.isArray(review?.conflicts) ? review.conflicts : [];

@@ -169,30 +169,3 @@ export function resolveClaimPreflightPresentation({ evaluation, claimItem = {} }
     paymentBoundary: "자료 보완 전에는 등록 규칙 일치 여부나 심사 결과를 판단하지 않습니다.",
   };
 }
-
-export function resolveClaimPresentation({ evaluation, claimItem = {}, adjudications = [] } = {}) {
-  const claimItemId = cleanText(claimItem.claimItemId || evaluation?.id);
-  const finalReduction = latestFinalReduction(adjudications, claimItemId);
-  const missingData = Array.isArray(claimItem.missingData)
-    ? claimItem.missingData.map(cleanText).filter(Boolean)
-    : [];
-
-  if (finalReduction) {
-    const adjudicationPresentation = resolveClaimAdjudicationPresentation(finalReduction);
-    return {
-      state: "reduced",
-      tone: adjudicationPresentation.tone,
-      label: adjudicationPresentation.label,
-      reason: adjudicationPresentation.reason,
-      finalReduction,
-      missingData,
-      paymentBoundary: adjudicationPresentation.paymentBoundary,
-    };
-  }
-  const preflight = resolveClaimPreflightPresentation({ evaluation, claimItem });
-  return {
-    ...preflight,
-    state: preflight.state === "high-risk" || preflight.state === "needs-review" ? "risk" : preflight.state,
-    finalReduction: null,
-  };
-}

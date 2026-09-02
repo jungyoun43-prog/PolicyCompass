@@ -12,6 +12,7 @@ import {
 
 import {
   cleanText,
+  clinicalLocalModel,
   ollamaEndpoint,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
@@ -208,12 +209,8 @@ function sweepThreads(now = Date.now()) {
 }
 
 function reviewOptions(environment, fetchImpl, timeoutMs) {
-  return {
-    model: cleanText(environment.POLICYCOMPASS_OLLAMA_MODEL ?? "", 160),
-    endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
-    fetchImpl,
-    timeoutMs,
-  };
+  const local = clinicalLocalModel(environment);
+  return { model: cleanText(local.model, 160), endpoint: local.endpoint, fetchImpl, timeoutMs };
 }
 
 function interruptedResponse(threadId, state) {

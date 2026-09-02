@@ -399,8 +399,19 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
 
           <section className="clinical-card soap-card workflow-disclosure workflow-disclosure--static" aria-labelledby="soapTitle" data-workflow-disclosure="soap">
             <div className="workflow-disclosure__summary">
-              <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3}>진료 기록</span></span>
-              <span className="workflow-disclosure__signals"><span className="workflow-disclosure__meta" data-disclosure-summary="soap" data-tone={status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : undefined}>{status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`}</span></span>
+              <span className="workflow-disclosure__heading">
+                <span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3}>진료 기록</span>
+                <span className="workflow-disclosure__meta" data-disclosure-summary="soap" data-tone={status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : undefined}>{status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`}</span>
+              </span>
+              <span className="workflow-disclosure__signals">
+                <div className="encounter-save-actions">
+                  <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
+                  <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
+                  <Button id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</Button>
+                  <Button variant="primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</Button>
+                  <Button variant="confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</Button>
+                </div>
+              </span>
             </div>
             <div className="workflow-disclosure__body">
               <div className="soap-grid">
@@ -545,16 +556,10 @@ export function EncounterTab({ state, patient, encounter, preflightEvaluations, 
           <Button className="context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 보드 열기</Button>
         </section>
 
+        {/* The actions live in the 진료 기록 card header; this strip only carries the status line. */}
         <section className="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
           <h3 className="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
           <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
-          <div className="encounter-save-actions">
-            <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
-            <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
-            <Button id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</Button>
-            <Button variant="primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</Button>
-            <Button variant="confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</Button>
-          </div>
         </section>
       </div>
 

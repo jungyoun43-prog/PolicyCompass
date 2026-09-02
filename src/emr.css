@@ -1247,27 +1247,27 @@ body.emr-page {
   border-color: var(--accent);
 }
 
-/* A floating action dock: it rides the bottom edge while the note scrolls. */
+/* The encounter actions sit at the right end of the 진료 기록 card header;
+   the save bar below only carries the status line and disappears when empty. */
+.soap-card .encounter-save-actions {
+  order: 2;
+  margin-left: var(--space-2);
+}
+
+.soap-card .encounter-save-actions .clinical-button {
+  min-height: 2.25rem;
+  padding-block: 0.25rem;
+  font-size: 0.8rem;
+}
+
 .encounter-save-bar {
-  position: sticky;
-  bottom: var(--space-3);
-  z-index: 8;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
-  align-items: center;
   justify-content: flex-end;
-  width: fit-content;
-  max-width: 100%;
-  margin-left: auto;
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, var(--line));
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  padding: var(--space-2);
-  box-shadow:
-    0 1.125rem 2.75rem color-mix(in srgb, var(--ink) 20%, transparent),
-    0 0.125rem 0.375rem color-mix(in srgb, var(--ink) 8%, transparent);
-  backdrop-filter: blur(1.125rem);
+  padding-inline: var(--space-2);
+}
+
+.encounter-save-bar:has(.form-message:empty) {
+  display: none;
 }
 
 .encounter-mobile-claim {
@@ -1277,14 +1277,8 @@ body.emr-page {
 }
 
 .encounter-save-bar .form-message {
-  flex: 1 1 15rem;
-  min-width: 0;
   min-height: 0;
-  padding-inline: var(--space-2);
-}
-
-.encounter-save-bar .form-message:empty {
-  display: none;
+  text-align: right;
 }
 
 .sign-review {
@@ -5698,9 +5692,12 @@ body.emr-page {
     grid-template-columns: 1fr;
   }
 
-  .encounter-save-bar {
-    width: 100%;
-    border-radius: var(--radius-panel);
+  .soap-card .encounter-save-actions {
+    margin-left: 0;
+  }
+
+  .soap-card .encounter-save-actions .clinical-button {
+    min-height: 44px;
   }
 
   .encounter-command-heading {
@@ -11350,4 +11347,29 @@ model-viewer::part(default-progress-mask) {
   .claim-review-control input {
     min-height: 44px;
   }
+}
+
+/* --- 진료 기록 header carries the encounter actions at its right edge ------ */
+.soap-card > .workflow-disclosure__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+}
+
+.soap-card .workflow-disclosure__signals {
+  margin-left: auto;
+}
+
+.soap-card > .workflow-disclosure__summary::after {
+  display: none;
+}
+
+.soap-card > .workflow-disclosure__summary > .workflow-disclosure__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }

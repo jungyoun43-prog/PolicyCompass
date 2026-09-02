@@ -231,7 +231,7 @@ export async function observeResponsiveRoute(api, {
       const encounter = document.getElementById('encounterStatusText')?.textContent.trim() ?? '';
       product['patient-encounter-context-preserved'] = patientName === '김비타'
         && /PC-1001/.test(patientMeta) && encounter.length > 0;
-      product['sign-review-complete'] = Boolean(document.querySelector('.encounter-save-bar #signEncounter, .encounter-save-bar #completeEncounter'))
+      product['sign-review-complete'] = Boolean(document.querySelector('.soap-card #signEncounter, .soap-card #completeEncounter'))
         && Boolean(document.querySelector('.patient-workspace-navigation'));
     }
     return {

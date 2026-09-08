@@ -1,9 +1,13 @@
-name: CI
+name: CI and Deploy
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -15,6 +19,66 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: python3 -m unittest discover -s tests -p 'test_deploy_ecs.py'
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: policycompass-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      ECS_SERVICE_ARN: arn:aws:ecs:ap-northeast-2:782419713811:service/default/policycompass
+      ECR_REPOSITORY: 782419713811.dkr.ecr.ap-northeast-2.amazonaws.com/policycompass
+      APP_URL: https://po-4eb3b4f0a1c24574a4a3b479d71a8fda.ecs.ap-northeast-2.on.aws
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip a superseded commit
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$latest" = "$GITHUB_SHA" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "A newer main commit exists; skipping deployment."
+          fi
+      - name: Authenticate to AWS using GitHub OIDC
+        if: steps.current.outputs.deploy == 'true'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::782419713811:role/PolicyCompassGitHubDeployRole
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Log in to ECR
+        if: steps.current.outputs.deploy == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Set up Docker Buildx
+        if: steps.current.outputs.deploy == 'true'
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push deployment image
+        if: steps.current.outputs.deploy == 'true'
+        id: image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: APP_REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Deploy image and verify service
+        if: steps.current.outputs.deploy == 'true'
+        env:
+          DEPLOY_IMAGE: ${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
+        run: python3 scripts/deploy-ecs.py

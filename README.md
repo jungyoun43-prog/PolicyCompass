@@ -141,6 +141,47 @@ EMR의 신체·진료과 지도는 Encounter의 진료과 필드 또는 진료�
 
 ## 배포
 
+### AWS ECS Express Mode
+
+`main`에 push하거나 PR을 병합하면 `.github/workflows/ci.yml`이 검사·테스트·빌드 후 Docker 이미지를 ECR에 올리고 기존 ECS `default/policycompass` 서비스를 자동 업데이트합니다. PR에서는 검사만 실행합니다. GitHub **Actions → CI and Deploy**에서 진행 상태를 확인하며, **Run workflow**로 `main` 배포를 다시 실행할 수도 있습니다.
+
+- GitHub OIDC 역할 `PolicyCompassGitHubDeployRole`은 이 저장소의 `main`에서만 사용할 수 있습니다. AWS 액세스 키를 GitHub에 저장하지 않습니다.
+- 컨테이너의 기존 환경변수·Secrets Manager 참조·포트·명령을 유지하고 이미지 digest만 교체합니다. 모델 설정은 AWS 콘솔에서 관리합니다.
+- 배포를 직렬로 실행하고, 더 최신 `main` 커밋이 있으면 오래된 작업의 배포를 건너뜁니다. 진행 중인 배포는 중간에 취소하지 않습니다.
+- ECS 배포 성공 및 `/api/health`의 `revision`이 배포한 Git SHA와 일치하는지 확인해야 Actions가 성공합니다. ECS 롤백은 배포 실패로 처리됩니다.
+- 서버의 개발 파일은 자동으로 pull하지 않습니다. `~/projects/PolicyCompass`에서 커밋·push한 변경이 배포 대상입니다. 개발 화면과 ECS 서비스는 별도 환경입니다.
+
+Docker에서는 Next.js standalone 출력으로 실행합니다. 이미지에는 API 키와 `.env` 파일이 포함되지 않습니다.
+
+```powershell
+docker build --platform linux/amd64 -t policycompass:local .
+docker run --rm -p 127.0.0.1:3000:3000 policycompass:local
+```
+
+`http://localhost:3000/api/health`가 HTTP 200과 `status: "ok"`를 반환하면 컨테이너가 준비된 상태입니다. 자동 배포 이미지에는 `revision`에 Git 커밋 SHA도 포함됩니다.
+
+AWS CLI를 설치한 뒤 `aws login --profile policycompass --region ap-northeast-2`로 브라우저에서 계정을 연결합니다. 배포 전 `aws sts get-caller-identity --profile policycompass --region ap-northeast-2`로 대상 계정을 확인합니다. 서울 외 리전을 사용하려면 모든 명령에서 리전을 함께 변경합니다.
+
+1. 대상 계정·리전의 ECR에 `policycompass` 저장소를 만들거나 기존 저장소를 사용합니다.
+2. ECR 콘솔의 **푸시 명령 보기**에 따라 인증하고, 위 이미지를 저장소 URI와 고유 태그로 태깅해 업로드합니다.
+3. ECS Express Mode에서 업로드한 이미지와 아래 설정을 사용합니다.
+
+| 설정 | 값 |
+| --- | --- |
+| 컨테이너 포트 | `3000` |
+| 상태 확인 경로 | `/api/health` |
+| CPU / 메모리 | 초기값 1 vCPU / 2 GiB |
+| 태스크 수 | 초기값 최소 1 / 최대 1 |
+| 환경변수 | 기본 실행에는 추가 설정 불필요. `NODE_ENV=production`, `HOSTNAME=0.0.0.0`, `PORT=3000`은 이미지에 설정됨 |
+
+ECS에는 이미지 다운로드·로그 기록용 실행 역할과 Express Mode 인프라 역할이 필요합니다. 기본 VPC의 퍼블릭 서브넷을 사용하거나 기존 서브넷을 지정합니다. 실행 중인 ECS 태스크·로드밸런서·ECR·로그에는 AWS 사용 요금이 적용됩니다.
+
+배포 후 실제 발급된 HTTPS 주소에서 `/`, `/map`, `/emr`, `/api/health`를 확인하고 ECS 로그에서 시작 오류가 없는지 확인합니다. AI 기능은 아래 서버 환경변수를 실행 시 주입하면 활성화됩니다. API 키는 이미지에 넣지 않고 Secrets Manager 등으로 전달하며, 해당 비밀을 읽을 실행 역할 권한도 필요합니다. 키 없이 배포해도 규칙 기반 기능은 동작합니다.
+
+공식 참고: [AWS CLI 설치](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), [브라우저 로그인](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html), [ECS Express Mode 배포](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-getting-started.html).
+
+### Vercel
+
 Vercel에 배포합니다. Next.js 프로젝트로 자동 감지되므로 별도의 `vercel.json` 없이 `next build` 결과가 그대로 배포됩니다. API는 `app/api/**/route.js` Route Handler이고, 페이지·API 모두에서 CSP(nonce + strict-dynamic)·HSTS·같은 출처 규칙이 로컬 `npm start`와 동일하게 적용됩니다(`middleware.js`, `next.config.mjs`).
 
 - `public/`는 정적으로 그대로 제공되는 파일(3D 모델·이미지 등)만 담습니다.

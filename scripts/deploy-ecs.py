@@ -10,6 +10,17 @@ import time
 import urllib.request
 
 
+def safe_update_error(stderr, payload):
+    message = stderr.strip()
+    container = payload["primaryContainer"]
+    for item in container.get("environment", []):
+        value = item.get("value", "")
+        if value:
+            message = message.replace(value, "[redacted]")
+            message = message.replace(json.dumps(value)[1:-1], "[redacted]")
+    return message[:2000]
+
+
 def aws(operation, **arguments):
     command = ["aws", "ecs", operation, "--output", "json", "--no-cli-pager"]
     for name, value in arguments.items():
@@ -76,7 +87,7 @@ def main():
                "file:///dev/stdin", "--output", "json", "--no-cli-pager"]
     result = subprocess.run(command, input=json.dumps(payload), capture_output=True, text=True)
     if result.returncode:
-        raise RuntimeError("ECS image update failed; inspect AWS permissions/service events.")
+        raise RuntimeError("ECS image update failed: " + safe_update_error(result.stderr, payload))
     updated = json.loads(result.stdout)["service"]
     new_deployment = updated["currentDeployment"]
     if new_deployment == service.get("currentDeployment"):

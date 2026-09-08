@@ -10,6 +10,10 @@ spec.loader.exec_module(deploy)
 
 
 class DeployTests(unittest.TestCase):
+    def test_update_error_redacts_environment_values(self):
+        payload = {"primaryContainer": {"environment": [{"name": "KEY", "value": "test-secret"}]}}
+        self.assertEqual(deploy.safe_update_error("Error: test-secret", payload), "Error: [redacted]")
+
     def test_stable_service_omits_current_deployment(self):
         service = {"activeConfigurations": [{"serviceRevisionArn": "live"}]}
         self.assertEqual(deploy.stable_revision(service), "live")

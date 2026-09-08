@@ -168,7 +168,7 @@ test("Journey 첫 기록 안내는 핵심 행동을 먼저 두고 사용법·데
   assert.match(html, /<details class="journey-data-tools context-disclosure"/);
   assert.doesNotMatch(html, /class="journey-empty__visual"/);
   assert.equal(empty.width, "100%");
-  assert.equal(empty["max-width"], "72rem");
+  assert.equal(declarationsFor(css, ".journey-page .journey-intro").width, "100%");
   assert.equal(empty["grid-template-columns"], "minmax(0, 1fr)");
   assert.equal(declarationsFor(css, ".journey-first-action")["min-height"], "56px");
   assert.equal(declarationsFor(css, ".journey-first-steps li")["min-height"], "84px");

@@ -738,7 +738,7 @@ textarea:focus {
 
 @media (max-width: 620px) {
   .context-disclosure--footer {
-    width: min(100% - var(--space-8), var(--page-width));
+    width: min(100% - var(--page-gutter), var(--page-width));
     margin-top: var(--space-5);
   }
 

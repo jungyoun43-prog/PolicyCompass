@@ -173,7 +173,7 @@ test("비동작 정보는 버튼이나 선택 chip의 면을 사용하지 않는
   assert.equal(signal["pointer-events"], "none");
 });
 
-test("내용이 짧은 넓은 hero는 정보량에 맞는 최대 폭을 사용한다", () => {
-  assert.equal(declarationsFor(gateway, ".gateway-intro").width, "min(100%, 58rem)");
-  assert.equal(declarationsFor(journeyCss, ".journey-page .journey-intro").width, "min(100%, 64rem)");
+test("역할 선택과 Journey hero는 아래 컨테이너와 같은 폭을 사용한다", () => {
+  assert.equal(declarationsFor(gateway, ".gateway-intro").width, "100%");
+  assert.equal(declarationsFor(journeyCss, ".journey-page .journey-intro").width, "100%");
 });

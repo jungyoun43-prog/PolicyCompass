@@ -35,12 +35,18 @@ await runBrowserSmoke({
       const tablists = [...document.querySelectorAll('.workspace-tabs[role="tablist"]')];
       const tabs = tablists[0] ? [...tablists[0].querySelectorAll('[role="tab"]')] : [];
       const headerRect = header?.getBoundingClientRect();
+      const navigationRect = document.querySelector('.patient-workspace-navigation')?.getBoundingClientRect();
+      const actionsRect = document.querySelector('.clinical-header .command-actions')?.getBoundingClientRect();
       const brandRect = brand?.getBoundingClientRect();
       const shellRect = shell?.getBoundingClientRect();
       const persistent = document.querySelector('[data-safety-persistent], .patient-workspace-navigation');
       const persistentRect = persistent?.getBoundingClientRect();
       return {
         headerHeight: headerRect?.height ?? 0,
+        navigationWidth: navigationRect?.width ?? 0,
+        navigationTop: navigationRect?.top ?? 0,
+        actionsBottom: actionsRect?.bottom ?? 0,
+        shellWidth: shellRect?.width ?? 0,
         brandLeft: brandRect?.left ?? -1,
         shellLeft: shellRect?.left ?? -1,
         globalActionCount: document.querySelectorAll('.clinical-header .app-header__action').length,
@@ -53,7 +59,11 @@ await runBrowserSmoke({
         viewportWidth: innerWidth,
       };
     })()`);
-    assert(geometry.headerHeight <= 60, `${viewport.width}x${viewport.height}: clinical header is ${geometry.headerHeight}px`);
+    assert(geometry.headerHeight <= (viewport.width <= 620 ? 108 : 60), `${viewport.width}x${viewport.height}: clinical header is ${geometry.headerHeight}px`);
+    if (viewport.width <= 620) {
+      assert(Math.abs(geometry.navigationWidth - geometry.shellWidth) <= 1, `${viewport.width}: mobile tabs must span the shell`);
+      assert(geometry.navigationTop >= geometry.actionsBottom, `${viewport.width}: mobile tabs overlap utility actions`);
+    }
     assert(geometry.globalActionCount === 0, `${viewport.width}x${viewport.height}: removed patient-add header action remains`);
     assert(Math.abs(geometry.brandLeft - geometry.shellLeft) <= 1, `${viewport.width}x${viewport.height}: brand/shell alignment drifted ${geometry.brandLeft}/${geometry.shellLeft}`);
     assert(geometry.tablistCount === 1, `${viewport.width}x${viewport.height}: expected one patient tablist`);

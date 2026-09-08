@@ -923,9 +923,6 @@
     min-width: 0;
     padding-inline: var(--space-3);
     text-align: center;
-  }
-
-  .insights-page .page-hero__actions .brief-action--primary {
     grid-column: 1 / -1;
   }
 

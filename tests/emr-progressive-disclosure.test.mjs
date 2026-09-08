@@ -143,12 +143,13 @@ test("진료 시작과 재개는 열린 SOAP 입력으로 초점을 옮긴다", 
   assert.match(encounterSource, /reopenEncounter\(current, patient\.id, encounter\.id\)[\s\S]*?getElementById\("soapSubjective"\)\?\.focus\(\)/);
 });
 
-test("EMR 헤더는 모든 뷰포트에서 60px 이하이다", () => {
-  const heights = [];
-  sheet.walkDecls("--header-height", (decl) => heights.push(Number(decl.value.match(/^(\d+)px$/)?.[1])));
-
-  assert.ok(heights.length >= 1);
-  assert.ok(heights.every((height) => Number.isFinite(height) && height <= 60), heights);
+test("EMR 헤더는 데스크톱에서 한 줄, 모바일에서 탭 전용 줄을 확보한다", () => {
+  assert.equal(declarationsFor(sheet, "body.emr-page")["--header-height"], "56px");
+  const mobile = { container: "@media (max-width: 620px)" };
+  assert.equal(declarationsFor(sheet, "body.emr-page", mobile)["--header-height"], "108px");
+  const navigation = declarationsFor(sheet, ".clinical-header .patient-workspace-navigation", mobile);
+  assert.equal(navigation["grid-column"], "1 / -1");
+  assert.equal(navigation["grid-row"], "2");
   const header = declarationsFor(sheet, ".clinical-header");
   assert.equal(header.height, "var(--header-height)");
   assert.equal(header["min-height"], "var(--header-height)");

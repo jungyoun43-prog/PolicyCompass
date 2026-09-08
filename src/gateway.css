@@ -55,7 +55,7 @@
 
 .gateway-intro {
   display: grid;
-  width: min(100%, 58rem);
+  width: 100%;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: center;
@@ -66,7 +66,7 @@
   background:
     radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-mid) 20%, transparent), transparent 19rem),
     linear-gradient(128deg, var(--accent-wash), color-mix(in srgb, var(--surface-raised) 76%, var(--accent-soft)));
-  padding: clamp(var(--space-6), 3vw, var(--space-8));
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
 }
 
 .gateway-eyebrow,

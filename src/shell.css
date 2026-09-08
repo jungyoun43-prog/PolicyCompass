@@ -324,7 +324,7 @@ body.insights-page {
 }
 
 .page-shell {
-  padding: var(--space-8) 0 var(--space-12);
+  padding: var(--hero-top) 0 var(--space-12);
 }
 
 .page-hero {
@@ -431,7 +431,7 @@ body.insights-page {
 
 @media (max-width: 620px) {
   :root {
-    --page-gutter: var(--space-4);
+    --page-gutter: var(--space-8);
   }
 
   .app-header__inner {
@@ -495,5 +495,21 @@ body.insights-page {
   .app-footer {
     flex-direction: column;
     gap: var(--space-1);
+  }
+}
+
+/* Narrow phones keep labels readable instead of squeezing them beside actions. */
+@media (max-width: 380px) {
+  .map-page .input-panel > .panel-heading {
+    flex-direction: column;
+  }
+
+  .map-page .page-hero__aside,
+  .map-page .form-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-page .form-actions .secondary-button {
+    width: 100%;
   }
 }

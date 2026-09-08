@@ -8593,6 +8593,7 @@ model-viewer::part(default-progress-mask) {
 }
 
 .rail-selected-patient .patient-identity {
+  width: 100%;
   display: grid;
   gap: var(--space-1);
 }
@@ -9360,12 +9361,12 @@ model-viewer::part(default-progress-mask) {
   padding-block: 4px;
 }
 
-/* --- Visit context lives in the rail; entry cards pack 2×2 ------------------- */
+/* Entry cards share rows while keeping their content aligned. */
 
 @media (min-width: 900px) {
   .entry-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: start;
+    align-items: stretch;
   }
 }
 
@@ -9988,6 +9989,7 @@ model-viewer::part(default-progress-mask) {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     scrollbar-color: var(--line) transparent;
     scrollbar-width: thin;
   }
@@ -10129,6 +10131,7 @@ model-viewer::part(default-progress-mask) {
 /* Density: cards sit closer and pad tighter. */
 .entry-grid {
   display: grid;
+  align-content: start;
   gap: var(--space-2);
 }
 
@@ -10391,9 +10394,7 @@ model-viewer::part(default-progress-mask) {
 
 /* --- Phone header: two rows, tabs on their own line ------------------------- */
 
-/* The slim single row survives on a phone by shedding identity text: the
-   brand keeps its mark, the AI status keeps its dot, actions stay compact and
-   the tab list scrolls in whatever width remains. */
+/* Keep identity and utility actions compact above the full-width tab row. */
 @media (max-width: 620px) {
   .clinical-header .app-brand {
     flex: 0 0 auto;
@@ -10538,4 +10539,121 @@ model-viewer::part(default-progress-mask) {
 .clinical-header .header-ai-status {
   white-space: nowrap;
   margin-left: 0;
+}
+
+/* Keep all three entry lists on one baseline even when a title is longer. */
+.entry-grid .workflow-disclosure--static > .workflow-disclosure__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 32px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.entry-grid .workflow-disclosure__heading {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.entry-grid .workflow-disclosure__meta {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.entry-grid .entry-launcher-slot {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: end;
+  margin-left: 0;
+}
+
+/* The editor width, rather than the window width, determines card density. */
+.encounter-main {
+  container-type: inline-size;
+}
+
+@container (max-width: 680px) {
+  .entry-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .entry-grid .workflow-disclosure--static > .workflow-disclosure__summary {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto;
+  }
+
+  .entry-grid .entry-launcher-slot {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+/* On phones the patient tabs need their own rail below the utility actions. */
+@media (max-width: 620px) {
+  body.emr-page {
+    --header-height: 108px;
+  }
+
+  .clinical-header .app-header__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 44px 44px;
+    gap: var(--space-1) var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .clinical-header .app-header__workspace {
+    display: contents;
+  }
+
+  .clinical-header .app-header__identity {
+    grid-column: 1;
+    grid-row: 1;
+    gap: var(--space-2);
+  }
+
+  .clinical-header .command-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .clinical-header .patient-workspace-navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .clinical-header .header-ai-status {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .clinical-header #aiStatusDetail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@container (max-width: 400px) {
+  .entry-grid .workflow-disclosure--static > .workflow-disclosure__summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 32px;
+  }
+
+  .entry-grid .entry-launcher-slot {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 380px) {
+  .rail-visit-slot .workflow-disclosure__summary {
+    flex-wrap: wrap;
+  }
+
+  .rail-visit-slot .workflow-disclosure__heading {
+    flex-basis: 100%;
+  }
 }

@@ -605,9 +605,12 @@
   }
 
   .outcome,
-  .workflow,
-  .closing {
+  .workflow {
     padding: 64px 0;
+  }
+
+  .closing {
+    padding: 64px var(--space-5);
   }
 
 }

@@ -75,6 +75,23 @@ def stable_revision(service):
     return service["activeConfigurations"][0]["serviceRevisionArn"]
 
 
+def wait_for_image(service_arn, image, timeout=1800):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
+        matches = [item for item in service.get("activeConfigurations", [])
+                   if item["primaryContainer"]["image"] == image]
+        if matches:
+            if service.get("currentDeployment"):
+                finished = wait_for_deployment(service["currentDeployment"],
+                                               timeout=max(1, deadline - time.monotonic()))
+                return finished["targetServiceRevision"]["arn"]
+            if len(service["activeConfigurations"]) == 1:
+                return stable_revision(service)
+        time.sleep(15)
+    raise TimeoutError("ECS did not activate the requested image within 30 minutes.")
+
+
 def main():
     service_arn = os.environ["ECS_SERVICE_ARN"]
     image = os.environ["DEPLOY_IMAGE"]
@@ -93,16 +110,12 @@ def main():
         result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError("ECS image update failed: " + safe_update_error(result.stderr, payload))
-    updated = json.loads(result.stdout)["service"]
-    new_deployment = updated["currentDeployment"]
-    if new_deployment == service.get("currentDeployment"):
-        raise RuntimeError("ECS did not create a new deployment.")
-    finished = wait_for_deployment(new_deployment)
+    print("ECS accepted the image update; waiting for deployment.", flush=True)
+    revision = wait_for_image(service_arn, image)
     live = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
-    if live.get("currentDeployment") not in (None, new_deployment):
-        raise RuntimeError("Another deployment replaced this workflow's deployment.")
-    actual = next(item for item in live["activeConfigurations"]
-                  if item["serviceRevisionArn"] == finished["targetServiceRevision"]["arn"])
+    if stable_revision(live) != revision:
+        raise RuntimeError("Another deployment replaced this workflow's revision.")
+    actual = live["activeConfigurations"][0]
     if actual["primaryContainer"]["image"] != image:
         raise RuntimeError("The deployed image does not match this workflow.")
     url = os.environ["APP_URL"].rstrip("/") + "/api/health"

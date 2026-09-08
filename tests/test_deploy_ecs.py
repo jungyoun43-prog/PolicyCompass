@@ -10,6 +10,14 @@ spec.loader.exec_module(deploy)
 
 
 class DeployTests(unittest.TestCase):
+    def test_waits_for_async_update_to_publish_image(self):
+        old = {"service": {"activeConfigurations": [{"serviceRevisionArn": "old",
+               "primaryContainer": {"image": "old-image"}}]}}
+        new = {"service": {"activeConfigurations": [{"serviceRevisionArn": "new",
+               "primaryContainer": {"image": "new-image"}}]}}
+        with patch.object(deploy, "aws", side_effect=[old, new]), patch.object(deploy.time, "sleep"):
+            self.assertEqual(deploy.wait_for_image("service", "new-image"), "new")
+
     def test_update_error_redacts_environment_values(self):
         payload = {"primaryContainer": {"environment": [{"name": "KEY", "value": "test-secret"}]}}
         self.assertEqual(deploy.safe_update_error("Error: test-secret", payload), "Error: [redacted]")

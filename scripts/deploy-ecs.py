@@ -1,11 +1,12 @@
 """Update an ECS Express image while retaining the current container settings.
 
-AWS responses may contain environment secrets. Keep them in memory and never
-print raw CLI responses, update payloads, or subprocess errors.
+AWS responses may contain environment secrets. Never print raw CLI responses
+or update payloads. The CLI input uses a private, automatically deleted file.
 """
 import json
 import os
 import subprocess
+import tempfile
 import time
 import urllib.request
 
@@ -82,10 +83,14 @@ def main():
         wait_for_deployment(service["currentDeployment"])
         service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
     payload = update_payload(service, stable_revision(service), image)
-    # Supply sensitive settings through stdin rather than process arguments/files.
-    command = ["aws", "ecs", "update-express-gateway-service", "--cli-input-json",
-               "file:///dev/stdin", "--output", "json", "--no-cli-pager"]
-    result = subprocess.run(command, input=json.dumps(payload), capture_output=True, text=True)
+    # AWS CLI may read cli-input-json more than once, so a pipe is not supported.
+    # NamedTemporaryFile is mode 0600 on Linux and is removed even on failure.
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".json") as request:
+        json.dump(payload, request)
+        request.flush()
+        command = ["aws", "ecs", "update-express-gateway-service", "--cli-input-json",
+                   "file://" + request.name, "--output", "json", "--no-cli-pager"]
+        result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError("ECS image update failed: " + safe_update_error(result.stderr, payload))
     updated = json.loads(result.stdout)["service"]

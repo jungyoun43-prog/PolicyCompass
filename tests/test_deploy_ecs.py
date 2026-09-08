@@ -10,6 +10,18 @@ spec.loader.exec_module(deploy)
 
 
 class DeployTests(unittest.TestCase):
+    def test_successful_deployment_must_also_settle_in_service_api(self):
+        config = {"serviceRevisionArn": "new", "primaryContainer": {"image": "new-image"}}
+        lagging = {"service": {"currentDeployment": "deployment", "activeConfigurations": [config]}}
+        stable = {"service": {"activeConfigurations": [config]}}
+        for waiter, args in [(deploy.wait_for_stable_service, ("service",)),
+                             (deploy.wait_for_image, ("service", "new-image"))]:
+            with patch.object(deploy, "aws", side_effect=[lagging, stable]), \
+                 patch.object(deploy, "deployment", return_value={"status": "SUCCESSFUL"}), \
+                 patch.object(deploy.time, "sleep") as sleep:
+                waiter(*args)
+                sleep.assert_called_once_with(15)
+
     def test_waits_for_async_update_to_publish_image(self):
         old = {"service": {"activeConfigurations": [{"serviceRevisionArn": "old",
                "primaryContainer": {"image": "old-image"}}]}}

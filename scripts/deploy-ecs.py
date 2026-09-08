@@ -75,19 +75,34 @@ def stable_revision(service):
     return service["activeConfigurations"][0]["serviceRevisionArn"]
 
 
+def check_deployment_state(service):
+    if not service.get("currentDeployment"):
+        return
+    status = deployment(service["currentDeployment"])["status"]
+    if status not in {"PENDING", "IN_PROGRESS", "SUCCESSFUL"}:
+        raise RuntimeError(f"ECS deployment did not succeed: {status}")
+
+
+def wait_for_stable_service(service_arn, timeout=1800):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
+        if not service.get("currentDeployment") and len(service.get("activeConfigurations", [])) == 1:
+            return service
+        check_deployment_state(service)
+        time.sleep(15)
+    raise TimeoutError("ECS service did not settle within 30 minutes.")
+
+
 def wait_for_image(service_arn, image, timeout=1800):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
         matches = [item for item in service.get("activeConfigurations", [])
                    if item["primaryContainer"]["image"] == image]
-        if matches:
-            if service.get("currentDeployment"):
-                finished = wait_for_deployment(service["currentDeployment"],
-                                               timeout=max(1, deadline - time.monotonic()))
-                return finished["targetServiceRevision"]["arn"]
-            if len(service["activeConfigurations"]) == 1:
-                return stable_revision(service)
+        if matches and not service.get("currentDeployment") and len(service["activeConfigurations"]) == 1:
+            return stable_revision(service)
+        check_deployment_state(service)
         time.sleep(15)
     raise TimeoutError("ECS did not activate the requested image within 30 minutes.")
 
@@ -95,10 +110,7 @@ def wait_for_image(service_arn, image, timeout=1800):
 def main():
     service_arn = os.environ["ECS_SERVICE_ARN"]
     image = os.environ["DEPLOY_IMAGE"]
-    service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
-    if service.get("currentDeployment"):
-        wait_for_deployment(service["currentDeployment"])
-        service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
+    service = wait_for_stable_service(service_arn)
     payload = update_payload(service, stable_revision(service), image)
     # AWS CLI may read cli-input-json more than once, so a pipe is not supported.
     # NamedTemporaryFile is mode 0600 on Linux and is removed even on failure.

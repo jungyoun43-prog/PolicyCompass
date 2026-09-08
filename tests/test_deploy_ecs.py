@@ -10,6 +10,14 @@ spec.loader.exec_module(deploy)
 
 
 class DeployTests(unittest.TestCase):
+    def test_stable_service_omits_current_deployment(self):
+        service = {"activeConfigurations": [{"serviceRevisionArn": "live"}]}
+        self.assertEqual(deploy.stable_revision(service), "live")
+        with self.assertRaises(RuntimeError):
+            deploy.stable_revision({**service, "currentDeployment": "pending"})
+        with self.assertRaises(RuntimeError):
+            deploy.stable_revision({"activeConfigurations": []})
+
     def test_update_preserves_selected_revision_settings_without_mutation(self):
         container = {"image": "old", "containerPort": 3000,
                      "environment": [{"name": "KEY", "value": "test-only"}],

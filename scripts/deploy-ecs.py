@@ -57,15 +57,20 @@ def update_payload(service, revision_arn, image):
     return {"serviceArn": service["serviceArn"], "primaryContainer": container}
 
 
+def stable_revision(service):
+    if service.get("currentDeployment") or len(service.get("activeConfigurations", [])) != 1:
+        raise RuntimeError("Service is not stable; retry after its deployment completes.")
+    return service["activeConfigurations"][0]["serviceRevisionArn"]
+
+
 def main():
     service_arn = os.environ["ECS_SERVICE_ARN"]
     image = os.environ["DEPLOY_IMAGE"]
     service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
-    settled = wait_for_deployment(service["currentDeployment"])
-    service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
-    if service["currentDeployment"] != settled["serviceDeploymentArn"]:
-        raise RuntimeError("Service changed concurrently; rerun deployment after it settles.")
-    payload = update_payload(service, settled["targetServiceRevision"]["arn"], image)
+    if service.get("currentDeployment"):
+        wait_for_deployment(service["currentDeployment"])
+        service = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
+    payload = update_payload(service, stable_revision(service), image)
     # Supply sensitive settings through stdin rather than process arguments/files.
     command = ["aws", "ecs", "update-express-gateway-service", "--cli-input-json",
                "file:///dev/stdin", "--output", "json", "--no-cli-pager"]
@@ -74,11 +79,11 @@ def main():
         raise RuntimeError("ECS image update failed; inspect AWS permissions/service events.")
     updated = json.loads(result.stdout)["service"]
     new_deployment = updated["currentDeployment"]
-    if new_deployment == service["currentDeployment"]:
+    if new_deployment == service.get("currentDeployment"):
         raise RuntimeError("ECS did not create a new deployment.")
     finished = wait_for_deployment(new_deployment)
     live = aws("describe-express-gateway-service", service_arn=service_arn)["service"]
-    if live["currentDeployment"] != new_deployment:
+    if live.get("currentDeployment") not in (None, new_deployment):
         raise RuntimeError("Another deployment replaced this workflow's deployment.")
     actual = next(item for item in live["activeConfigurations"]
                   if item["serviceRevisionArn"] == finished["targetServiceRevision"]["arn"])

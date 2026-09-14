@@ -1,0 +1,92 @@
+/* Size controls from the dialog, not the desktop behind it. rem bounds keep
+   browser/text zoom meaningful; container units provide modest fluid scaling. */
+.emr-page .rx-dialog {
+  container: emr-dialog / inline-size;
+  max-width: calc(100dvw - 16px);
+}
+.emr-page .rx-dialog[data-embedded] { max-width: 100%; }
+.rx-dialog .rx-dialog__panel {
+  --rx-fluid-text: clamp(.875rem, .78rem + .3cqi, 1rem);
+  --rx-fluid-small: clamp(.8125rem, .72rem + .25cqi, .9375rem);
+  --rx-fluid-title: clamp(1.125rem, .95rem + .5cqi, 1.375rem);
+  --rx-fluid-product: clamp(1rem, .88rem + .35cqi, 1.1875rem);
+  --rx-fluid-gap: clamp(.375rem, 1cqi, .875rem);
+  --rx-fluid-control: clamp(2.125rem, 1.9rem + .7cqi, 2.625rem);
+  --space-3: var(--rx-fluid-gap);
+  --space-4: clamp(.625rem, 1.6cqi, 1rem);
+  font-size: var(--rx-fluid-text);
+  gap: var(--rx-fluid-gap);
+  min-width: 0;
+  overscroll-behavior: contain;
+}
+.rx-dialog:is(#prescriptionDialog, #medicationCoverageDialog) .rx-dialog__panel { gap: var(--rx-fluid-gap); }
+
+/* Include the two previously custom-sized dialogs at their existing specificity. */
+.rx-dialog:is(.rx-dialog, #prescriptionDialog, #medicationCoverageDialog) :is(input, select, textarea, button) {
+  font-size: var(--rx-fluid-text);
+  line-height: 1.4;
+}
+.rx-dialog:is(.rx-dialog, #prescriptionDialog, #medicationCoverageDialog) :is(input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, button) {
+  min-height: var(--rx-fluid-control);
+}
+.rx-dialog:is(.rx-dialog, #prescriptionDialog, #medicationCoverageDialog) :is(label, .rx-dialog__context, .rx-count, .rx-result__meta, .rx-result__ingredient, summary, .rx-pipeline__text) {
+  font-size: var(--rx-fluid-small);
+}
+.rx-dialog:is(.rx-dialog, #prescriptionDialog, #medicationCoverageDialog) .rx-dialog__title {
+  font-size: var(--rx-fluid-title);
+}
+.rx-dialog:is(.rx-dialog, #prescriptionDialog, #medicationCoverageDialog) :is(.rx-result__label, .rx-section-title) {
+  font-size: var(--rx-fluid-text);
+}
+.rx-dialog .rx-dialog__heading { min-width: 0; }
+.rx-dialog .rx-dialog__titleline { flex-wrap: wrap; }
+.rx-dialog .rx-dialog__close { flex-shrink: 0; }
+.rx-dialog .rx-dialog__header { gap: var(--rx-fluid-gap); }
+.rx-dialog :is(.prescription-form-grid, .order-form-grid) { gap: var(--rx-fluid-gap); }
+
+#prescriptionDialog .rx-order-line {
+  grid-template-columns: minmax(10rem, 1fr) 4.5rem 4.5rem minmax(9rem, 13rem) auto;
+  gap: var(--rx-fluid-gap);
+  padding: var(--rx-fluid-gap);
+}
+#prescriptionDialog .rx-order-line[data-infusion] {
+  grid-template-columns: minmax(10rem, 1fr) 4.5rem 4.5rem minmax(8rem, 10rem) 8.5rem auto;
+}
+#prescriptionDialog .rx-order-line__product { font-size: var(--rx-fluid-product); white-space: nowrap; }
+#prescriptionDialog .rx-order-line label { font-size: var(--rx-fluid-small); }
+#prescriptionDialog .rx-result--compact .rx-result__label { font-size: var(--rx-fluid-text); }
+#prescriptionDialog .rx-result--compact button { font-size: var(--rx-fluid-small); }
+#prescriptionDialog .rx-result--compact { padding-block: .25rem; gap: var(--rx-fluid-gap); }
+
+#medicationCoverageDialog :is(.coverage-intro p, .coverage-criteria ol, .coverage-summary p, .coverage-risk p, .rx-model-report__table, .coverage-patient-table, .rx-review__progress-text) {
+  font-size: var(--rx-fluid-text);
+}
+#medicationCoverageDialog :is(.coverage-intro small, .coverage-product p, .coverage-product a, .coverage-provenance, .coverage-footer, .coverage-report-original, .rx-process__summary) {
+  font-size: var(--rx-fluid-small);
+}
+#medicationCoverageDialog :is(.coverage-criteria h4, .coverage-summary h4, .coverage-risk h4, .coverage-product h4) {
+  font-size: var(--rx-fluid-text);
+}
+#medicationCoverageDialog .coverage-product h4 small { font-size: inherit; }
+#medicationCoverageDialog .coverage-risk strong { font-size: var(--rx-fluid-title); }
+#medicationCoverageDialog :is(.coverage-tools, .coverage-summary > div, .coverage-intro) { flex-wrap: wrap; gap: var(--rx-fluid-gap); }
+#medicationCoverageDialog .coverage-product { gap: var(--rx-fluid-gap); }
+#medicationCoverageDialog .coverage-product > div { min-width: 0; }
+#medicationCoverageDialog .coverage-section-icon { width: 1.4em; height: 1.4em; }
+#medicationCoverageDialog .coverage-judgment svg { width: clamp(1.75rem, 4cqi, 2.25rem); height: clamp(1.75rem, 4cqi, 2.25rem); }
+#medicationCoverageDialog .coverage-risk > .coverage-judgment svg { width: clamp(3rem, 8cqi, 4.5rem); height: clamp(3rem, 8cqi, 4.5rem); }
+
+@container emr-dialog (max-width: 58rem) {
+  #prescriptionDialog .rx-order-line, #prescriptionDialog .rx-order-line[data-infusion] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #prescriptionDialog .rx-order-line__product { grid-column: 1 / -1; }
+}
+@container emr-dialog (max-width: 30rem) {
+  .rx-dialog .rx-dialog__header { flex-wrap: wrap; }
+  .rx-dialog :is(.prescription-form-grid, .order-form-grid) { grid-template-columns: minmax(0, 1fr); }
+  .rx-dialog .rx-pipeline--progress { grid-template-columns: minmax(0, 1fr); }
+  #medicationCoverageDialog .coverage-intro p { flex-basis: calc(100% - 4rem); }
+  #medicationCoverageDialog .coverage-tools { margin-left: auto; }
+  #medicationCoverageDialog :is(.rx-model-report__table td, .rx-model-report__table th, .coverage-patient-table td, .coverage-patient-table th) { padding: .25rem; }
+}

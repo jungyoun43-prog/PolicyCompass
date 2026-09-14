@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { addEncounterPrescription } from "../../src/emr-encounter.js";
@@ -19,6 +19,9 @@ import { FRONTIER_MODEL_CHOICES, FRONTIER_MODEL_GROUPS, frontierModelLabel } fro
 import { medicationReviewInstructions, medicationReviewNotice, medicationReviewPatientDataText } from "../../src/medication-review-prompt.js";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
+
+import { ContextMenu } from "radix-ui";
+import { MedicationCoverageOverview, MedicationCoverageSummary } from "./medication-coverage-overview.jsx";
 
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
 const HIGHLIGHT_PAIR_COLORS = 5;
@@ -145,17 +148,6 @@ function clinicianRecordRows(rows) {
   });
 }
 
-function medicationDetailRows(medication) {
-  return [
-    ["계열", medication.classLabel],
-    ["적응증", medication.indication || "등록된 적응증 없음"],
-    ["급여 인정 상병", medication.coverage.indications.map(({ code, label }) => `${code} ${label}`).join(", ") || "등록된 인정 상병 없음"],
-    ["기본 용법", `1회 ${medication.dosing.dose}${medication.dosing.doseUnit} · ${medication.dosing.route} · ${medication.dosing.frequency} · ${medication.dosing.durationDays}일 · 총 ${medication.dosing.quantity}`],
-    ["복약 안내", medication.dosing.instructions || "등록된 복약 안내 없음"],
-    ["인정 일수", medication.coverage.maxDurationDays ? `1회 최대 ${medication.coverage.maxDurationDays}일` : "등록된 인정 일수 없음"],
-  ];
-}
-
 function medicationReviewTransmission(review) {
   return [
     ["약품", `${review.medication.label} · ${review.medication.ingredient}`],
@@ -208,7 +200,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
-  const [expandedDetails, setExpandedDetails] = useState(() => new Set());
+  const [coverageMedication, setCoverageMedication] = useState(null);
+  const requestVersion = useRef(0);
   const [expandedSources, setExpandedSources] = useState(() => new Set());
   const [expandedChecks, setExpandedChecks] = useState(() => new Set());
 
@@ -252,7 +245,25 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setExpandedChecks(new Set());
     setActiveDialog("prescription");
   };
-  const close = () => setActiveDialog((current) => (current === "prescription" ? "" : current));
+  const closeCoverage = () => {
+    requestVersion.current += 1;
+    setCoverageMedication(null);
+    setReviewPreview(null);
+    setPendingReview(null);
+    setReviewBusyId("");
+  };
+  const close = () => {
+    closeCoverage();
+    setActiveDialog((current) => (current === "prescription" ? "" : current));
+  };
+  const openCoverage = (medication) => {
+    requestVersion.current += 1;
+    setReview(null);
+    setReviewPreview(null);
+    setPendingReview(null);
+    setReviewBusyId("");
+    setCoverageMedication(medication);
+  };
 
   const pickMedication = (medication) => {
     setSelectedMedicationId(medication.id);
@@ -296,11 +307,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     }
     setExpandedSources(new Set());
     setExpandedChecks(new Set());
-    if (!provider) {
-      setReview({ medicationId, ...base });
-      setStatus("규칙 기반 사전점검을 완료했습니다.");
-      return;
-    }
     // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인·수정한다.
     setExpandedField("");
     setReviewPreview({
@@ -327,8 +333,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   );
 
   const sendReview = async () => {
-    if (!reviewPreview) return;
+    if (!reviewPreview || reviewBusyId) return;
+    const version = ++requestVersion.current;
     const { medicationId, name, base, dataText, noticeText, promptText } = reviewPreview;
+    if (!provider) {
+      setReviewPreview(null);
+      setReview({ medicationId, ...base, note: "모델 미설정 · 규칙 기반 결과입니다." });
+      return;
+    }
     const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
     if (provider === "frontier" && reviewModel) overrides.model = reviewModel;
     setReviewPreview(null);
@@ -344,6 +356,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
+      if (version !== requestVersion.current) return;
       const merged = applyMedicationReviewDraft(base, result.draft ?? {});
       setReview({ medicationId, ...merged });
       if (merged.generatedBy === "rule") {
@@ -352,11 +365,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         setStatus(`${reviewedModelLabelFor(merged.model)} 검토를 완료했습니다.`, "success");
       }
     } catch (error) {
-      setReview({ medicationId, ...base });
+      if (version !== requestVersion.current) return;
+      setReview({ medicationId, ...base, note: "AI 연결 실패 · 규칙 기반 결과입니다." });
       setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
     } finally {
-      setPendingReview(null);
-      setReviewBusyId("");
+      if (version === requestVersion.current) {
+        setPendingReview(null);
+        setReviewBusyId("");
+      }
     }
   };
 
@@ -421,6 +437,66 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         launcherSlot) : null}
       <RxDialog id="prescriptionDialog" open={open} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
         notice="급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다." noticeId="prescriptionNotice"
+      >
+
+        <RxSearch id="medicationSearchForm" inputId="medicationSearchInput" label="약품 검색" placeholder="약품명·성분명·계열·상병코드 (예: 벤라리주맙, 더발루맙)" value={query} onChange={setQuery} />
+
+        <div className="rx-prescription-search">
+          <section className="rx-results" aria-labelledby="rxResultsTitle">
+            <h4 className="rx-section-title" id="rxResultsTitle">검색 결과 <span className="rx-count" id="medicationResultCount">{results.length}건</span></h4>
+            <ul className="rx-result-list" id="medicationResultList" aria-label="약품 검색 결과" aria-live="polite">
+              {results.length === 0 ? (
+                <li className="rx-result-empty">{query.trim() ? "검색어와 맞는 약품이 없습니다. 성분명이나 계열로 다시 검색하세요." : "약품명·성분명·계열·상병코드로 검색하세요."}</li>
+              ) : results.map((medication) => (
+                <ContextMenu.Root key={medication.id}>
+                  <ContextMenu.Trigger asChild>
+                    <li tabIndex={0} aria-label={medication.label + " · 우클릭 또는 Shift+F10으로 메뉴 열기"}
+                      className={"rx-result rx-result--compact" + (medication.id === selectedMedicationId ? " is-selected" : "")}>
+                      <b className="rx-result__label">{medication.label}</b>
+                      <Button variant="primary" type="button" onClick={() => pickMedication(medication)}>처방</Button>
+                    </li>
+                  </ContextMenu.Trigger>
+                  <ContextMenu.Portal>
+                    <ContextMenu.Content className="rx-medication-menu" collisionPadding={12}>
+                      {["처방이력조회", "기록항목으로 보내기", "처방일괄적용", "메인그래프로 보내기", "약물이상반응 One Click 보고", "약물이상반응 직접보고", "약품정보", "수가정보"].map((label) => (
+                        <ContextMenu.Item key={label} disabled className="rx-medication-menu__item">{label}</ContextMenu.Item>
+                      ))}
+                      <ContextMenu.Separator className="rx-medication-menu__separator" />
+                      <ContextMenu.Item className="rx-medication-menu__item rx-medication-menu__coverage" onSelect={() => openCoverage(medication)}>급여인정확인</ContextMenu.Item>
+                    </ContextMenu.Content>
+                  </ContextMenu.Portal>
+                </ContextMenu.Root>
+              ))}
+            </ul>
+          </section>
+
+
+        </div>
+
+        <form className="inline-clinical-form rx-form" id="prescriptionForm" noValidate autoComplete="off" spellCheck="false" onSubmit={submit}>
+          <p className="rx-form__selected" id="medicationSelectedSummary">
+            {selectedMedicationId
+              ? `${form.name} · ${findMedicationInCatalog(selectedMedicationId)?.ingredient ?? ""}`
+              : "검색 결과에서 약을 선택하면 기본 용법이 채워집니다. 용법은 의료진이 직접 확인하고 수정하세요."}
+          </p>
+          <div className="prescription-form-grid">
+            <label className="clinical-label-field">약품명<input id="medicationName" name="name" maxLength={160} required placeholder="약품명" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></label>
+            <label>1회 용량<input id="medicationDose" name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
+            <label>용량 단위<select id="medicationDoseUnit" name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
+            <label>투여 경로<select id="medicationRoute" name="route" value={form.route} onChange={(event) => setForm((current) => ({ ...current, route: event.target.value }))}>{[["피하주사", "피하주사 · SC"], ["정맥주입", "정맥주입 · IV"], ["경구", "경구 · PO"], ["정맥", "정맥 · IV"], ["근육", "근육 · IM"], ["피하", "피하 · SC"], ["흡입", "흡입 · INH"], ["설하", "설하 · SL"], ["국소", "국소 · TOP"], ["점안", "점안 · OU"], ["직장", "직장 · PR"], ["비강", "비강 · NAS"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label>투여 빈도<select id="medicationFrequency" name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min={1} max={365} inputMode="numeric" placeholder="일" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} /></label>
+            <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min={0.01} step={0.01} inputMode="decimal" placeholder="수량" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></label>
+            <label className="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxLength={500} rows={3} placeholder="식전·식후, 주의사항 등 의료진 지시" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
+            <Button variant="primary" className="rx-form__submit" type="submit">처방 추가</Button>
+          </div>
+        </form>
+      </RxDialog>
+
+      {coverageMedication && open ? (
+        <RxDialog id="medicationCoverageDialog" open onClose={closeCoverage} eyebrow="급여인정확인"
+          title="AI 처방 급여인정 도우미" titleId="coverageDialogTitle" context={context}
+          noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
         headerExtra={review ? (
           <HoverPopover hostClassName="rx-process" trigger="검토 과정 확인하기" triggerClassName="rx-process__summary" triggerId="medicationReviewProcessSummary"
             panelId="medicationReviewPipeline" panelClassName="rx-process__body"
@@ -451,53 +527,15 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               </>
             )} />
         ) : null}>
-
-        <RxSearch id="medicationSearchForm" inputId="medicationSearchInput" label="약품 검색" placeholder="약품명·성분명·계열·상병코드 (예: 암로디핀, 흡입제, J44)" value={query} onChange={setQuery} />
-
-        <div className="rx-dialog__columns">
-          <section className="rx-results" aria-labelledby="rxResultsTitle">
-            <h4 className="rx-section-title" id="rxResultsTitle">검색 결과 <span className="rx-count" id="medicationResultCount">{results.length}건</span></h4>
-            <ul className="rx-result-list" id="medicationResultList" aria-label="약품 검색 결과" aria-live="polite">
-              {results.length === 0 ? (
-                <li className="rx-result-empty">{query.trim() ? "검색어와 맞는 약품이 없습니다. 성분명이나 계열로 다시 검색하세요." : "약품명·성분명·계열·상병코드로 검색하세요."}</li>
-              ) : results.map((medication) => {
-                const rowReview = review?.medicationId === medication.id ? review : null;
-                return (
-                  <li className={`rx-result${medication.id === selectedMedicationId ? " is-selected" : ""}${reviewBusyId === medication.id ? " is-reviewing" : ""}`} data-review-tone={rowReview?.verdictTone || undefined} key={medication.id}>
-                    <div className="rx-result__heading">
-                      <b className="rx-result__label">{medication.label}</b>
-                    </div>
-                    <span className="rx-result__ingredient">{medication.ingredient}</span>
-                    <div className="rx-result__actions">
-                      <Button variant="primary" type="button" onClick={() => pickMedication(medication)}>처방 담기</Button>
-                      <span className="rx-result__actions-divider"></span>
-                      <Button className="rx-result__review" type="button" disabled={reviewBusyId === medication.id} onClick={() => runReview(medication.id)}>
-                        {reviewBusyId === medication.id ? "검토 중…" : "AI 검토"}
-                      </Button>
-                    </div>
-                    <details className="rx-result__details" open={expandedDetails.has(medication.id)} onToggle={(event) => {
-                      const isOpen = event.currentTarget.open;
-                      setExpandedDetails((current) => {
-                        const next = new Set(current);
-                        if (isOpen) next.add(medication.id);
-                        else next.delete(medication.id);
-                        return next;
-                      });
-                    }}>
-                      <summary className="rx-result__details-summary">
-                        자세히 보기
-                        {rowReview ? <span className="rx-verdict-chip" data-tone={rowReview.verdictTone} onClick={(event) => event.preventDefault()}>{rowReview.verdictSymbol} {rowReview.verdictLabel}</span> : null}
-                      </summary>
-                      <DetailList rows={medicationDetailRows(medication)} />
-                    </details>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
+          <div className="coverage-intro">
+            <p>{review ? "등록된 기준과 환자 정보를 대조한 검토 결과입니다." : "전송할 환자 정보와 급여 기준을 확인한 후 검토를 요청하세요."}</p>
+            <Button type="button" onClick={() => runReview(coverageMedication.id)} disabled={Boolean(reviewBusyId) || !capability.checked}>
+              {reviewBusyId ? "검토 중…" : review ? "다시 확인하기" : "전송 내용 확인"}
+            </Button>
+          </div>
+          <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} />
           <section className="rx-review" aria-labelledby="rxReviewTitle">
-            <h4 className="rx-section-title" id="rxReviewTitle">AI 삭감 사전검토 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
+            <h4 className="rx-section-title" id="rxReviewTitle">환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
             {pendingReview ? (
               <div className="rx-review__progress" id="medicationReviewProgress" role="status" aria-live="polite">
                 <span className="rx-review__spinner" aria-hidden="true"></span>
@@ -520,7 +558,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 </div>
               </div>
             ) : !review ? (
-              <p className="rx-review__empty" id="medicationReviewEmpty">검색 결과에서 <b>AI 검토</b>를 누르면 이 약제의 급여 고시 기준과 환자 의료데이터를 대조해 충족 여부를 ○·△·✕로 보여 줍니다.</p>
+              <p className="rx-review__empty" id="medicationReviewEmpty">아직 검토하지 않았습니다. 전송 내용을 확인한 뒤 검토를 실행하세요.</p>
             ) : (
               <div className="rx-review__body" id="medicationReviewBody" aria-live="polite">
                 <div className="rx-verdict" id="medicationReviewVerdict" data-tone={review.verdictTone}>
@@ -533,6 +571,17 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 </div>
                 {review.markdown ? <MarkdownReport markdown={review.markdown} /> : (
                 <section className="rx-review__section">
+                  <div className="coverage-table-scroll">
+                    <table className="coverage-patient-table">
+                      <thead><tr><th>항목</th><th>환자 정보</th><th>판단</th><th>근거 (기록 발췌)</th></tr></thead>
+                      <tbody>{review.checks.map((check) => <tr key={check.id}>
+                        <th scope="row">{check.title}</th><td>{check.chart.detail}</td>
+                        <td><span className="rx-verdict-chip" data-tone={MEDICATION_REVIEW_VERDICTS[check.verdict].tone}>{MEDICATION_REVIEW_VERDICTS[check.verdict].symbol}</span></td>
+                        <td>{check.chart.findings.map((finding) => [finding.date, finding.label, finding.detail].filter(Boolean).join(" · ")).join(" / ") || "확인된 기록 없음"}</td>
+                      </tr>)}</tbody>
+                    </table>
+                  </div>
+                  <details className="coverage-evidence"><summary>기준별 상세 근거와 원문 보기</summary>
                   <h5 className="rx-review__heading">판정 근거 · 삭감 근거와 환자 정보 대조</h5>
                   <ul className="rx-source-list" id="medicationReviewSources">
                     {review.checks.map((check) => {
@@ -632,33 +681,17 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                       );
                     })}
                   </ul>
+                  </details>
                 </section>
                 )}
               </div>
             )}
           </section>
-        </div>
-
-        <form className="inline-clinical-form rx-form" id="prescriptionForm" noValidate autoComplete="off" spellCheck="false" onSubmit={submit}>
-          <p className="rx-form__selected" id="medicationSelectedSummary">
-            {selectedMedicationId
-              ? `${form.name} · ${findMedicationInCatalog(selectedMedicationId)?.ingredient ?? ""}`
-              : "검색 결과에서 약을 선택하면 기본 용법이 채워집니다. 용법은 의료진이 직접 확인하고 수정하세요."}
-          </p>
-          <div className="prescription-form-grid">
-            <label className="clinical-label-field">약품명<input id="medicationName" name="name" maxLength={160} required placeholder="약품명" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></label>
-            <label>1회 용량<input id="medicationDose" name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
-            <label>용량 단위<select id="medicationDoseUnit" name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
-            <label>투여 경로<select id="medicationRoute" name="route" value={form.route} onChange={(event) => setForm((current) => ({ ...current, route: event.target.value }))}>{[["경구", "경구 · PO"], ["정맥", "정맥 · IV"], ["근육", "근육 · IM"], ["피하", "피하 · SC"], ["흡입", "흡입 · INH"], ["설하", "설하 · SL"], ["국소", "국소 · TOP"], ["점안", "점안 · OU"], ["직장", "직장 · PR"], ["비강", "비강 · NAS"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label>투여 빈도<select id="medicationFrequency" name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min={1} max={365} inputMode="numeric" placeholder="일" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} /></label>
-            <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min={0.01} step={0.01} inputMode="decimal" placeholder="수량" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></label>
-            <label className="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxLength={500} rows={3} placeholder="식전·식후, 주의사항 등 의료진 지시" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
-            <Button variant="primary" className="rx-form__submit" type="submit">처방 추가</Button>
-          </div>
-        </form>
-      </RxDialog>
-      {reviewPreview ? (
+          {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
+          <p className="coverage-footer">입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다.</p>
+        </RxDialog>
+      ) : null}
+      {reviewPreview && open ? (
         <RxDialog id="reviewPreviewDialog" open onClose={() => setReviewPreview(null)} eyebrow="검토 요청 확인"
           title="AI 검토 전송 내용" titleId="reviewPreviewTitle" context={`${reviewPreview.name} · ${cloudLabel}`}
           noticeId="reviewPreviewNotice"
@@ -693,7 +726,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               ) : null}
               <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>
               <Button variant="primary" type="button" id="reviewPreviewSend" onClick={sendReview}>
-                {reviewModel ? `${frontierModelLabel(reviewModel)}로 검토 요청` : "이 내용으로 검토 요청"}
+                {!provider ? "규칙 기반 검토 실행" : reviewModel ? `${frontierModelLabel(reviewModel)}로 검토 요청` : "이 내용으로 검토 요청"}
               </Button>
             </div>
           </div>

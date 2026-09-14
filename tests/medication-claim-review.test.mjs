@@ -297,7 +297,7 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   assert.ok(formAt > dialogAt, "처방 입력 폼은 팝업 안에 있다");
   assert.match(html, /<\/form><\/div><\/div>$/, "처방 입력 폼은 팝업 패널의 마지막 자식이다");
   assert.match(html, /id="medicationResultCount">0건</, "검색 전에는 결과가 없다");
-  assert.match(html, /id="medicationReviewEmpty">검색 결과에서 <b>AI 검토<\/b>를 누르면/);
+  assert.doesNotMatch(html, /medicationReviewEmpty|AI 삭감 사전검토/, "처방 검색에는 AI 검토 안내를 표시하지 않는다");
   // source-check: 판정 카드와 판정 근거 대조표는 AI 검토 클릭·응답 뒤에만 그려지므로 서버 렌더로는 도달할 수 없다.
   assert.equal(rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"'), true);
   assert.match(rx, /판정 근거 · 삭감 근거와 환자 정보 대조/);

@@ -1,5 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * The UI contracts these tests guard used to live in static HTML files. After
@@ -45,7 +46,7 @@ const PAGE_FILES = {
   "/journey": ["app/(journey)/journey/page.jsx", "app/(journey)/layout.jsx"],
 };
 
-const root = new URL("../..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../..", import.meta.url));
 
 export async function pageMarkup(route) {
   const files = PAGE_FILES[route];

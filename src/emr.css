@@ -10657,3 +10657,83 @@ model-viewer::part(default-progress-mask) {
     flex-basis: 100%;
   }
 }
+/* Compact medication search and the separate coverage review window. */
+#prescriptionDialog .rx-result--compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  min-height: 44px;
+  border-radius: 4px;
+}
+#prescriptionDialog .rx-result--compact .rx-result__label { font-size: 13px; line-height: 1.4; }
+#prescriptionDialog .rx-result--compact button { flex-shrink: 0; min-height: 30px; padding: 4px 12px; }
+.rx-result--compact:focus-visible { outline: 2px solid #5b77c6; outline-offset: 2px; }
+.rx-prescription-search { padding: 0 24px; }
+.rx-medication-menu {
+  z-index: 1000;
+  min-width: 245px;
+  max-width: calc(100vw - 24px);
+  max-height: var(--radix-context-menu-content-available-height);
+  overflow-y: auto;
+  padding: 6px;
+  color: #eff4ff;
+  background: #253147;
+  border: 1px solid #54647f;
+  border-radius: 5px;
+  box-shadow: 0 10px 30px #10182955;
+}
+.rx-medication-menu__item { padding: 9px 12px; font-size: 14px; outline: none; border-radius: 3px; }
+.rx-medication-menu__item[data-disabled] { color: #a8b3c6; cursor: default; }
+.rx-medication-menu__coverage { cursor: pointer; color: white; }
+.rx-medication-menu__coverage[data-highlighted] { background: #435b85; }
+.rx-medication-menu__separator { height: 1px; margin: 5px 6px; background: #536079; }
+#medicationCoverageDialog { width: min(880px, calc(100vw - 24px)); max-height: 92dvh; color: #23324d; background: #fff; }
+#medicationCoverageDialog .rx-dialog__panel { padding: 0 18px 16px; }
+#medicationCoverageDialog .rx-dialog__header { margin: 0 -18px; padding: 14px 18px; background: #583784; color: white; }
+#medicationCoverageDialog .rx-dialog__title { font-size: 17px; color: white; }
+#medicationCoverageDialog .rx-dialog__context,
+#medicationCoverageDialog .rail-eyebrow { color: #e6daf8; }
+.coverage-intro { display: flex; align-items: center; gap: 14px; justify-content: space-between; padding: 14px 0; font-size: 13px; }
+.coverage-intro p { margin: 0; }
+.coverage-intro button { flex-shrink: 0; }
+.coverage-product { display: flex; align-items: center; gap: 16px; padding: 8px 0 18px; }
+.coverage-product__image { flex: 0 0 140px; display: grid; place-items: center; background: #f5f6f8; border-radius: 5px; min-height: 90px; }
+.coverage-product img { width: 140px; height: 90px; object-fit: contain; }
+.coverage-product h4 { color: #2444a2; font-size: 17px; margin: 0 0 8px; }
+.coverage-product small { font-size: 12px; }
+.coverage-product p, .coverage-product a { font-size: 12px; }
+.coverage-criteria { border: 1px solid #f3cad7; border-radius: 6px; padding: 14px; background: #fff8fa; }
+.coverage-criteria h4 { color: #a3275c; margin: 0 0 10px; font-size: 15px; }
+.coverage-criteria ol { margin: 0 0 10px; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+.coverage-criteria summary { cursor: pointer; font-size: 12px; }
+.coverage-criteria pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 12px; line-height: 1.7; max-height: 280px; overflow-y: auto; }
+.coverage-provenance, .coverage-footer { font-size: 11px; color: #66738b; line-height: 1.5; }
+#medicationCoverageDialog .rx-review { margin-top: 16px; padding: 14px; border: 1px solid #c8dceb; border-radius: 6px; background: #f4faff; }
+#medicationCoverageDialog .rx-section-title { color: #2757a1; font-size: 15px; flex-wrap: wrap; }
+#medicationCoverageDialog .rx-model-report { font-size: 13px; }
+#medicationCoverageDialog .rx-model-report__table { width: 100%; font-size: 12px; background: white; }
+.coverage-summary { background: #edf8f2; border: 1px solid #cce9da; border-radius: 6px; margin-top: 14px; padding: 14px; }
+.coverage-summary > div { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.coverage-summary h4 { margin: 0; font-size: 15px; color: #177366; }
+.coverage-summary button { background: white; border: 1px solid #adcebf; border-radius: 4px; padding: 5px 9px; font-size: 12px; }
+.coverage-summary p, .coverage-summary > span { font-size: 13px; line-height: 1.6; }
+.coverage-table-scroll { overflow-x: auto; }
+.coverage-patient-table { width: 100%; border-collapse: collapse; background: white; font-size: 12px; line-height: 1.5; }
+.coverage-patient-table th, .coverage-patient-table td { padding: 8px; border: 1px solid #d1dce7; text-align: left; overflow-wrap: anywhere; }
+.coverage-patient-table thead { background: #e7eff8; }
+.coverage-patient-table th:first-child { min-width: 80px; }
+.coverage-evidence { margin-top: 12px; font-size: 12px; }
+.coverage-evidence > summary { cursor: pointer; }
+@media (max-width: 600px) {
+  .rx-prescription-search { padding: 0 12px; }
+  .coverage-product { gap: 10px; }
+  .coverage-product__image { flex-basis: 86px; }
+  .coverage-product img { width: 86px; height: 72px; }
+  .coverage-product h4 { font-size: 14px; }
+  .coverage-intro { flex-wrap: wrap; }
+  #medicationCoverageDialog .rx-dialog__header { flex-wrap: wrap; }
+  #medicationCoverageDialog .rx-review { padding: 10px; }
+}

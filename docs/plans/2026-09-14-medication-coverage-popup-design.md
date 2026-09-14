@@ -13,3 +13,13 @@ Sources checked 2026-09-14:
 - https://astrazeneca.co.kr/product/?vid=36
 
 The optional writing-plans skill is not installed in the available local skill roots; the implementation sequence is recorded here instead.
+
+## Validation
+
+- Production build and focused ESLint passed; 25 medication/gateway tests passed.
+- Browser checks: both drugs, context menu, Shift+F10, confirmation-before-request, one POST, mocked model response, 503 rules fallback, no previous-drug result, 390px viewport.
+- Both prescription defaults verified through FormData. Fixed missing select options for mg/kg, infusion/injection and catalog schedules.
+- Final compact-row CSS verified in the browser at 48px row height.
+- Product images loaded from the manufacturer with a narrowly scoped CSP image host exception.
+- Fixed Windows path handling in the markup test helper so focused tests run on this workspace.
+- No real LLM request or deployment was performed.

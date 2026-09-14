@@ -15,7 +15,7 @@ export function middleware(request) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${needsWasm ? " 'wasm-unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://www.astrazeneca.co.kr",
     "font-src 'self'",
     `connect-src ${connectSrc}`,
     "object-src 'none'",

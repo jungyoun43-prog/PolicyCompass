@@ -3,7 +3,7 @@ import test from "node:test";
 import { openPrescriptionWindow, prescriptionWindowFeatures } from "../components/emr/prescription-window.js";
 
 test("처방 창은 현재 화면 중앙에 열리고 작은 화면에서는 크기를 제한한다", () => {
-  assert.equal(prescriptionWindowFeatures({ screen: { availWidth: 1920, availHeight: 1080, availLeft: -1920, availTop: 0 } }), "popup=yes,width=1120,height=920,left=-1520,top=48,resizable=yes,scrollbars=yes");
+  assert.equal(prescriptionWindowFeatures({ screen: { availWidth: 1920, availHeight: 1080, availLeft: -1920, availTop: 0 } }), "popup=yes,width=1000,height=800,left=-1460,top=108,resizable=yes,scrollbars=yes");
   assert.equal(prescriptionWindowFeatures({ screen: { availWidth: 800, availHeight: 600, availLeft: 0, availTop: 0 } }), "popup=yes,width=768,height=504,left=16,top=16,resizable=yes,scrollbars=yes");
 });
 

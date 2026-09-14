@@ -39,7 +39,7 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
  * The shared entry-dialog frame: a real <dialog>, a sticky header carrying the
  * title, its scope notice, any extra header actions, and the way out.
  */
-export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
+export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, showNotice = true, headerExtra, children }) {
   const contentRef = useRef(null);
   const drag = useRef(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -80,9 +80,9 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false,
                 <span className="rail-eyebrow">{eyebrow}</span>
                 <span className="rx-dialog__titleline">
                   <span className="rx-dialog__title" id={titleId} role="heading" aria-level={3}>{title}</span>
-                  <HoverPopover hostClassName="rx-notice" trigger="i" triggerClassName="rx-notice__summary" triggerId={noticeId}
+                  {showNotice ? <HoverPopover hostClassName="rx-notice" trigger="i" triggerClassName="rx-notice__summary" triggerId={noticeId}
                     panelId={`${noticeId}Panel`} panelClassName="rx-notice__body rx-notice__body--start" ariaLabel="이 화면의 사용 범위 안내"
-                    panel={notice} />
+                    panel={notice} /> : null}
                 </span>
                 <span className="rx-dialog__context">{context}</span>
               </span>

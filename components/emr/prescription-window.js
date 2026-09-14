@@ -2,8 +2,8 @@ export function prescriptionWindowFeatures(host = window) {
   const screen = host.screen || {};
   const availableWidth = screen.availWidth || host.outerWidth || 1152;
   const availableHeight = screen.availHeight || host.outerHeight || 1016;
-  const width = Math.max(100, Math.min(1120, availableWidth - 32));
-  const height = Math.max(100, Math.min(920, availableHeight - 96));
+  const width = Math.max(100, Math.min(1000, availableWidth - 32));
+  const height = Math.max(100, Math.min(800, availableHeight - 96));
   const left = Math.round((screen.availLeft ?? host.screenX ?? 0) + (availableWidth - width) / 2);
   const top = Math.round((screen.availTop ?? host.screenY ?? 0) + (availableHeight - height - 64) / 2);
   return `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`;

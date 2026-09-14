@@ -103,7 +103,10 @@ test("약품 검색 결과는 간결한 처방명과 처방 버튼을 보여 주
   assert.equal(showsIngredient, false, "성분명을 별도 줄로 반복하지 않는다");
   assert.doesNotMatch(dialog, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
   assert.match(dialog, /MEDICATION_PRODUCTS\[medication\.id\]\?\.orderName/);
-  assert.match(dialog, /onClick=\{\(\) => pickMedication\(medication\)\}>처방<\/Button>/);
+  assert.match(dialog, /\{prescriptionEditor\(medication\)\}/, "검색 결과에서 약마다 입력칸을 바로 제공한다");
+  assert.match(dialog, /onSubmit=\{\(event\) => submit\(event, form, medication\.id\)\}/, "해당 약의 입력값으로 처방한다");
+  assert.match(dialog, /class="rx-form__submit" type="submit"/);
+  assert.doesNotMatch(dialog, /pickMedication\(/, "처방 버튼을 눌러야 입력칸이 열리는 이전 흐름은 제거한다");
   assert.doesNotMatch(dialog, /<details class="rx-result__details"/);
   assert.match(dialog, /label === "급여인정확인" \? openCoverage\(medication\)/);
 });

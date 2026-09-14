@@ -89,15 +89,14 @@ test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", 
   assert.match(encounterHtml, /data-disclosure-summary="soap"/);
 });
 
-test("처방 입력은 자동 검증하지 않는 임상 안전 범위를 팝업 안내에 유지한다", async () => {
-  // source-check: 처방 팝업은 Radix Dialog.Portal 안에 렌더돼 서버 렌더러가 본문을 만들지 않으므로, 안내 문구와 폼 순서는 소스에서 확인한다.
+test("처방 제목의 안내 아이콘은 숨기고 급여 검토에는 판단 범위를 명시한다", async () => {
+  // source-check: 포털 안의 처방 창과 급여 검토 창은 서로 다른 안내 표시 정책을 사용한다.
   const dialog = await componentMarkup("components/emr/prescription-dialog.jsx");
-  const notice = dialog.match(/notice="([^"]*)"/)?.[1] ?? "";
-
-  assert.match(dialog, /noticeId="prescriptionNotice"/);
-  assert.match(notice, /급여 인정이나 삭감을 확정하지 않습니다/);
-  assert.match(notice, /최종 처방 결정은 의료진에게 있습니다/);
-  assert.ok(dialog.indexOf('noticeId="prescriptionNotice"') < dialog.indexOf('id="prescriptionForm"'));
+  const kit = await componentMarkup("components/emr/dialog-kit.jsx");
+  assert.match(dialog, /<RxDialog id="prescriptionDialog"[^>]*showNotice=\{false\}/);
+  assert.match(kit, /showNotice = true/);
+  assert.match(kit, /\{showNotice \? <HoverPopover/);
+  assert.match(dialog, /noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다\."/);
 });
 
 test("오늘 진료는 모든 단계를 펼친 채 열리고 사용자 선택은 메모리에만 유지된다", async () => {

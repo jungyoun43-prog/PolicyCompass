@@ -103,7 +103,7 @@ test("EMR은 환자·차트·신체 지도·코파일럿·급여 칸반·로컬 
   }
   // source-check: Radix dialog content is portaled and mounts only on the client, so the entry forms never appear in server markup.
   assert.match(entryDialogs, /id="diagnosisForm"/);
-  assert.match(prescriptionDialog, /id="prescriptionForm"/);
+  assert.ok(prescriptionDialog.includes('id={"prescriptionForm-" + medication.id}'), "약마다 고유한 처방 폼을 제공한다");
   assert.match(entryDialogs, /id="orderForm"/);
 
   assert.match(html, /환자 전달 파일 내보내기/);

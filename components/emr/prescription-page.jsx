@@ -15,7 +15,11 @@ export function PrescriptionPage() {
     const opener = window.opener;
     if (!token || !opener) return;
     bridge.current = { token, opener };
+    let lastSeen = Date.now();
+    let disconnected = false;
     const disconnect = () => {
+      if (disconnected) return;
+      disconnected = true;
       setConnected(false);
       setMessage("원래 EMR과 연결이 종료됐습니다. EMR에서 약 처방 창을 다시 열어 주세요.");
       pending.current?.reject(new Error("EMR 연결이 종료돼 처방을 추가할 수 없습니다."));
@@ -24,10 +28,12 @@ export function PrescriptionPage() {
     const receive = (event) => {
       if (event.origin !== window.location.origin || event.source !== opener || event.data?.token !== token) return;
       const data = event.data;
+      if (data.type === "prescription-pong") lastSeen = Date.now();
       if (data.type === "prescription-context" && data.payload?.patient && data.payload?.encounter) {
         setPayload(data.payload);
         setConnected(true);
         setMessage("");
+        lastSeen = Date.now();
         clearTimeout(timeout);
       } else if (data.type === "prescription-disconnected") disconnect();
       else if (data.type === "prescription-result" && data.requestId === pending.current?.id) {
@@ -39,7 +45,11 @@ export function PrescriptionPage() {
     };
     window.addEventListener("message", receive);
     const timeout = setTimeout(disconnect, 15000);
-    const poll = setInterval(() => { if (opener.closed) disconnect(); }, 1000);
+    const poll = setInterval(() => {
+      if (disconnected) return;
+      if (opener.closed || Date.now() - lastSeen > 6000) { disconnect(); return; }
+      opener.postMessage({ type: "prescription-ping", token }, window.location.origin);
+    }, 1000);
     opener.postMessage({ type: "prescription-ready", token }, window.location.origin);
     return () => { clearTimeout(timeout); clearInterval(poll); window.removeEventListener("message", receive); };
   }, []);

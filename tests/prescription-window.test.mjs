@@ -26,6 +26,8 @@ test("처방 창은 원래 창·토큰을 확인하고 중복 저장을 막으�
     await receive({ ...event, source: {} });
     await receive({ ...event, data: { ...event.data, token: "wrong" } });
     assert.equal(writes, 0);
+    await receive({ ...event, data: { token, type: "prescription-ping" } });
+    assert.equal(messages.at(-1).data.type, "prescription-pong");
     await Promise.all([receive(event), receive(event)]);
     assert.equal(writes, 1);
     assert.equal(messages.filter(({ data }) => data.ok).length, 2);

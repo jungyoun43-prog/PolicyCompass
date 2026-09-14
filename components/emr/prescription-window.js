@@ -10,6 +10,7 @@ export function openPrescriptionWindow(payload, onSubmit) {
   const receive = async (event) => {
     if (disposed || event.origin !== origin || event.source !== child || event.data?.token !== token) return;
     if (event.data.type === "prescription-ready") send({ type: "prescription-context", payload });
+    if (event.data.type === "prescription-ping") send({ type: "prescription-pong" });
     if (event.data.type !== "prescription-submit" || typeof event.data.requestId !== "string") return;
     const { requestId, prescription } = event.data;
     if (!requests.has(requestId)) {

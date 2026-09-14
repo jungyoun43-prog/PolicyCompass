@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { medicationReviewNotice } from "../../src/medication-review-prompt.js";
 
 export const MEDICATION_PRODUCTS = {
@@ -70,7 +71,7 @@ export function MedicationCoverageSummary({ review }) {
   };
   return <section className="coverage-summary">
     <div><h4>{review.generatedBy === "rule" ? "규칙 기반 요약" : "AI 요약 의견"}</h4>
-      <button type="button" onClick={copy}>요약 내용 복사</button></div>
+      <Button type="button" onClick={copy}>요약 내용 복사</Button></div>
     <p>{summary}</p><span role="status">{copied}</span>
   </section>;
 }

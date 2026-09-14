@@ -1,5 +1,7 @@
 # Medication coverage popup
 
+Design correction: retain the application's existing visual language and shared RxDialog format. The reference image describes functionality and content only. Use existing surface, text, border, accent and radius tokens; no purple window header or pink/blue/green panel theme. Reuse the shared Button for summary copying.
+
 Confirmed flow: compact search rows with a single prescription action; context menu on each medication; coverage confirmation opens an in-app dialog. Other screenshot menu entries are disabled placeholders. Remove the AI review introduction from prescription search. Keep editable patient data, notice, prompt and model selection before any review request.
 
 Use the existing Radix dialog and context menu primitives rather than a separate browser window (which complicates focus and patient state). Keep current prescribing behavior: selecting a drug fills the editable prescription form, then the clinician adds the draft.

@@ -7923,6 +7923,8 @@ button.claim-attention-item__summary:focus-visible {
 
 .rx-review__progress-text {
   display: grid;
+  flex: 1;
+  min-width: 0;
   gap: var(--space-1);
   font-size: var(--font-size-caption);
   color: var(--muted);
@@ -7940,21 +7942,25 @@ button.claim-attention-item__summary:focus-visible {
   gap: var(--space-2) var(--space-3);
   margin: var(--space-2) 0 0;
   padding: 0;
-  max-width: 460px;
+  width: 100%;
 }
 
 .rx-pipeline--progress .rx-pipeline__step {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   min-width: 0;
 }
 
 .rx-pipeline--progress .rx-pipeline__text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .rx-pipeline--progress { grid-template-columns: minmax(0, 1fr); }
 }
 
 .rx-pipeline--progress .rx-pipeline__step[data-state="active"] .rx-pipeline__index {

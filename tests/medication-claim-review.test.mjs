@@ -52,7 +52,7 @@ export async function load(url, context, nextLoad) {
 register(`data:text/javascript,${encodeURIComponent(PORTAL_INLINE_HOOK)}`);
 const { PrescriptionDialog } = await import("../components/emr/prescription-dialog.jsx");
 
-/** The open 약 처방하기 dialog for a demo patient, as first painted (no search, no review yet). */
+/** The open 약 처방 dialog for a demo patient, as first painted (no search, no review yet). */
 function renderPrescriptionDialog(props = {}) {
   const patient = demo.patients[0];
   const noop = () => {};
@@ -289,7 +289,7 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   const formAt = html.indexOf('id="prescriptionForm"');
 
   // Then — 런처 버튼, 팝업, 검색 입력, 처방 입력 폼이 실제 마크업에 있다.
-  assert.match(html, /<button[^>]*id="openPrescriptionDialog"[^>]*aria-haspopup="dialog"[^>]*>약 처방하기<\/button>/);
+  assert.match(html, /<button[^>]*id="openPrescriptionDialog"[^>]*aria-haspopup="dialog"[^>]*>약 처방<\/button>/);
   assert.match(html, /<div[^>]*role="dialog"[^>]*id="prescriptionDialog"[^>]*aria-labelledby="rxDialogTitle"/);
   assert.match(html, /<label[^>]*for="medicationSearchInput">약품 검색<input id="medicationSearchInput"[^>]*type="search"/);
   assert.ok(launcherAt > -1 && dialogAt > -1 && formAt > -1);

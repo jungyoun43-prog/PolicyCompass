@@ -10577,11 +10577,11 @@ model-viewer::part(default-progress-mask) {
   margin-left: 0;
 }
 
-/* Keep all three entry lists on one baseline even when a title is longer. */
+/* Counts follow the heading; the action stays at the top right. */
 .entry-grid .workflow-disclosure--static > .workflow-disclosure__summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto 32px;
+  grid-template-columns: minmax(0, max-content) auto minmax(max-content, 1fr);
+  grid-template-rows: auto;
   gap: var(--space-2);
   align-items: center;
 }
@@ -10594,12 +10594,12 @@ model-viewer::part(default-progress-mask) {
 .entry-grid .workflow-disclosure__meta {
   grid-column: 2;
   grid-row: 1;
-  justify-self: end;
+  justify-self: start;
 }
 
 .entry-grid .entry-launcher-slot {
-  grid-column: 1 / -1;
-  grid-row: 2;
+  grid-column: 3;
+  grid-row: 1;
   justify-self: end;
   margin-left: 0;
 }
@@ -10615,7 +10615,7 @@ model-viewer::part(default-progress-mask) {
   }
 
   .entry-grid .workflow-disclosure--static > .workflow-disclosure__summary {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, max-content) auto minmax(max-content, 1fr);
     grid-template-rows: auto;
   }
 

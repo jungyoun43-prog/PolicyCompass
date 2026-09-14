@@ -485,9 +485,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</Button>,
+        <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방</Button>,
         launcherSlot) : null}
-      <RxDialog id="prescriptionDialog" open={open && !standalone} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
+      <RxDialog id="prescriptionDialog" open={open && !standalone} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방" titleId="rxDialogTitle" context={context}
         notice="급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다." noticeId="prescriptionNotice"
       >
 

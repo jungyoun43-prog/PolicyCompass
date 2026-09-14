@@ -288,14 +288,14 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   const dialogAt = html.indexOf('id="prescriptionDialog"');
   const formAt = html.indexOf('id="prescriptionForm"');
 
-  // Then — 런처 버튼, 팝업, 검색 입력, 처방 입력 폼이 실제 마크업에 있다.
+  // The empty search has no separate composer; choosing a result reveals it in that row.
   assert.match(html, /<button[^>]*id="openPrescriptionDialog"[^>]*aria-haspopup="dialog"[^>]*>약 처방<\/button>/);
   assert.match(html, /<div[^>]*role="dialog"[^>]*id="prescriptionDialog"[^>]*aria-labelledby="rxDialogTitle"/);
   assert.match(html, /<label[^>]*for="medicationSearchInput">약품 검색<input id="medicationSearchInput"[^>]*type="search"/);
-  assert.ok(launcherAt > -1 && dialogAt > -1 && formAt > -1);
+  assert.ok(launcherAt > -1 && dialogAt > -1);
   assert.ok(launcherAt < dialogAt, "런처가 팝업보다 앞선다");
-  assert.ok(formAt > dialogAt, "처방 입력 폼은 팝업 안에 있다");
-  assert.match(html, /<\/form><\/div><\/div>$/, "처방 입력 폼은 팝업 패널의 마지막 자식이다");
+  assert.equal(formAt, -1, "약 선택 전에는 별도 처방 폼이 없다");
+  assert.doesNotMatch(html, /검색 결과에서 약을 선택하세요/);
   assert.match(html, /id="medicationResultCount">0건</, "검색 전에는 결과가 없다");
   assert.doesNotMatch(html, /medicationReviewEmpty|AI 삭감 사전검토/, "처방 검색에는 AI 검토 안내를 표시하지 않는다");
   // source-check: 판정 카드와 판정 근거 대조표는 AI 검토 클릭·응답 뒤에만 그려지므로 서버 렌더로는 도달할 수 없다.

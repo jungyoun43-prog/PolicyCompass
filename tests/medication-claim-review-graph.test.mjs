@@ -47,6 +47,27 @@ function ollamaStub(content, calls = []) {
 
 const localEnvironment = { POLICYCOMPASS_OLLAMA_MODEL: "demo-local", POLICYCOMPASS_OLLAMA_URL: "http://127.0.0.1:11434" };
 
+test("대괄호 없는 모델 판정 헤더도 같은 판정으로 인식한다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  for (const [symbol, verdict] of [["○", "circle"], ["△", "triangle"], ["✕", "cross"]]) {
+    const markdown = REPORT.replace(/^## \[✕\].*/, `## ${symbol} Benralizumab — 급여기준 검토`);
+    const calls = [];
+    const result = await runMedicationClaimReview({ comparison }, { environment: localEnvironment, fetchImpl: ollamaStub(markdown, calls) });
+    assert.equal(result.draft.generatedBy, "local-model");
+    assert.equal(result.draft.verdict, verdict);
+    assert.equal(result.draft.markdown, markdown);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("본문 기호나 불완전한 헤더를 판정으로 오인하지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  for (const header of ["본문 ## [○]", "### [○] 설명", "## [○/△/✕]", "## [✕", "## Xylophone"]) {
+    const result = await runMedicationClaimReview({ comparison }, { environment: localEnvironment, fetchImpl: ollamaStub(header) });
+    assert.equal(result.draft.generatedBy, "rule");
+  }
+});
+
 test("모델이 설정되지 않으면 규칙 판정을 그대로 사용한다", async () => {
   // Given
   const comparison = comparisonFor("김비타", "benralizumab-30");

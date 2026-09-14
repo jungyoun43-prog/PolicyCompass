@@ -179,8 +179,8 @@ function markdownText(value, maximum = 8_000) {
 function validateDraft(raw, _comparison) {
   const markdown = markdownText(raw);
   if (!markdown) throw new Error("모델 응답이 비었습니다.");
-  const heading = markdown.match(/##\s*\[\s*(.)\s*\]/u);
-  const symbol = heading ? heading[1] : "";
+  const heading = markdown.match(/^##[ \t]+(?:\[[ \t]*([^\]\s])[ \t]*\]|([^\s\[]))(?=[ \t]|$)/mu);
+  const symbol = heading ? (heading[1] || heading[2]) : "";
   const verdict = VERDICT_SYMBOLS[symbol];
   if (!verdict) throw new Error("출력 형식의 판정 헤더(## [\u25cb/\u25b3/\u2715])가 없습니다.");
   safeGeneratedText(markdown.slice(0, 500), 500);

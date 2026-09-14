@@ -734,9 +734,12 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             )}
           </section>
           {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="종합 삭감 위험">
+            <div className="coverage-risk__text">
             <h4>종합 삭감 위험</h4>
             <strong>{review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
             <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
+            </div>
+            <ReviewMark verdict={review.verdict} />
           </section> : null}
           {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
           {settingsOpen && reviewPreview ? <aside className="coverage-settings" aria-label="검토 설정">

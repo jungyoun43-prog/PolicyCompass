@@ -10827,7 +10827,10 @@ model-viewer::part(default-progress-mask) {
 #medicationCoverageDialog .rx-model-report__table { table-layout: fixed; }
 #medicationCoverageDialog .rx-model-report__table td { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; vertical-align: top; line-height: 1.7; }
 #medicationCoverageDialog .rx-model-report__table th:last-child { width: 48%; }
-#medicationCoverageDialog .coverage-risk { padding: 12px 14px; border: 1px solid currentColor; border-radius: 5px; }
+#medicationCoverageDialog .coverage-risk { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid currentColor; border-radius: 5px; }
+.coverage-risk__text { min-width: 0; }
+.coverage-risk > .coverage-judgment { flex-shrink: 0; }
+.coverage-risk > .coverage-judgment svg { width: 64px; height: 64px; }
 .coverage-risk h4 { margin: 0 0 7px; font-size: 13px; }
 .coverage-risk strong { display: block; font-size: 17px; }
 .coverage-risk p { margin: 7px 0 0; font-size: 12px; }

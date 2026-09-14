@@ -10794,9 +10794,9 @@ model-viewer::part(default-progress-mask) {
 .coverage-intro small { display: block; font-size: 11px; }
 .coverage-tools { display: flex; flex: none; gap: 4px; }
 #medicationCoverageDialog .coverage-tools button { font-size: 11px; padding: 5px 8px; min-height: 28px; border-radius: 4px; color: #26385e; background: #fff; border-color: #bac4d9; }
-#medicationCoverageDialog .coverage-product { padding: 0; gap: 12px; }
-#medicationCoverageDialog .coverage-product__image { flex-basis: 108px; min-height: 68px; background: #f6f6f7; }
-#medicationCoverageDialog .coverage-product img { width: 108px; height: 68px; }
+#medicationCoverageDialog .coverage-product { padding: 0; gap: 12px; min-height: 102px; }
+#medicationCoverageDialog .coverage-product__image { flex-basis: 108px; min-height: 102px; background: #f6f6f7; }
+#medicationCoverageDialog .coverage-product img { width: 108px; height: 102px; }
 #medicationCoverageDialog .coverage-product h4 { color: #1740a3; font-size: 14px; margin-bottom: 4px; }
 #medicationCoverageDialog .coverage-product p { margin: 3px 0; font-size: 11px; }
 #medicationCoverageDialog .coverage-product a { font-size: 11px; }
@@ -10854,7 +10854,8 @@ model-viewer::part(default-progress-mask) {
 .coverage-judgment[data-verdict="triangle"] { color: var(--data-amber); }
 #medicationCoverageDialog .rx-model-report__table td:has(> .coverage-judgment) { vertical-align: middle; }
 @media (max-width: 600px) {
-  #medicationCoverageDialog .coverage-product__image { flex-basis: 76px; }
-  #medicationCoverageDialog .coverage-product img { width: 76px; height: 60px; }
+  #medicationCoverageDialog .coverage-product { min-height: 90px; }
+  #medicationCoverageDialog .coverage-product__image { flex-basis: 76px; min-height: 90px; }
+  #medicationCoverageDialog .coverage-product img { width: 76px; height: 90px; }
   .coverage-tools { margin-left: auto; }
 }

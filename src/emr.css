@@ -10838,6 +10838,12 @@ model-viewer::part(default-progress-mask) {
 #medicationCoverageDialog[data-embedded] .rx-dialog__panel { height: 100%; max-height: none; }
 #medicationCoverageDialog[data-embedded] .rx-dialog__drag-handle { cursor: default; }
 .coverage-page-empty { max-width: 650px; margin: 60px auto; padding: 24px; }
+.coverage-judgment { display: flex; justify-content: center; align-items: center; min-width: 32px; }
+.coverage-judgment svg { display: block; width: 32px; height: 32px; flex-shrink: 0; }
+.coverage-judgment[data-verdict="circle"] { color: var(--status-success-text); }
+.coverage-judgment[data-verdict="cross"] { color: var(--urgent); }
+.coverage-judgment[data-verdict="triangle"] { color: var(--data-amber); }
+#medicationCoverageDialog .rx-model-report__table td:has(> .coverage-judgment) { vertical-align: middle; }
 @media (max-width: 600px) {
   #medicationCoverageDialog .coverage-product__image { flex-basis: 76px; }
   #medicationCoverageDialog .coverage-product img { width: 76px; height: 60px; }

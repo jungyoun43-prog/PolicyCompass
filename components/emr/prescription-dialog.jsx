@@ -37,6 +37,23 @@ function boldSegments(text) {
   return text.split(/\*\*([^*]+)\*\*/g).map((part, index) => (index % 2 ? <b key={index}>{part}</b> : part));
 }
 
+function ReviewMark({ verdict }) {
+  const meta = MEDICATION_REVIEW_VERDICTS[verdict];
+  return <span className="coverage-judgment" data-verdict={verdict} role="img" aria-label={meta.symbol}>
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {verdict === "circle" ? <circle cx="16" cy="16" r="11" /> : verdict === "cross" ? <path d="m7 7 18 18M25 7 7 25" /> : <path d="M16 4 29 27H3Z" />}
+    </svg>
+  </span>;
+}
+
+function reportJudgment(cell) {
+  const symbol = cell.replace(/\*\*/g, "").trim();
+  if (/^[○◯〇oO]$/.test(symbol)) return "circle";
+  if (/^[✕×✗xX]$/.test(symbol)) return "cross";
+  if (/^[△▲Δ]$/.test(symbol)) return "triangle";
+  return null;
+}
+
 /** Renders the model's 급여기준 판정 보고 (출력 형식 markdown) without a markdown library. */
 function MarkdownReport({ markdown }) {
   const lines = markdown.split("\n");
@@ -69,7 +86,7 @@ function MarkdownReport({ markdown }) {
                 {block.rows.map((cells, rowIndex) => (
                   <tr key={rowIndex}>{(rowIndex === 0 ? cells : normalizeMedicationReportRow(cells, block.rows[0].length)).map((cell, cellIndex) => (rowIndex === 0
                     ? <th key={cellIndex}>{boldSegments(cell)}</th>
-                    : <td key={cellIndex}>{boldSegments(cell)}</td>))}</tr>
+                    : <td key={cellIndex}>{/판단|판정/.test(block.rows[0][cellIndex]) && reportJudgment(cell) ? <ReviewMark verdict={reportJudgment(cell)} /> : boldSegments(cell)}</td>))}</tr>
                 ))}
               </tbody>
             </table>
@@ -605,7 +622,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                       <thead><tr><th>항목</th><th>환자 정보</th><th>판단</th><th>근거 (기록 발췌)</th></tr></thead>
                       <tbody>{review.checks.map((check) => <tr key={check.id}>
                         <th scope="row">{check.title}</th><td>{check.chart.detail}</td>
-                        <td><span className="rx-verdict-chip" data-tone={MEDICATION_REVIEW_VERDICTS[check.verdict].tone}>{MEDICATION_REVIEW_VERDICTS[check.verdict].symbol}</span></td>
+                        <td><ReviewMark verdict={check.verdict} /></td>
                         <td>{check.chart.findings.map((finding) => [finding.date, finding.label, finding.detail].filter(Boolean).join(" · ")).join(" / ") || "확인된 기록 없음"}</td>
                       </tr>)}</tbody>
                     </table>

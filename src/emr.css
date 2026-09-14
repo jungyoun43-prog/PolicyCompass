@@ -10843,9 +10843,25 @@ model-viewer::part(default-progress-mask) {
 .coverage-risk[data-tone="green"] { color: #167337; background: #eff9f1; }
 .coverage-risk[data-tone="amber"] { color: #88621c; background: #fffaed; }
 .coverage-risk[data-tone="red"] { color: #a53142; background: #fff3f4; }
-#medicationCoverageDialog[data-embedded] { position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; transform: none; translate: none !important; border-radius: 0; }
-#medicationCoverageDialog[data-embedded] .rx-dialog__panel { height: 100%; max-height: none; }
-#medicationCoverageDialog[data-embedded] .rx-dialog__drag-handle { cursor: default; }
+#medicationCoverageDialog[data-embedded], #prescriptionDialog[data-embedded] { position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; margin: 0; transform: none; translate: none !important; border-radius: 0; }
+#medicationCoverageDialog[data-embedded] .rx-dialog__panel, #prescriptionDialog[data-embedded] .rx-dialog__panel { height: 100%; max-height: none; }
+#medicationCoverageDialog[data-embedded] .rx-dialog__drag-handle, #prescriptionDialog[data-embedded] .rx-dialog__drag-handle { cursor: default; }
+.prescription-window-status { padding: 8px 12px; color: var(--urgent); }
+.coverage-section-icon { display: inline-block; width: 21px; height: 21px; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
+#prescriptionDialog .rx-order-line { display: grid; grid-template-columns: minmax(180px, 1fr) 80px 80px 140px auto; align-items: center; gap: 6px; padding: 8px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--surface-soft); }
+#prescriptionDialog .rx-order-line__product { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+#prescriptionDialog .rx-order-line label { min-width: 0; font-size: 11px; }
+#prescriptionDialog .rx-order-line input, #prescriptionDialog .rx-order-line select { min-width: 0; width: 100%; padding-inline: 5px; }
+#prescriptionDialog .rx-order-line .rx-form__submit { grid-column: auto; margin: 0; align-self: end; white-space: nowrap; }
+#prescriptionDialog .rx-form { margin-top: 8px; }
+#prescriptionDialog .rx-order-details { margin-top: 6px; }
+#prescriptionDialog .rx-order-details > summary { padding: 8px 0; font-size: 12px; cursor: pointer; }
+#prescriptionDialog .prescription-form-grid { gap: 8px; }
+@media (max-width: 700px) {
+  #prescriptionDialog .rx-order-line { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #prescriptionDialog .rx-order-line__product { grid-column: 1 / -1; }
+  #prescriptionDialog .rx-order-line .rx-form__submit { align-self: end; }
+}
 .coverage-page-empty { max-width: 650px; margin: 60px auto; padding: 24px; }
 .coverage-judgment { display: flex; justify-content: center; align-items: center; min-width: 32px; }
 .coverage-judgment svg { display: block; width: 32px; height: 32px; flex-shrink: 0; }

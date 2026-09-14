@@ -33,6 +33,15 @@ export const MEDICATION_PRODUCTS = {
   },
 };
 
+export function CoverageIcon({ kind = "criteria" }) {
+  return <svg className="coverage-section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {kind === "patient" ? <><circle cx="9" cy="7" r="3" /><path d="M3 20v-3a6 6 0 0 1 12 0v3M16 11l2 2 4-5" /></>
+      : kind === "risk" ? <><path d="m12 3 9 4v5c0 5-9 9-9 9s-9-4-9-9V7Z" /><path d="M12 8v5m0 4h.01" /></>
+        : kind === "summary" ? <><rect x="4" y="7" width="16" height="13" rx="3" /><path d="M12 3v4M8 16h8M1 11v5m22-5v5M8 11h.01M16 11h.01" /></>
+          : <><path d="M14 3H5v18h14V8ZM14 3v5h5M8 12h8M8 16h6" /></>}
+  </svg>;
+}
+
 export function MedicationCoverageOverview({ medication }) {
   const [failed, setFailed] = useState(false);
   const product = MEDICATION_PRODUCTS[medication.id];
@@ -52,7 +61,7 @@ export function MedicationCoverageOverview({ medication }) {
       </div>
     </div>
     <section className="coverage-criteria">
-      <h4><span aria-hidden="true">▤</span> 급여인정 기준 (요약)</h4>
+      <h4><CoverageIcon />급여인정 기준 (요약)</h4>
       {criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}>{criterion.replace(/^(?:[가-힣]\.|\d+[.)]|[-•])\s*/, "")}</li>)}</ol> : <p>등록된 기준 원문을 확인해 주세요.</p>}
       <details><summary>상세 기준 보기</summary><pre>{notice}</pre></details>
       <p className="coverage-provenance">프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다.</p>
@@ -72,7 +81,7 @@ export function MedicationCoverageSummary({ review }) {
     } catch { setCopied("복사하지 못했습니다. 내용을 선택해 복사하세요."); }
   };
   return <section className="coverage-summary">
-    <div><h4>{review.generatedBy === "rule" ? "규칙 기반 요약" : "AI 요약 의견"}</h4>
+    <div><h4><CoverageIcon kind="summary" />{review.generatedBy === "rule" ? "규칙 기반 요약" : "AI 요약 의견"}</h4>
       <Button type="button" onClick={copy}>요약 내용 복사</Button></div>
     <p>{summary}</p><span role="status">{copied}</span>
   </section>;

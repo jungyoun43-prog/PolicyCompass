@@ -17,7 +17,9 @@ test("Next 서버는 보안 헤더와 출처·JSON·크기·오류 상태 계약
       const csp = response.headers.get("content-security-policy") ?? "";
       assert.match(csp, /connect-src 'self'/, route);
       assert.match(csp, /default-src 'self'/, route);
-      assert.doesNotMatch(csp, /https?:\/\//, route);
+      const directives = csp.split(";").map((part) => part.trim());
+      assert.equal(directives.find((part) => part.startsWith("img-src ")), "img-src 'self' data: blob: https://www.astrazeneca.co.kr", route);
+      assert.doesNotMatch(directives.filter((part) => !part.startsWith("img-src ")).join(";"), /https?:\/\//, route);
       assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains", route);
       assert.equal(response.headers.get("x-frame-options"), "DENY", route);
     }

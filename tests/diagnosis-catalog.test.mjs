@@ -91,7 +91,7 @@ test("진단 입력은 팝업에서 검색·코드 선택·주상병 구분을 �
   assert.match(dialogs, /id="diagnosisSystem"[\s\S]*?urn:kr:kcd[\s\S]*?<\/select>/);
 });
 
-test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 접어 둔다", async () => {
+test("약품 검색 결과는 간결한 처방명과 처방 버튼을 보여 주고 검토는 메뉴에서 연다", async () => {
   // Given
   const dialog = await componentMarkup("components/emr/prescription-dialog.jsx");
 
@@ -100,8 +100,10 @@ test("약품 검색 결과는 상품명과 성분명만 보여 주고 상세는 
 
   // Then
   // source-check: 검색 결과 목록은 Radix Dialog.Portal 안에서만 렌더되어 서버 렌더로 닿을 수 없다.
-  assert.equal(showsIngredient, true);
+  assert.equal(showsIngredient, false, "성분명을 별도 줄로 반복하지 않는다");
   assert.doesNotMatch(dialog, /rx-result__meta/, "결과 행에 코드·용법 줄을 다시 넣지 않는다");
-  assert.match(dialog, /class="rx-result__details-summary">\s*자세히 보기/);
-  assert.match(dialog, /<details class="rx-result__details"[\s\S]*?<DetailList rows=/, "상세 행은 접힌 details 안에 있다");
+  assert.match(dialog, /MEDICATION_PRODUCTS\[medication\.id\]\?\.orderName/);
+  assert.match(dialog, /onClick=\{\(\) => pickMedication\(medication\)\}>처방<\/Button>/);
+  assert.doesNotMatch(dialog, /<details class="rx-result__details"/);
+  assert.match(dialog, /label === "급여인정확인" \? openCoverage\(medication\)/);
 });

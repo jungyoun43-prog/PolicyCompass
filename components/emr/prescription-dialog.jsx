@@ -529,7 +529,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       {coverageMedication && open ? (
         <RxDialog id="medicationCoverageDialog" embedded={standalone} open onClose={closeCoverage} eyebrow="급여인정확인"
           onEscapeKeyDown={(event) => { if (settingsOpen) { event.preventDefault(); setSettingsOpen(false); } }}
-          title="AI 처방 급여인정 도우미 (웹 서비스)" titleId="coverageDialogTitle" context={context}
+          title="AI 처방 급여인정 도우미" titleId="coverageDialogTitle" context={context}
           noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
         headerExtra={review ? (
           <HoverPopover hostClassName="rx-process" trigger="검토 과정 확인하기" triggerClassName="rx-process__summary" triggerId="medicationReviewProcessSummary"

@@ -36,6 +36,15 @@ function boldSegments(text) {
   return text.split(/\*\*([^*]+)\*\*/g).map((part, index) => (index % 2 ? <b key={index}>{part}</b> : part));
 }
 
+function ReportEvidence({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  if (text.length <= 180) return <>{boldSegments(text)}</>;
+  return <div className="coverage-evidence-excerpt">
+    <div className={expanded ? "" : "coverage-evidence-excerpt__preview"}>{boldSegments(text)}</div>
+    <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "근거 접기" : "근거 전체 보기"}</button>
+  </div>;
+}
+
 function ReviewMark({ verdict }) {
   const meta = MEDICATION_REVIEW_VERDICTS[verdict];
   return <span className="coverage-judgment" data-verdict={verdict} role="img" aria-label={meta.symbol}>
@@ -85,7 +94,7 @@ function MarkdownReport({ markdown }) {
                 {block.rows.map((cells, rowIndex) => (
                   <tr key={rowIndex}>{(rowIndex === 0 ? cells : normalizeMedicationReportRow(cells, block.rows[0].length)).map((cell, cellIndex) => (rowIndex === 0
                     ? <th key={cellIndex}>{boldSegments(cell)}</th>
-                    : <td key={cellIndex}>{/판단|판정/.test(block.rows[0][cellIndex]) && reportJudgment(cell) ? <ReviewMark verdict={reportJudgment(cell)} /> : boldSegments(cell)}</td>))}</tr>
+                    : <td key={cellIndex}>{/판단|판정/.test(block.rows[0][cellIndex]) && reportJudgment(cell) ? <ReviewMark verdict={reportJudgment(cell)} /> : /근거/.test(block.rows[0][cellIndex]) ? <ReportEvidence text={cell} /> : boldSegments(cell)}</td>))}</tr>
                 ))}
               </tbody>
             </table>
@@ -515,7 +524,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <label><span className="rx-order-field-label">용량 단위</span><select id={"medicationDoseUnit-" + medication.id} name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
             <label><span className="rx-order-field-label">투여 빈도</span><select id={"medicationFrequency-" + medication.id} name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             {usesInfusionRate(form.route) ? <label><span className="rx-order-field-label">주입속도 (필요 시)</span><input id={"medicationInfusionRate-" + medication.id} name="infusionRate" maxLength={80} placeholder="단위 포함 입력" value={form.infusionRate} onChange={(event) => setForm((current) => ({ ...current, infusionRate: event.target.value }))} /></label> : <span aria-hidden="true" />}
-            <Button variant="primary" className="rx-form__submit" type="submit" disabled={saving || !editable}>{saving ? "저장 중…" : "처방"}</Button>
+            <div className="rx-order-line__actions">
+              <Button variant="primary" className="rx-form__submit" type="submit" disabled={saving || !editable}>{saving ? "저장 중…" : "처방"}</Button>
+            </div>
           </div>
         </form>
     );
@@ -610,7 +621,17 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <Button type="button" aria-label="검토 설정" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>⚙</Button>
             </div>
           </div>
-          <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} />
+          <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication}>
+          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="종합 삭감 위험">
+            <div className="coverage-risk__text">
+            <h4><CoverageIcon kind="risk" />종합 삭감 위험</h4>
+            <strong>{review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
+            <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
+            </div>
+            <ReviewMark verdict={review.verdict} />
+          </section> : null}
+          {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
+          </MedicationCoverageOverview>
           <section className="rx-review" aria-labelledby="rxReviewTitle">
             <h4 className="rx-section-title" id="rxReviewTitle"><CoverageIcon kind="patient" />환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
             {pendingReview ? (
@@ -647,7 +668,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                       <tbody>{review.checks.map((check) => <tr key={check.id}>
                         <th scope="row">{check.title}</th><td>{check.chart.detail}</td>
                         <td><ReviewMark verdict={check.verdict} /></td>
-                        <td>{check.chart.findings.map((finding) => [finding.date, finding.label, finding.detail].filter(Boolean).join(" · ")).join(" / ") || "확인된 기록 없음"}</td>
+                        <td><ReportEvidence text={check.chart.findings.map((finding) => [finding.date, finding.label, finding.detail].filter(Boolean).join(" · ")).join(" / ") || "확인된 기록 없음"} /></td>
                       </tr>)}</tbody>
                     </table>
                   </div>
@@ -757,15 +778,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               </div>
             )}
           </section>
-          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="종합 삭감 위험">
-            <div className="coverage-risk__text">
-            <h4><CoverageIcon kind="risk" />종합 삭감 위험</h4>
-            <strong>{review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
-            <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
-            </div>
-            <ReviewMark verdict={review.verdict} />
-          </section> : null}
-          {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
           {settingsOpen && reviewPreview ? <aside className="coverage-settings" aria-label="검토 설정">
             <header><h4>모델 · 검토 설정</h4><Button type="button" onClick={() => setSettingsOpen(false)}>닫기</Button></header>
           <div className="review-preview" data-focus={expandedField || undefined}>

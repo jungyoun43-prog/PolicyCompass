@@ -1,6 +1,9 @@
 import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
 import http from "node:http";
+import { fileURLToPath } from "node:url";
+
+const NEXT_CLI = fileURLToPath(new URL("../../node_modules/next/dist/bin/next", import.meta.url));
 
 const AI_ENV_BLANKS = {
   OPENAI_API_KEY: "",
@@ -28,7 +31,7 @@ async function ensureBuild() {
     // fall through to a fresh build
   }
   await new Promise((resolve, reject) => {
-    const build = spawn("npx", ["next", "build"], {
+    const build = spawn(process.execPath, [NEXT_CLI, "build"], {
       cwd: new URL("../..", import.meta.url),
       stdio: ["ignore", "inherit", "inherit"],
     });
@@ -45,13 +48,13 @@ async function ensureBuild() {
 export async function startNextServer(environment = {}) {
   await ensureBuild();
   const port = await freePort();
-  // detached: the npx wrapper spawns next-server as a grandchild; killing the
-  // whole process group is the only way the runner's stdio pipes ever close.
-  const child = spawn("npx", ["next", "start", "-p", String(port)], {
+  // Run the installed CLI directly: npx wrappers vary by OS and can leave
+  // grandchildren holding the runner's pipes open after shutdown.
+  const child = spawn(process.execPath, [NEXT_CLI, "start", "-p", String(port)], {
     cwd: new URL("../..", import.meta.url),
     env: { ...process.env, ...AI_ENV_BLANKS, ...environment },
     stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
+    detached: process.platform !== "win32",
   });
   let output = "";
   child.stdout.on("data", (chunk) => { output += chunk; });

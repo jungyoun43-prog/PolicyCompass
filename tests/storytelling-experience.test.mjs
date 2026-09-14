@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import test from "node:test";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 import InsightsPage from "../app/(insights)/insights/page.jsx";
 import JourneyPage from "../app/(journey)/journey/page.jsx";
@@ -100,6 +101,6 @@ test("두 화면의 브라우저 모듈은 정적 구문 검사를 통과한다"
   // browser-free static syntax check is the strongest load-time contract here.
   for (const file of ["insights.js", "journey.js"]) {
     const path = new URL(`../src/${file}`, import.meta.url);
-    await assert.doesNotReject(execFileAsync(process.execPath, ["--check", path.pathname]));
+    await assert.doesNotReject(execFileAsync(process.execPath, ["--check", fileURLToPath(path)]));
   }
 });

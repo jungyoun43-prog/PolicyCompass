@@ -299,7 +299,7 @@ test("EMR 화면은 처방을 팝업에서 검색하고 판정과 근거 대조�
   assert.match(html, /id="medicationResultCount">0건</, "검색 전에는 결과가 없다");
   assert.doesNotMatch(html, /medicationReviewEmpty|AI 삭감 사전검토/, "처방 검색에는 AI 검토 안내를 표시하지 않는다");
   // source-check: 판정 카드와 판정 근거 대조표는 AI 검토 클릭·응답 뒤에만 그려지므로 서버 렌더로는 도달할 수 없다.
-  assert.equal(rx.indexOf('id="medicationReviewVerdict"') > rx.indexOf('id="medicationReviewSources"'), true, "종합 위험은 근거 표 아래 별도 블록에 표시한다");
+  assert.equal(rx.indexOf('id="medicationReviewVerdict"') < rx.indexOf('id="medicationReviewSources"'), true, "종합 위험을 근거 표보다 먼저 표시한다");
   assert.match(rx, /판정 근거 · 삭감 근거와 환자 정보 대조/);
   assert.doesNotMatch(rx, /medicationReviewRationale/, "판정 근거 대조표가 있으므로 줄글 근거는 중복이다");
   // source-check: 검색 결과·판정은 사용자의 검색·검토 요청 뒤에만 나타나므로 팝업이 공유 약품 목록·규칙 엔진·검토 API를 쓰는지는 원문으로만 확인한다.

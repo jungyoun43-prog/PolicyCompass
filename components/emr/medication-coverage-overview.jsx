@@ -42,7 +42,7 @@ export function CoverageIcon({ kind = "criteria" }) {
   </svg>;
 }
 
-export function MedicationCoverageOverview({ medication }) {
+export function MedicationCoverageOverview({ medication, children }) {
   const [failed, setFailed] = useState(false);
   const product = MEDICATION_PRODUCTS[medication.id];
   const notice = medicationReviewNotice(medication.id);
@@ -60,6 +60,7 @@ export function MedicationCoverageOverview({ medication }) {
         <a href={product.source} target="_blank" rel="noreferrer">제품정보 · 사진 출처 ↗</a>
       </div>
     </div>
+    {children}
     <section className="coverage-criteria">
       <h4><CoverageIcon />급여인정 기준 (요약)</h4>
       {criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}>{criterion.replace(/^(?:[가-힣]\.|\d+[.)]|[-•])\s*/, "")}</li>)}</ol> : <p>등록된 기준 원문을 확인해 주세요.</p>}

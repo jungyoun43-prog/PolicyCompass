@@ -10850,7 +10850,7 @@ model-viewer::part(default-progress-mask) {
 .coverage-section-icon { display: inline-block; width: 21px; height: 21px; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
 #prescriptionDialog .rx-order-line { display: grid; grid-template-columns: minmax(160px, 1fr) 72px 72px minmax(140px, 200px) auto; align-items: center; gap: 6px; padding: 8px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--surface-soft); }
 #prescriptionDialog .rx-order-line[data-infusion] { grid-template-columns: minmax(160px, 1fr) 72px 72px minmax(120px, 160px) 130px auto; }
-#prescriptionDialog .rx-order-line__product { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+#prescriptionDialog .rx-order-line__product { min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 16px; line-height: 1.5; }
 #prescriptionDialog .rx-order-line label { min-width: 0; font-size: 11px; }
 #prescriptionDialog .rx-order-line input, #prescriptionDialog .rx-order-line select { min-width: 0; width: 100%; padding-inline: 5px; }
 #prescriptionDialog .rx-order-line .rx-form__submit { grid-column: auto; margin: 0; align-self: end; white-space: nowrap; }

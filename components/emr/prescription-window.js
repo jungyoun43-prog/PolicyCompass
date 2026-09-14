@@ -2,7 +2,7 @@
 export function openPrescriptionWindow(payload, onSubmit) {
   const token = crypto.randomUUID();
   const origin = window.location.origin;
-  const child = window.open(`/emr/prescription#${token}`, `prescription-${token}`, "popup=yes,width=1000,height=850,resizable=yes,scrollbars=yes");
+  const child = window.open(`/emr/prescription#${token}`, `prescription-${token}`, "popup=yes,width=560,height=460,resizable=yes,scrollbars=yes");
   if (!child) return null;
   let disposed = false;
   const requests = new Map();

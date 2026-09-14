@@ -21,7 +21,7 @@ import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
 import { ContextMenu } from "radix-ui";
-import { MedicationCoverageOverview, MedicationCoverageSummary } from "./medication-coverage-overview.jsx";
+import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSummary } from "./medication-coverage-overview.jsx";
 
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
 const HIGHLIGHT_PAIR_COLORS = 5;
@@ -59,7 +59,7 @@ function MarkdownReport({ markdown }) {
   return (
     <div className="rx-model-report" id="medicationReviewReport">
       {blocks.map((block, index) => {
-        if (block.type === "heading") return <p key={index} className="rx-model-report__heading">{boldSegments(block.text)}</p>;
+        if (block.type === "heading") return null;
         if (block.type === "table") {
           return (
             <table key={index} className="rx-model-report__table">
@@ -73,8 +73,9 @@ function MarkdownReport({ markdown }) {
             </table>
           );
         }
-        return <p key={index}>{boldSegments(block.text)}</p>;
+        return null;
       })}
+      <details className="coverage-report-original"><summary>검토 보고 원문</summary><pre>{markdown}</pre></details>
     </div>
   );
 }
@@ -197,6 +198,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
   const [reviewPreview, setReviewPreview] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const requestAbort = useRef(null);
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
@@ -247,6 +250,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   };
   const closeCoverage = () => {
     requestVersion.current += 1;
+    requestAbort.current?.abort();
+    setSettingsOpen(false);
     setCoverageMedication(null);
     setReviewPreview(null);
     setPendingReview(null);
@@ -262,7 +267,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setReviewPreview(null);
     setPendingReview(null);
     setReviewBusyId("");
+    setSettingsOpen(false);
     setCoverageMedication(medication);
+    runReview(medication.id, true);
   };
 
   const pickMedication = (medication) => {
@@ -289,7 +296,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     ? { dose: form.dose, doseUnit: form.doseUnit, route: form.route, frequency: form.frequency, durationDays: form.durationDays, quantity: form.quantity, instructions: form.instructions }
     : medication.dosing);
 
-  const runReview = async (medicationId) => {
+  const runReview = async (medicationId, fresh = false) => {
     const medication = findMedicationInCatalog(medicationId);
     if (!medication || !patient || reviewBusyId) return;
     let base;
@@ -307,16 +314,18 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     }
     setExpandedSources(new Set());
     setExpandedChecks(new Set());
-    // 서버로 보내기 전에 전송 항목(진료데이터·고시정보·프롬프트)을 사람이 확인·수정한다.
+    // Opening coverage runs immediately; editable inputs remain in the settings drawer.
     setExpandedField("");
-    setReviewPreview({
+    const preview = !fresh && reviewPreview?.medicationId === medicationId ? { ...reviewPreview, base } : {
       medicationId,
       name: medication.label,
       base,
       dataText: medicationReviewPatientDataText(base),
       noticeText: medicationReviewNotice(medicationId),
       promptText: medicationReviewInstructions(),
-    });
+    };
+    setReviewPreview(preview);
+    await sendReview(preview);
   };
 
   const editPreview = (field) => (event) => {
@@ -332,27 +341,37 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     </button>
   );
 
-  const sendReview = async () => {
-    if (!reviewPreview || reviewBusyId) return;
+  const sendReview = async (input = reviewPreview) => {
+    if (!input || reviewBusyId) return;
     const version = ++requestVersion.current;
-    const { medicationId, name, base, dataText, noticeText, promptText } = reviewPreview;
-    if (!provider) {
-      setReviewPreview(null);
-      setReview({ medicationId, ...base, note: "모델 미설정 · 규칙 기반 결과입니다." });
-      return;
-    }
-    const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
-    if (provider === "frontier" && reviewModel) overrides.model = reviewModel;
-    setReviewPreview(null);
-    // 판정은 모델 검토까지 끝난 뒤에만 보여 준다. 그동안은 진행 상태를 표시한다.
+    const { medicationId, name, base, dataText, noticeText, promptText } = input;
+    requestAbort.current?.abort();
+    const controller = new AbortController();
+    requestAbort.current = controller;
+    setSettingsOpen(false);
     setReview(null);
     setPendingReview({ medicationId, name, model: requestedModelLabel });
     setReviewBusyId(medicationId);
     try {
+      let activeProvider = provider;
+      if (!capability.checked) {
+        const statusResponse = await fetch(MEDICATION_REVIEW_ENDPOINT + "/status", { signal: controller.signal });
+        if (!statusResponse.ok) throw new Error("모델 연결 상태를 확인하지 못했습니다.");
+        const status = await statusResponse.json();
+        activeProvider = status.local?.configured ? "local" : status.frontier?.configured ? "frontier" : "";
+        setCapability({checked:true,local:activeProvider === "local",frontier:activeProvider === "frontier",model:status.local?.model || status.frontier?.model || ""});
+      }
+      if (!activeProvider) {
+        setReview({ medicationId, ...base, note: "모델 미설정 · 규칙 기반 결과입니다." });
+        return;
+      }
+      const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
+      if (activeProvider === "frontier" && reviewModel) overrides.model = reviewModel;
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
+        signal: controller.signal,
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ comparison: base, provider, overrides }),
+        body: JSON.stringify({ comparison: base, provider: activeProvider, overrides }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
@@ -452,17 +471,15 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   <ContextMenu.Trigger asChild>
                     <li tabIndex={0} aria-label={medication.label + " · 우클릭 또는 Shift+F10으로 메뉴 열기"}
                       className={"rx-result rx-result--compact" + (medication.id === selectedMedicationId ? " is-selected" : "")}>
-                      <b className="rx-result__label">{medication.label}</b>
+                      <b className="rx-result__label">{MEDICATION_PRODUCTS[medication.id]?.orderName || medication.label}</b>
                       <Button variant="primary" type="button" onClick={() => pickMedication(medication)}>처방</Button>
                     </li>
                   </ContextMenu.Trigger>
                   <ContextMenu.Portal>
                     <ContextMenu.Content className="rx-medication-menu" collisionPadding={12}>
-                      {["처방이력조회", "기록항목으로 보내기", "처방일괄적용", "메인그래프로 보내기", "약물이상반응 One Click 보고", "약물이상반응 직접보고", "약품정보", "수가정보"].map((label) => (
-                        <ContextMenu.Item key={label} disabled className="rx-medication-menu__item">{label}</ContextMenu.Item>
+                      {["처방이력조회", "기록항목으로 보내기", "처방일괄적용", "메인그래프로 보내기", "약물이상반응 One Click 보고", "약물이상반응 직접보고", "약품정보", "급여인정확인", "수가정보"].map((label) => (
+                        <ContextMenu.Item key={label} className="rx-medication-menu__item" onSelect={() => label === "급여인정확인" ? openCoverage(medication) : setStatus(`${label} 기능은 준비 중입니다.`)}>{label}</ContextMenu.Item>
                       ))}
-                      <ContextMenu.Separator className="rx-medication-menu__separator" />
-                      <ContextMenu.Item className="rx-medication-menu__item rx-medication-menu__coverage" onSelect={() => openCoverage(medication)}>급여인정확인</ContextMenu.Item>
                     </ContextMenu.Content>
                   </ContextMenu.Portal>
                 </ContextMenu.Root>
@@ -495,7 +512,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
       {coverageMedication && open ? (
         <RxDialog id="medicationCoverageDialog" open onClose={closeCoverage} eyebrow="급여인정확인"
-          title="AI 처방 급여인정 도우미" titleId="coverageDialogTitle" context={context}
+          onEscapeKeyDown={(event) => { if (settingsOpen) { event.preventDefault(); setSettingsOpen(false); } }}
+          title="AI 처방 급여인정 도우미 (웹 서비스)" titleId="coverageDialogTitle" context={context}
           noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
         headerExtra={review ? (
           <HoverPopover hostClassName="rx-process" trigger="검토 과정 확인하기" triggerClassName="rx-process__summary" triggerId="medicationReviewProcessSummary"
@@ -528,14 +546,16 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             )} />
         ) : null}>
           <div className="coverage-intro">
-            <p>{review ? "등록된 기준과 환자 정보를 대조한 검토 결과입니다." : "전송할 환자 정보와 급여 기준을 확인한 후 검토를 요청하세요."}</p>
+            <svg className="coverage-robot" aria-hidden="true" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="12" width="28" height="23" rx="7"/><path d="M20 12V6M2 20v9m36-9v9M14 28h12"/><circle cx="20" cy="4" r="2"/><circle cx="14" cy="21" r="2"/><circle cx="26" cy="21" r="2"/></svg><p><b>{pendingReview ? "AI가 건강보험 기준과 환자 정보를 검토하고 있습니다." : review?.generatedBy === "rule" ? "등록된 기준으로 환자 정보를 점검했습니다." : "AI가 건강보험 기준에 따라 환자의 기준부합 여부를 검토했습니다."}</b><small>본 내용은 참고용이며, 최종 판단은 반드시 의료진이 확인하시기 바랍니다.</small></p><div className="coverage-tools">
             <Button type="button" onClick={() => runReview(coverageMedication.id)} disabled={Boolean(reviewBusyId) || !capability.checked}>
-              {reviewBusyId ? "검토 중…" : review ? "다시 확인하기" : "전송 내용 확인"}
+              {reviewBusyId ? "검토 중…" : "다시 확인하기"}
             </Button>
+            <Button type="button" aria-label="검토 설정" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>⚙</Button>
+            </div>
           </div>
           <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} />
           <section className="rx-review" aria-labelledby="rxReviewTitle">
-            <h4 className="rx-section-title" id="rxReviewTitle">환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
+            <h4 className="rx-section-title" id="rxReviewTitle">환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span>{review ? <span className="coverage-overall" id="medicationReviewVerdict" data-tone={review.verdictTone}>{review.verdictSymbol} {review.verdictLabel}</span> : null}</h4>
             {pendingReview ? (
               <div className="rx-review__progress" id="medicationReviewProgress" role="status" aria-live="polite">
                 <span className="rx-review__spinner" aria-hidden="true"></span>
@@ -558,17 +578,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 </div>
               </div>
             ) : !review ? (
-              <p className="rx-review__empty" id="medicationReviewEmpty">아직 검토하지 않았습니다. 전송 내용을 확인한 뒤 검토를 실행하세요.</p>
+              <p className="rx-review__empty" id="medicationReviewEmpty">검토를 준비하고 있습니다.</p>
             ) : (
               <div className="rx-review__body" id="medicationReviewBody" aria-live="polite">
-                <div className="rx-verdict" id="medicationReviewVerdict" data-tone={review.verdictTone}>
-                  <span className="rx-verdict__symbol">{review.verdictSymbol}</span>
-                  <span className="rx-verdict__text">
-                    <b>{review.verdictLabel}</b>
-                    {review.markdown ? null : <span>{review.summary}</span>}
-                    {review.note ? <span className="rx-verdict__note">{review.note}</span> : null}
-                  </span>
-                </div>
+                {review.note ? <p className="rx-verdict__note">{review.note}</p> : null}
                 {review.markdown ? <MarkdownReport markdown={review.markdown} /> : (
                 <section className="rx-review__section">
                   <div className="coverage-table-scroll">
@@ -688,28 +701,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             )}
           </section>
           {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
-          <p className="coverage-footer">입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다.</p>
-        </RxDialog>
-      ) : null}
-      {reviewPreview && open ? (
-        <RxDialog id="reviewPreviewDialog" open onClose={() => setReviewPreview(null)} eyebrow="검토 요청 확인"
-          title="AI 검토 전송 내용" titleId="reviewPreviewTitle" context={`${reviewPreview.name} · ${cloudLabel}`}
-          noticeId="reviewPreviewNotice"
-          notice={<p>검토 요청 시 서버로 전송되는 입력을 그대로 보여 줍니다. 이름·등록번호 같은 직접식별자는 포함되지 않습니다.</p>}>
+          {settingsOpen && reviewPreview ? <aside className="coverage-settings" aria-label="검토 설정">
+            <header><h4>모델 · 검토 설정</h4><Button type="button" onClick={() => setSettingsOpen(false)}>닫기</Button></header>
           <div className="review-preview" data-focus={expandedField || undefined}>
-            <section className="review-preview__section" data-expanded={expandedField === "dataText" || undefined}>
-              <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("dataText", "진료데이터")}</h4>
-              <textarea className="review-preview__code" id="reviewPreviewData" rows={12} value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
-            </section>
-            <section className="review-preview__section" data-expanded={expandedField === "noticeText" || undefined}>
-              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("noticeText", "고시정보")}</h4>
-              <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" rows={10} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
-            </section>
-            <section className="review-preview__section" data-expanded={expandedField === "promptText" || undefined}>
-              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span>{expandToggle("promptText", "프롬프트")}</h4>
-              <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
-            </section>
-            <div className="review-preview__actions">
               {provider === "frontier" ? (
                 <label className="review-preview__model">검토 모델
                   <select id="reviewPreviewModel" value={reviewModel} onChange={(event) => setReviewModel(event.target.value)}>
@@ -724,14 +718,32 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   </select>
                 </label>
               ) : null}
-              <Button type="button" onClick={() => setReviewPreview(null)}>취소</Button>
-              <Button variant="primary" type="button" id="reviewPreviewSend" onClick={sendReview}>
-                {!provider ? "규칙 기반 검토 실행" : reviewModel ? `${frontierModelLabel(reviewModel)}로 검토 요청` : "이 내용으로 검토 요청"}
+            <section className="review-preview__section" data-expanded={expandedField === "dataText" || undefined}>
+              <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("dataText", "진료데이터")}</h4>
+              <textarea className="review-preview__code" id="reviewPreviewData" rows={12} value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
+            </section>
+            <section className="review-preview__section" data-expanded={expandedField === "noticeText" || undefined}>
+              <h4>고시정보 <span>이 약제의 요양급여 적용기준 고시 — {"{NOTICE}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("noticeText", "고시정보")}</h4>
+              <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" rows={10} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
+            </section>
+            <section className="review-preview__section" data-expanded={expandedField === "promptText" || undefined}>
+              <h4>프롬프트 <span>모델에 전달되는 시스템 지시 — 위 고시정보와 진료데이터가 사용자 입력으로 함께 전송됩니다.</span>{expandToggle("promptText", "프롬프트")}</h4>
+              <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
+            </section>
+            <div className="review-preview__actions">
+
+              <Button type="button" onClick={() => setSettingsOpen(false)}>닫기</Button>
+              <Button variant="primary" type="button" id="reviewPreviewSend" disabled={Boolean(reviewBusyId)} onClick={() => sendReview()}>
+                {!provider ? "규칙 기반 검토 실행" : reviewModel ? `${frontierModelLabel(reviewModel)}로 검토 요청` : "설정 적용 후 다시 검토"}
               </Button>
             </div>
           </div>
+
+          </aside> : null}
+          <p className="coverage-footer">입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다.</p>
         </RxDialog>
       ) : null}
+
     </>
   );
 }

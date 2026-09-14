@@ -197,7 +197,7 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(rx, /data-source-origin/);
 });
 
-test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미리보기 팝업으로 확인한다", async () => {
+test("AI 검토는 바로 시작하고 오른쪽 설정에서 진료데이터·고시정보·프롬프트를 수정한다", async () => {
   // Given
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
   const medication = findMedicationInCatalog("benralizumab-30");
@@ -241,11 +241,12 @@ test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미
   assert.equal(sent[0].messages[0].content, medicationReviewPrompt(base, overrides));
   // source-check: 미리보기 팝업은 Radix Dialog.Portal 안의 클라이언트 상태라 서버 렌더로 닿을 수 없다.
   // 모델 없는 규칙 기반 경로는 전송이 없으므로 팝업 없이 그대로 진행한다.
-  assert.match(rx, /setReviewPreview\(\{\s*medicationId,\s*name: medication\.label,\s*base,/);
+  assert.match(rx, /setReviewPreview\(preview\)/);
+  assert.match(rx, /await sendReview\(preview\)/);
   assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
   assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
   assert.match(rx, /promptText: medicationReviewInstructions\(\)/);
-  assert.match(rx, /id="reviewPreviewDialog"/);
+  assert.match(rx, /class="coverage-settings" aria-label="검토 설정"/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
   assert.match(rx, /프롬프트/);
@@ -254,11 +255,11 @@ test("AI 검토 전송 전에 진료데이터·고시정보·프롬프트를 미
   assert.match(rx, /id="reviewPreviewNoticeText"[^>]*value=\{reviewPreview\.noticeText\}/);
   assert.match(rx, /id="reviewPreviewPrompt"[^>]*value=\{reviewPreview\.promptText\}/);
   assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText \}/);
-  assert.match(rx, /comparison: base, provider, overrides/);
-  assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{sendReview\}/);
+  assert.match(rx, /comparison: base, provider: activeProvider, overrides/);
+  assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{\(\) => sendReview\(\)\}/);
   // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.
   assert.match(rx, /\{review\.markdown \? <MarkdownReport markdown=\{review\.markdown\} \/> : \(/);
-  assert.match(rx, /\{review\.markdown \? null : <span>\{review\.summary\}<\/span>\}/);
+  assert.match(rx, /MedicationCoverageSummary/);
 });
 
 test("같은 사실을 가리키는 기준 문구와 차트 값은 한 쌍으로 묶인다", async () => {

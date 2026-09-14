@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import postcss from "postcss";
 
@@ -9,7 +10,7 @@ import postcss from "postcss";
  * these helpers parse the sheet once and answer the questions tests actually
  * ask: "which declarations does this selector end up with, in this container?"
  */
-const root = new URL("../..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../..", import.meta.url));
 const cache = new Map();
 
 export async function stylesheet(relativePath) {

@@ -7,6 +7,7 @@ import { medicationReviewNotice } from "../../src/medication-review-prompt.js";
 export const MEDICATION_PRODUCTS = {
   "benralizumab-30": {
     name: "파센라 프리필드시린지주 30mg",
+    orderName: "파센라프리필드시린지주30mg(벤라리주맙)(PFS)",
     english: "FASENRA PFS",
     image: "https://www.astrazeneca.co.kr/wp-content/uploads/mangboard/2021/04/16/F707_pasenla.gif",
     source: "https://astrazeneca.co.kr/product/?board_pid=49&mode=view",
@@ -19,6 +20,7 @@ export const MEDICATION_PRODUCTS = {
   },
   "durvalumab-500": {
     name: "임핀지주 500mg",
+    orderName: "임핀지주500mg(더발루맙)(Vial)",
     english: "IMFINZI",
     image: "https://www.astrazeneca.co.kr/wp-content/uploads/mangboard/2019/05/13/F446_imfinzi_pic.gif",
     source: "https://astrazeneca.co.kr/product/?vid=36",
@@ -50,7 +52,7 @@ export function MedicationCoverageOverview({ medication }) {
       </div>
     </div>
     <section className="coverage-criteria">
-      <h4>급여인정 기준 (요약)</h4>
+      <h4><span aria-hidden="true">▤</span> 급여인정 기준 (요약)</h4>
       {criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}>{criterion.replace(/^(?:[가-힣]\.|\d+[.)]|[-•])\s*/, "")}</li>)}</ol> : <p>등록된 기준 원문을 확인해 주세요.</p>}
       <details><summary>상세 기준 보기</summary><pre>{notice}</pre></details>
       <p className="coverage-provenance">프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다.</p>

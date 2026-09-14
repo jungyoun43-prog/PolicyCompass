@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { Button } from "@/components/ui/button";
@@ -39,15 +39,43 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
  * The shared entry-dialog frame: a real <dialog>, a sticky header carrying the
  * title, its scope notice, any extra header actions, and the way out.
  */
-export function RxDialog({ id, open, onClose, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
+export function RxDialog({ id, open, onClose, onEscapeKeyDown, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
+  const contentRef = useRef(null);
+  const drag = useRef(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const reset = () => setOffset({ x: 0, y: 0 });
+    window.addEventListener("resize", reset);
+    return () => window.removeEventListener("resize", reset);
+  }, []);
+  const move = (dx, dy, origin, rect) => setOffset({
+    x: origin.x + Math.max(8 - rect.left, Math.min(dx, window.innerWidth - rect.right - 8)),
+    y: origin.y + Math.max(8 - rect.top, Math.min(dy, window.innerHeight - rect.bottom - 8)),
+  });
+  const startDrag = (event) => {
+    if (event.button !== 0 || event.target.closest("button, a, input, select, textarea")) return;
+    drag.current = { x: event.clientX, y: event.clientY, offset, rect: contentRef.current.getBoundingClientRect() };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="rx-dialog-overlay" />
-        <DialogPrimitive.Content className="rx-dialog" id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
+        <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
           <DialogPrimitive.Title className="visually-hidden">{title}</DialogPrimitive.Title>
           <div className="rx-dialog__panel">
-            <header className="rx-dialog__header">
+            <header className="rx-dialog__header rx-dialog__drag-handle" tabIndex={0} aria-label={`${title} 창 이동`} title="드래그 또는 방향키로 이동 · 더블클릭으로 가운데 정렬"
+              onPointerDown={startDrag}
+              onPointerMove={(event) => { const start = drag.current; if (start) move(event.clientX - start.x, event.clientY - start.y, start.offset, start.rect); }}
+              onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
+              onLostPointerCapture={() => { drag.current = null; }}
+              onDoubleClick={(event) => { if (!event.target.closest("button, a")) setOffset({ x: 0, y: 0 }); }}
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+                event.preventDefault();
+                move(event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0, offset, contentRef.current.getBoundingClientRect());
+              }}>
               <span className="rx-dialog__heading">
                 <span className="rail-eyebrow">{eyebrow}</span>
                 <span className="rx-dialog__titleline">

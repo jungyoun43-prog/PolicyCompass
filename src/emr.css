@@ -10689,6 +10689,7 @@ model-viewer::part(default-progress-mask) {
 .rx-medication-menu__item[data-disabled] { color: var(--muted); cursor: default; }
 .rx-medication-menu__coverage { cursor: pointer; color: var(--ink); }
 .rx-medication-menu__coverage[data-highlighted] { background: var(--accent-wash); }
+.rx-medication-menu__item[data-highlighted] { background: var(--accent-wash); cursor: pointer; }
 .rx-medication-menu__separator { height: 1px; margin: 5px 6px; background: var(--line); }
 .coverage-intro { display: flex; align-items: center; gap: 14px; justify-content: space-between; padding: 14px 0; font-size: 13px; }
 .coverage-intro p { margin: 0; }
@@ -10728,4 +10729,64 @@ model-viewer::part(default-progress-mask) {
   .coverage-product h4 { font-size: 14px; }
   .coverage-intro { flex-wrap: wrap; }
   #medicationCoverageDialog .rx-review { padding: 10px; }
+}
+/* Movable EMR windows; the coverage assistant follows the supplied reference. */
+.rx-dialog__drag-handle { cursor: grab; touch-action: none; user-select: none; }
+.rx-dialog__drag-handle:active { cursor: grabbing; }
+.rx-dialog__drag-handle button { cursor: pointer; }
+#medicationCoverageDialog { width: min(760px, calc(100vw - 24px)); max-height: 94dvh; border: 2px solid #674c91; border-radius: 5px; color: #253153; background: white; }
+#medicationCoverageDialog .rx-dialog__panel { padding: 0 12px 10px; gap: 10px; }
+#medicationCoverageDialog .rx-dialog__header { margin: 0 -12px; padding: 7px 12px; min-height: 34px; background: linear-gradient(#7751a4, #452478); color: white; border: 0; }
+#medicationCoverageDialog .rx-dialog__title { font-size: 14px; color: white; }
+#medicationCoverageDialog .rx-dialog__header .rail-eyebrow,
+#medicationCoverageDialog .rx-dialog__context,
+#medicationCoverageDialog .rx-notice { display: none; }
+#medicationCoverageDialog .rx-dialog__close { color: white; background: transparent; border: 0; min-height: 24px; padding: 0 3px; font-size: 12px; }
+#medicationCoverageDialog .rx-process__summary { color: white; font-size: 11px; }
+#medicationCoverageDialog .coverage-intro { padding: 6px 0 10px; gap: 10px; border-bottom: 1px solid #e3e6ee; }
+.coverage-robot { flex: 0 0 38px; width: 38px; height: 38px; color: #343ddb; }
+.coverage-intro p { flex: 1; font-size: 12px; color: #253777; line-height: 1.5; }
+.coverage-intro small { display: block; font-size: 11px; }
+.coverage-tools { display: flex; flex: none; gap: 4px; }
+#medicationCoverageDialog .coverage-tools button { font-size: 11px; padding: 5px 8px; min-height: 28px; border-radius: 4px; color: #26385e; background: #fff; border-color: #bac4d9; }
+#medicationCoverageDialog .coverage-product { padding: 0; gap: 12px; }
+#medicationCoverageDialog .coverage-product__image { flex-basis: 108px; min-height: 68px; background: #f6f6f7; }
+#medicationCoverageDialog .coverage-product img { width: 108px; height: 68px; }
+#medicationCoverageDialog .coverage-product h4 { color: #1740a3; font-size: 14px; margin-bottom: 4px; }
+#medicationCoverageDialog .coverage-product p { margin: 3px 0; font-size: 11px; }
+#medicationCoverageDialog .coverage-product a { font-size: 11px; }
+#medicationCoverageDialog .coverage-criteria { padding: 0 10px 8px; background: #fffafb; border: 1px solid #ffc9d9; border-radius: 5px; }
+#medicationCoverageDialog .coverage-criteria h4 { margin: 0 -10px 8px; padding: 9px 12px; background: linear-gradient(100deg, #fde0e9, #fff4f7); color: #a71b54; font-size: 14px; }
+#medicationCoverageDialog .coverage-criteria ol { padding-left: 25px; font-size: 12px; line-height: 1.6; margin-bottom: 6px; }
+#medicationCoverageDialog .coverage-criteria li::marker { color: #7864ef; font-weight: 700; }
+#medicationCoverageDialog .coverage-provenance { font-size: 10px; margin: 5px 0 0; color: #69728a; }
+#medicationCoverageDialog .rx-review { margin-top: 0; padding: 0 8px 8px; background: #f6faff; border-color: #c9e5fa; border-radius: 5px; }
+#medicationCoverageDialog .rx-section-title { margin: 0 -8px 8px; padding: 9px 12px; background: linear-gradient(100deg, #dcefff, #f4faff); color: #214696; font-size: 14px; }
+#medicationCoverageDialog .rx-model-report__table, #medicationCoverageDialog .coverage-patient-table { font-size: 11px; background: white; }
+#medicationCoverageDialog .coverage-patient-table thead { background: #e8eef7; }
+#medicationCoverageDialog .coverage-patient-table td, #medicationCoverageDialog .coverage-patient-table th { border-color: #d1d9e7; padding: 6px; }
+#medicationCoverageDialog .coverage-summary { margin-top: 0; background: linear-gradient(100deg, #e0f4ed, #f0faf5); border: 0; border-radius: 4px; padding: 10px 12px; }
+#medicationCoverageDialog .coverage-summary h4 { color: #15736a; font-size: 14px; }
+#medicationCoverageDialog .coverage-summary p { color: #296e69; font-size: 12px; margin: 6px 0 0; }
+#medicationCoverageDialog .coverage-summary button { font-size: 11px; min-height: 26px; padding: 4px 8px; border-radius: 4px; border-color: #b3ded5; color: #264365; background: white; }
+#medicationCoverageDialog .coverage-footer { margin: 0; font-size: 10px; color: #616582; }
+.coverage-settings { position: absolute; z-index: 25; right: 0; top: 38px; bottom: 0; width: min(430px, 100%); padding: 16px; overflow-y: auto; color: var(--ink); background: var(--surface-raised); border-left: 1px solid var(--line-strong); box-shadow: -8px 0 25px #1a163033; }
+.coverage-settings > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.coverage-settings .review-preview { display: flex; flex-direction: column; gap: 16px; }
+.coverage-settings .review-preview__section { min-width: 0; }
+.coverage-settings textarea { box-sizing: border-box; width: 100%; max-height: 190px; }
+.coverage-settings [data-expanded] textarea { max-height: none; min-height: 360px; }
+.coverage-settings .review-preview__actions { position: sticky; bottom: -16px; padding: 12px 0; background: var(--surface-raised); display: flex; flex-wrap: wrap; }
+#medicationCoverageDialog .rx-model-report { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.coverage-overall { margin-left: auto; padding: 4px 8px; font-size: 12px; border: 1px solid currentColor; border-radius: 4px; background: #fff; }
+.coverage-overall[data-tone="green"] { color: #168d35; background: #edfbed; }
+.coverage-overall[data-tone="amber"] { color: #966215; background: #fff9e8; }
+.coverage-overall[data-tone="red"] { color: #ad3141; background: #fff1f2; }
+.coverage-report-original { margin-top: 8px; font-size: 11px; }
+.coverage-report-original summary { cursor: pointer; }
+.coverage-report-original pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+@media (max-width: 600px) {
+  #medicationCoverageDialog .coverage-product__image { flex-basis: 76px; }
+  #medicationCoverageDialog .coverage-product img { width: 76px; height: 60px; }
+  .coverage-tools { margin-left: auto; }
 }

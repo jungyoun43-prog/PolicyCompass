@@ -10330,16 +10330,15 @@ model-viewer::part(default-progress-mask) {
 
 /* --- Fluid width envelope --------------------------------------------------- */
 
-/* The workspace is fluid, but a zoomed-out or ultra-wide window must not turn
-   the note into 1,500px lines: the shell caps at a reading width and the side
-   columns scale with the viewport instead of stepping between fixed sizes. */
+/* Use the available viewport, including when browser zoom changes its CSS
+   dimensions. Side columns share the extra width with the note editor. */
 .emr-page {
   --font-size-body: 0.875rem;
   --font-size-caption: 0.71rem;
   font-size: var(--font-size-body);
-  --emr-max-width: 1720px;
-  --emr-rail-width: clamp(16rem, 23vw, 21.25rem);
-  --emr-context-width: clamp(17rem, 23vw, 25rem);
+  --emr-max-width: 100%;
+  --emr-rail-width: clamp(16rem, 20vw, 28rem);
+  --emr-context-width: clamp(17rem, 25vw, 36rem);
 }
 
 .emr-shell,
@@ -10353,6 +10352,43 @@ model-viewer::part(default-progress-mask) {
 
 .encounter-layout {
   grid-template-columns: minmax(0, 1fr) var(--emr-context-width);
+}
+
+@media (min-width: 1181px) {
+  .emr-page .encounter-main {
+    grid-template-rows: minmax(min-content, 1fr) auto;
+    align-content: stretch;
+  }
+
+  .emr-page .encounter-form,
+  .emr-page .soap-card {
+    min-height: 0;
+  }
+
+  .emr-page .soap-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .emr-page .soap-card > .workflow-disclosure__body {
+    display: flex;
+    flex: 1;
+  }
+
+  .emr-page .soap-grid {
+    flex: 1;
+    grid-template-rows: auto minmax(min-content, 1fr) minmax(min-content, 1fr);
+  }
+
+  .emr-page .soap-field {
+    grid-template-rows: auto minmax(min-content, 1fr);
+  }
+
+  .emr-page .soap-field textarea {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
 }
 
 /* Above phone widths the header never grows a second row: actions stay on

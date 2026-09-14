@@ -143,7 +143,7 @@ test("진단·처방·오더는 모두 팝업에서 입력한다", async () => {
   ]) {
     assert.match(dialogs, new RegExp(`<Button[^>]*id="${launcher}"`), step);
     assert.match(dialogs, new RegExp(`id="${dialog}"`), step);
-    assert.ok(dialogs.includes(`id="${form}"`), `${step} 입력 폼은 팝업 안에 있다`);
+    assert.ok(dialogs.includes(step === "prescriptions" ? 'id={"prescriptionForm-" + medication.id}' : `id="${form}"`), `${step} 입력 폼은 팝업 안에 있다`);
     assert.ok(dialogs.indexOf(`id="${launcher}"`) < dialogs.indexOf(`id="${dialog}"`), step);
   }
 });

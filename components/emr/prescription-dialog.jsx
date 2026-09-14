@@ -30,10 +30,7 @@ import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSumm
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
 const HIGHLIGHT_PAIR_COLORS = 5;
 
-const EMPTY_RX_FORM = {
-  code: "", system: "", name: "", dose: "", doseUnit: "정", route: "경구",
-  frequency: "1일 1회", durationDays: "", quantity: "", instructions: "", infusionRate: "",
-};
+
 
 function boldSegments(text) {
   return text.split(/\*\*([^*]+)\*\*/g).map((part, index) => (index % 2 ? <b key={index}>{part}</b> : part));
@@ -222,7 +219,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     if (!editable) prescriptionWindow.current?.dispose();
   }, [patient, encounter, editable, applyMutation, withDraftPreserved]);
   useEffect(() => () => { prescriptionWindow.current?.dispose(); currentHost.current = null; }, [patient?.id, encounter?.id]);
-  const [form, setForm] = useState(EMPTY_RX_FORM);
+  const [drafts, setDrafts] = useState({});
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
   const [review, setReview] = useState(null);
   const [pendingReview, setPendingReview] = useState(null);
@@ -240,8 +237,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [expandedChecks, setExpandedChecks] = useState(() => new Set());
 
   useEffect(() => {
-    registerDirty(() => Boolean(form.name.trim() || form.dose.trim() || form.instructions.trim()));
-  }, [registerDirty, form]);
+    registerDirty(() => Object.keys(drafts).length > 0);
+  }, [registerDirty, drafts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,30 +320,16 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     runReview(medication.id, true);
   };
 
-  const pickMedication = (medication) => {
-    setSelectedMedicationId(medication.id);
-    setForm({
-      code: medication.code,
-      system: medication.system,
-      name: medication.label,
-      dose: medication.dosing.dose,
-      doseUnit: medication.dosing.doseUnit,
-      route: medication.dosing.route,
-      frequency: medication.dosing.frequency,
-      durationDays: String(medication.dosing.durationDays),
-      quantity: String(medication.dosing.quantity),
-      instructions: medication.dosing.instructions,
-      infusionRate: "",
-    });
-    requestAnimationFrame(() => {
-      document.getElementById("prescriptionForm")?.scrollIntoView({ block: "end", behavior: "smooth" });
-      document.getElementById("medicationDose")?.focus({ preventScroll: true });
-    });
+  const defaultForm = (medication) => ({
+    code: medication.code, system: medication.system, name: medication.label,
+    ...medication.dosing, durationDays: String(medication.dosing.durationDays),
+    quantity: String(medication.dosing.quantity), infusionRate: "",
+  });
+  const currentDosing = (medication) => {
+    if (standalone && initialCoverage?.prescription) return initialCoverage.prescription;
+    const draft = drafts[medication.id];
+    return draft ? { ...draft, instructions: prescriptionEntryInstructions(draft) } : medication.dosing;
   };
-
-  const currentDosing = (medication) => (standalone && initialCoverage?.prescription ? initialCoverage.prescription : selectedMedicationId === medication.id
-    ? { dose: form.dose, doseUnit: form.doseUnit, route: form.route, frequency: form.frequency, durationDays: form.durationDays, quantity: form.quantity, instructions: prescriptionEntryInstructions(form) }
-    : medication.dosing);
 
   const runReview = async (medicationId, fresh = false) => {
     const medication = findMedicationInCatalog(medicationId);
@@ -447,7 +430,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     }
   };
 
-  const submit = async (event) => {
+  const submit = async (event, form, medicationId) => {
     event.preventDefault();
     if (!patient || !encounter || savingRef.current) return;
     if (!editable) { setStatus("진료 연결 상태를 확인하고 처방 창을 다시 열어 주세요.", "error"); return; }
@@ -469,11 +452,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         durationDays: form.durationDays,
         quantity: form.quantity,
         instructions: prescriptionEntryInstructions(form),
-        claimReviewVerdict: review && review.medicationId === selectedMedicationId ? review.verdict : undefined,
+        claimReviewVerdict: review && review.medicationId === medicationId ? review.verdict : undefined,
       };
       if (prescriptionStandalone) await onPrescriptionSubmit(prescription);
       else await applyMutation(withDraftPreserved((current) => addEncounterPrescription(current, patient.id, encounter.id, prescription)), "처방 초안을 추가했습니다.");
-      setForm(EMPTY_RX_FORM);
+      setDrafts({});
       setSelectedMedicationId("");
       close();
     } catch (error) {
@@ -518,25 +501,32 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     return () => cancelAnimationFrame(frame);
   });
 
-  const prescriptionEditor = (
-        <form className="inline-clinical-form rx-form" id="prescriptionForm" noValidate autoComplete="off" spellCheck="false" onSubmit={submit}>
+  const prescriptionEditor = (medication) => {
+    const form = drafts[medication.id] || defaultForm(medication);
+    const setForm = (update) => {
+      setSelectedMedicationId(medication.id);
+      setDrafts((current) => ({ ...current, [medication.id]: update(current[medication.id] || defaultForm(medication)) }));
+    };
+    return (
+        <form className="inline-clinical-form rx-form" id={"prescriptionForm-" + medication.id} noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => submit(event, form, medication.id)}>
           <div className="rx-order-line" data-infusion={usesInfusionRate(form.route) || undefined}>
-            <div className="rx-order-line__product" id="medicationSelectedSummary"><strong>{MEDICATION_PRODUCTS[selectedMedicationId]?.orderName || form.name}</strong><input id="medicationName" name="name" type="hidden" value={form.name} /></div>
-            <label>1회 용량<input id="medicationDose" name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
-            <label>용량 단위<select id="medicationDoseUnit" name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
-            <label>투여 빈도<select id="medicationFrequency" name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            {usesInfusionRate(form.route) ? <label>주입속도 (필요 시)<input id="medicationInfusionRate" name="infusionRate" maxLength={80} placeholder="단위 포함 입력" value={form.infusionRate} onChange={(event) => setForm((current) => ({ ...current, infusionRate: event.target.value }))} /></label> : null}
-            <Button variant="primary" className="rx-form__submit" type="submit" disabled={saving || !editable || !selectedMedicationId}>{saving ? "저장 중…" : "처방 추가"}</Button>
+            <div className="rx-order-line__product" id={"medicationSelectedSummary-" + medication.id}><strong>{MEDICATION_PRODUCTS[medication.id]?.orderName || form.name}</strong><input id={"medicationName-" + medication.id} name="name" type="hidden" value={form.name} /></div>
+            <label>1회 용량<input id={"medicationDose-" + medication.id} name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
+            <label>용량 단위<select id={"medicationDoseUnit-" + medication.id} name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
+            <label>투여 빈도<select id={"medicationFrequency-" + medication.id} name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            {usesInfusionRate(form.route) ? <label>주입속도 (필요 시)<input id={"medicationInfusionRate-" + medication.id} name="infusionRate" maxLength={80} placeholder="단위 포함 입력" value={form.infusionRate} onChange={(event) => setForm((current) => ({ ...current, infusionRate: event.target.value }))} /></label> : null}
+            <Button variant="primary" className="rx-form__submit" type="submit" disabled={saving || !editable}>{saving ? "저장 중…" : "처방"}</Button>
           </div>
           <details className="rx-order-details"><summary>상세 처방 설정 · {form.route || "투여 경로"} · {form.frequency || "투여 빈도"}</summary><div className="prescription-form-grid">
-            <label>투여 경로<select id="medicationRoute" name="route" value={form.route} onChange={(event) => setForm((current) => ({ ...current, route: event.target.value, infusionRate: "" }))}>{[["피하주사", "피하주사 · SC"], ["정맥주입", "정맥주입 · IV"], ["경구", "경구 · PO"], ["정맥", "정맥 · IV"], ["근육", "근육 · IM"], ["피하", "피하 · SC"], ["흡입", "흡입 · INH"], ["설하", "설하 · SL"], ["국소", "국소 · TOP"], ["점안", "점안 · OU"], ["직장", "직장 · PR"], ["비강", "비강 · NAS"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label>처방 일수<input id="medicationDurationDays" name="durationDays" type="number" min={1} max={365} inputMode="numeric" placeholder="일" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} /></label>
-            <label>총 수량<input id="medicationQuantity" name="quantity" type="number" min={0.01} step={0.01} inputMode="decimal" placeholder="수량" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></label>
-            <label className="clinical-instructions-field">복약 안내<textarea id="medicationInstructions" name="instructions" maxLength={500} rows={3} placeholder="식전·식후, 주의사항 등 의료진 지시" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
+            <label>투여 경로<select id={"medicationRoute-" + medication.id} name="route" value={form.route} onChange={(event) => setForm((current) => ({ ...current, route: event.target.value, infusionRate: "" }))}>{[["피하주사", "피하주사 · SC"], ["정맥주입", "정맥주입 · IV"], ["경구", "경구 · PO"], ["정맥", "정맥 · IV"], ["근육", "근육 · IM"], ["피하", "피하 · SC"], ["흡입", "흡입 · INH"], ["설하", "설하 · SL"], ["국소", "국소 · TOP"], ["점안", "점안 · OU"], ["직장", "직장 · PR"], ["비강", "비강 · NAS"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label>처방 일수<input id={"medicationDurationDays-" + medication.id} name="durationDays" type="number" min={1} max={365} inputMode="numeric" placeholder="일" value={form.durationDays} onChange={(event) => setForm((current) => ({ ...current, durationDays: event.target.value }))} /></label>
+            <label>총 수량<input id={"medicationQuantity-" + medication.id} name="quantity" type="number" min={0.01} step={0.01} inputMode="decimal" placeholder="수량" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></label>
+            <label className="clinical-instructions-field">복약 안내<textarea id={"medicationInstructions-" + medication.id} name="instructions" maxLength={500} rows={3} placeholder="식전·식후, 주의사항 등 의료진 지시" value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} /></label>
 
           </div></details>
         </form>
-  );
+    );
+  };
 
   const pairCounter = { next: 0 };
 
@@ -561,12 +551,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               ) : results.map((medication) => (
                 <ContextMenu.Root key={medication.id}>
                   <ContextMenu.Trigger asChild>
-                    <li tabIndex={0} aria-label={medication.label + " · 우클릭 또는 Shift+F10으로 메뉴 열기"}
+                    <li data-medication-id={medication.id} tabIndex={0} aria-label={medication.label + " · 우클릭 또는 Shift+F10으로 메뉴 열기"}
                       className={"rx-result rx-result--compact" + (medication.id === selectedMedicationId ? " is-selected" : "")}>
-                      {medication.id === selectedMedicationId ? prescriptionEditor : <>
-                        <b className="rx-result__label">{MEDICATION_PRODUCTS[medication.id]?.orderName || medication.label}</b>
-                        <Button variant="primary" type="button" onClick={() => pickMedication(medication)}>처방</Button>
-                      </>}
+                      {prescriptionEditor(medication)}
                     </li>
                   </ContextMenu.Trigger>
                   <ContextMenu.Portal>

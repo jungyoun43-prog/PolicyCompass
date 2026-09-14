@@ -39,7 +39,7 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
  * The shared entry-dialog frame: a real <dialog>, a sticky header carrying the
  * title, its scope notice, any extra header actions, and the way out.
  */
-export function RxDialog({ id, open, onClose, onEscapeKeyDown, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
+export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, headerExtra, children }) {
   const contentRef = useRef(null);
   const drag = useRef(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -53,7 +53,7 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, eyebrow, title, t
     y: origin.y + Math.max(8 - rect.top, Math.min(dy, window.innerHeight - rect.bottom - 8)),
   });
   const startDrag = (event) => {
-    if (event.button !== 0 || event.target.closest("button, a, input, select, textarea")) return;
+    if (embedded || event.button !== 0 || event.target.closest("button, a, input, select, textarea")) return;
     drag.current = { x: event.clientX, y: event.clientY, offset, rect: contentRef.current.getBoundingClientRect() };
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
@@ -61,8 +61,8 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, eyebrow, title, t
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="rx-dialog-overlay" />
-        <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
+        {!embedded ? <DialogPrimitive.Overlay className="rx-dialog-overlay" /> : null}
+        <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" data-embedded={embedded || undefined} id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
           <DialogPrimitive.Title className="visually-hidden">{title}</DialogPrimitive.Title>
           <div className="rx-dialog__panel">
             <header className="rx-dialog__header rx-dialog__drag-handle" tabIndex={0} aria-label={`${title} 창 이동`} title="드래그 또는 방향키로 이동 · 더블클릭으로 가운데 정렬"
@@ -72,7 +72,7 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, eyebrow, title, t
               onLostPointerCapture={() => { drag.current = null; }}
               onDoubleClick={(event) => { if (!event.target.closest("button, a")) setOffset({ x: 0, y: 0 }); }}
               onKeyDown={(event) => {
-                if (event.target !== event.currentTarget || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+                if (embedded || event.target !== event.currentTarget || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
                 event.preventDefault();
                 move(event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0, offset, contentRef.current.getBoundingClientRect());
               }}>

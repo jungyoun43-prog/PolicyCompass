@@ -21,6 +21,8 @@ import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
 import { ContextMenu } from "radix-ui";
+import { openCoverageWindow } from "./coverage-window.js";
+import { splitMedicationReportRow, normalizeMedicationReportRow } from "../../src/medication-report-table.js";
 import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSummary } from "./medication-coverage-overview.jsx";
 
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
@@ -44,7 +46,7 @@ function MarkdownReport({ markdown }) {
   for (const raw of lines) {
     const line = raw.trim();
     if (line.startsWith("|")) {
-      const cells = line.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+      const cells = splitMedicationReportRow(line);
       if (cells.every((cell) => /^:?-{2,}:?$/.test(cell))) continue;
       table = table ?? [];
       table.push(cells);
@@ -65,7 +67,7 @@ function MarkdownReport({ markdown }) {
             <table key={index} className="rx-model-report__table">
               <tbody>
                 {block.rows.map((cells, rowIndex) => (
-                  <tr key={rowIndex}>{cells.map((cell, cellIndex) => (rowIndex === 0
+                  <tr key={rowIndex}>{(rowIndex === 0 ? cells : normalizeMedicationReportRow(cells, block.rows[0].length)).map((cell, cellIndex) => (rowIndex === 0
                     ? <th key={cellIndex}>{boldSegments(cell)}</th>
                     : <td key={cellIndex}>{boldSegments(cell)}</td>))}</tr>
                 ))}
@@ -189,7 +191,7 @@ function DetailList({ rows }) {
 
 // `launcherSlot` is the disclosure header's #entryLauncher-prescriptions element,
 // handed down by the parent that renders it; the launcher button portals there.
-export function PrescriptionDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot }) {
+export function PrescriptionDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot, standalone = false, initialCoverage, onStandaloneClose }) {
   const open = activeDialog === "prescription";
   const [query, setQuery] = useState("");
   const [form, setForm] = useState(EMPTY_RX_FORM);
@@ -200,6 +202,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [reviewPreview, setReviewPreview] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const requestAbort = useRef(null);
+  const standaloneStarted = useRef(false);
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
@@ -249,6 +252,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setActiveDialog("prescription");
   };
   const closeCoverage = () => {
+    if (standalone) onStandaloneClose?.();
     requestVersion.current += 1;
     requestAbort.current?.abort();
     setSettingsOpen(false);
@@ -262,6 +266,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setActiveDialog((current) => (current === "prescription" ? "" : current));
   };
   const openCoverage = (medication) => {
+    if (!standalone && openCoverageWindow({ patient, encounter, medicationId: medication.id, prescription: currentDosing(medication) })) return;
     requestVersion.current += 1;
     setReview(null);
     setReviewPreview(null);
@@ -292,7 +297,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     });
   };
 
-  const currentDosing = (medication) => (selectedMedicationId === medication.id
+  const currentDosing = (medication) => (standalone && initialCoverage?.prescription ? initialCoverage.prescription : selectedMedicationId === medication.id
     ? { dose: form.dose, doseUnit: form.doseUnit, route: form.route, frequency: form.frequency, durationDays: form.durationDays, quantity: form.quantity, instructions: form.instructions }
     : medication.dosing);
 
@@ -447,6 +452,17 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         ? `AI 검토 가능 · ${provider === "local" ? "로컬 모델" : requestedModelLabel || "연결된 모델"}`
         : "규칙 기반 · 모델 미설정";
 
+  useEffect(() => {
+    if (!standalone || !initialCoverage || !capability.checked || standaloneStarted.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (standaloneStarted.current) return;
+      standaloneStarted.current = true;
+      const medication = findMedicationInCatalog(initialCoverage.medicationId);
+      if (medication) openCoverage(medication);
+    });
+    return () => cancelAnimationFrame(frame);
+  });
+
   const pairCounter = { next: 0 };
 
   return (
@@ -454,7 +470,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       {launcherSlot ? createPortal(
         <Button variant="primary" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방하기</Button>,
         launcherSlot) : null}
-      <RxDialog id="prescriptionDialog" open={open} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
+      <RxDialog id="prescriptionDialog" open={open && !standalone} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방하기" titleId="rxDialogTitle" context={context}
         notice="급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다." noticeId="prescriptionNotice"
       >
 
@@ -511,7 +527,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       </RxDialog>
 
       {coverageMedication && open ? (
-        <RxDialog id="medicationCoverageDialog" open onClose={closeCoverage} eyebrow="급여인정확인"
+        <RxDialog id="medicationCoverageDialog" embedded={standalone} open onClose={closeCoverage} eyebrow="급여인정확인"
           onEscapeKeyDown={(event) => { if (settingsOpen) { event.preventDefault(); setSettingsOpen(false); } }}
           title="AI 처방 급여인정 도우미 (웹 서비스)" titleId="coverageDialogTitle" context={context}
           noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
@@ -555,7 +571,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           </div>
           <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} />
           <section className="rx-review" aria-labelledby="rxReviewTitle">
-            <h4 className="rx-section-title" id="rxReviewTitle">환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span>{review ? <span className="coverage-overall" id="medicationReviewVerdict" data-tone={review.verdictTone}>{review.verdictSymbol} {review.verdictLabel}</span> : null}</h4>
+            <h4 className="rx-section-title" id="rxReviewTitle">환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
             {pendingReview ? (
               <div className="rx-review__progress" id="medicationReviewProgress" role="status" aria-live="polite">
                 <span className="rx-review__spinner" aria-hidden="true"></span>
@@ -700,6 +716,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
               </div>
             )}
           </section>
+          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="종합 삭감 위험">
+            <h4>종합 삭감 위험</h4>
+            <strong>{review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
+            <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
+          </section> : null}
           {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
           {settingsOpen && reviewPreview ? <aside className="coverage-settings" aria-label="검토 설정">
             <header><h4>모델 · 검토 설정</h4><Button type="button" onClick={() => setSettingsOpen(false)}>닫기</Button></header>

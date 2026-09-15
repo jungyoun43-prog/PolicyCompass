@@ -5,6 +5,11 @@
   max-width: calc(100dvw - 16px);
 }
 .emr-page .rx-dialog[data-embedded] { max-width: 100%; }
+#prescriptionDialog:not([data-embedded]) {
+  width: min(1000px, calc(100dvw - 24px));
+  height: min(460px, 90dvh);
+  max-height: 90dvh;
+}
 .rx-dialog .rx-dialog__panel {
   --rx-fluid-text: clamp(.875rem, .78rem + .3cqi, 1rem);
   --rx-fluid-small: clamp(.8125rem, .72rem + .25cqi, .9375rem);

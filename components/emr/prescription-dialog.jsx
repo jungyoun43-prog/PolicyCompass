@@ -22,7 +22,7 @@ import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dial
 
 import { ContextMenu } from "radix-ui";
 import { openCoverageWindow } from "./coverage-window.js";
-import { openPrescriptionWindow } from "./prescription-window.js";
+
 import { usesInfusionRate, prescriptionEntryInstructions } from "../../src/prescription-entry.js";
 import { splitMedicationReportRow, normalizeMedicationReportRow } from "../../src/medication-report-table.js";
 import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSummary, CoverageIcon } from "./medication-coverage-overview.jsx";
@@ -221,13 +221,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const prescriptionWindow = useRef(null);
-  const currentHost = useRef(null);
-  useEffect(() => {
-    currentHost.current = { patient, encounter, editable, applyMutation, withDraftPreserved };
-    if (!editable) prescriptionWindow.current?.dispose();
-  }, [patient, encounter, editable, applyMutation, withDraftPreserved]);
-  useEffect(() => () => { prescriptionWindow.current?.dispose(); currentHost.current = null; }, [patient?.id, encounter?.id]);
   const [drafts, setDrafts] = useState({});
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
   const [review, setReview] = useState(null);
@@ -278,23 +271,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     if (!editable) {
       setStatus("진료를 시작한 뒤 처방을 담을 수 있습니다.", "error");
       return;
-    }
-    if (!prescriptionStandalone) {
-      if (prescriptionWindow.current && !prescriptionWindow.current.closed) {
-        prescriptionWindow.current.focus();
-        return;
-      }
-      const patientId = patient.id;
-      const encounterId = encounter.id;
-      prescriptionWindow.current = openPrescriptionWindow({ patient, encounter }, async (prescription) => {
-        const host = currentHost.current;
-        if (!host?.editable || host.patient?.id !== patientId || host.encounter?.id !== encounterId) throw new Error("진료 상태가 바뀌었습니다. EMR에서 처방 창을 다시 열어 주세요.");
-        await host.applyMutation(host.withDraftPreserved((current) => {
-          if (current.selectedPatientId !== patientId) throw new Error("선택한 환자가 변경되어 처방을 추가하지 않았습니다.");
-          return addEncounterPrescription(current, patientId, encounterId, prescription);
-        }), "처방 초안을 추가했습니다.");
-      });
-      if (prescriptionWindow.current) return;
     }
     setReview(null);
     setPendingReview(null);

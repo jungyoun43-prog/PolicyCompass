@@ -245,7 +245,7 @@ test("AI 검토는 바로 시작하고 오른쪽 설정에서 진료데이터·�
   assert.match(rx, /await sendReview\(preview\)/);
   assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
   assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
-  assert.match(rx, /promptText: medicationReviewInstructions\(\)/);
+  assert.match(rx, /promptText: medicationReviewInstructions\(reviewModel \|\| capability\.model\)/);
   assert.match(rx, /class="coverage-settings" aria-label="검토 설정"/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
@@ -258,7 +258,7 @@ test("AI 검토는 바로 시작하고 오른쪽 설정에서 진료데이터·�
   assert.match(rx, /comparison: base, provider: activeProvider, overrides/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{\(\) => sendReview\(\)\}/);
   // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.
-  assert.match(rx, /\{review\.markdown \? <MarkdownReport markdown=\{review\.markdown\} \/> : \(/);
+  assert.match(rx, /review\.outputKind === "decision" \? <MedicationDecisionResult review=\{review\} \/> : review\.markdown \? <MarkdownReport markdown=\{review\.markdown\} \/> : \(/);
   assert.match(rx, /MedicationCoverageSummary/);
 });
 

@@ -2,6 +2,8 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewPrompt } from "../../src/medication-review-prompt.js";
+import { isJevReviewModel } from "../../src/medication-review-decision.js";
+import { jevMedicationDraft } from "../medication-jev-review.mjs";
 
 import {
   callFrontierModel,
@@ -263,6 +265,9 @@ function medicationClaimReviewGraph() {
         const attemptOptions = { ...options, timeoutMs: Math.min(options.timeoutMs ?? 30_000, remaining - 3_000) };
         let raw = null;
         try {
+          if (options.provider === "frontier" && isJevReviewModel(options.model)) {
+            return { draft: await jevMedicationDraft(state.comparison, attemptOptions) };
+          }
           raw = options.provider === "frontier"
             ? await frontierDraft(state.comparison, attemptOptions, feedback)
             : await localDraft(state.comparison, attemptOptions, feedback);

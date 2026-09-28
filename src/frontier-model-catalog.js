@@ -4,6 +4,7 @@
  * cannot be steered to arbitrary (or arbitrarily expensive) models.
  */
 export const FRONTIER_MODEL_CHOICES = Object.freeze([
+  { group: "판정 전용", id: "typesafe/jev-1.13", label: "Jev 1.13 · 판정과 확률" },
   { group: "Claude", id: "anthropic/claude-opus-5", label: "Claude Opus 5" },
   { group: "Claude", id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5" },
   { group: "Claude", id: "anthropic/claude-fable-5", label: "Claude Fable 5" },

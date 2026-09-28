@@ -17,6 +17,8 @@ import {
 } from "../../src/medication-claim-review.js";
 import { FRONTIER_MODEL_CHOICES, FRONTIER_MODEL_GROUPS, frontierModelLabel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewInstructions, medicationReviewNotice, medicationReviewPatientDataText } from "../../src/medication-review-prompt.js";
+import { isJevReviewModel } from "../../src/medication-review-decision.js";
+import { MedicationDecisionResult } from "./medication-decision-result.jsx";
 import { displayDate, INSURANCE_LABELS, SEX_LABELS, today } from "../../lib/emr/format.js";
 import { encounterDialogContext, HoverPopover, RxDialog, RxSearch } from "./dialog-kit.jsx";
 
@@ -342,7 +344,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       base,
       dataText: medicationReviewPatientDataText(base),
       noticeText: medicationReviewNotice(medicationId),
-      promptText: medicationReviewInstructions(),
+      promptText: medicationReviewInstructions(reviewModel || capability.model),
     };
     setReviewPreview(preview);
     await sendReview(preview);
@@ -370,7 +372,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     requestAbort.current = controller;
     setSettingsOpen(false);
     setReview(null);
-    setPendingReview({ medicationId, name, model: requestedModelLabel });
+    setPendingReview({ medicationId, name, model: requestedModelLabel, decision: isJevReviewModel(reviewModel || capability.model) });
     setReviewBusyId(medicationId);
     try {
       let activeProvider = provider;
@@ -466,6 +468,16 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const cloudLabel = cloudLabelFor(requestedModelLabel);
   const reviewedModelLabelFor = (model) => (model ? frontierModelLabel(model) : "AI");
   const reviewedModelLabel = review?.model ? frontierModelLabel(review.model) : "";
+  const selectedDecisionModel = provider === "frontier" && isJevReviewModel(reviewModel || capability.model);
+
+  const changeReviewModel = (event) => {
+    const nextModel = event.target.value;
+    const previousInstructions = medicationReviewInstructions(reviewModel || capability.model);
+    setReviewModel(nextModel);
+    setReviewPreview((current) => current && current.promptText === previousInstructions
+      ? { ...current, promptText: medicationReviewInstructions(nextModel || capability.model) }
+      : current);
+  };
 
   const reviewModeLabel = review && review.generatedBy !== "rule"
     ? `AI 검토 · ${reviewedModelLabel || review.generatedBy}`
@@ -569,7 +581,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     ["1", "진료데이터 추출", "환자 구조화 기록에서 판정에 쓰일 검사·처방·진단 기록을 추립니다."],
                     ["2", "고시·진료데이터 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
                     ["3", review.generatedBy === "rule" ? cloudLabel : cloudLabelFor(reviewedModelLabel), "급여 고시 기준과 환자 의료데이터만으로 충족 여부를 판정합니다."],
-                    ["4", "판정 보고 반환", "출력 형식(판정·사유·기준별 표)을 지키지 않은 보고는 서버가 되돌립니다."],
+                    ["4", review.outputKind === "decision" ? "판정·확률 반환" : "판정 보고 반환", review.outputKind === "decision" ? "선택된 판정과 세 선택지의 확률을 확인해 표시합니다." : "출력 형식(판정·사유·기준별 표)을 지키지 않은 보고는 서버가 되돌립니다."],
                   ].map(([index, title, detail]) => (
                     <li className="rx-pipeline__step" key={index}>
                       <span className="rx-pipeline__index">{index}</span>
@@ -606,7 +618,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             </div>
             <ReviewMark verdict={review.verdict} />
           </section> : null}
-          {review ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
+          {review && review.outputKind !== "decision" ? <MedicationCoverageSummary key={review.createdAt || review.markdown || review.medicationId} review={review} /> : null}
           </MedicationCoverageOverview>
           <section className="rx-review" aria-labelledby="rxReviewTitle">
             <h4 className="rx-section-title" id="rxReviewTitle"><CoverageIcon kind="patient" />환자 정보 기반 검토 결과 <span className="rx-count" id="medicationReviewMode">{reviewModeLabel}</span></h4>
@@ -615,13 +627,13 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 <span className="rx-review__spinner" aria-hidden="true"></span>
                 <div className="rx-review__progress-text">
                   <b>AI 검토 중 · {pendingReview.name}</b>
-                  <span>{cloudLabelFor(pendingReview.model)}이 급여 고시 기준과 환자 의료데이터를 대조하고 있습니다. 검토가 끝나면 기준별 판정 표를 보여 드립니다.</span>
+                  <span>{cloudLabelFor(pendingReview.model)}이 급여 고시 기준과 환자 의료데이터를 대조하고 있습니다. {pendingReview.decision ? "검토가 끝나면 판정과 선택지별 확률을 보여 드립니다." : "검토가 끝나면 기준별 판정 표를 보여 드립니다."}</span>
                   <ol className="rx-pipeline rx-pipeline--progress">
                     {[
                       ["1", "진료데이터 추출 완료", "done"],
                       ["2", "고시·진료데이터 전송", "done"],
                       ["3", "고시 기준 판정 중", "active"],
-                      ["4", "판정 보고 반환", "waiting"],
+                      ["4", pendingReview.decision ? "판정·확률 반환" : "판정 보고 반환", "waiting"],
                     ].map(([index, title, state]) => (
                       <li className="rx-pipeline__step" data-state={state} key={index}>
                         <span className="rx-pipeline__index">{state === "done" ? "✓" : index}</span>
@@ -636,7 +648,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             ) : (
               <div className="rx-review__body" id="medicationReviewBody" aria-live="polite">
                 {review.note ? <p className="rx-verdict__note">{review.note}</p> : null}
-                {review.markdown ? <MarkdownReport markdown={review.markdown} /> : (
+                {review.outputKind === "decision" ? <MedicationDecisionResult review={review} /> : review.markdown ? <MarkdownReport markdown={review.markdown} /> : (
                 <section className="rx-review__section">
                   <div className="coverage-table-scroll">
                     <table className="coverage-patient-table">
@@ -759,7 +771,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           <div className="review-preview" data-focus={expandedField || undefined}>
               {provider === "frontier" ? (
                 <label className="review-preview__model">검토 모델
-                  <select id="reviewPreviewModel" value={reviewModel} onChange={(event) => setReviewModel(event.target.value)}>
+                  <select id="reviewPreviewModel" value={reviewModel} onChange={changeReviewModel}>
                     <option value="">서버 기본 · {defaultModelLabel || "미설정"}</option>
                     {FRONTIER_MODEL_GROUPS.map((group) => (
                       <optgroup key={group} label={group}>
@@ -771,6 +783,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   </select>
                 </label>
               ) : null}
+            {selectedDecisionModel ? <p className="rx-review__boundary">Jev는 ○ 충족 / △ 판정 제한 / ✕ 미충족 중 하나와 선택지별 확률을 반환합니다.</p> : null}
             <section className="review-preview__section" data-expanded={expandedField === "dataText" || undefined}>
               <h4>진료데이터 <span>환자 구조화 기록 추출 — {"{PATIENT_DATA}"} 자리에 들어가며, 수정한 내용이 그대로 전송됩니다.</span>{expandToggle("dataText", "진료데이터")}</h4>
               <textarea className="review-preview__code" id="reviewPreviewData" rows={12} value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />

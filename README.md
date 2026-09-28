@@ -223,7 +223,9 @@ curl https://<배포 도메인>/api/medication-claim-review/status
 
 연결된 뒤에도 처방 팝업에서 **전송 동의 항목을 선택해야** 클라우드로 보냅니다. 동의 전에는 상태 표시가 `규칙 기반 · 전송 동의 필요`로 바뀌고, 검토 과정 3단계도 같은 이유를 적습니다.
 
-구조화 출력을 강제하므로 **JSON schema(structured outputs)를 지원하는 모델**이어야 합니다([지원 모델 목록](https://openrouter.ai/models?order=newest&supported_parameters=structured_outputs)). 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다.
+구조화 출력을 강제하는 기능에는 **JSON schema(structured outputs)를 지원하는 모델**이 필요합니다([지원 모델 목록](https://openrouter.ai/models?order=newest&supported_parameters=structured_outputs)). 지원하지 않는 모델은 스키마 검증에서 걸러지고 규칙 판정으로 되돌아갑니다.
+
+약제 급여 검토의 **검토 설정 → 검토 모델 → Jev 1.13 · 판정과 확률**을 선택하면 기존 `OPENROUTER_API_KEY`로 [Decisions API](https://openrouter.ai/blog/insights/what-is-jev/)를 호출합니다. Jev는 ○ 충족 / △ 판정 제한 / ✕ 미충족 중 하나와 선택지별 확률을 표시하며, 설명문이나 기준별 근거표를 생성하지 않습니다. 확률은 모델의 선택 확률이며 실제 삭감률이 아닙니다. 잘못된 응답이나 연결 실패 시 규칙 판정으로 복귀합니다. Jev는 이 검토 화면에서 선택하고, 설명문 생성이 필요한 다른 기능의 서버 기본 모델은 기존 생성 모델로 유지하세요.
 
 `POLICYCOMPASS_FRONTIER_BASE_URL`·`POLICYCOMPASS_FRONTIER_API`로 덮어쓰면 Together·Groq·자체 호스팅 프록시 등 다른 OpenAI 호환 게이트웨이도 같은 방식으로 연결됩니다.
 

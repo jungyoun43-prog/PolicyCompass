@@ -1,5 +1,6 @@
 import { chartMedicationClass, MEDICATION_CLAIM_SOURCES } from "./medication-catalog.js";
 import { textCleaner } from "./text.js";
+import { MEDICATION_DECISION_CHOICES, medicationDecisionProbabilities } from "./medication-review-decision.js";
 
 export const MEDICATION_REVIEW_BOUNDARY = "등록 기준과 이 환자의 확정 기록을 대조한 청구 전 사전점검입니다. 급여 인정·삭감을 확정하지 않고 처방 여부를 대신 결정하지 않으며, 최종 판단은 의료진과 심사 절차에 있습니다.";
 
@@ -692,9 +693,9 @@ export function buildMedicationClaimComparison({
 }
 
 /**
- * Applies a model draft on top of the rule comparison. The model may sharpen the
- * wording and escalate the verdict, but never soften it below what the registered
- * criteria already showed, and it may only cite checks that exist in the comparison.
+ * Applies a model draft on top of the rule comparison. Notice-based reports and
+ * validated decisions retain their model verdict. Legacy drafts may only escalate
+ * the rule verdict and may only cite checks that exist in the comparison.
  */
 export function applyMedicationReviewDraft(comparison, draft = {}) {
   if (!comparison || typeof comparison !== "object") throw new TypeError("규칙 비교 결과가 필요합니다.");
@@ -709,24 +710,28 @@ export function applyMedicationReviewDraft(comparison, draft = {}) {
     .slice(0, 8);
   const proposed = cleanText(draft.verdict, 20);
   const markdown = typeof draft.markdown === "string" ? draft.markdown.slice(0, 8_000) : "";
+  const probabilities = draft.outputKind === "decision"
+    ? medicationDecisionProbabilities(proposed, draft.probabilities) : null;
   // 고시 프롬프트 기반 검토(markdown)는 프롬프트 판정을 그대로 따른다.
-  const verdict = markdown && MEDICATION_REVIEW_VERDICTS[proposed]
+  const verdict = (markdown || probabilities) && MEDICATION_REVIEW_VERDICTS[proposed]
     ? proposed
     : isVerdictAtLeastAsCautious(proposed, comparison.verdict) ? proposed : comparison.verdict;
   const state = MEDICATION_REVIEW_VERDICTS[verdict];
-  const softened = !markdown && Boolean(proposed) && proposed !== verdict;
+  const softened = !markdown && !probabilities && Boolean(proposed) && proposed !== verdict;
   return {
     ...comparison,
     verdict,
     verdictSymbol: state.symbol,
     verdictLabel: state.label,
     verdictTone: state.tone,
-    summary: summary || comparison.summary,
-    rationale: rationale.length ? rationale : comparison.rationale,
+    summary: probabilities ? MEDICATION_DECISION_CHOICES[verdict].label : summary || comparison.summary,
+    rationale: probabilities ? [] : rationale.length ? rationale : comparison.rationale,
     citedCheckIds: citedCheckIds.length ? citedCheckIds : comparison.checks.map(({ id }) => id),
     generatedBy: cleanText(draft.generatedBy, 40) || "model",
     model: cleanText(draft.model, 120),
-    markdown,
+    markdown: probabilities ? "" : markdown,
+    outputKind: probabilities ? "decision" : "report",
+    probabilities,
     ruleVerdict: comparison.verdict,
     note: softened
       ? `모델이 제시한 '${MEDICATION_REVIEW_VERDICTS[proposed]?.label ?? proposed}'보다 규칙 판정을 우선했습니다.`

@@ -1,4 +1,5 @@
 import { findMedicationInCatalog } from "./medication-catalog.js";
+import { isJevReviewModel } from "./medication-review-decision.js";
 
 const REVIEW_PROMPT_TEMPLATE = `당신은 건강보험 약제 급여기준 검토를 지원하는 시스템입니다.
 
@@ -53,7 +54,11 @@ const REVIEW_PROMPT_TEMPLATE = `당신은 건강보험 약제 급여기준 검�
  * system prompt below is the operator-approved 급여기준 검토 지시문; the user
  * message carries the 고시정보(NOTICE) and 환자 의료데이터(PATIENT_DATA).
  */
-export function medicationReviewInstructions() {
+export function medicationReviewInstructions(model) {
+  if (isJevReviewModel(model)) {
+    return REVIEW_PROMPT_TEMPLATE.split("### 출력 형식")[0]
+      + "선택지 중 하나를 판정하고 선택지별 확률을 반환합니다. 설명문은 작성하지 않습니다.\n\n### 급여 고시정보\n\n{NOTICE}\n\n### 환자 의료데이터\n\n{PATIENT_DATA}";
+  }
   return REVIEW_PROMPT_TEMPLATE;
 }
 
@@ -84,7 +89,7 @@ export function medicationReviewPatientDataText(comparison) {
  * 자리에 고시 원문과 환자 데이터 원문이 그대로 치환된 단일 메시지.
  */
 export function medicationReviewPrompt(comparison, overrides = {}) {
-  const template = overrides.instructions || medicationReviewInstructions();
+  const template = overrides.instructions || medicationReviewInstructions(overrides.model);
   return template
     .replace("{NOTICE}", overrides.notice || medicationReviewNotice(comparison.medication?.id))
     .replace("{PATIENT_DATA}", overrides.patientData || medicationReviewPatientDataText(comparison));

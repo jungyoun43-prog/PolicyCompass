@@ -314,7 +314,7 @@ test("검토 화면은 서버 기본이 아니라 실제로 요청한·응답한
 
   // When / Then — 진행 중엔 선택한 모델, 완료 뒤엔 서버가 응답한 모델 id를 표시한다.
   // source-check: 진행 중·완료 상태는 검토 요청 클릭과 서버 응답으로만 만들어져 서버 렌더가 재현할 수 없다.
-  assert.match(rx, /setPendingReview\(\{ medicationId, name, model: requestedModelLabel \}\)/);
+  assert.match(rx, /setPendingReview\(\{ medicationId, name, model: requestedModelLabel[, }]/);
   assert.match(rx, /cloudLabelFor\(pendingReview\.model\)/);
   assert.match(rx, /reviewedModelLabel = review\?\.model \? frontierModelLabel\(review\.model\)/);
   assert.match(rx, /cloudLabelFor\(reviewedModelLabel\)/);

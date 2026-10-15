@@ -17,6 +17,7 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 import { PatientRail } from "./patient-rail.jsx";
 import { WorkspaceHeader } from "./workspace-header.jsx";
 import { DataUtilities } from "./data-utilities.jsx";
+import { CoverageQuickStart } from "./coverage-quick-start.jsx";
 import { EncounterTab } from "./tabs/encounter-tab.jsx";
 import { OverviewTab } from "./tabs/overview-tab.jsx";
 import { ChartTab } from "./tabs/chart-tab.jsx";
@@ -203,6 +204,7 @@ export function EmrApp() {
       <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai}
         nav={patient ? <WorkspaceHeader onSelectTab={selectTab} /> : null} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
+        <CoverageQuickStart />
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">
             <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary">외부 미검증 · 지원 {fhirReport.supported}건 · 제외 {fhirReport.unsupported}건</span></summary>

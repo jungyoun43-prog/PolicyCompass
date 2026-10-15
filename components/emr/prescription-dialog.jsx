@@ -546,6 +546,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     <li data-medication-id={medication.id} tabIndex={0} aria-label={medication.label + " · 우클릭 또는 Shift+F10으로 메뉴 열기"}
                       className={"rx-result rx-result--compact" + (medication.id === selectedMedicationId ? " is-selected" : "")}>
                       {prescriptionEditor(medication)}
+                      <Button className="rx-coverage-launch" onClick={() => openCoverage(medication)} aria-label={`${medication.label} 급여인정확인`} aria-haspopup="dialog">급여인정확인</Button>
                     </li>
                   </ContextMenu.Trigger>
                   <ContextMenu.Portal>

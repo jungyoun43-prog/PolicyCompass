@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { mock } from "node:test";
 
 import {
   addPatient,
@@ -40,6 +40,8 @@ const sheet = await stylesheet("src/emr.css");
 const workbenchSource = await componentMarkup("components/emr/claims/workbench.jsx");
 const ruleManagerSource = await componentMarkup("components/emr/claims/rule-manager.jsx");
 
+// The claim window and its synthetic chart must use the same reference day.
+mock.timers.enable({ apis: ["Date"], now: new Date("2026-09-02T00:00:00.000Z") });
 const demo = createDemoEmrState("2026-09-02T00:00:00.000Z");
 const store = { applyMutation: async () => {}, setStatus: () => {} };
 const noop = () => {};

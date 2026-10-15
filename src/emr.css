@@ -10904,3 +10904,25 @@ model-viewer::part(default-progress-mask) {
 .coverage-decision__options meter { width: 100%; height: 14px; margin-top: 8px; }
 .coverage-decision__options meter::-webkit-meter-optimum-value { background: var(--decision-color); }
 .coverage-decision__options meter::-moz-meter-bar { background: var(--decision-color); }
+
+/* Replayable first-use coverage help shares the clinical surface vocabulary. */
+.coverage-quick-start { margin-bottom: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--ink); }
+.coverage-quick-start > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 44px; cursor: pointer; list-style: none; }
+.coverage-quick-start > summary::-webkit-details-marker { display: none; }
+.coverage-quick-start h2 { margin: 0; font-size: 1rem; line-height: 1.5; font-weight: 720; }
+.coverage-quick-start > summary > span { flex-shrink: 0; font-size: .82rem; text-decoration: underline; text-underline-offset: 3px; }
+.coverage-quick-start__body { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-5); padding-top: var(--space-3); }
+.coverage-quick-start__body p { max-width: 72ch; margin: 0 0 var(--space-2); font-size: .88rem; line-height: 1.65; }
+.coverage-quick-start ol { margin: var(--space-2) 0 var(--space-3); padding-inline-start: 1.4rem; font-size: .88rem; line-height: 1.8; }
+.coverage-quick-start__action { display: grid; gap: var(--space-2); }
+.coverage-quick-start__action small { max-width: 26ch; color: var(--ink); font-size: .78rem; line-height: 1.5; }
+.coverage-quick-start__error { margin: var(--space-3) 0 0; color: var(--urgent); }
+.rx-coverage-launch { margin: var(--space-2); min-height: 44px; }
+@media (max-width: 700px) {
+  .coverage-quick-start { padding: var(--space-3); }
+  .coverage-quick-start > summary { align-items: flex-start; }
+  .coverage-quick-start h2 { max-width: 18ch; }
+  .coverage-quick-start__body { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .coverage-quick-start__action .clinical-button { width: 100%; }
+  .coverage-quick-start__action small { max-width: none; }
+}

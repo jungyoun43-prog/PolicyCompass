@@ -10,7 +10,7 @@ import reactHooks from "eslint-plugin-react-hooks";
  */
 export default [
   {
-    ignores: [".next/**", "node_modules/**", "artifacts/**", "public/**", "outputs/**", "work/**"],
+    ignores: [".next/**", ".agents/**", "node_modules/**", "artifacts/**", "public/**", "outputs/**", "work/**"],
   },
   js.configs.recommended,
   {

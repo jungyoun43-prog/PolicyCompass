@@ -1,5 +1,7 @@
 .git
 .github
+.agents
+skills-lock.json
 .aws
 .env*
 **/.env*

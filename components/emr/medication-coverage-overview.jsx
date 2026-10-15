@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { medicationReviewNotice } from "../../src/medication-review-prompt.js";
+import { medicationCoveragePolicyNotice } from "../../src/medication-coverage-policies.js";
 
 export const MEDICATION_PRODUCTS = {
   "benralizumab-30": {
@@ -42,12 +43,13 @@ export function CoverageIcon({ kind = "criteria" }) {
   </svg>;
 }
 
-export function MedicationCoverageOverview({ medication, children }) {
+export function MedicationCoverageOverview({ medication, policy, children }) {
   const [failed, setFailed] = useState(false);
   const product = MEDICATION_PRODUCTS[medication.id];
-  const notice = medicationReviewNotice(medication.id);
+  const foreign = policy && policy.countryCode !== "KR";
+  const notice = policy?.noticeText ?? (foreign ? medicationCoveragePolicyNotice(medication.id, policy.id) : medicationReviewNotice(medication.id));
   // Presentation summary of the existing catalog notice; not a new official policy source.
-  const criteria = product.criteria;
+  const criteria = foreign ? policy.criteria : product.criteria;
   return <>
     <div className="coverage-product">
       <a className="coverage-product__image" href={product.source} target="_blank" rel="noreferrer" aria-label={`${product.name} 제조사 제품정보`}>
@@ -62,18 +64,18 @@ export function MedicationCoverageOverview({ medication, children }) {
     </div>
     {children}
     <section className="coverage-criteria">
-      <h4><CoverageIcon />급여인정 기준 (요약)</h4>
+      <h4><CoverageIcon />{foreign ? `${policy.country} · ${policy.payer} 기준 (요약)` : "급여인정 기준 (요약)"}</h4>
       {criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}>{criterion.replace(/^(?:[가-힣]\.|\d+[.)]|[-•])\s*/, "")}</li>)}</ol> : <p>등록된 기준 원문을 확인해 주세요.</p>}
       <details><summary>상세 기준 보기</summary><pre>{notice}</pre></details>
-      <p className="coverage-provenance">프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다.</p>
+      <p className="coverage-provenance">{foreign ? `선택한 적응증의 공식 자료 요약입니다.${policy.edited ? " 검토에는 직접 수정한 입력을 사용했습니다." : ""} 세부 조건은 출처 원문을 확인하세요.` : "프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다."}</p>
     </section>
   </>;
 }
 
 export function MedicationCoverageSummary({ review }) {
   const [copied, setCopied] = useState("");
-  const modelSummary = review.markdown?.match(/\*\*최종 판단:\*\*\s*([^\n]+)/)?.[1]
-    || review.markdown?.match(/\*\*사유:\*\*\s*([^\n]+)/)?.[1];
+  const modelSummary = review.markdown?.match(/\*\*(?:최종 판단|Final (?:judgment|judgement|assessment|decision)):\*\*\s*([^\n]+)/i)?.[1]
+    || review.markdown?.match(/\*\*(?:사유|Reason|Rationale):\*\*\s*([^\n]+)/i)?.[1];
   const summary = modelSummary || (review.markdown ? "상단의 모델 검토 보고에서 기준별 판정과 근거를 확인하세요." : review.summary);
   const copy = async () => {
     try {

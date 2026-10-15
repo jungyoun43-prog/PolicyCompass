@@ -72,6 +72,18 @@ test("Next 서버는 보안 헤더와 출처·JSON·크기·오류 상태 계약
     assert.equal(largeReview.status, 503, "약제 검토는 256KB 문자 제한 없이 제공자 설정 검사까지 도달한다");
     assert.equal((await largeReview.json()).code, "LOCAL_AI_NOT_CONFIGURED");
 
+    const medicationStatus = await fetch(`${baseUrl}/api/medication-claim-review/status`).then(response => response.json());
+    assert.equal(medicationStatus.translation.configured, false);
+    assert.equal(medicationStatus.translation.model, "anthropic/claude-haiku-5.5");
+    const translationRoute = "/api/medication-claim-review/translate";
+    const forbiddenTranslation = await post(baseUrl, translationRoute, "{}", { "content-type": "application/json", origin: "https://evil.example" });
+    assert.equal(forbiddenTranslation.status, 403);
+    assert.equal((await forbiddenTranslation.json()).code, "ORIGIN_NOT_ALLOWED");
+    assert.equal((await post(baseUrl, translationRoute, "{}", { "content-type": "text/plain", origin: baseUrl })).status, 415);
+    const unconfiguredTranslation = await post(baseUrl, translationRoute, JSON.stringify({ fields: { dataText: "진료기록".repeat(70_000) } }), jsonHeaders);
+    assert.equal(unconfiguredTranslation.status, 503, "번역도 원문을 자르거나 256KB에서 거절하지 않는다");
+    assert.equal((await unconfiguredTranslation.json()).code, "TRANSLATION_NOT_CONFIGURED");
+
     const snapshotPayload = {
       clinicalSnapshot: {
         schema: "policycompass-clinical-snapshot",

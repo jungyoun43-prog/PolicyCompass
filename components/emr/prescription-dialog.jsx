@@ -11,7 +11,6 @@ import {
   searchMedicationCatalog,
 } from "../../src/medication-catalog.js";
 import {
-  applyMedicationReviewDraft,
   buildMedicationClaimComparison,
   MEDICATION_REVIEW_VERDICTS,
 } from "../../src/medication-claim-review.js";
@@ -28,6 +27,11 @@ import { openCoverageWindow } from "./coverage-window.js";
 import { usesInfusionRate, prescriptionEntryInstructions } from "../../src/prescription-entry.js";
 import { splitMedicationReportRow, normalizeMedicationReportRow } from "../../src/medication-report-table.js";
 import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSummary, CoverageIcon } from "./medication-coverage-overview.jsx";
+import { CoveragePolicyPicker, CoveragePolicySource } from "./coverage-policy-picker.jsx";
+import { REGISTERED_COVERAGE_POLICY, isForeignCoveragePolicy, medicationCoveragePolicy, medicationCoveragePolicyNotice, switchMedicationCoveragePolicy } from "../../src/medication-coverage-policies.js";
+import { applyCoveragePolicyReview } from "../../src/medication-coverage-review.js";
+import { CoverageTranslationControls } from "./coverage-translation-controls.jsx";
+import { COVERAGE_TRANSLATION_FIELDS, coverageTranslationFields, coverageTranslationLanguage, coverageTranslationView } from "../../src/medication-coverage-translation.js";
 
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
 const HIGHLIGHT_PAIR_COLORS = 5;
@@ -96,7 +100,7 @@ function MarkdownReport({ markdown }) {
                 {block.rows.map((cells, rowIndex) => (
                   <tr key={rowIndex}>{(rowIndex === 0 ? cells : normalizeMedicationReportRow(cells, block.rows[0].length)).map((cell, cellIndex) => (rowIndex === 0
                     ? <th key={cellIndex}>{boldSegments(cell)}</th>
-                    : <td key={cellIndex}>{/판단|판정/.test(block.rows[0][cellIndex]) && reportJudgment(cell) ? <ReviewMark verdict={reportJudgment(cell)} /> : /근거/.test(block.rows[0][cellIndex]) ? <ReportEvidence text={cell} /> : boldSegments(cell)}</td>))}</tr>
+                    : <td key={cellIndex}>{/판단|판정|judgment|judgement|assessment/i.test(block.rows[0][cellIndex]) && reportJudgment(cell) ? <ReviewMark verdict={reportJudgment(cell)} /> : /근거|evidence|rationale/i.test(block.rows[0][cellIndex]) ? <ReportEvidence text={cell} /> : boldSegments(cell)}</td>))}</tr>
                 ))}
               </tbody>
             </table>
@@ -225,10 +229,18 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const savingRef = useRef(false);
   const [drafts, setDrafts] = useState({});
   const [selectedMedicationId, setSelectedMedicationId] = useState("");
-  const [review, setReview] = useState(null);
+  const [sourceReview, setReview] = useState(null);
   const [pendingReview, setPendingReview] = useState(null);
   const [reviewBusyId, setReviewBusyId] = useState("");
-  const [reviewPreview, setReviewPreview] = useState(null);
+  const [sourcePreview, setReviewPreview] = useState(null);
+  const [translation, setTranslation] = useState(null);
+  const [translationBusy, setTranslationBusy] = useState(false);
+  const [translationError, setTranslationError] = useState("");
+  const translationAbort = useRef(null);
+  const translationVersion = useRef(0);
+  const translatedView = coverageTranslationView(sourcePreview, sourceReview, translation);
+  const review = translatedView.review;
+  const reviewPreview = translatedView.preview;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewInputError, setReviewInputError] = useState("");
   const requestAbort = useRef(null);
@@ -241,6 +253,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [expandedSources, setExpandedSources] = useState(() => new Set());
   const [expandedChecks, setExpandedChecks] = useState(() => new Set());
   const reviewInputsRef = useRef(null);
+
+  useEffect(() => () => translationAbort.current?.abort(), []);
   const missingReviewFields = reviewInputError ? {
     dataText: !reviewPreview?.dataText?.trim(),
     noticeText: !reviewPreview?.noticeText?.trim(),
@@ -270,6 +284,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           local: result?.local?.configured === true,
           frontier: result?.frontier?.configured === true,
           model: String(result?.local?.model || result?.frontier?.model || ""),
+          translation: result?.translation?.configured === true,
         });
       } catch {
         if (!cancelled) setCapability({ checked: true, local: false, frontier: false, model: "" });
@@ -294,6 +309,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setActiveDialog("prescription");
   };
   const closeCoverage = () => {
+    cancelTranslation();
+    setTranslation(null);
     if (standalone) onStandaloneClose?.();
     requestVersion.current += 1;
     requestAbort.current?.abort();
@@ -351,14 +368,18 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setExpandedChecks(new Set());
     // Opening coverage prepares editable inputs; only the explicit send action runs a review.
     setExpandedField("");
-    const preview = !fresh && reviewPreview?.medicationId === medicationId ? { ...reviewPreview, base } : {
+    const preview = !fresh && sourcePreview?.medicationId === medicationId ? { ...sourcePreview, base } : {
       medicationId,
       name: medication.label,
       base,
+      policyId: REGISTERED_COVERAGE_POLICY,
+      noticeDrafts: {},
       dataText: medicationReviewPatientDataText(base),
       noticeText: medicationReviewNotice(medicationId),
       promptText: medicationReviewInstructions(reviewModel || capability.model),
     };
+    cancelTranslation();
+    setTranslation(null);
     setReviewPreview(preview);
     setReviewInputError("");
     setSettingsOpen(true);
@@ -367,6 +388,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const editPreview = (field) => (event) => {
     const value = event.target.value;
     setReviewInputError("");
+    setTranslation(null);
+    setTranslationError("");
     setReviewPreview((current) => (current ? { ...current, [field]: value } : current));
   };
 
@@ -384,6 +407,66 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setSettingsOpen(true);
   };
 
+  const selectCoveragePolicy = (policyId) => {
+    if (reviewBusyId || !sourcePreview || policyId === sourcePreview.policyId) return;
+    cancelTranslation();
+    setTranslation(null);
+    setReviewPreview(switchMedicationCoveragePolicy(sourcePreview, policyId));
+    setReview(null);
+    setExpandedField("");
+    setReviewInputError("");
+    setSettingsOpen(true);
+    reviewInputsRef.current?.closest(".rx-dialog__panel")?.scrollTo({ top: 0, behavior: "instant" });
+  };
+
+  const cancelTranslation = () => {
+    translationVersion.current += 1;
+    translationAbort.current?.abort();
+    setTranslationBusy(false);
+    setTranslationError("");
+  };
+
+  const translateCoverage = async () => {
+    if (!sourcePreview || translationBusy || reviewBusyId) return;
+    const policy = medicationCoveragePolicy(sourcePreview.medicationId, sourcePreview.policyId);
+    const source = coverageTranslationFields(sourcePreview, sourceReview, policy);
+    if (translation && COVERAGE_TRANSLATION_FIELDS.every(key => translation.source[key] === source[key])) {
+      setTranslation({ ...translation, show: true });
+      return;
+    }
+    if (![source.dataText, source.noticeText, source.promptText].every(value => value.trim())) {
+      setTranslationError("진료데이터, 보험 기준, 검토 지시문을 모두 입력한 뒤 번역해 주세요.");
+      return;
+    }
+    const version = ++translationVersion.current;
+    const controller = new AbortController();
+    translationAbort.current = controller;
+    setTranslationBusy(true);
+    setTranslationError("");
+    try {
+      const response = await fetch(`${MEDICATION_REVIEW_ENDPOINT}/translate`, {
+        method: "POST", signal: controller.signal,
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId, fields: source }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || "Haiku 번역에 연결하지 못했습니다.");
+      if (version !== translationVersion.current) return;
+      if (!COVERAGE_TRANSLATION_FIELDS.every(key => typeof result.fields?.[key] === "string")
+        || ![result.fields.dataText, result.fields.noticeText, result.fields.promptText].every(value => value.trim())) throw new Error("번역 결과가 완전하지 않습니다.");
+      const criteria = JSON.parse(result.fields.criteriaText);
+      if (!Array.isArray(criteria) || criteria.some(value => typeof value !== "string")) throw new Error("번역된 보험 기준 형식이 올바르지 않습니다.");
+      const language = coverageTranslationLanguage(policy.countryCode);
+      setTranslation({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId,
+        source, fields: result.fields, model: result.model, language, show: true });
+    } catch (error) {
+      if (version !== translationVersion.current) return;
+      setTranslationError(`${error instanceof Error ? error.message : "번역에 실패했습니다."} 원문은 유지했습니다.`);
+    } finally {
+      if (version === translationVersion.current) setTranslationBusy(false);
+    }
+  };
+
   const sendReview = async (input = reviewPreview) => {
     if (!input || reviewBusyId) return;
     if (![input.dataText, input.noticeText, input.promptText].every((value) => value?.trim())) {
@@ -398,6 +481,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setReviewInputError("");
     const version = ++requestVersion.current;
     const { medicationId, name, base, dataText, noticeText, promptText } = input;
+    const foreign = isForeignCoveragePolicy(input);
     requestAbort.current?.abort();
     const controller = new AbortController();
     requestAbort.current = controller;
@@ -412,10 +496,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         if (!statusResponse.ok) throw new Error("모델 연결 상태를 확인하지 못했습니다.");
         const status = await statusResponse.json();
         activeProvider = status.local?.configured ? "local" : status.frontier?.configured ? "frontier" : "";
-        setCapability({checked:true,local:activeProvider === "local",frontier:activeProvider === "frontier",model:status.local?.model || status.frontier?.model || ""});
+        setCapability({checked:true,local:activeProvider === "local",frontier:activeProvider === "frontier",model:status.local?.model || status.frontier?.model || "",translation:status.translation?.configured === true});
       }
       if (!activeProvider) {
-        setReview({ medicationId, ...base, note: "모델 미설정 · 규칙 기반 결과입니다." });
+        if (foreign) throw new Error("해외 보험 기준 검토에는 AI 모델 연결이 필요합니다.");
+        setReview(applyCoveragePolicyReview(input, { generatedBy: "rule", note: "모델 미설정 · 규칙 기반 결과입니다." }));
         return;
       }
       const overrides = { patientData: dataText, notice: noticeText, instructions: promptText };
@@ -434,8 +519,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       }
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
       if (version !== requestVersion.current) return;
-      const merged = applyMedicationReviewDraft(base, result.draft ?? {});
-      setReview({ medicationId, ...merged });
+      const merged = applyCoveragePolicyReview(input, result.draft ?? {});
+      setReview(merged);
       if (merged.generatedBy === "rule") {
         setStatus(merged.note || "모델 검토가 실패해 규칙 기반 사전점검을 표시합니다.", "error");
       } else {
@@ -443,8 +528,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       }
     } catch (error) {
       if (version !== requestVersion.current) return;
-      setReview({ medicationId, ...base, note: "AI 연결 실패 · 규칙 기반 결과입니다." });
-      setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
+      if (foreign) {
+        setReview(null);
+        setSettingsOpen(true);
+        setReviewInputError(`${error instanceof Error ? error.message : "해외 기준 검토 연결 실패"} 입력을 확인하고 다시 시도해 주세요.`);
+      } else {
+        setReview(applyCoveragePolicyReview(input, { generatedBy: "rule", note: "AI 연결 실패 · 규칙 기반 결과입니다." }));
+        setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
+      }
     } finally {
       if (version === requestVersion.current) {
         setPendingReview(null);
@@ -475,7 +566,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         durationDays: form.durationDays,
         quantity: form.quantity,
         instructions: prescriptionEntryInstructions(form),
-        claimReviewVerdict: review && review.medicationId === medicationId ? review.verdict : undefined,
+        claimReviewVerdict: review && review.medicationId === medicationId && review.coveragePolicy?.countryCode === "KR" ? review.verdict : undefined,
       };
       if (prescriptionStandalone) await onPrescriptionSubmit(prescription);
       else await applyMutation(withDraftPreserved((current) => addEncounterPrescription(current, patient.id, encounter.id, prescription)), "처방 초안을 추가했습니다.");
@@ -510,6 +601,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     const nextModel = event.target.value;
     const previousInstructions = medicationReviewInstructions(reviewModel || capability.model);
     setReviewModel(nextModel);
+    setTranslation(null);
     setReviewPreview((current) => current && current.promptText === previousInstructions
       ? { ...current, promptText: medicationReviewInstructions(nextModel || capability.model) }
       : current);
@@ -559,6 +651,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   };
 
   const pairCounter = { next: 0 };
+  const selectedPolicy = coverageMedication ? medicationCoveragePolicy(coverageMedication.id, reviewPreview?.policyId) : null;
+  const foreignPolicy = selectedPolicy?.countryCode !== "KR" && Boolean(selectedPolicy);
+  const noticeLabel = foreignPolicy ? "보험 기준" : "고시정보";
+  const policyEdited = sourcePreview && selectedPolicy
+    ? sourcePreview.noticeText !== medicationCoveragePolicyNotice(coverageMedication.id, selectedPolicy.id) : false;
+  const translationLanguage = coverageTranslationLanguage(selectedPolicy?.countryCode);
+  const cachedTranslation = Boolean(translation && sourcePreview && selectedPolicy
+    && COVERAGE_TRANSLATION_FIELDS.every(key => translation.source[key] === coverageTranslationFields(sourcePreview, sourceReview, selectedPolicy)[key]));
 
   return (
     <>
@@ -614,14 +714,14 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
           footer={<>
             {settingsOpen && reviewPreview ? <div className="review-preview__actions">
-              <span className="coverage-input-note">검토 시작을 누를 때만 입력 내용을 전송합니다.</span>
-              <Button variant="primary" type="button" id="reviewPreviewSend" disabled={Boolean(reviewBusyId) || !capability.checked} onClick={() => sendReview()}>
-                {!provider ? "규칙 기반 검토 시작" : `${requestedModelLabel || "선택한 모델"}로 검토 시작`}
+              <span className="coverage-input-note">{foreignPolicy && !provider ? "해외 기준 검토는 AI 모델 연결 후 사용할 수 있습니다." : "검토 시작을 누를 때만 입력 내용을 전송합니다."}</span>
+              <Button variant="primary" type="button" id="reviewPreviewSend" disabled={Boolean(reviewBusyId) || translationBusy || !capability.checked || (foreignPolicy && !provider)} onClick={() => sendReview()}>
+                {!provider ? foreignPolicy ? "AI 모델 연결 필요" : "규칙 기반 검토 시작" : `${requestedModelLabel || "선택한 모델"}로 검토 시작`}
               </Button>
             </div> : null}
-            <p className="coverage-footer">입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다.</p>
+            <p className="coverage-footer">{foreignPolicy ? "선택한 보험자·제도의 비교용 검토입니다. 실제 보장 여부는 가입 조건과 최신 기준·심사에 따라 달라질 수 있습니다." : "입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다."}</p>
           </>}
-          headerExtra={review && !settingsOpen ? (
+          headerExtra={<>{review && !settingsOpen ? (
           <HoverPopover hostClassName="rx-process" trigger="검토 과정 확인하기" triggerClassName="rx-process__summary" triggerId="medicationReviewProcessSummary"
             panelId="medicationReviewPipeline" panelClassName="rx-process__body"
             panel={(
@@ -650,18 +750,24 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                 ) : null}
               </>
             )} />
-        ) : null}>
+        ) : null}{selectedPolicy ? <CoveragePolicyPicker key={coverageMedication.id} medicationId={coverageMedication.id} selectedPolicy={selectedPolicy} disabled={Boolean(reviewBusyId)} onSelect={selectCoveragePolicy} /> : null}</>}>
           <div className="coverage-intro">
-            <p><b>{settingsOpen ? "고시와 입력 내용을 확인한 뒤 검토를 시작하세요." : pendingReview ? "AI가 건강보험 기준과 환자 정보를 검토하고 있습니다." : !review ? "고시와 입력 내용을 확인한 뒤 검토를 시작하세요." : review.generatedBy === "rule" ? "등록된 기준으로 환자 정보를 점검했습니다." : "AI가 건강보험 기준에 따라 환자의 기준부합 여부를 검토했습니다."}</b><small>본 내용은 참고용이며, 최종 판단은 반드시 의료진이 확인하시기 바랍니다.</small></p><div className="coverage-tools">
+            <p><b>{settingsOpen ? "기준과 입력 내용을 확인한 뒤 검토를 시작하세요." : pendingReview ? "AI가 선택한 보험 기준과 환자 정보를 검토하고 있습니다." : !review ? "기준과 입력 내용을 확인한 뒤 검토를 시작하세요." : review.generatedBy === "rule" ? "등록된 기준으로 환자 정보를 점검했습니다." : "AI가 선택한 보험 기준에 따라 환자의 기준부합 여부를 검토했습니다."}</b><small>본 내용은 참고용이며, 최종 판단은 반드시 의료진이 확인하시기 바랍니다.</small></p><div className="coverage-tools">
             {review && !settingsOpen ? <Button type="button" onClick={returnToReviewInputs}>입력 수정 후 다시 검토</Button> : null}
             </div>
           </div>
+          {selectedPolicy ? <CoveragePolicySource policy={!settingsOpen && review?.coveragePolicy ? review.coveragePolicy : { ...selectedPolicy, translation: translatedView.active ? reviewPreview.translation : undefined }} edited={!settingsOpen && review?.coveragePolicy ? review.coveragePolicy.edited : policyEdited}>
+            {translationLanguage ? <CoverageTranslationControls language={translationLanguage} configured={Boolean(capability.translation)}
+              busy={translationBusy} reviewBusy={Boolean(reviewBusyId)} translated={translatedView.active} cached={cachedTranslation} error={translationError}
+              onTranslate={translateCoverage} onOriginal={() => setTranslation(current => ({ ...current, show: false }))} onCancel={cancelTranslation} /> : null}
+          </CoveragePolicySource> : null}
+          {selectedPolicy ? <p className="visually-hidden" role="status">{selectedPolicy.country} {selectedPolicy.payer} 기준을 선택했습니다.</p> : null}
           {!settingsOpen && (review || pendingReview) ? <>
-          <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication}>
-          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="종합 삭감 위험">
+          <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} policy={review?.coveragePolicy || { ...selectedPolicy, noticeText: reviewPreview?.noticeText, criteria: reviewPreview?.translatedCriteria || selectedPolicy.criteria }}>
+          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label={foreignPolicy ? "선택 기준 검토" : "종합 삭감 위험"}>
             <div className="coverage-risk__text">
-            <h4><CoverageIcon kind="risk" />종합 삭감 위험</h4>
-            <strong>{review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
+            <h4><CoverageIcon kind="risk" />{foreignPolicy ? "선택 기준 검토" : "종합 삭감 위험"}</h4>
+            <strong>{foreignPolicy ? review.verdictLabel : review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
             <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
             </div>
             <ReviewMark verdict={review.verdict} />
@@ -820,7 +926,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             {reviewInputError ? <p id="coverageInputError" className="coverage-input-error" role="alert">{reviewInputError}</p> : null}
           <div className="review-preview" data-focus={expandedField || undefined}>
                 <label className="review-preview__model">검토 모델
-                  <select id="reviewPreviewModel" name="reviewModel" value={reviewModel} onChange={changeReviewModel} disabled={!capability.frontier}>
+                  <select id="reviewPreviewModel" name="reviewModel" value={reviewModel} onChange={changeReviewModel} disabled={!capability.frontier || translationBusy}>
                     <option value="">서버 기본 · {defaultModelLabel || "미설정"}</option>
                     {FRONTIER_MODEL_GROUPS.map((group) => (
                       <optgroup key={group} label={group}>
@@ -835,19 +941,19 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <section className="review-preview__section" data-expanded={expandedField === "dataText" || undefined}>
               <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewData">진료데이터</label></h4>{expandToggle("dataText", "진료데이터")}</header>
               <p className="review-preview__hint" id="reviewPreviewDataHint">검사·진단·처방 정보를 확인하거나 직접 입력하세요.</p>
-              <textarea className="review-preview__code" id="reviewPreviewData" name="patientData" autoComplete="off" aria-invalid={missingReviewFields.dataText || undefined} aria-describedby={`reviewPreviewDataHint${missingReviewFields.dataText ? " reviewPreviewDataError" : ""}`} rows={12} wrap="off" value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
+              <textarea className="review-preview__code" id="reviewPreviewData" name="patientData" autoComplete="off" readOnly={translatedView.active || translationBusy} lang={translatedView.active ? translationLanguage?.code : undefined} aria-invalid={missingReviewFields.dataText || undefined} aria-describedby={`reviewPreviewDataHint${missingReviewFields.dataText ? " reviewPreviewDataError" : ""}`} rows={12} wrap="off" value={reviewPreview.dataText} onChange={editPreview("dataText")} spellCheck={false} />
               {missingReviewFields.dataText ? <p className="coverage-field-error" id="reviewPreviewDataError">진료데이터를 입력해 주세요.</p> : null}
             </section>
             <section className="review-preview__section" data-expanded={expandedField === "noticeText" || undefined}>
-              <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewNoticeText">고시정보</label></h4>{expandToggle("noticeText", "고시정보")}</header>
-              <p className="review-preview__hint" id="reviewPreviewNoticeHint">적용할 급여기준 원문을 확인하거나 붙여넣으세요.</p>
-              <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" name="notice" autoComplete="off" aria-invalid={missingReviewFields.noticeText || undefined} aria-describedby={`reviewPreviewNoticeHint${missingReviewFields.noticeText ? " reviewPreviewNoticeError" : ""}`} rows={12} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
+              <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewNoticeText">{noticeLabel}</label></h4>{expandToggle("noticeText", noticeLabel)}</header>
+              <p className="review-preview__hint" id="reviewPreviewNoticeHint">{translatedView.active ? "선택한 보험 기준의 영어 번역본입니다. 원문 보기를 눌러 원문과 비교할 수 있습니다." : foreignPolicy ? "선택한 보험 기준의 한국어 요약입니다. 출처 원문을 확인하고 필요한 내용을 보완하세요." : "적용할 급여기준 원문을 확인하거나 붙여넣으세요."}</p>
+              <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" name="notice" autoComplete="off" readOnly={translatedView.active || translationBusy} lang={translatedView.active ? translationLanguage?.code : undefined} aria-invalid={missingReviewFields.noticeText || undefined} aria-describedby={`reviewPreviewNoticeHint${missingReviewFields.noticeText ? " reviewPreviewNoticeError" : ""}`} rows={12} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
               {missingReviewFields.noticeText ? <p className="coverage-field-error" id="reviewPreviewNoticeError">고시정보를 입력해 주세요.</p> : null}
             </section>
             <section className="review-preview__section review-preview__section--instructions" data-expanded={expandedField === "promptText" || undefined}>
               <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewPrompt">검토 지시문 (프롬프트)</label></h4>{expandToggle("promptText", "검토 지시문")}</header>
               <p className="review-preview__hint" id="reviewPreviewPromptHint">검토 방법과 답변 형식을 직접 수정할 수 있습니다.</p>
-              <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" name="instructions" autoComplete="off" aria-invalid={missingReviewFields.promptText || undefined} aria-describedby={`reviewPreviewPromptHint${missingReviewFields.promptText ? " reviewPreviewPromptError" : ""}`} rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
+              <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" name="instructions" autoComplete="off" readOnly={translatedView.active || translationBusy} lang={translatedView.active ? translationLanguage?.code : undefined} aria-invalid={missingReviewFields.promptText || undefined} aria-describedby={`reviewPreviewPromptHint${missingReviewFields.promptText ? " reviewPreviewPromptError" : ""}`} rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
               {missingReviewFields.promptText ? <p className="coverage-field-error" id="reviewPreviewPromptError">검토 지시문을 입력해 주세요.</p> : null}
             </section>
           </div>

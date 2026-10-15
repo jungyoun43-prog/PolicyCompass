@@ -607,7 +607,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <Button type="button" onClick={() => runReview(coverageMedication.id)} disabled={Boolean(reviewBusyId) || !capability.checked}>
               {reviewBusyId ? "검토 중…" : "다시 확인하기"}
             </Button>
-            <Button type="button" aria-label="검토 설정" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>⚙</Button>
+            <Button type="button" aria-label="검토 설정" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>검토 설정</Button>
             </div>
           </div>
           <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication}>

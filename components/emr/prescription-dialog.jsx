@@ -494,7 +494,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         body: JSON.stringify({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId, fields: source }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.message || "Haiku 번역에 연결하지 못했습니다.");
+      if (!response.ok || result.code) throw new Error(result.message || "Haiku 번역에 연결하지 못했습니다.");
       if (version !== translationVersion.current) return;
       if (!COVERAGE_TRANSLATION_FIELDS.every(key => typeof result.fields?.[key] === "string")
         || ![result.fields.dataText, result.fields.noticeText, result.fields.promptText].every(value => value.trim())) throw new Error("번역 결과가 완전하지 않습니다.");

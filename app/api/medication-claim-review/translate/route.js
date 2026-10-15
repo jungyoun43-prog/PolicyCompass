@@ -2,6 +2,7 @@ export const maxDuration = 120;
 
 import { medicationCoverageTranslationStatus, translateMedicationCoverage, validateCoverageTranslationPayload } from "../../../../scripts/medication-coverage-translation.mjs";
 import { ApiError, assertSameOrigin, assertFrontierRequestAllowed, assertFrontierDailyBudget, readJson, modelResponse, withApiErrors } from "../../../../lib/api.js";
+import { keepAliveJson } from "../../../../lib/keep-alive-json.js";
 
 export const POST = withApiErrors(async request => {
   assertSameOrigin(request);
@@ -13,6 +14,10 @@ export const POST = withApiErrors(async request => {
   }
   assertFrontierRequestAllowed(request);
   await assertFrontierDailyBudget();
-  return modelResponse(() => translateMedicationCoverage(payload), { invalidCode: "INVALID_COVERAGE_TRANSLATION", failureCode: "COVERAGE_TRANSLATION_FAILED",
-    failureMessage: "Haiku 번역을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+  // Preflight errors keep their HTTP status. Once the JSON stream starts,
+  // delayed model errors retain the API's code/message body for the client.
+  return keepAliveJson(() => withApiErrors(() => modelResponse(() => translateMedicationCoverage(payload), {
+    invalidCode: "INVALID_COVERAGE_TRANSLATION", failureCode: "COVERAGE_TRANSLATION_FAILED",
+    failureMessage: "Haiku 번역을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  }))(request), { signal: request.signal });
 });

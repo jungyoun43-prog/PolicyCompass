@@ -32,7 +32,12 @@ test("Jev uses Decisions API and OpenRouter key with edited inputs and three def
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://openrouter.ai/api/alpha/decisions");
   assert.equal(calls[0].headers.authorization, "Bearer sk-or-test");
-  assert.equal(calls[0].body.state, "사용자 판정 원칙\n수정 고시\n수정 환자자료");
+  const data = JSON.parse(calls[0].body.state);
+  assert.equal(data.noticeText, overrides.notice);
+  assert.equal(data.patientDataText, overrides.patientData);
+  assert.equal(data.reviewContext.reviewDate, asOf);
+  assert.match(calls[0].body.questions.verdict.instructions, /사용자 판정 원칙/);
+  assert.doesNotMatch(calls[0].body.questions.verdict.instructions, /수정 고시|수정 환자자료/);
   assert.deepEqual(Object.keys(calls[0].body.questions.verdict.criteria), ["circle", "triangle", "cross"]);
   assert.equal(calls[0].body.questions.verdict.type, "choice");
   assert.equal(calls[0].body.model, JEV_REVIEW_MODEL);
@@ -44,14 +49,29 @@ test("Jev uses Decisions API and OpenRouter key with edited inputs and three def
 
 test("Jev default prompt requests no report and does not disclose patient name or rule verdict", async () => {
   let state;
+  let instructions;
   await runMedicationClaimReview(payload, { environment, fetchImpl: async (_url, options) => {
     state = JSON.parse(options.body).state;
+    instructions = JSON.parse(options.body).questions.verdict.instructions;
     return stub()();
   } });
   assert.match(state, /고시 제2026-92호/);
-  assert.match(state, /설명문은 작성하지 않습니다/);
+  assert.match(instructions, /설명문은 작성하지 않습니다/);
+  assert.doesNotMatch(state, /### 판정 원칙/);
   assert.doesNotMatch(state, /김비타|### 출력 형식|ruleVerdict/);
   assert.match(medicationReviewInstructions(), /### 출력 형식/);
+});
+
+test("Jev 입력 한도 초과도 규칙 판정으로 바꾸지 않는다", async () => {
+  let calls = 0;
+  await assert.rejects(runMedicationClaimReview(payload, {
+    environment,
+    fetchImpl: async () => {
+      calls += 1;
+      return { ok: false, status: 413, json: async () => ({ error: { message: "request too large" } }) };
+    },
+  }), { name: "ModelContextError" });
+  assert.equal(calls, 1);
 });
 
 test("all three Jev choices survive rule merging and render matching probabilities without explanation", async () => {
@@ -99,7 +119,7 @@ test("malformed Jev answers retry then fall back without invented probabilities"
 
 test("Jev HTTP failure and timeout use existing rule fallback", async () => {
   for (const fetchImpl of [
-    async () => ({ ok: false, status: 429 }),
+    async () => ({ ok: false, status: 429, json: async () => { throw new SyntaxError("non-JSON error body"); } }),
     async () => { throw new Error("timeout"); },
   ]) {
     const result = await runMedicationClaimReview(payload, { environment, fetchImpl });

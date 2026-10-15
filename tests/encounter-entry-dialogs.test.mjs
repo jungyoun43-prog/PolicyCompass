@@ -21,7 +21,7 @@ import {
   medicationReviewInstructions,
   medicationReviewNotice,
   medicationReviewPatientDataText,
-  medicationReviewPrompt,
+  medicationReviewRequest,
 } from "../src/medication-review-prompt.js";
 import { createDemoEmrState } from "../src/emr-demo-state.js";
 import { runMedicationClaimReview } from "../scripts/graphs/medication-claim-review-graph.mjs";
@@ -213,7 +213,7 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
     instructions: "수정된 템플릿입니다.\n고시: {NOTICE}\n데이터: {PATIENT_DATA}",
   };
 
-  // When — 미리보기 세 섹션의 원본과, 수정본을 오버라이드로 치환한 최종 프롬프트.
+  // When — the three preview fields remain distinct in the model request.
   const dataText = medicationReviewPatientDataText(base);
   const noticeText = medicationReviewNotice(medication.id);
   const promptText = medicationReviewInstructions();
@@ -230,15 +230,17 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   assert.ok(dataText.trim().length > 0, "진료데이터");
   assert.equal(dataText.includes("김비타"), false);
   assert.match(noticeText, /고시 제2026-92호/);
-  assert.match(promptText, /\{NOTICE\}[\s\S]*\{PATIENT_DATA\}/);
-  assert.equal(medicationReviewPrompt(base), promptText.replace("{NOTICE}", noticeText).replace("{PATIENT_DATA}", dataText));
-  // 수정본은 오버라이드로 그대로 치환되고, 서버 그래프가 모델에 보내는 메시지도 같은 치환 함수의 결과다.
-  assert.equal(
-    medicationReviewPrompt(base, overrides),
-    "수정된 템플릿입니다.\n고시: 수정된 고시 본문입니다.\n데이터: 수정된 환자 의료데이터입니다.",
-  );
+  assert.match(promptText, /### 판정 원칙/);
+  const initial = medicationReviewRequest(base);
+  assert.equal(JSON.parse(initial.input).noticeText, noticeText);
+  assert.equal(JSON.parse(initial.input).patientDataText, dataText);
+  const edited = medicationReviewRequest(base, overrides);
+  assert.ok(edited.instructions.endsWith(overrides.instructions));
+  assert.equal(JSON.parse(edited.input).noticeText, overrides.notice);
+  assert.equal(JSON.parse(edited.input).patientDataText, overrides.patientData);
   assert.equal(sent.length, 1);
-  assert.equal(sent[0].messages[0].content, medicationReviewPrompt(base, overrides));
+  assert.equal(sent[0].messages[0].content, edited.instructions);
+  assert.equal(sent[0].messages[1].content, edited.input);
   // source-check: 미리보기 팝업은 Radix Dialog.Portal 안의 클라이언트 상태라 서버 렌더로 닿을 수 없다.
   // Opening coverage prepares the inputs; sending requires a separate user action.
   assert.match(rx, /setReviewPreview\(preview\)/);

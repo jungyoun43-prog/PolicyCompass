@@ -16,7 +16,7 @@ import {
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
-  const payload = await readJson(request);
+  const payload = await readJson(request, { maxLength: null });
   const provider = resolveConfiguredProvider(payload, medicationClaimReviewStatus, {
     unavailableMessage: "AI 검토가 설정되지 않아 규칙 기반 사전점검을 사용합니다.",
   });

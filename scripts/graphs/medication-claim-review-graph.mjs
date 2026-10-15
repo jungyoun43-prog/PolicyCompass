@@ -1,7 +1,8 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
-import { medicationReviewPrompt } from "../../src/medication-review-prompt.js";
+import { medicationReviewRequest } from "../../src/medication-review-prompt.js";
+import { assertModelContextAccepted, ModelContextError } from "../../lib/model-errors.js";
 import { isJevReviewModel } from "../../src/medication-review-decision.js";
 import { jevMedicationDraft } from "../medication-jev-review.mjs";
 
@@ -68,23 +69,26 @@ function sanitizeCheck(input) {
 }
 
 const RECORD_TYPES = new Set(["condition", "observation", "medication", "allergy", "procedure", "symptom"]);
-const MAX_RECORDS = 60;
+
+function sourceText(value) {
+  return typeof value === "string" ? value : "";
+}
 
 function sanitizeRecord(input) {
   const type = cleanText(input?.type, 40);
-  const label = cleanText(input?.label, 240);
+  const label = sourceText(input?.label);
   const date = cleanText(input?.date, 10);
   if (!RECORD_TYPES.has(type) || !label || !date) return null;
-  const record = { type, code: cleanText(input?.code, 120), label, date, status: cleanText(input?.status, 80) };
+  const record = { type, code: sourceText(input?.code), label, date, status: sourceText(input?.status) };
   if (typeof input?.value === "number" && Number.isFinite(input.value)) record.value = input.value;
-  else if (cleanText(input?.value, 200)) record.value = cleanText(input.value, 200);
-  if (cleanText(input?.unit, 80)) record.unit = cleanText(input.unit, 80);
+  else if (sourceText(input?.value)) record.value = input.value;
+  if (sourceText(input?.unit)) record.unit = input.unit;
   if (input?.prescription && typeof input.prescription === "object") {
     record.prescription = {
-      dose: cleanText(input.prescription.dose, 40),
-      doseUnit: cleanText(input.prescription.doseUnit, 30),
-      route: cleanText(input.prescription.route, 60),
-      frequency: cleanText(input.prescription.frequency, 80),
+      dose: sourceText(input.prescription.dose),
+      doseUnit: sourceText(input.prescription.doseUnit),
+      route: sourceText(input.prescription.route),
+      frequency: sourceText(input.prescription.frequency),
       durationDays: boundedInteger(input.prescription.durationDays, 365),
     };
   }
@@ -109,7 +113,7 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
   if (!checks.length) throw new TypeError("대조된 기준 항목이 없습니다.");
   const verdict = cleanText(source.verdict, 20);
   if (!Object.hasOwn(VERDICT_RANK, verdict)) throw new TypeError("규칙 판정이 올바르지 않습니다.");
-  const label = cleanText(source.medication?.label, 160);
+  const label = sourceText(source.medication?.label);
   if (!label) throw new TypeError("검토할 약품명이 필요합니다.");
   return {
     schema: COMPARISON_SCHEMA,
@@ -118,29 +122,31 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
     medication: {
       id: cleanText(source.medication?.id, 80),
       code: cleanText(source.medication?.code, 80),
+      system: cleanText(source.medication?.system, 120),
       label,
-      ingredient: cleanText(source.medication?.ingredient, 160),
-      classLabel: cleanText(source.medication?.classLabel, 120),
+      ingredient: sourceText(source.medication?.ingredient),
+      classLabel: sourceText(source.medication?.classLabel),
     },
     prescription: {
-      dose: cleanText(source.prescription?.dose, 40),
-      doseUnit: cleanText(source.prescription?.doseUnit, 30),
-      route: cleanText(source.prescription?.route, 60),
-      frequency: cleanText(source.prescription?.frequency, 80),
+      dose: sourceText(source.prescription?.dose),
+      doseUnit: sourceText(source.prescription?.doseUnit),
+      route: sourceText(source.prescription?.route),
+      frequency: sourceText(source.prescription?.frequency),
       durationDays: boundedInteger(source.prescription?.durationDays, 365),
+      quantity: sourceText(source.prescription?.quantity),
     },
     patient: {
       ageYears: Number.isInteger(source.patient?.ageYears) ? source.patient.ageYears : null,
       sex: cleanText(source.patient?.sex, 20),
       insuranceType: cleanText(source.patient?.insuranceType, 40),
       conditionCount: boundedInteger(source.patient?.conditionCount, 10_000),
+      eventCount: boundedInteger(source.patient?.eventCount, Number.MAX_SAFE_INTEGER),
     },
     records: (Array.isArray(source.records) ? source.records : [])
-      .slice(0, MAX_RECORDS)
       .map(sanitizeRecord)
       .filter(Boolean),
     ...(typeof source.dataset === "string" && source.dataset.trim()
-      ? { dataset: markdownText(source.dataset, 100_000) }
+      ? { dataset: source.dataset }
       : {}),
     checks,
     verdict,
@@ -151,12 +157,13 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
 function sanitizeOverrides(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const overrides = {};
-  const instructionsText = markdownText(input.instructions, 8_000);
-  const noticeText = markdownText(input.notice, 8_000);
-  const patientDataText = markdownText(input.patientData, 40_000);
-  if (instructionsText) overrides.instructions = instructionsText;
-  if (noticeText) overrides.notice = noticeText;
-  if (patientDataText) overrides.patientData = patientDataText;
+  for (const key of ["instructions", "notice", "patientData"]) {
+    if (!Object.hasOwn(input, key)) continue;
+    if (typeof input[key] !== "string" || !input[key].trim()) {
+      throw new TypeError("검토 지시문, 고시정보, 진료데이터는 비어 있지 않은 문자열이어야 합니다.");
+    }
+    overrides[key] = input[key];
+  }
   const model = cleanText(input.model, 120);
   if (model && isAllowedFrontierModel(model)) overrides.model = model;
   return overrides;
@@ -168,14 +175,13 @@ const VERDICT_SYMBOLS = {
   "\u2715": "cross", "\u2717": "cross", "\u00d7": "cross", "X": "cross", "x": "cross",
 };
 
-function markdownText(value, maximum = 8_000) {
+function markdownText(value) {
   if (typeof value !== "string") return "";
   return value
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
     .replace(/\r\n?/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, maximum);
+    .trim();
 }
 
 function validateDraft(raw, _comparison) {
@@ -185,17 +191,16 @@ function validateDraft(raw, _comparison) {
   const symbol = heading ? (heading[1] || heading[2]) : "";
   const verdict = VERDICT_SYMBOLS[symbol];
   if (!verdict) throw new Error("출력 형식의 판정 헤더(## [\u25cb/\u25b3/\u2715])가 없습니다.");
-  safeGeneratedText(markdown.slice(0, 500), 500);
+  safeGeneratedText(markdown, markdown.length);
   return { verdict, markdown };
 }
 
 async function localDraft(comparison, options, feedback) {
+  const { instructions, input } = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
   const messages = [
-    { role: "user", content: medicationReviewPrompt(comparison, options.overrides ?? {}) },
+    { role: "system", content: instructions },
+    { role: "user", content: input },
   ];
-  if (feedback) {
-    messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 지정된 출력 형식을 지켜 다시 작성하세요.` });
-  }
   const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -204,13 +209,24 @@ async function localDraft(comparison, options, feedback) {
       messages,
       stream: false,
       think: false,
+      truncate: false,
+      shift: false,
       options: { temperature: 0 },
     }),
     redirect: "error",
     signal: AbortSignal.timeout(options.timeoutMs),
   });
-  if (!response.ok) throw new Error(`약제 검토 로컬 모델 요청 실패 (${response.status})`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    assertModelContextAccepted(response.status, error);
+    throw new Error(`약제 검토 로컬 모델 요청 실패 (${response.status})`);
+  }
   const body = await response.json();
+  if (body?.error) {
+    assertModelContextAccepted(response.status, body);
+    throw new Error("로컬 모델이 검토 응답을 완료하지 못했습니다.");
+  }
+  if (body?.done_reason === "length") throw new Error("모델 응답이 출력 한도에 도달해 완료되지 않았습니다.");
   return {
     text: typeof body?.message?.content === "string" ? body.message.content : "",
     model: cleanText(body?.model, 160) || options.model,
@@ -219,13 +235,14 @@ async function localDraft(comparison, options, feedback) {
 }
 
 async function frontierDraft(comparison, options, feedback) {
-  const base = medicationReviewPrompt(comparison, options.overrides ?? {});
-  const input = feedback ? `${base}\n\n[재시도 안내] ${feedback}` : base;
+  const { instructions, input } = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
-    instructions: "",
+    instructions,
     input,
+    preserveInput: true,
+    requireCompleteOutput: true,
     maxOutputTokens: 2_600,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
@@ -255,8 +272,7 @@ function medicationClaimReviewGraph() {
       }
       let feedback = "";
       let rawSample = "";
-      // 서버리스 함수 한도(60초) 안에서만 재시도한다 — 한도를 넘겨 죽으면
-      // 실패 사유조차 내려보낼 수 없다.
+      // Leave time for a structured error response within the route's 120s budget.
       const startedAt = Date.now();
       const budgetMs = options.budgetMs ?? 110_000;
       for (let attempt = 1; attempt <= 2; attempt += 1) {
@@ -273,9 +289,10 @@ function medicationClaimReviewGraph() {
             : await localDraft(state.comparison, attemptOptions, feedback);
           return { draft: { ...validateDraft(raw.text, state.comparison), model: raw.model, generatedBy: raw.generatedBy } };
         } catch (error) {
+          if (error instanceof ModelContextError) throw error;
           feedback = cleanText(error?.message, 300);
           // 검증에 걸린 시도의 모델 원문 앞부분을 보존해 실패 사유와 함께 보여 준다.
-          if (raw?.text) rawSample = markdownText(raw.text, 200).replace(/\n+/g, " ");
+          if (raw?.text) rawSample = markdownText(raw.text).slice(0, 200).replace(/\n+/g, " ");
         }
       }
       return {

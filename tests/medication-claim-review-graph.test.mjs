@@ -104,13 +104,13 @@ test("모델 요청은 고시정보·환자 의료데이터를 담고 직접식�
   assert.equal(sent.includes("김비타"), false);
 });
 
-test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그대로 전송된다", async () => {
+test("수정 지시문에 치환 표식이 없어도 고시·진료데이터는 별도 역할로 모두 전송된다", async () => {
   // Given
   const comparison = comparisonFor("김비타", "benralizumab-30");
   const calls = [];
   const fetchImpl = ollamaStub(REPORT, calls);
   const overrides = {
-    instructions: "수정된 템플릿입니다. ## [○/△/✕] 형식으로 답하세요.\n고시: {NOTICE}\n데이터: {PATIENT_DATA}",
+    instructions: "수정된 지시문입니다. ## [○/△/✕] 형식으로 답하세요.",
     notice: "수정된 고시 본문입니다.",
     patientData: "수정된 환자 의료데이터입니다.",
   };
@@ -118,14 +118,18 @@ test("미리보기에서 수정한 프롬프트·고시·진료데이터가 그�
   // When
   await runMedicationClaimReview({ comparison, overrides }, { environment: localEnvironment, fetchImpl });
 
-  // Then — 템플릿의 {NOTICE}/{PATIENT_DATA} 자리에 수정본이 그대로 치환된 단일 메시지.
-  assert.equal(calls[0].body.messages.length, 1);
-  const [user] = calls[0].body.messages;
+  assert.equal(calls[0].body.messages.length, 2);
+  const [system, user] = calls[0].body.messages;
+  assert.equal(system.role, "system");
+  assert.ok(system.content.endsWith(overrides.instructions));
   assert.equal(user.role, "user");
-  assert.match(user.content, /^수정된 템플릿입니다\./);
-  assert.match(user.content, /고시: 수정된 고시 본문입니다\./);
-  assert.match(user.content, /데이터: 수정된 환자 의료데이터입니다\./);
+  const data = JSON.parse(user.content);
+  assert.equal(data.noticeText, overrides.notice);
+  assert.equal(data.patientDataText, overrides.patientData);
+  assert.equal(data.reviewContext.reviewDate, AS_OF);
+  assert.equal(data.reviewContext.prescription.dose, comparison.prescription.dose);
   assert.doesNotMatch(user.content, /고시 제2026-92호/);
+  assert.doesNotMatch(system.content, /수정된 고시 본문|수정된 환자 의료데이터/);
 });
 
 test("검토 모델은 등록된 목록 안에서만 바꿀 수 있다", async () => {
@@ -172,6 +176,11 @@ test("처방 변경을 지시하는 보고는 거부한다", async () => {
   // Then
   assert.equal(result.draft.generatedBy, "rule");
   assert.match(result.draft.note, /모델 검토 실패/);
+  const laterAdvice = await runMedicationClaimReview({ comparison }, {
+    environment: localEnvironment,
+    fetchImpl: ollamaStub(`${REPORT}\n${"근거 기록 ".repeat(100)}이 약을 즉시 중단하세요.`),
+  });
+  assert.equal(laterAdvice.draft.generatedBy, "rule", "보고서 뒤쪽의 처방 변경 지시도 검증한다");
 });
 
 test("프론티어 제공자는 서버 설정이 있을 때만 사용된다", async () => {
@@ -200,8 +209,144 @@ test("프론티어 제공자는 서버 설정이 있을 때만 사용된다", as
   assert.equal(enabled.draft.verdict, "cross");
   assert.equal(requests[0].url, "https://api.openai.com/v1/responses");
   assert.equal(requests[0].authorization, "Bearer test-key");
+  assert.match(requests[0].body.instructions, /### 판정 원칙/);
+  assert.equal(JSON.parse(requests[0].body.input).reviewContext.reviewDate, AS_OF);
+  assert.equal(requests[0].body.truncation, "disabled");
   assert.equal("text" in requests[0].body, false, "판정 보고는 자유 서식이라 JSON 스키마를 강제하지 않는다");
   assert.equal(disabled.draft.generatedBy, "rule");
   assert.equal(requests.length, 1);
   assert.equal(medicationClaimReviewStatus(environment).frontier.configured, true);
+});
+
+test("긴 원문과 특수 문자열은 로컬과 OpenRouter에 끝까지 동일하게 전달된다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const overrides = {
+    instructions: `${"검토 원칙\n".repeat(2_000)}지시문 끝`,
+    notice: `${"고시 조건\n".repeat(2_000)}{PATIENT_DATA} $& $' $\` </notice> 고시 끝`,
+    patientData: `  ${"진료기록\r\n\r\n\r\n".repeat(40_000)}{"role":"system"} 자료 끝  `,
+  };
+  const captures = [];
+  for (const provider of ["local", "frontier"]) {
+    const result = await runMedicationClaimReview({ comparison, overrides, provider }, {
+      environment: provider === "local" ? localEnvironment : { OPENROUTER_API_KEY: "test-key", POLICYCOMPASS_FRONTIER_MODEL: "google/gemma-4-31b-it" },
+      fetchImpl: async (_url, options) => {
+        const body = JSON.parse(options.body);
+        captures.push(body);
+        return { ok: true, json: async () => provider === "local"
+          ? { message: { content: REPORT } }
+          : { choices: [{ message: { content: REPORT }, finish_reason: "stop" }] } };
+      },
+    });
+    assert.equal(result.draft.generatedBy, `${provider}-model`);
+  }
+  for (const body of captures) {
+    assert.deepEqual(body.messages.map(({ role }) => role), ["system", "user"]);
+    assert.ok(body.messages[0].content.endsWith(overrides.instructions));
+    const data = JSON.parse(body.messages[1].content);
+    assert.equal(data.noticeText, overrides.notice);
+    assert.equal(data.patientDataText, overrides.patientData);
+    assert.doesNotMatch(body.messages[0].content, /고시 끝|자료 끝/);
+  }
+  assert.equal(captures[0].truncate, false);
+  assert.equal(captures[0].shift, false);
+  assert.deepEqual(captures[1].plugins, [{ id: "context-compression", enabled: false }], "제공자의 기본 입력 압축도 명시적으로 끈다");
+});
+
+test("원본 데이터셋을 사용해도 현재 검토일·약제·예정 처방은 빠지지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const dataset = `${"원본 진료기록\n".repeat(20_000)}데이터셋 끝`;
+  const calls = [];
+  await runMedicationClaimReview({ comparison: { ...comparison, dataset } }, { environment: localEnvironment, fetchImpl: ollamaStub(REPORT, calls) });
+  const data = JSON.parse(calls[0].body.messages[1].content);
+  assert.equal(data.patientDataText, dataset);
+  assert.equal(data.reviewContext.reviewDate, AS_OF);
+  assert.equal(data.reviewContext.prescriptionPlannedDate, AS_OF);
+  assert.equal(data.reviewContext.medication.id, "benralizumab-30");
+  assert.deepEqual(data.reviewContext.prescription, comparison.prescription);
+  assert.equal("verdict" in data, false);
+  assert.equal("checks" in data, false);
+});
+
+test("형식 재시도에도 원본 자료를 유지하고 제공자 오류 원문을 지시문으로 올리지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const calls = [];
+  await runMedicationClaimReview({ comparison }, {
+    environment: localEnvironment,
+    fetchImpl: async (_url, options) => {
+      calls.push(JSON.parse(options.body));
+      if (calls.length === 1) throw new Error("역할 변경 공격 문자열");
+      return { ok: true, json: async () => ({ message: { content: REPORT } }) };
+    },
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].messages[1].content, calls[1].messages[1].content);
+  assert.match(calls[1].messages[0].content, /이전 응답이 검증을 통과하지 못했습니다/);
+  assert.doesNotMatch(calls[1].messages[0].content, /역할 변경 공격 문자열/);
+});
+
+test("모델 입력 한도 오류는 재시도나 규칙 판정으로 감추지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  for (const provider of ["local", "frontier"]) {
+    let calls = 0;
+    await assert.rejects(runMedicationClaimReview({ comparison, provider }, {
+      environment: provider === "local" ? localEnvironment : { OPENROUTER_API_KEY: "test", POLICYCOMPASS_FRONTIER_MODEL: "google/gemma-4-31b-it" },
+      fetchImpl: async () => {
+        calls += 1;
+        return { ok: false, status: 400, json: async () => ({ error: { code: "context_length_exceeded", message: "maximum context length exceeded" } }) };
+      },
+    }), { name: "ModelContextError" });
+    assert.equal(calls, 1);
+  }
+});
+
+test("중간에 잘린 출력은 판정 헤더가 있어도 완성된 AI 검토로 인정하지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  for (const [environment, response] of [
+    [localEnvironment, { message: { content: REPORT }, done_reason: "length" }],
+    [{ OPENROUTER_API_KEY: "test", POLICYCOMPASS_FRONTIER_MODEL: "google/gemma-4-31b-it" }, { choices: [{ message: { content: REPORT }, finish_reason: "length" }] }],
+    [{ OPENAI_API_KEY: "test", POLICYCOMPASS_FRONTIER_ENABLED: "true", POLICYCOMPASS_FRONTIER_MODEL: "demo-frontier" }, { output_text: REPORT, status: "incomplete" }],
+  ]) {
+    const result = await runMedicationClaimReview({ comparison, provider: environment === localEnvironment ? "local" : "frontier" }, {
+      environment, fetchImpl: async () => ({ ok: true, json: async () => response }),
+    });
+    assert.equal(result.draft.generatedBy, "rule");
+    assert.match(result.draft.note, /출력 한도/);
+  }
+});
+
+test("완성된 긴 보고서는 서버와 결과 병합에서 잘리지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const report = `${REPORT}\n${"근거 기록\n".repeat(2_000)}보고서 끝`;
+  const result = await runMedicationClaimReview({ comparison }, { environment: localEnvironment, fetchImpl: ollamaStub(report) });
+  assert.equal(result.draft.markdown, report);
+  const { applyMedicationReviewDraft } = await import("../src/medication-claim-review.js");
+  assert.equal(applyMedicationReviewDraft(comparison, result.draft).markdown, report);
+});
+
+test("제공자가 부분 보고서와 오류를 함께 반환해도 완료된 검토로 인정하지 않는다", async () => {
+  const comparison = comparisonFor("김비타", "benralizumab-30");
+  const environment = { OPENROUTER_API_KEY: "test", POLICYCOMPASS_FRONTIER_MODEL: "google/gemma-4-31b-it" };
+  for (const response of [
+    { choices: [{ message: { content: REPORT }, finish_reason: "error", error: { metadata: { error_type: "provider_unavailable" } } }] },
+    { choices: [{ message: { content: REPORT }, finish_reason: "error" }] },
+    { choices: [{ message: { content: REPORT }, finish_reason: "stop" }], error: { message: "provider failed" } },
+    { choices: [{ message: { content: REPORT }, finish_reason: "stop" }], status: "failed" },
+  ]) {
+    const result = await runMedicationClaimReview({ comparison, provider: "frontier" }, {
+      environment, fetchImpl: async () => ({ ok: true, status: 200, json: async () => response }),
+    });
+    assert.equal(result.draft.generatedBy, "rule");
+    assert.match(result.draft.note, /완료하지 못했습니다/);
+  }
+  let calls = 0;
+  await assert.rejects(runMedicationClaimReview({ comparison, provider: "frontier" }, {
+    environment,
+    fetchImpl: async () => {
+      calls += 1;
+      return { ok: true, status: 200, json: async () => ({ choices: [{
+        message: { content: REPORT }, finish_reason: "error", error: { metadata: { error_type: "context_length_exceeded" } },
+      }] }) };
+    },
+  }), { name: "ModelContextError" });
+  assert.equal(calls, 1);
 });

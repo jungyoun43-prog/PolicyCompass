@@ -132,6 +132,29 @@ test("검토 진료데이터에는 고시 판정에 필요한 구조화 기록 �
   assert.doesNotMatch(JSON.stringify(kim.records), /김비타|PC-1001/);
 });
 
+test("많은 기록과 긴 원본 데이터셋을 브라우저와 서버가 자르지 않는다", () => {
+  const patient = demo.patients.find(({ name }) => name === "김비타");
+  const label = `${"검사 설명 ".repeat(100)}검사명 끝`;
+  const events = Array.from({ length: 100 }, (_, index) => ({
+    id: `record-${index}`, type: "observation", code: "TEST", label,
+    date: "2026-07-01", status: "final", value: `${"원문 ".repeat(100)}측정값 끝`,
+  }));
+  const sourceDataset = `${"익명화 원본\n".repeat(20_000)}원본 끝`;
+  const comparison = buildMedicationClaimComparison({
+    patient: { ...patient, events, sourceDataset },
+    medication: findMedicationInCatalog("benralizumab-30"), asOf: AS_OF,
+  });
+  assert.equal(comparison.records.length, 100);
+  assert.equal(comparison.records[99].label, label);
+  assert.equal(comparison.records[99].value, events[99].value);
+  assert.equal(comparison.dataset, sourceDataset);
+  const sanitized = sanitizeMedicationClaimComparison({ comparison });
+  assert.equal(sanitized.records.length, 100);
+  assert.equal(sanitized.records[99].label, label);
+  assert.equal(sanitized.records[99].value, events[99].value);
+  assert.equal(sanitized.dataset, sourceDataset);
+});
+
 test("차트에 이미 있는 약은 등록된 효능군으로 해석된다", () => {
   // Given / When / Then
   assert.equal(chartMedicationClass({ code: "DEMO-LAMA", label: "LAMA 흡입제" }).class, "LAMA");

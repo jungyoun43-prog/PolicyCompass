@@ -1,5 +1,6 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { textCleaner } from "../src/text.js";
+import { assertModelContextAccepted } from "../lib/model-errors.js";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -354,6 +355,8 @@ export async function callFrontierModel({
   schemaName,
   schema,
   maxOutputTokens = 2_000,
+  preserveInput = false,
+  requireCompleteOutput = false,
   fetchImpl = globalThis.fetch,
   timeoutMs = 30_000,
   environment = process.env,
@@ -375,6 +378,7 @@ export async function callFrontierModel({
       max_tokens: maxOutputTokens,
       temperature: 0,
       reasoning: { effort: "low" },
+      ...(preserveInput && new URL(baseUrl).hostname === "openrouter.ai" ? { plugins: [{ id: "context-compression", enabled: false }] } : {}),
       ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } } } : {}),
     }
     : {
@@ -384,6 +388,7 @@ export async function callFrontierModel({
       ...(instructions ? { instructions } : {}),
       input,
       max_output_tokens: maxOutputTokens,
+      ...(preserveInput ? { truncation: "disabled" } : {}),
       ...(schema ? { text: { format: { type: "json_schema", name: schemaName, strict: true, schema } } } : {}),
     };
   const response = await fetchImpl(url, {
@@ -395,15 +400,26 @@ export async function callFrontierModel({
   });
   if (!response.ok) {
     let detail = "";
+    let errorBody;
     try {
-      detail = cleanText((await response.json())?.error?.message, 500);
+      errorBody = await response.json();
+      detail = cleanText(errorBody?.error?.message, 500);
     } catch {
       // The status code remains the primary error when the body is not JSON.
     }
+    if (preserveInput) assertModelContextAccepted(response.status, errorBody);
     const mismatch = response.status === 401 ? frontierKeyMismatch(environment) : "";
     throw new Error(`프론티어 모델 요청 실패 (${response.status}) ${url}${detail ? `: ${detail}` : ""}${mismatch ? ` · ${mismatch}` : ""}`);
   }
   const payload = await response.json();
+  const choice = payload?.choices?.[0];
+  if (preserveInput) assertModelContextAccepted(response.status, payload);
+  if (requireCompleteOutput && (payload?.error || choice?.error || payload?.status === "failed" || ["error", "content_filter"].includes(choice?.finish_reason))) {
+    throw new Error("모델이 검토 응답을 완료하지 못했습니다.");
+  }
+  if (requireCompleteOutput && (payload?.status === "incomplete" || choice?.finish_reason === "length")) {
+    throw new Error("모델 응답이 출력 한도에 도달해 완료되지 않았습니다.");
+  }
   return {
     text: style === "chat" ? chatCompletionText(payload) : parseStructuredText(payload),
     model: cleanText(payload?.model, 160) || name,

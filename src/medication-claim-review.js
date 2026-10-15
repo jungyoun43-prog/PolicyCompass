@@ -582,7 +582,6 @@ function rationaleFor(checks) {
  */
 const STRUCTURED_RECORD_TYPES = new Set(["condition", "observation", "medication", "allergy", "procedure", "symptom"]);
 const STRUCTURED_RECORD_LOOKBACK_DAYS = 730;
-const MAX_STRUCTURED_RECORDS = 60;
 
 /**
  * A de-identified extract of the patient's structured events — codes, dates,
@@ -599,23 +598,22 @@ function structuredRecords(events, asOf) {
       && daysBetween(asOf, event.date) !== null
       && daysBetween(asOf, event.date) <= STRUCTURED_RECORD_LOOKBACK_DAYS)
     .sort((left, right) => right.date.localeCompare(left.date))
-    .slice(0, MAX_STRUCTURED_RECORDS)
     .map((event) => {
       const record = {
         type: cleanText(event.type, 40),
-        code: cleanText(event.code, 120),
-        label: cleanText(event.label, 240),
+        code: cleanText(event.code, Infinity),
+        label: cleanText(event.label, Infinity),
         date: validDate(event.date),
-        status: cleanText(event.status, 80),
+        status: cleanText(event.status, Infinity),
       };
-      if (typeof event.value === "number" || cleanText(event.value, 200)) record.value = event.value;
-      if (cleanText(event.unit, 80)) record.unit = cleanText(event.unit, 80);
+      if (typeof event.value === "number" || cleanText(event.value, Infinity)) record.value = event.value;
+      if (cleanText(event.unit, Infinity)) record.unit = cleanText(event.unit, Infinity);
       if (event.prescription && typeof event.prescription === "object") {
         record.prescription = {
-          dose: cleanText(String(event.prescription.dose ?? ""), 40),
-          doseUnit: cleanText(event.prescription.doseUnit, 30),
-          route: cleanText(event.prescription.route, 60),
-          frequency: cleanText(event.prescription.frequency, 80),
+          dose: cleanText(String(event.prescription.dose ?? ""), Infinity),
+          doseUnit: cleanText(event.prescription.doseUnit, Infinity),
+          route: cleanText(event.prescription.route, Infinity),
+          frequency: cleanText(event.prescription.frequency, Infinity),
           durationDays: positiveInteger(event.prescription.durationDays),
         };
       }
@@ -678,7 +676,7 @@ export function buildMedicationClaimComparison({
     },
     records: structuredRecords(events, reviewDate),
     ...(typeof patient?.sourceDataset === "string" && patient.sourceDataset.trim()
-      ? { dataset: patient.sourceDataset.slice(0, 100_000) }
+      ? { dataset: patient.sourceDataset }
       : {}),
     checks,
     verdict,
@@ -709,7 +707,7 @@ export function applyMedicationReviewDraft(comparison, draft = {}) {
     .filter(Boolean)
     .slice(0, 8);
   const proposed = cleanText(draft.verdict, 20);
-  const markdown = typeof draft.markdown === "string" ? draft.markdown.slice(0, 8_000) : "";
+  const markdown = typeof draft.markdown === "string" ? draft.markdown : "";
   const probabilities = draft.outputKind === "decision"
     ? medicationDecisionProbabilities(proposed, draft.probabilities) : null;
   // 고시 프롬프트 기반 검토(markdown)는 프롬프트 판정을 그대로 따른다.

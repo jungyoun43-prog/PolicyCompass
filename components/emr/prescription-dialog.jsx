@@ -417,6 +417,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         body: JSON.stringify({ comparison: base, provider: activeProvider, overrides }),
       });
       const result = await response.json().catch(() => ({}));
+      if (result.code === "MODEL_CONTEXT_TOO_LARGE" && version === requestVersion.current) {
+        setSettingsOpen(true);
+        setReviewInputError(result.message || "모델 입력 한도를 초과했습니다. 검토 모델이나 입력을 조정해 주세요.");
+        return;
+      }
       if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
       if (version !== requestVersion.current) return;
       const merged = applyMedicationReviewDraft(base, result.draft ?? {});

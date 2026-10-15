@@ -68,6 +68,10 @@ test("Next 서버는 보안 헤더와 출처·JSON·크기·오류 상태 계약
     assert.equal(frontierUnconfigured.status, 503);
     assert.equal((await frontierUnconfigured.json()).code, "FRONTIER_NOT_CONFIGURED");
 
+    const largeReview = await post(baseUrl, "/api/medication-claim-review", JSON.stringify({ overrides: { patientData: "진료기록".repeat(70_000) } }), jsonHeaders);
+    assert.equal(largeReview.status, 503, "약제 검토는 256KB 문자 제한 없이 제공자 설정 검사까지 도달한다");
+    assert.equal((await largeReview.json()).code, "LOCAL_AI_NOT_CONFIGURED");
+
     const snapshotPayload = {
       clinicalSnapshot: {
         schema: "policycompass-clinical-snapshot",

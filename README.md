@@ -141,6 +141,20 @@ EMR의 신체·진료과 지도는 Encounter의 진료과 필드 또는 진료�
 
 ## 배포
 
+### S3 정적 데모
+
+정적 데모: https://d2mwvqfejrhpzf.cloudfront.net
+
+화면과 브라우저의 규칙 기반 기능을 S3에서 제공하고 CloudFront로 HTTPS를 제공합니다. AI 서버 API는 포함하지 않으며 화면 상단에 정적 데모 안내가 표시됩니다. 실제 환자정보를 입력하지 마세요.
+
+```powershell
+npm.cmd ci
+npm.cmd run build:static
+npm.cmd run deploy:static
+```
+
+빌드는 `outputs/static-demo-<timestamp>/out`에 생성됩니다. 운영 API·미들웨어는 원본에 유지하고, 별도 빌드에서만 제외합니다. AI 설정 상태는 비활성 JSON으로 제공합니다. 배포는 `policycompass-3d-demo` 버킷의 `policycompass-static/releases/` 아래에 새 릴리스를 올리며 기존 3D 데모를 덮어쓰지 않습니다. 배포 결과는 `outputs/static-demo-deployment.json`에 기록하고, 다음 배포는 그 파일의 CloudFront 배포를 업데이트합니다. 다른 PC에서 재배포할 때는 이 파일도 전달해야 기존 주소를 유지할 수 있습니다. AWS CLI 인증 및 S3·CloudFront 권한이 필요합니다.
+
 ### AWS ECS Express Mode
 
 `main`에 push하거나 PR을 병합하면 `.github/workflows/ci.yml`이 검사·테스트·빌드 후 Docker 이미지를 ECR에 올리고 기존 ECS `default/policycompass` 서비스를 자동 업데이트합니다. PR에서는 검사만 실행합니다. GitHub **Actions → CI and Deploy**에서 진행 상태를 확인하며, **Run workflow**로 `main` 배포를 다시 실행할 수도 있습니다.

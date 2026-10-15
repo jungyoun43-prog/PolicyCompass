@@ -240,13 +240,14 @@ test("AI 검토는 바로 시작하고 오른쪽 설정에서 진료데이터·�
   assert.equal(sent.length, 1);
   assert.equal(sent[0].messages[0].content, medicationReviewPrompt(base, overrides));
   // source-check: 미리보기 팝업은 Radix Dialog.Portal 안의 클라이언트 상태라 서버 렌더로 닿을 수 없다.
-  // 모델 없는 규칙 기반 경로는 전송이 없으므로 팝업 없이 그대로 진행한다.
+  // Opening coverage prepares the inputs; sending requires a separate user action.
   assert.match(rx, /setReviewPreview\(preview\)/);
-  assert.match(rx, /await sendReview\(preview\)/);
+  assert.doesNotMatch(rx, /await sendReview\(preview\)/);
+  assert.match(rx, /setSettingsOpen\(true\)/);
   assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
   assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
   assert.match(rx, /promptText: medicationReviewInstructions\(reviewModel \|\| capability\.model\)/);
-  assert.match(rx, /class="coverage-settings" aria-label="검토 설정"/);
+  assert.match(rx, /coverage-settings--prepare/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
   assert.match(rx, /프롬프트/);

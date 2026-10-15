@@ -197,7 +197,7 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
   assert.match(rx, /data-source-origin/);
 });
 
-test("AI 검토는 바로 시작하고 오른쪽 설정에서 진료데이터·고시정보·프롬프트를 수정한다", async () => {
+test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 뒤 명시적으로 시작한다", async () => {
   // Given
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
   const medication = findMedicationInCatalog("benralizumab-30");

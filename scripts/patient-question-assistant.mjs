@@ -238,7 +238,7 @@ export function frontierCredentials(environment = process.env) {
     ? environment.POLICYCOMPASS_FRONTIER_ENABLED !== "false"
     : environment.POLICYCOMPASS_FRONTIER_ENABLED === "true";
   const model = cleanText(environment.POLICYCOMPASS_FRONTIER_MODEL ?? "", 160)
-    || (openRouterKey ? "" : "gpt-5.6-sol");
+    || (openRouterKey ? "" : "gpt-6.1-sol");
   const configured = Boolean(apiKey) && enabled && Boolean(model);
   return {
     apiKey,

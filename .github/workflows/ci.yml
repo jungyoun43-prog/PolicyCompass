@@ -39,7 +39,7 @@ jobs:
       AWS_REGION: ap-northeast-2
       ECS_SERVICE_ARN: arn:aws:ecs:ap-northeast-2:782419713811:service/default/policycompass
       ECR_REPOSITORY: 782419713811.dkr.ecr.ap-northeast-2.amazonaws.com/policycompass
-      APP_URL: https://po-4eb3b4f0a1c24574a4a3b479d71a8fda.ecs.ap-northeast-2.on.aws
+      APP_URL: https://po-2a4759f461a046a086405596fcc8950f.ecs.ap-northeast-2.on.aws
     steps:
       - uses: actions/checkout@v4
       - name: Skip a superseded commit

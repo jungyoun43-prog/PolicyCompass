@@ -41,7 +41,7 @@ test("Next 서버는 보안 헤더와 출처·JSON·크기·오류 상태 계약
     const patientStatusBody = await patientStatus.json();
     assert.deepEqual(patientStatusBody.local, { configured: false, model: "" });
     assert.equal(patientStatusBody.frontier.configured, false);
-    assert.equal(patientStatusBody.frontier.model, "gpt-5.6-sol");
+    assert.equal(patientStatusBody.frontier.model, "gpt-6.1-sol");
     assert.equal(patientStatusBody.frontier.reason, "API 키가 설정되지 않았습니다.");
     assert.equal(patientStatusBody.frontier.detected.OPENROUTER_API_KEY, false);
     assert.equal(Object.values(patientStatusBody.frontier.detected).every((value) => typeof value === "boolean"), true);

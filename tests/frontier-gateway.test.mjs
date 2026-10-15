@@ -231,7 +231,7 @@ test("기존 OpenAI 설정과 명시적 덮어쓰기는 그대로 동작한다",
 
   // When / Then
   assert.equal(frontierCredentials(openAi).configured, true);
-  assert.equal(frontierCredentials(openAi).model, "gpt-5.6-sol");
+  assert.equal(frontierCredentials(openAi).model, "gpt-6.1-sol");
   assert.equal(frontierApiStyle(openAi), "responses");
   assert.equal(frontierBaseUrl(overridden), "https://api.groq.com/openai/v1");
   assert.equal(frontierApiStyle(overridden), "responses");

@@ -139,11 +139,11 @@ test("검토 모델은 등록된 목록 안에서만 바꿀 수 있다", async (
   };
 
   // When
-  await runMedicationClaimReview({ comparison, provider: "frontier", overrides: { model: "anthropic/claude-opus-5" } }, { environment, fetchImpl });
+  await runMedicationClaimReview({ comparison, provider: "frontier", overrides: { model: "anthropic/claude-opus-5.5" } }, { environment, fetchImpl });
   await runMedicationClaimReview({ comparison, provider: "frontier", overrides: { model: "evil/expensive-model" } }, { environment, fetchImpl });
 
   // Then
-  assert.equal(requests[0].model, "anthropic/claude-opus-5");
+  assert.equal(requests[0].model, "anthropic/claude-opus-5.5");
   assert.equal(requests[1].model, "openai/gpt-5.6-sol", "목록 밖 모델은 무시하고 서버 기본을 쓴다");
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/button.jsx";
 import { createDemoEmrState } from "../../src/emr-demo-state.js";
 import { findMedicationInCatalog } from "../../src/medication-catalog.js";
 import { currentEncounterFor } from "../../lib/emr/selectors.js";

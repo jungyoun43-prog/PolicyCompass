@@ -1,6 +1,6 @@
 # Medication coverage popup
 
-Latest user revision: product/form/strength order names, fully colored menu entries with coverage between product and pricing information; draggable shared RxDialog windows; immediate review on coverage selection; editable model/data/notice/prompt in a right settings drawer. Explicitly requested the newly attached purple-header/pink-blue-green panel design, superseding the earlier native-style preference and confirmation-before-send flow. Keep actual results and evidence, not screenshot fixture findings. Other menu entries display a preparation message.
+Latest user revision: product/form/strength order names, fully colored menu entries with coverage between product and pricing information; draggable shared RxDialog windows; immediate review on coverage selection; editable model/data/notice/prompt on the original full input screen, preserving edits and model selection when returning from results. Explicitly requested the newly attached purple-header/pink-blue-green panel design, superseding the earlier native-style preference and confirmation-before-send flow. Keep actual results and evidence, not screenshot fixture findings. Other menu entries display a preparation message.
 
 Design correction: retain the application's existing visual language and shared RxDialog format. The reference image describes functionality and content only. Use existing surface, text, border, accent and radius tokens; no purple window header or pink/blue/green panel theme. Reuse the shared Button for summary copying.
 

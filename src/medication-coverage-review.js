@@ -18,8 +18,9 @@ export function applyCoveragePolicyReview(input, draft = {}) {
       verdictLabel: { circle: "기준 충족", triangle: "판정 제한", cross: "기준 미충족" }[merged.verdict],
       summary: draft.summary || "선택한 보험 기준에 대한 모델 판정입니다. 기준별 근거를 확인해 주세요." } : {}),
     medicationId: input.medicationId,
-    coveragePolicy: { ...policy, noticeText: input.noticeText,
+    coveragePolicy: { ...policy, noticeText: input.noticeText, noticeSource: input.noticeSource ?? null,
+      checkedOn: input.noticeSource?.checkedOn ?? policy.checkedOn,
       ...(input.translation ? { translation: input.translation, criteria: input.translatedCriteria } : {}),
-      edited: (input.translation?.sourceNotice ?? input.noticeText) !== medicationCoveragePolicyNotice(input.medicationId, input.policyId) },
+      edited: (input.translation?.sourceNotice ?? input.noticeText) !== (input.noticeSource?.text ?? medicationCoveragePolicyNotice(input.medicationId, input.policyId)) },
   };
 }

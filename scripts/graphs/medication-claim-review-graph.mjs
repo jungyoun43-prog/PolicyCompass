@@ -2,6 +2,7 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewRequest } from "../../src/medication-review-prompt.js";
+import { medicationCoveragePolicy } from "../../src/medication-coverage-policies.js";
 import { assertModelContextAccepted, ModelContextError } from "../../lib/model-errors.js";
 import { isJevReviewModel } from "../../src/medication-review-decision.js";
 import { jevMedicationDraft } from "../medication-jev-review.mjs";
@@ -154,7 +155,7 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
 }
 
 /** Operator-edited 프롬프트/고시정보/진료데이터 from the pre-send preview. */
-function sanitizeOverrides(input) {
+function sanitizeOverrides(input, comparison) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const overrides = {};
   for (const key of ["instructions", "notice", "patientData"]) {
@@ -166,6 +167,11 @@ function sanitizeOverrides(input) {
   }
   const model = cleanText(input.model, 120);
   if (model && isAllowedFrontierModel(model)) overrides.model = model;
+  if (input.policyId !== undefined) {
+    const policy = medicationCoveragePolicy(comparison.medication.id, input.policyId);
+    if (!policy) throw new TypeError("이 약제에 등록되지 않은 보험 기준입니다.");
+    overrides.policyContext = { country: policy.country, payer: policy.payer, program: policy.program, indication: policy.indication };
+  }
   return overrides;
 }
 
@@ -323,7 +329,7 @@ export async function runMedicationClaimReview(payload = {}, {
   timeoutMs = 30_000,
 } = {}) {
   const comparison = sanitizeMedicationClaimComparison(payload);
-  const overrides = sanitizeOverrides(payload?.overrides);
+  const overrides = sanitizeOverrides(payload?.overrides, comparison);
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
   const status = medicationClaimReviewStatus(environment);
   const options = provider === "frontier"

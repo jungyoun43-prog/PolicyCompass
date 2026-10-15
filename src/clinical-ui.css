@@ -234,6 +234,10 @@ body.emr-page {
 .emr-page .coverage-translation p { max-width: 75ch; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.6; }
 .emr-page .coverage-translation p.coverage-translation__error { color: var(--urgent); }
 .emr-page #medicationCoverageDialog textarea[readonly] { background: var(--surface-soft); }
+.emr-page .coverage-policy-source__error { display: grid; justify-items: start; gap: 8px; }
+.emr-page .coverage-policy-source__error p { color: var(--urgent); }
+.emr-page .coverage-policy-source details > summary { min-height: var(--control-height-small); display: flex; align-items: center; color: var(--accent); cursor: pointer; }
+.emr-page .coverage-policy-source details ul { display: grid; gap: 6px; margin: 8px 0 0; padding-inline-start: 20px; }
 
 @container emr-dialog (max-width: 24rem) {
   .emr-page #prescriptionDialog .rx-order-line__actions { grid-row: 6; }

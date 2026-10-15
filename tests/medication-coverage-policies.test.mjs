@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { medicationCoveragePolicies, medicationCoveragePolicy, medicationCoveragePolicyNotice, switchMedicationCoveragePolicy } from "../src/medication-coverage-policies.js";
+import { medicationCoveragePolicies, medicationCoveragePolicy, medicationCoveragePolicyNotice, switchMedicationCoveragePolicy, applyMedicationPolicySource } from "../src/medication-coverage-policies.js";
 import { applyCoveragePolicyReview } from "../src/medication-coverage-review.js";
 import { medicationReviewNotice, medicationReviewRequest } from "../src/medication-review-prompt.js";
 
@@ -20,10 +20,9 @@ test("policies are bound to the medication and distinguish country from US payer
     assert.equal(new Set(policies.map(({ id }) => id)).size, policies.length);
     assert.equal(medicationCoveragePolicyNotice(medicationId), medicationReviewNotice(medicationId));
     for (const policy of policies.filter(({ countryCode }) => countryCode !== "KR")) {
-      const notice = medicationCoveragePolicyNotice(medicationId, policy.id);
-      assert.ok(notice.includes(medicationId) && notice.includes(policy.payer) && notice.includes(policy.indication));
-      assert.ok(notice.includes(policy.checkedOn));
-      assert.ok(policy.sources.length && policy.sources.every(({ url }) => notice.includes(url) && url.startsWith("https://")));
+      assert.equal(medicationCoveragePolicyNotice(medicationId, policy.id), "", "foreign loading state has no generated criteria");
+      assert.ok(policy.sources.length && policy.sources.every(({ url }) => url.startsWith("https://")));
+      assert.equal(policy.criteria, undefined, "registry contains metadata, not authored clinical summaries");
     }
   }
   assert.equal(medicationCoveragePolicy("durvalumab-500", "us-oklahoma"), null);
@@ -43,6 +42,7 @@ test("changing policy preserves clinical data, instructions, and each policy's e
   const editedUS = selected.noticeText;
   selected = switchMedicationCoveragePolicy(selected, "gb-nice");
   selected.noticeText = "";
+  selected.noticeTouched = { "gb-nice": true };
   selected = switchMedicationCoveragePolicy(selected, "kr-registered");
   assert.equal(selected.noticeText, original.noticeText);
   selected = switchMedicationCoveragePolicy(selected, "us-aetna");
@@ -56,7 +56,8 @@ test("changing policy preserves clinical data, instructions, and each policy's e
 test("selected foreign text reaches the existing LLM payload without Korean criteria or interpolation", () => {
   for (const medicationId of ["benralizumab-30", "durvalumab-500"]) {
     for (const policy of medicationCoveragePolicies(medicationId).filter(({ countryCode }) => countryCode !== "KR")) {
-      const input = switchMedicationCoveragePolicy(makeInput(medicationId), policy.id);
+      let input = switchMedicationCoveragePolicy(makeInput(medicationId), policy.id);
+      input = applyMedicationPolicySource(input, { medicationId, policyId: policy.id, original: true, text: "Publisher criterion\n1. Preserve 150 cells/μL and all alternatives." });
       const payload = medicationReviewRequest(input.base, { patientData: input.dataText, notice: input.noticeText, instructions: input.promptText });
       const parsed = JSON.parse(payload.input);
       assert.equal(parsed.noticeText, input.noticeText);
@@ -66,6 +67,38 @@ test("selected foreign text reaches the existing LLM payload without Korean crit
       assert.ok(!Object.hasOwn(parsed.reviewContext, "checks"));
     }
   }
+});
+
+test("official source loads verbatim, remains separate from metadata, and restores each policy's edits", () => {
+  const original = makeInput();
+  let input = switchMedicationCoveragePolicy(original, "us-aetna");
+  const document = { medicationId: original.medicationId, policyId: "us-aetna", original: true, text: "Publisher-only text\nOriginal AND/OR relationship", hash: "source-hash" };
+  input = applyMedicationPolicySource(input, document);
+  assert.equal(input.noticeText, document.text);
+  assert.equal(input.noticeSource, document);
+  input.noticeText += "\nOperator edit";
+  input = switchMedicationCoveragePolicy(input, "gb-nice");
+  assert.equal(input.noticeText, "");
+  input = switchMedicationCoveragePolicy(input, "us-aetna");
+  assert.equal(input.noticeText, document.text + "\nOperator edit");
+  assert.equal(input.noticeSource.hash, document.hash);
+  assert.throws(() => applyMedicationPolicySource(input, { ...document, policyId: "gb-nice" }));
+  assert.throws(() => applyMedicationPolicySource(input, { ...document, text: "" }));
+});
+
+test("switching away during loading does not cache a blank draft, but intentional empty edits survive a retry", () => {
+  let input = switchMedicationCoveragePolicy(makeInput(), "us-aetna");
+  input = switchMedicationCoveragePolicy(input, "gb-nice");
+  assert.equal(input.noticeDrafts["us-aetna"], undefined);
+  input = switchMedicationCoveragePolicy(input, "us-aetna");
+  const document = { medicationId: input.medicationId, policyId: input.policyId, original: true, text: "Publisher source fixture" };
+  assert.equal(applyMedicationPolicySource(input, document).noticeText, document.text);
+  input.noticeTouched = { "us-aetna": true };
+  input = switchMedicationCoveragePolicy(input, "gb-nice");
+  input = switchMedicationCoveragePolicy(input, "us-aetna");
+  assert.equal(applyMedicationPolicySource(input, document).noticeText, "");
+  input.noticeText = "Operator pasted source after failure";
+  assert.equal(applyMedicationPolicySource(input, document).noticeText, input.noticeText, "retry cannot overwrite the latest manual edit with an older cached draft");
 });
 
 test("foreign results cannot reuse a Korean rule fallback, legacy verdict, or invalid model decision", () => {

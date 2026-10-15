@@ -44,8 +44,9 @@ export function CoveragePolicySource({ policy, edited = false, children }) {
     <div><h4>{policy.country} · {policy.payer}</h4><span>{policy.program}{edited ? " · 입력 수정됨" : ""}</span></div>
     <p>{policy.indication}</p>
     {policy.countryCode === "KR" ? <small>프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다.</small> : <>
-      <small>{policy.translation ? "Haiku 영어 번역본" : "공식 자료의 한국어 요약"} · 확인 {policy.checkedOn}{policy.version ? ` · ${policy.version}` : ""}</small>
-      <div className="coverage-policy-source__links">{policy.sources.map(({ title, url }) => <a key={url} href={url} target="_blank" rel="noreferrer">{title} <span className="visually-hidden">(새 탭)</span></a>)}</div>
+      <small>{policy.translation ? "Haiku 번역본" : policy.noticeSource?.original ? "공식 문서 원문" : "공식 원문 불러오기"}{policy.noticeSource?.fetchedAt ? ` · 조회 ${new Date(policy.noticeSource.fetchedAt).toLocaleString("ko-KR")}` : ""}{policy.version ? ` · ${policy.version}` : ""}</small>
+      <div className="coverage-policy-source__links">{policy.sources.map(({ title, url }) => <a key={url} href={url} target="_blank" rel="noreferrer">공식 원문 보기 · {title} <span className="visually-hidden">(새 탭)</span></a>)}</div>
+      {policy.noticeSource?.documents?.some(document => document.references?.length) ? <details><summary>원문에서 연결한 관련 기준</summary><ul>{policy.noticeSource.documents.flatMap(document => document.references || []).map((reference, index) => <li key={`${reference.url}-${index}`}><a href={reference.url} target="_blank" rel="noreferrer">{reference.title || reference.url}</a></li>)}</ul></details> : null}
     </>}
     {children}
   </section>;

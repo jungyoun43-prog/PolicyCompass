@@ -257,7 +257,7 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   assert.match(rx, /id="reviewPreviewData"[^>]*value=\{reviewPreview\.dataText\}/);
   assert.match(rx, /id="reviewPreviewNoticeText"[^>]*value=\{reviewPreview\.noticeText\}/);
   assert.match(rx, /id="reviewPreviewPrompt"[^>]*value=\{reviewPreview\.promptText\}/);
-  assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText \}/);
+  assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText, policyId: input\.policyId \}/);
   assert.match(rx, /comparison: base, provider: activeProvider, overrides/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{\(\) => sendReview\(\)\}/);
   // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.

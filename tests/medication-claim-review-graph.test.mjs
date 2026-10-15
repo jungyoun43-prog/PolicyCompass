@@ -218,6 +218,23 @@ test("프론티어 제공자는 서버 설정이 있을 때만 사용된다", as
   assert.equal(medicationClaimReviewStatus(environment).frontier.configured, true);
 });
 
+test("해외 원문은 그대로 전송하고 보험자·적응증은 서버 등록 정보로 한정한다", async () => {
+  const comparison = comparisonFor("김비타", "durvalumab-500");
+  const notice = "Original policy fixture\n  1. Initial condition; and\n  2. Continuing condition 12 months.";
+  const calls = [];
+  const overrides = { notice, policyId: "us-aetna", policyContext: { payer: "untrusted payer", indication: "other disease" } };
+  await runMedicationClaimReview({ comparison, overrides }, { environment: localEnvironment, fetchImpl: ollamaStub(REPORT, calls) });
+  const data = JSON.parse(calls[0].body.messages[1].content);
+  assert.equal(data.noticeText, notice);
+  assert.deepEqual(data.reviewContext.coveragePolicy, {
+    country: "미국", payer: "Aetna", program: "상업보험 · CPB 0917",
+    indication: "절제 불가능 II·III기 비소세포폐암 · 동시 CCRT 후 단독 공고요법",
+  });
+  assert.ok(!calls[0].body.messages[0].content.includes(notice));
+  await assert.rejects(() => runMedicationClaimReview({ comparison, overrides: { ...overrides, policyId: "us-oklahoma" } }, { environment: localEnvironment, fetchImpl: ollamaStub(REPORT, calls) }), /등록되지 않은/);
+  assert.equal(calls.length, 1, "약제와 맞지 않는 보험 기준은 모델 호출 전 거부한다");
+});
+
 test("긴 원문과 특수 문자열은 로컬과 OpenRouter에 끝까지 동일하게 전달된다", async () => {
   const comparison = comparisonFor("김비타", "benralizumab-30");
   const overrides = {

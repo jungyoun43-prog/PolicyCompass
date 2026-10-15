@@ -44,20 +44,17 @@ test("translation target comes from the selected country's registered policy", (
     { ...payload, fields: { ...source, dataText: "" } }, { ...payload, fields: { ...source, criteriaText: "{}" } } ]) assert.throws(() => validateCoverageTranslationPayload(bad), TypeError);
 });
 
-test("medical translations preserve JSON structure, numbers, codes, units, URLs and judgments", () => {
-  assert.deepEqual(validateCoverageTranslation(source, translated), translated);
+test("translation validation checks response format and required fields only", () => {
+  assert.deepEqual(validateCoverageTranslation(translated), translated);
   const mutations = [
-    { dataText: translated.dataText.replace("30 mg", "31 mg") },
-    { dataText: translated.dataText.replace("C34", "C33") },
-    { dataText: translated.dataText.replace('"records":', '"record":') },
-    { dataText: translated.dataText.replace('"value":2', '"value":"2"') },
-    { noticeText: translated.noticeText.replace("≥", ">") },
-    { noticeText: translated.noticeText.replace("mg", "g") },
-    { noticeText: translated.noticeText.replace("https://example.test/TA565", "https://other.test/TA565") },
-    { reportText: translated.reportText.replace("[○]", "[✕]") },
-    { promptText: "" }, { unknown: "extra" },
+    { dataText: null }, { noticeText: [] }, { reportText: 1 },
+    { promptText: "" }, { noticeText: "   " }, { dataText: "" },
+    { criteriaText: "{}" }, { criteriaText: "[1]" }, { criteriaText: "not JSON" }, { unknown: "extra" },
   ];
-  for (const change of mutations) assert.throws(() => validateCoverageTranslation(source, { ...translated, ...change }));
+  for (const change of mutations) assert.throws(() => validateCoverageTranslation({ ...translated, ...change }));
+  const incomplete = { ...translated };
+  delete incomplete.summaryText;
+  assert.throws(() => validateCoverageTranslation(incomplete));
 });
 
 test("translation keeps original prompts as source data and pins Haiku through the structured gateway", async () => {
@@ -82,6 +79,12 @@ test("incomplete or invalid model output fails without returning partial transla
   await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ finish_reason: "length", message: { content: "{}" } }] }) }) }), /완료되지 않았습니다/);
   await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async () => ({ ok: true, json: async () => ({ model: "another-model", choices: [{ message: { content: JSON.stringify(translated) } }] }) }) }), /Haiku/);
   await assert.rejects(() => translateMedicationCoverage(payload, { environment: {}, fetchImpl: async () => { throw new Error("must not call"); } }), /설정되지/);
+});
+
+test("natural-language rendering of quantities is accepted without a source-preservation gate", async () => {
+  const natural = { ...translated, noticeText: "Eosinophils at least 150 cells per microliter AND administration 30 milligrams. Source https://example.test/TA565" };
+  const result = await translateMedicationCoverage(payload, { environment, fetchImpl: async () => gateway(natural) });
+  assert.deepEqual(result.fields, natural);
 });
 
 test("long translation sources pass through intact without an application character cutoff", async () => {

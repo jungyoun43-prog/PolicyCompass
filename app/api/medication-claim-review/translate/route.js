@@ -14,5 +14,5 @@ export const POST = withApiErrors(async request => {
   assertFrontierRequestAllowed(request);
   await assertFrontierDailyBudget();
   return modelResponse(() => translateMedicationCoverage(payload), { invalidCode: "INVALID_COVERAGE_TRANSLATION", failureCode: "COVERAGE_TRANSLATION_FAILED",
-    failureMessage: "번역을 완료하지 못했거나 원문 보존 검증을 통과하지 못했습니다. 원문은 유지했습니다. 다시 시도해 주세요." });
+    failureMessage: "Haiku 번역을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요." });
 });

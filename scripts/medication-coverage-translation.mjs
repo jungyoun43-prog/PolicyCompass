@@ -34,41 +34,17 @@ export function validateCoverageTranslationPayload(payload) {
   return { fields, language, policy };
 }
 
-function matches(pattern, text) { return [...text.matchAll(pattern)].map(match => match[0]).sort().join("\n"); }
-function validateText(source, translated) {
-  if (typeof translated !== "string" || (source.trim() && !translated.trim()) || (!source && translated)) throw new Error("번역 응답에 누락되거나 추가된 자료가 있습니다.");
-  for (const pattern of [/\d+(?:[.,]\d+)*/g, /https?:\/\/[^\s<>"')]+/g, />=|<=|[≥≤<>±%=]/g,
-    /\b[A-Z]{1,6}[-.]?\d[A-Z0-9._-]*\b/g, /\b(?:mg|mcg|kg|mL|mmol|IU|Gy|cells)(?:\/[a-zA-Zμµ]+)?\b/g]) {
-    if (matches(pattern, source) !== matches(pattern, translated)) throw new Error("번역 중 수치·단위·의료 코드·출처가 바뀌어 적용하지 않았습니다.");
-  }
-}
-
-function validateStructure(source, translated) {
-  if (Array.isArray(source)) {
-    if (!Array.isArray(translated) || source.length !== translated.length) throw new Error("번역 중 JSON 배열 구조가 바뀌었습니다.");
-    source.forEach((value, index) => validateStructure(value, translated[index]));
-  } else if (source && typeof source === "object") {
-    if (!translated || typeof translated !== "object" || Array.isArray(translated)
-      || JSON.stringify(Object.keys(source).sort()) !== JSON.stringify(Object.keys(translated).sort())) throw new Error("번역 중 JSON 키가 바뀌었습니다.");
-    for (const key of Object.keys(source)) validateStructure(source[key], translated[key]);
-  } else if (typeof source === "string") validateText(source, translated);
-  else if (source !== translated) throw new Error("번역 중 JSON 값이 바뀌었습니다.");
-}
-
-export function validateCoverageTranslation(source, translated) {
+export function validateCoverageTranslation(translated) {
   if (!translated || typeof translated !== "object" || Array.isArray(translated)
     || JSON.stringify(Object.keys(translated).sort()) !== JSON.stringify([...COVERAGE_TRANSLATION_FIELDS].sort())) throw new Error("번역 응답 형식이 올바르지 않습니다.");
   for (const key of COVERAGE_TRANSLATION_FIELDS) {
-    validateText(source[key], translated[key]);
-    let original;
-    try { original = JSON.parse(source[key]); } catch { continue; }
-    let converted;
-    try { converted = JSON.parse(translated[key]); } catch { throw new Error("번역된 JSON 형식이 올바르지 않습니다."); }
-    validateStructure(original, converted);
+    if (typeof translated[key] !== "string") throw new Error("번역 응답 필드는 문자열이어야 합니다.");
   }
-  // A translated report must retain the actual model judgment, not re-decide it.
-  const symbols = text => matches(/[○◯〇△Δ✕×✗]/g, text);
-  if (symbols(source.reportText) !== symbols(translated.reportText)) throw new Error("번역 중 판정 기호가 바뀌었습니다.");
+  if (![translated.dataText, translated.noticeText, translated.promptText].every(text => text.trim())) throw new Error("번역 응답의 필수 항목이 비어 있습니다.");
+  try {
+    const criteria = JSON.parse(translated.criteriaText);
+    if (!Array.isArray(criteria) || criteria.some(value => typeof value !== "string")) throw new Error();
+  } catch { throw new Error("번역된 보험 기준 목록의 JSON 형식이 올바르지 않습니다."); }
   return translated;
 }
 
@@ -88,5 +64,5 @@ Preserve every numeric literal, date, dose, unit, inequality symbol, percentage,
   let translated;
   try { translated = JSON.parse(result.text); } catch { throw new Error("Haiku가 완전한 번역 JSON을 반환하지 않았습니다."); }
   if (!/haiku/i.test(result.model)) throw new Error("지정한 Haiku 번역 모델의 응답이 아닙니다.");
-  return { fields: validateCoverageTranslation(fields, translated), language, model: result.model };
+  return { fields: validateCoverageTranslation(translated), language, model: result.model };
 }

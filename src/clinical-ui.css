@@ -1,0 +1,226 @@
+/* Clinical workspace: restrained surfaces and one control scale. */
+body.emr-page {
+  --surface: #f7f9f8;
+  --surface-soft: #f1f4f2;
+  --surface-raised: #ffffff;
+  --ink: #24332c;
+  --muted: #606e65;
+  --line: #dce3de;
+  --line-strong: #b8c5bc;
+  --accent: #285b45;
+  --accent-wash: #eaf2ed;
+  --focus-ring: var(--accent);
+  --radius-control: 6px;
+  --radius-panel: 12px;
+  --shadow-panel: none;
+  --control-height: 36px;
+  --control-height-small: 32px;
+  --emr-rail-width: clamp(16rem, 19vw, 20rem);
+  --emr-context-width: clamp(19rem, 25vw, 27rem);
+  background: var(--surface);
+  font-weight: 400;
+}
+
+.emr-page ::selection { background: #d4e7da; color: var(--ink); }
+.emr-page :is(input, textarea) { caret-color: var(--accent); }
+.emr-page :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+
+.emr-page :is(.clinical-button, .text-action) {
+  min-height: var(--control-height);
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  border-color: var(--line-strong);
+  box-shadow: none;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: nowrap;
+  touch-action: manipulation;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+}
+
+.emr-page :is(.clinical-button, .text-action):hover:not(:disabled) {
+  background: var(--surface-soft);
+  border-color: var(--accent);
+  transform: none;
+  filter: none;
+}
+
+.emr-page :is(.clinical-button, .text-action):active:not(:disabled) { transform: none; filter: none; }
+.emr-page :is(.clinical-button, .text-action):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; box-shadow: none; }
+.emr-page .clinical-button--primary,
+.emr-page .clinical-button--confirm { background: var(--accent); border-color: var(--accent); color: #fff; }
+.emr-page :is(.clinical-button--primary, .clinical-button--confirm):hover:not(:disabled) { background: #204a38; border-color: #204a38; }
+.emr-page .clinical-button:active:not(:disabled) { background: var(--accent-wash); border-color: var(--accent); }
+.emr-page :is(.clinical-button--primary, .clinical-button--confirm):active:not(:disabled) { background: var(--ink); border-color: var(--ink); }
+.emr-page .clinical-button--danger { color: var(--urgent); border-color: var(--line); background: var(--surface-raised); }
+.emr-page .clinical-button--danger:hover:not(:disabled) { color: var(--urgent); border-color: var(--urgent); background: #fff4f4; }
+.emr-page .text-action { background: transparent; border-color: transparent; color: var(--muted); }
+.emr-page .clinical-button--sm { min-height: var(--control-height-small); padding: 5px 9px; font-size: .75rem; }
+
+.emr-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background-color: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: none;
+  font-size: .8125rem;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.emr-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { min-height: var(--control-height); padding: 6px 9px; }
+.emr-page input#patientSearch { padding-inline-start: 36px; }
+.emr-page textarea { padding: 10px 12px; }
+.emr-page :is(input, select, textarea):focus-visible { border-color: var(--accent); outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.emr-page :is(table, .rail-count, .source-badge, .queue-badge) { font-variant-numeric: tabular-nums; }
+
+.emr-page .clinical-header { background: var(--surface-raised); backdrop-filter: none; border-bottom: 1px solid var(--line); box-shadow: none; }
+.emr-page .clinical-header .patient-workspace-navigation { border: 0; border-radius: 0; background: transparent; box-shadow: none; padding: 0; }
+.emr-page .clinical-header .workspace-tabs { gap: 4px; }
+.emr-page .clinical-header .workspace-tabs button { border-radius: 0; color: var(--muted); font-size: .8125rem; font-weight: 500; }
+.emr-page .clinical-header .workspace-tabs button[data-state="active"] { color: var(--accent); font-weight: 650; }
+.emr-page .clinical-header .command-actions .clinical-button { min-height: var(--control-height-small); padding: 5px 10px; font-size: .75rem; }
+.emr-page .header-ai-status { border: 0; border-radius: 0; padding-inline: 0; background: transparent; box-shadow: none; }
+
+.emr-page :is(.clinical-layout, .patient-workspace) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.emr-page .clinical-layout { gap: 16px; }
+.emr-page .patient-rail { border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); box-shadow: none; }
+.emr-page .clinical-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); box-shadow: none; }
+.emr-page .encounter-context-rail { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.emr-page .encounter-context-rail > .clinical-card { border-color: var(--line); }
+.emr-page .encounter-layout { gap: 16px; }
+
+.emr-page .rail-selected-patient { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; padding: 0 0 16px; }
+.emr-page .rail-selected-patient::before { display: none; }
+.emr-page .rail-selected-patient .patient-identity__row h1 { font-size: 1.375rem; font-weight: 700; letter-spacing: -.025em; }
+.emr-page .rail-selected-patient #selectedPatientMeta { color: var(--muted); font-size: .8125rem; font-weight: 400; }
+.emr-page .rail-selected-patient :is(.patient-condition-chip, .patient-condition-summary__more) { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
+.emr-page .rail-selected-patient .patient-condition-chip strong { font-size: .75rem; font-weight: 500; }
+.emr-page .rail-selected-patient .patient-condition-chip small { color: var(--muted); }
+.emr-page .rail-selected-patient .safety-chip { border-radius: 4px; font-size: .75rem; font-weight: 500; }
+.emr-page .rail-heading h2 { font-size: 1rem; font-weight: 650; }
+.emr-page .rail-count { padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+.emr-page .patient-list { gap: 2px; }
+.emr-page .patient-list button { border: 1px solid transparent; border-radius: 6px; background: transparent; box-shadow: none; padding: 10px; }
+.emr-page .patient-list button[aria-pressed="true"] { border-color: var(--line-strong); background: var(--surface-raised); box-shadow: none; }
+.emr-page .patient-list button:hover { background: var(--surface-raised); }
+.emr-page .patient-list button b { font-weight: 600; }
+.emr-page .queue-badge { border: 0; border-radius: 4px; box-shadow: none; font-size: .6875rem; font-weight: 500; }
+.emr-page .queue-filters { border: 0; border-radius: 6px; padding: 3px; background: #e5ebe7; box-shadow: none; }
+.emr-page .queue-filters label { border-radius: 4px; font-weight: 500; box-shadow: none; }
+.emr-page .rail-visit-slot .workflow-disclosure__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.emr-page .rail-visit-slot .workflow-disclosure__heading { min-width: 0; flex: 1 1 6rem; }
+.emr-page .rail-visit-slot .workflow-disclosure__meta { flex: 0 0 auto; gap: 6px; }
+
+.emr-page .soap-field { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.emr-page .soap-grid { gap: 12px; }
+.emr-page .soap-field > span { color: var(--muted); font-size: .75rem; font-weight: 500; }
+.emr-page .soap-field > span b { border: 0; border-radius: 3px; color: var(--accent); background: transparent; font-weight: 700; }
+.emr-page .soap-field textarea { border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); font-size: .875rem; font-weight: 400; line-height: 1.65; }
+.emr-page .workflow-disclosure__title { font-size: .875rem; font-weight: 650; letter-spacing: -.015em; }
+.emr-page .workflow-disclosure__summary .source-badge { padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: .6875rem; font-weight: 400; }
+.emr-page .entry-grid .clinical-button { min-height: var(--control-height-small); padding: 5px 10px; box-shadow: none; }
+.emr-page :is(.clinical-entry-list > li, .clinical-empty) { border-radius: 6px; background: var(--surface-soft); box-shadow: none; }
+
+.emr-page .coverage-quick-start { padding: 0 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; }
+.emr-page .coverage-quick-start > summary { min-height: 44px; }
+.emr-page .coverage-quick-start h2 { font-size: .8125rem; font-weight: 500; }
+.emr-page .coverage-quick-start > summary > span { font-size: .75rem; }
+.emr-page .coverage-quick-start__body { padding-bottom: 16px; }
+
+/* Dialog chrome and editors use the same visual language as the chart. */
+.emr-page .rx-dialog { --rx-fluid-text: .8125rem; --rx-fluid-small: .75rem; --rx-fluid-title: 1rem; --rx-fluid-control: var(--control-height); border: 0; border-radius: 12px; background: var(--surface-raised); box-shadow: 0 16px 48px #24332c26; }
+.emr-page .rx-dialog .rx-dialog__header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface-raised); color: var(--ink); }
+.emr-page .rx-dialog .rx-dialog__header:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.emr-page .rx-dialog .rx-dialog__title { font-size: 1rem; font-weight: 650; letter-spacing: -.02em; color: var(--ink); }
+.emr-page .rx-dialog .rx-dialog__context { color: var(--muted); font-size: .75rem; font-weight: 400; }
+.emr-page .rx-dialog .rx-dialog__close { min-height: var(--control-height-small); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; background: transparent; color: var(--muted); }
+.emr-page .rx-dialog .rx-dialog__panel { --rx-fluid-text: .8125rem; --rx-fluid-small: .75rem; --rx-fluid-title: 1rem; --rx-fluid-control: var(--control-height); padding: 16px 20px; gap: 16px; }
+.emr-page .rx-dialog .rx-section-title { background: transparent; color: var(--ink); font-size: .8125rem; font-weight: 650; }
+.emr-page .rx-dialog :is(input, select, button) { font-size: .8125rem; }
+.emr-page .rx-dialog input,
+.emr-page .rx-dialog select { min-height: var(--control-height); height: var(--control-height); border-radius: 6px; font-weight: 400; }
+
+.emr-page #prescriptionDialog .rx-result--compact { margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.emr-page #prescriptionDialog .rx-result--compact .rx-order-line { gap: 8px; padding: 12px 0; background: transparent; }
+.emr-page #prescriptionDialog .rx-result--compact .rx-order-line__product { font-size: .8125rem; font-weight: 600; line-height: 1.5; white-space: normal; }
+.emr-page .rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line :is(input, select, button) { min-height: var(--control-height); height: var(--control-height); padding: 6px 8px; border-radius: 6px; font-size: .8125rem; }
+.emr-page #prescriptionDialog .rx-order-line__actions { gap: 6px; }
+.emr-page #prescriptionDialog .rx-result--compact .rx-order-line .rx-order-line__actions button { min-height: var(--control-height); height: var(--control-height); padding-inline: 10px; font-size: .8125rem; }
+
+.emr-page #medicationCoverageDialog { --coverage-content-width: 72rem; display: flex; flex-direction: column; overflow: clip; color: var(--ink); border: 0; border-radius: 12px; }
+.emr-page .rx-dialog#medicationCoverageDialog .rx-dialog__panel { flex: 1 1 auto; min-height: 0; height: auto; max-height: none; scroll-padding-block: calc(var(--rx-sticky-header-height, 0px) + 12px) 12px; }
+.emr-page #medicationCoverageDialog .rx-dialog__panel > :is(.coverage-intro, .coverage-settings--prepare, .coverage-product, .coverage-criteria, .coverage-risk, .coverage-summary, .rx-review) { width: 100%; max-width: var(--coverage-content-width); margin-inline: auto; }
+.emr-page #medicationCoverageDialog :is(.rx-dialog__panel, .rx-dialog__footer, textarea, pre, .rx-source__excerpt, .rx-model-report__table th, .rx-model-report__table td, .coverage-patient-table th, .coverage-patient-table td, .rx-dialog__title, .coverage-header__medication, .coverage-header__encounter) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; hyphens: none; }
+.emr-page #medicationCoverageDialog .rx-dialog__footer { flex: 0 0 auto; display: grid; gap: 8px; padding: 12px max(12px, env(safe-area-inset-right), calc((100% - var(--coverage-content-width)) / 2)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left), calc((100% - var(--coverage-content-width)) / 2)); border-top: 1px solid var(--line-strong); background: var(--surface-raised); }
+.emr-page #medicationCoverageDialog .rx-dialog__footer .coverage-footer { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+.emr-page #medicationCoverageDialog .rx-dialog__header { margin: 0 -12px 6px; padding: 18px max(20px, calc((100% - var(--coverage-content-width)) / 2 + 12px)); grid-template-columns: minmax(0, 1fr) auto; align-items: start; border-block-start: 3px solid var(--accent); border-block-end: 1px solid var(--line-strong); background: var(--accent-wash); color: var(--ink); }
+.emr-page #medicationCoverageDialog .rx-dialog__heading { gap: 8px; }
+.emr-page .rx-dialog#medicationCoverageDialog .rx-dialog__title { color: var(--ink); font-size: 1.25rem; font-weight: 650; line-height: 1.4; }
+.emr-page #medicationCoverageDialog .rx-dialog__context { display: grid; gap: 4px; color: var(--accent); font-size: .75rem; line-height: 1.5; }
+.emr-page #medicationCoverageDialog .coverage-header__medication { color: var(--ink); font-size: .875rem; font-weight: 600; }
+.emr-page #medicationCoverageDialog .rx-dialog__close { color: var(--accent); padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); }
+.emr-page #medicationCoverageDialog .rx-process__summary { color: var(--muted); }
+.emr-page #medicationCoverageDialog .rx-dialog__header :is(button, .rx-process__summary) { min-height: var(--control-height-small); font-size: .75rem; }
+.emr-page #medicationCoverageDialog .coverage-intro { margin: 0; padding: 0 0 16px; border-bottom: 1px solid var(--line); }
+.emr-page #medicationCoverageDialog .coverage-intro p { color: var(--ink); font-size: .8125rem; font-weight: 400; line-height: 1.55; }
+.emr-page #medicationCoverageDialog .coverage-intro p b { font-weight: 500; }
+.emr-page #medicationCoverageDialog .coverage-intro small { color: var(--muted); font-size: .75rem; }
+.emr-page #medicationCoverageDialog .coverage-settings--prepare { padding-block: 0; }
+.emr-page #medicationCoverageDialog .coverage-settings--prepare > header { margin-bottom: 12px; }
+.emr-page #medicationCoverageDialog .coverage-settings--prepare > header h4 { font-size: .875rem; font-weight: 650; }
+.emr-page #medicationCoverageDialog .review-preview { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.emr-page #medicationCoverageDialog .coverage-settings--prepare .review-preview__section { grid-template-rows: auto auto auto; gap: 8px; }
+.emr-page #medicationCoverageDialog .review-preview__field-header { min-height: var(--control-height-small); }
+.emr-page #medicationCoverageDialog .review-preview__field-header label { font-size: .8125rem; font-weight: 600; }
+.emr-page #medicationCoverageDialog .review-preview__hint { font-size: .75rem; line-height: 1.5; }
+.emr-page #medicationCoverageDialog .review-preview__expand { min-height: var(--control-height-small); padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); color: var(--muted); font-size: .75rem; font-weight: 500; }
+.emr-page #medicationCoverageDialog .review-preview__expand:hover { background: var(--surface-soft); border-color: var(--accent); color: var(--accent); }
+.emr-page #medicationCoverageDialog .review-preview__expand[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent); color: var(--accent); }
+.emr-page #medicationCoverageDialog .coverage-settings--prepare textarea { padding: 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface-raised); color: var(--ink); font-family: var(--font-sans); font-size: .8125rem; font-weight: 400; line-height: 1.65; }
+.emr-page #medicationCoverageDialog #reviewPreviewData { font-family: var(--font-mono); font-size: .75rem; white-space: pre; word-break: normal; overflow-wrap: normal; }
+.emr-page #medicationCoverageDialog .review-preview__model { gap: 8px; }
+.emr-page #medicationCoverageDialog .review-preview__model label { font-size: .75rem; font-weight: 500; color: var(--muted); }
+.emr-page #medicationCoverageDialog .review-preview__model select { max-width: 26rem; font-weight: 500; }
+.emr-page #medicationCoverageDialog .review-preview__actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.emr-page #medicationCoverageDialog .coverage-input-note { font-size: .8125rem; line-height: 1.5; }
+.emr-page #medicationCoverageDialog :is(.coverage-input-error, .coverage-field-error) { margin: 0 0 12px; color: var(--urgent); font-size: .8125rem; line-height: 1.5; }
+.emr-page #medicationCoverageDialog .coverage-field-error { margin: 0; }
+.emr-page #medicationCoverageDialog textarea[aria-invalid="true"] { border-color: var(--urgent); }
+.emr-page #medicationCoverageDialog .review-preview__actions .clinical-button { flex: 0 0 auto; }
+.emr-page #medicationCoverageDialog :is(.rx-review, .coverage-criteria, .coverage-summary) { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.emr-page #medicationCoverageDialog :is(.coverage-criteria h4, .coverage-summary h4) { padding-inline: 0; background: transparent; color: var(--ink); }
+.emr-page #medicationCoverageDialog :is(.coverage-patient-table, .rx-model-report__table) { font-size: .8125rem; }
+.emr-page #medicationCoverageDialog :is(.coverage-patient-table th, .rx-model-report__table th) { background: var(--surface-soft); color: var(--ink); font-weight: 600; }
+.emr-page #medicationCoverageDialog :is(.coverage-patient-table td, .rx-model-report__table td) { line-height: 1.6; font-weight: 400; }
+.emr-page .rx-dialog[data-embedded] { border-radius: 0; box-shadow: none; }
+
+@container emr-dialog (max-width: 24rem) {
+  .emr-page #prescriptionDialog .rx-order-line__actions { grid-row: 6; }
+}
+
+@media (max-width: 1080px) {
+  .emr-page .clinical-layout { gap: 12px; }
+}
+
+@media (max-width: 620px), (pointer: coarse) {
+  body.emr-page { --control-height: 44px; --control-height-small: 44px; }
+  .emr-page .rx-dialog .rx-dialog__header { padding: 12px; }
+  .emr-page .rx-dialog .rx-dialog__panel { padding: 12px; }
+  .emr-page #medicationCoverageDialog .rx-dialog__header { padding: 16px; grid-template-columns: minmax(0, 1fr); }
+  .emr-page #medicationCoverageDialog .rx-dialog__header-actions { justify-self: stretch; }
+  .emr-page #medicationCoverageDialog .rx-dialog__close { margin-inline-start: auto; }
+  .emr-page .clinical-header .workspace-tabs button { min-height: 44px; }
+  .emr-page #medicationCoverageDialog .review-preview { gap: 16px; }
+  .emr-page #medicationCoverageDialog .review-preview__model select { max-width: 100%; }
+  .emr-page #medicationCoverageDialog .review-preview__actions { flex-direction: column; align-items: stretch; gap: 8px; }
+  .emr-page #medicationCoverageDialog .review-preview__actions .clinical-button { width: 100%; }
+  .emr-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea),
+  .emr-page .rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line :is(input, select),
+  .emr-page #medicationCoverageDialog .coverage-settings--prepare textarea { font-size: 1rem; }
+  .emr-page .soap-field textarea { font-size: 1rem; }
+  .emr-page #medicationCoverageDialog #reviewPreviewData { font-size: 1rem; }
+}

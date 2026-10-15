@@ -19,7 +19,6 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
   return (
     <section className="rail-selected-patient" data-safety-persistent aria-label="선택 환자 요약">
       <div className="patient-identity">
-        <p className="rail-eyebrow">SELECTED PATIENT</p>
         <div className="patient-identity__row">
           <div>
             <h1 id="selectedPatientName">{patient.name}</h1>

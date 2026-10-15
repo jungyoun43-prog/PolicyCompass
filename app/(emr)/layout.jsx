@@ -6,6 +6,7 @@ import "../../src/body-index.css";
 import "../../src/emr.css";
 import "../../src/controls.css";
 import "../../src/emr-dialog-responsive.css";
+import "../../src/clinical-ui.css";
 
 import { pageMetadata, RootShell } from "../../components/root-shell.jsx";
 

@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * shadcn-style Button that speaks the PolicyCompass class vocabulary: the
- * variants map onto the existing clinical-button styles, so adopting the
- * component changes no pixels while call sites gain the shadcn API.
+ * variants and sizes use the shared clinical control vocabulary.
  */
 const buttonVariants = cva("", {
   variants: {
@@ -18,15 +17,20 @@ const buttonVariants = cva("", {
       demo: "clinical-button clinical-button--demo",
       text: "text-action",
     },
+    size: {
+      default: "",
+      sm: "clinical-button--sm",
+    },
   },
   defaultVariants: {
     variant: "default",
+    size: "default",
   },
 });
 
-function Button({ className, variant, asChild = false, ...props }) {
+function Button({ className, variant, size, asChild = false, ...props }) {
   const Comp = asChild ? Slot.Root : "button";
-  return <Comp className={cn(buttonVariants({ variant }), className)} type={props.type ?? "button"} {...props} />;
+  return <Comp className={cn(buttonVariants({ variant, size }), className)} type={props.type ?? "button"} {...props} />;
 }
 
 export { Button, buttonVariants };

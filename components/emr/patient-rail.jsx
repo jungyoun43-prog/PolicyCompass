@@ -160,7 +160,6 @@ export function PatientRail({
       <div id="visitContextSlot" className="rail-visit-slot" ref={visitSlotRef} />
       <div className="rail-heading">
         <div>
-          <p className="rail-eyebrow">TODAY&apos;S WORKLIST</p>
           <h2 id="patientRailTitle">오늘 환자</h2>
         </div>
         <span className="rail-count" id="patientCount">{todayCount}/{patients.length}명</span>

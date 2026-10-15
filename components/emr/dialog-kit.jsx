@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,10 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
 
 /**
  * The shared entry-dialog frame: a real <dialog>, a sticky header carrying the
- * title, its scope notice, any extra header actions, and the way out.
+ * title, its scope notice, any extra header actions, and the way out. Optional
+ * footer content stays outside the scrolling panel.
  */
-export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, showNotice = true, headerExtra, children }) {
+export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, showNotice = true, headerExtra, footer, children }) {
   const contentRef = useRef(null);
   const drag = useRef(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -48,6 +49,15 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false,
     window.addEventListener("resize", reset);
     return () => window.removeEventListener("resize", reset);
   }, []);
+  const observeCoverageHeader = useCallback((header) => {
+    if (!header || id !== "medicationCoverageDialog") return;
+    const panel = header.parentElement;
+    const updateInset = () => panel.style.setProperty("--rx-sticky-header-height", `${header.getBoundingClientRect().height}px`);
+    updateInset();
+    const observer = new ResizeObserver(updateInset);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [id]);
   const move = (dx, dy, origin, rect) => setOffset({
     x: origin.x + Math.max(8 - rect.left, Math.min(dx, window.innerWidth - rect.right - 8)),
     y: origin.y + Math.max(8 - rect.top, Math.min(dy, window.innerHeight - rect.bottom - 8)),
@@ -65,7 +75,7 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false,
         <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" data-embedded={embedded || undefined} id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
           <DialogPrimitive.Title className="visually-hidden">{title}</DialogPrimitive.Title>
           <div className="rx-dialog__panel">
-            <header className="rx-dialog__header rx-dialog__drag-handle" tabIndex={0} aria-label={`${title} 창 이동`} title="드래그 또는 방향키로 이동 · 더블클릭으로 가운데 정렬"
+            <header ref={observeCoverageHeader} className="rx-dialog__header rx-dialog__drag-handle" tabIndex={embedded ? undefined : 0} aria-label={embedded ? title : `${title} 창 이동`} title={embedded ? undefined : "드래그 또는 방향키로 이동 · 더블클릭으로 가운데 정렬"}
               onPointerDown={startDrag}
               onPointerMove={(event) => { const start = drag.current; if (start) move(event.clientX - start.x, event.clientY - start.y, start.offset, start.rect); }}
               onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
@@ -93,6 +103,7 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false,
             </header>
             {children}
           </div>
+          {footer ? <footer className="rx-dialog__footer">{footer}</footer> : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

@@ -2,6 +2,21 @@
 
 PolicyCompass 제품·UI·데이터 경계의 단일 설계 기준입니다.
 
+## Clinical UI refinement — 2026-10-15
+
+The physician EMR, prescription composer, and reimbursement review use Operate mode: clear task hierarchy, restrained green accents, and readable clinical data. The implementation is scoped to `.emr-page` in `src/clinical-ui.css`; the personal app keeps its own visual language.
+
+- Desktop controls share a 36px height; compact secondary actions use 32px. Phone and coarse-pointer controls use at least 44px. The shared Button exposes `size="sm"` rather than a separate one-off button style.
+- Primary fill is reserved for committing a task, such as finishing an encounter or starting a review. Diagnosis, prescription, and order launchers use secondary buttons.
+- Navigation uses a flat tab strip. Worksheets use a single border without decorative shadows; nested SOAP fields use labels and plain editors instead of another card layer. A thin neutral separator groups source inputs and their actions.
+- Clinical input and body text use normal weight. Headings and controls provide the hierarchy; counts use tabular numerals. Color remains paired with the existing textual safety and verdict labels.
+- Prescription dose fields and actions share a baseline and height. Review data, notice, and instruction editors use three full-width stacked rows with equal heights; expansion controls remain compact rectangular buttons. No robot decoration or assistant persona heading is used.
+- The reimbursement header uses the existing green wash and a thin top rule. The selected medication sits below the page title, followed by patient and encounter context; the action area wraps below on phones.
+- The review start action, transmission note, and reference notice live in a persistent footer outside the scrolling panel, reserving their own space. Korean prose wraps at word boundaries with an emergency fallback for oversized tokens; raw clinical JSON retains its lines and scrolls horizontally.
+- The second skill pass limits coverage content to 72rem on wide screens, removes reserved hint space between vertically stacked editors, and keeps mobile prescription actions after dose inputs. Clinical text inputs use 16px on phones, with a 2px accent focus ring. Coverage scroll padding follows the actual sticky header height, and validation identifies and focuses the first missing source field.
+- Instructions: [Impeccable](https://skills.sh/pbakaus/impeccable/impeccable), especially its Distill and Operate guidance, and [Vercel Web Interface Guidelines](https://skills.sh/vercel-labs/agent-skills/web-design-guidelines). Both are installed in `.agents/skills`; `find-skills` is installed in the user's Codex skills folder.
+- Additional project skills: [Awesome Design](https://github.com/EagleFandel/awesome-design), using its IBM reference for restrained surfaces, consistent spacing, and semantic interaction states; [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), using its web guidance for error placement, focus visibility, and accessible labels. These references adapt to the existing Korean clinical interface and green palette; this document remains the product's design authority.
+
 ## 0. Canonical Two-App Product Architecture
 
 This section is normative. When a later patient or clinical detail conflicts with it, this two-app boundary wins.

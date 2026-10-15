@@ -102,7 +102,7 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button variant="primary" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>,
+        <Button size="sm" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>,
         launcherSlot) : null}
       <RxDialog id="diagnosisDialog" open={open} onClose={close} eyebrow="DIAGNOSIS SEARCH" title="진단 추가" titleId="dxDialogTitle" context={context}
         notice="상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다." noticeId="diagnosisNotice">
@@ -192,7 +192,7 @@ export function OrderDialog({ patient, encounter, editable, applyMutation, withD
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button variant="primary" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>,
+        <Button size="sm" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>,
         launcherSlot) : null}
       <RxDialog id="orderDialog" open={open} onClose={close} eyebrow="ORDER SEARCH" title="오더 추가" titleId="orderDialogTitle" context={context}
         notice="오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다." noticeId="orderNotice">

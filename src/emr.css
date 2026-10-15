@@ -10929,7 +10929,6 @@ model-viewer::part(default-progress-mask) {
 
 /* Coverage starts with editable source inputs, before any model request. */
 #prescriptionDialog .rx-order-line__actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-#prescriptionDialog .rx-order-line__actions .clinical-button { min-height: 44px; }
 .coverage-settings--prepare { position: static; z-index: auto; width: auto; padding: 16px 0; border: 0; box-shadow: none; overflow: visible; }
 .coverage-settings--prepare > header { margin-bottom: 16px; }
 .coverage-settings--prepare > header h4 { margin: 0; font-size: 1rem; }
@@ -10953,7 +10952,6 @@ model-viewer::part(default-progress-mask) {
   .coverage-settings--prepare .review-preview__actions .clinical-button { width: 100%; }
 }
 
-#prescriptionDialog .rx-result--compact .rx-order-line__actions button.clinical-button { min-height: 44px; max-height: none; padding: 8px 10px; font-size: .82rem; }
 .coverage-settings--prepare .review-preview { max-height: none; overflow: visible; padding: 0; }
 #medicationCoverageDialog .coverage-settings--prepare .review-preview__model { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; width: 100%; margin: 0; color: var(--ink); }
 .coverage-settings--prepare .review-preview__actions { position: static; }

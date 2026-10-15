@@ -239,3 +239,11 @@
   #medicationCoverageDialog .coverage-tools { margin-left: auto; }
   #medicationCoverageDialog :is(.rx-model-report__table td, .rx-model-report__table th, .coverage-patient-table td, .coverage-patient-table th) { padding: .25rem; }
 }
+
+/* The review action remains beside prescribing, with a full touch target. */
+.rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line .rx-order-line__actions button {
+  height: auto;
+  min-height: 2.75rem;
+  padding: .5rem .625rem;
+  font-size: .82rem;
+}

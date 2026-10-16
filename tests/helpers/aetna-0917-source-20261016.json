@@ -1,0 +1,98 @@
+{
+  "medicationId": "durvalumab-500",
+  "policyId": "us-aetna",
+  "text": "Brand Selection for Medically Necessary Indications for Commercial Medical Plans\n\nAccording to Aetna commercial benefit plans, health care services are considered not medically necessary if they are more costly than an alternative service or sequence of services at least as likely to produce equivalent therapeutic or diagnostic results as to the diagnosis or treatment of that member’s illness, injury or disease. Aetna commercial plans may require a trial of a lower-cost drug (preferred medication) that is at least as likely to produce equivalent therapeutic results before approving coverage for a higher-cost drug within the same therapeutic class. For a list of preferred drugs, refer to the Aetna Commercial Clinical Program Summary.\n\nScope of Policy\n\nThis Clinical Policy Bulletin addresses durvalumab (Imfinzi) for commercial medical plans. For Medicare criteria, see Medicare Part B Criteria.\n\nNote: Requires Precertification:\n\nPrecertification of durvalumab (Imfinzi) is required of all Aetna participating providers and members in applicable plan designs.  For precertification of durvalumab, call (866) 752-7021 or fax (888) 267-3277. For Statement of Medical Necessity (SMN) precertification forms, see Specialty Pharmacy Precertification.\n\nNote: Site of Care Utilization Management Policy applies. For information on site of service for durvalumab (Imfinzi), see Utilization Management Policy on Site of Care for Specialty Drug Infusions.\n\nExclusions\n\nAetna considers members not eligible for Imfinzi when they have experienced disease progression while on PD-1 or PD-L1 inhibitor therapy.\n\nCriteria for Initial Approval\n\nAetna considers durvalumab (Imfinzi) medically necessary for the following indications:\n\nNon-small cell lung cancer (NSCLC) - for treatment of NSCLC when any of the following criteria are met:\n\n1. The member has unresectable stage II or III NSCLC that has not progressed following concurrent platinum-based chemotherapy and radiation therapy and meets all of the following criteria:\n\n  1. The tumor is negative for EGFR exon 19 deletion and exon 21 L858R mutations (unless testing is not feasible due to insufficient tissue); and\n  2. The requested medication will be used as a single agent; or\n2. The member has recurrent, advanced, or metastatic NSCLC negative for EGFR exon 19 deletion and exon 21 L858R mutations and ALK, RET, and ROS1 gene fusions (unless testing is not feasible due to insufficient tissue) and meets either of the following criteria:\n\n  1. The requested medication will be used in combination with tremelimumab-actl (Imjudo) and platinum-based chemotherapy; or\n  2. The requested medication will be used as maintenance therapy as a single agent or in combination with pemetrexed; or\n3. The member has resectable NSCLC and meets all of the following criteria:\n\n  1. The requested medication will be used as neoadjuvant treatment in combination with platinum-containing chemotherapy and continued as adjuvant treatment after surgery as a single agent; and\n  2. The tumor is negative for EGFR exon 19 deletion and exon 21 L858R mutations and ALK, RET, and ROS1 gene fusions (unless testing is not feasible due to insufficient tissue);\n\nAetna considers all other indications as experimental, investigational, or unproven.\n\nContinuation of Therapy\n\nAetna considers continuation of durvalumab (Imfinzi) therapy medically necessary for the following indications:\n\nNSCLC - for continued treatment in members requesting reauthorization for NSCLC when any of the following criteria are met:\n\n1. The member has unresectable stage II or III NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen (up to 12 months total); or\n2. The member has recurrent, advanced, or metastatic NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen; or\n3. The member has resectable NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen (up to 12 cycles after surgery);\n\nDosage and Administration\n\nNote: Approvals may be subject to dosing limits in accordance with FDA-approved labeling, accepted compendia, and/or evidence-based practice guidelines. See Medical Specialty Medication Quantity Limits for more information.\n\nThe following information includes dosing recommendations as per the FDA-approved prescribing information.\n\nDurvalumab is supplied as Imfinzi 500 mg/10 mL (50 mg/mL) or 120 mg/2.4 mL (50 mg/mL) solution in a single-dose vial for injection. Imfinzi is administered as an intravenous (IV) infusion over 60 minutes. Duration of therapy is until disease progression or unacceptable toxicity, unless otherwise specified.\n\nUnresectable Stage III NSCLC, Following Concurrent Platinum-based Chemotherapy and Radiation Therapy\n\n• For persons with a body weight of 30 kg and more: Imfinzi 10 mg/kg every 2 weeks, or 1500 mg every 4 weeks, for a maximum of 12 months\n• For persons with a body weight of less than 30 kg: Imfinzi 10 mg/kg every 2 weeks, for a maximum of 12 months",
+  "documents": [
+    {
+      "title": "Aetna CPB 0917 · NSCLC consolidation",
+      "url": "https://www.aetna.com/cpb/medical/data/900_999/0917.html",
+      "sections": [
+        {
+          "title": "Commercial policy",
+          "text": "Brand Selection for Medically Necessary Indications for Commercial Medical Plans\n\nAccording to Aetna commercial benefit plans, health care services are considered not medically necessary if they are more costly than an alternative service or sequence of services at least as likely to produce equivalent therapeutic or diagnostic results as to the diagnosis or treatment of that member’s illness, injury or disease. Aetna commercial plans may require a trial of a lower-cost drug (preferred medication) that is at least as likely to produce equivalent therapeutic results before approving coverage for a higher-cost drug within the same therapeutic class. For a list of preferred drugs, refer to the Aetna Commercial Clinical Program Summary.",
+          "references": [
+            {
+              "title": "Aetna Commercial Clinical Program Summary",
+              "href": "https://www.aetna.com/health-care-professionals/precertification/precertification-lists.html#tab_content_section_responsivegrid_970135637_responsivegrid_tabs_link_tabs_2"
+            }
+          ]
+        },
+        {
+          "title": "Scope of Policy",
+          "text": "Scope of Policy\n\nThis Clinical Policy Bulletin addresses durvalumab (Imfinzi) for commercial medical plans. For Medicare criteria, see Medicare Part B Criteria.\n\nNote: Requires Precertification:\n\nPrecertification of durvalumab (Imfinzi) is required of all Aetna participating providers and members in applicable plan designs.  For precertification of durvalumab, call (866) 752-7021 or fax (888) 267-3277. For Statement of Medical Necessity (SMN) precertification forms, see Specialty Pharmacy Precertification.\n\nNote: Site of Care Utilization Management Policy applies. For information on site of service for durvalumab (Imfinzi), see Utilization Management Policy on Site of Care for Specialty Drug Infusions.",
+          "references": [
+            {
+              "title": "Medicare Part B Criteria",
+              "href": "https://www.aetna.com/health-care-professionals/medicare/part-b-step.html"
+            },
+            {
+              "title": "Specialty Pharmacy Precertification",
+              "href": "https://www.aetna.com/health-care-professionals/health-care-professional-forms.html"
+            },
+            {
+              "title": "Utilization Management Policy on Site of Care for Specialty Drug Infusions",
+              "href": "https://www.aetna.com/health-care-professionals/utilization-management/drug-infusion-site-of-care-policy.html"
+            }
+          ]
+        },
+        {
+          "title": "Exclusions",
+          "text": "Exclusions\n\nAetna considers members not eligible for Imfinzi when they have experienced disease progression while on PD-1 or PD-L1 inhibitor therapy.",
+          "references": []
+        },
+        {
+          "title": "Criteria for Initial Approval",
+          "text": "Criteria for Initial Approval\n\nAetna considers durvalumab (Imfinzi) medically necessary for the following indications:\n\nNon-small cell lung cancer (NSCLC) - for treatment of NSCLC when any of the following criteria are met:\n\n1. The member has unresectable stage II or III NSCLC that has not progressed following concurrent platinum-based chemotherapy and radiation therapy and meets all of the following criteria:\n\n  1. The tumor is negative for EGFR exon 19 deletion and exon 21 L858R mutations (unless testing is not feasible due to insufficient tissue); and\n  2. The requested medication will be used as a single agent; or\n2. The member has recurrent, advanced, or metastatic NSCLC negative for EGFR exon 19 deletion and exon 21 L858R mutations and ALK, RET, and ROS1 gene fusions (unless testing is not feasible due to insufficient tissue) and meets either of the following criteria:\n\n  1. The requested medication will be used in combination with tremelimumab-actl (Imjudo) and platinum-based chemotherapy; or\n  2. The requested medication will be used as maintenance therapy as a single agent or in combination with pemetrexed; or\n3. The member has resectable NSCLC and meets all of the following criteria:\n\n  1. The requested medication will be used as neoadjuvant treatment in combination with platinum-containing chemotherapy and continued as adjuvant treatment after surgery as a single agent; and\n  2. The tumor is negative for EGFR exon 19 deletion and exon 21 L858R mutations and ALK, RET, and ROS1 gene fusions (unless testing is not feasible due to insufficient tissue);\n\nAetna considers all other indications as experimental, investigational, or unproven.",
+          "references": []
+        },
+        {
+          "title": "Continuation of Therapy",
+          "text": "Continuation of Therapy\n\nAetna considers continuation of durvalumab (Imfinzi) therapy medically necessary for the following indications:\n\nNSCLC - for continued treatment in members requesting reauthorization for NSCLC when any of the following criteria are met:\n\n1. The member has unresectable stage II or III NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen (up to 12 months total); or\n2. The member has recurrent, advanced, or metastatic NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen; or\n3. The member has resectable NSCLC and there is no evidence of unacceptable toxicity or disease progression while on the current regimen (up to 12 cycles after surgery);",
+          "references": []
+        },
+        {
+          "title": "Dosage and Administration",
+          "text": "Dosage and Administration\n\nNote: Approvals may be subject to dosing limits in accordance with FDA-approved labeling, accepted compendia, and/or evidence-based practice guidelines. See Medical Specialty Medication Quantity Limits for more information.\n\nThe following information includes dosing recommendations as per the FDA-approved prescribing information.\n\nDurvalumab is supplied as Imfinzi 500 mg/10 mL (50 mg/mL) or 120 mg/2.4 mL (50 mg/mL) solution in a single-dose vial for injection. Imfinzi is administered as an intravenous (IV) infusion over 60 minutes. Duration of therapy is until disease progression or unacceptable toxicity, unless otherwise specified.",
+          "references": [
+            {
+              "title": "Medical Specialty Medication Quantity Limits",
+              "href": "https://aetna.com/content/dam/aetna/pdfs/aetnacom/pdf/medical-specialty-medication-quantity-limits.pdf"
+            }
+          ]
+        },
+        {
+          "title": "Unresectable Stage III NSCLC, Following Concurrent Platinum-based Chemotherapy and Radiation Therapy",
+          "text": "Unresectable Stage III NSCLC, Following Concurrent Platinum-based Chemotherapy and Radiation Therapy\n\n• For persons with a body weight of 30 kg and more: Imfinzi 10 mg/kg every 2 weeks, or 1500 mg every 4 weeks, for a maximum of 12 months\n• For persons with a body weight of less than 30 kg: Imfinzi 10 mg/kg every 2 weeks, for a maximum of 12 months",
+          "references": []
+        }
+      ],
+      "references": [
+        {
+          "title": "Aetna Commercial Clinical Program Summary",
+          "url": "https://www.aetna.com/health-care-professionals/precertification/precertification-lists.html#tab_content_section_responsivegrid_970135637_responsivegrid_tabs_link_tabs_2"
+        },
+        {
+          "title": "Medicare Part B Criteria",
+          "url": "https://www.aetna.com/health-care-professionals/medicare/part-b-step.html"
+        },
+        {
+          "title": "Specialty Pharmacy Precertification",
+          "url": "https://www.aetna.com/health-care-professionals/health-care-professional-forms.html"
+        },
+        {
+          "title": "Utilization Management Policy on Site of Care for Specialty Drug Infusions",
+          "url": "https://www.aetna.com/health-care-professionals/utilization-management/drug-infusion-site-of-care-policy.html"
+        },
+        {
+          "title": "Medical Specialty Medication Quantity Limits",
+          "url": "https://aetna.com/content/dam/aetna/pdfs/aetnacom/pdf/medical-specialty-medication-quantity-limits.pdf"
+        }
+      ],
+      "lastModified": "Fri, 25 Sep 2026 20:18:36 GMT"
+    }
+  ],
+  "original": true,
+  "fetchedAt": "2026-10-16T02:22:27.279Z",
+  "checkedOn": "2026-10-16",
+  "hash": "5f7bd3b7fbb52cf51d8b93009df6c2e0ea7b2cae7c9b4764f58ade951fca8fb2"
+}

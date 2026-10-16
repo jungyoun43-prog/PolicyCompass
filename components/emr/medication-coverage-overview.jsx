@@ -84,7 +84,7 @@ export function MedicationCoverageSummary({ review }) {
     } catch { setCopied("복사하지 못했습니다. 내용을 선택해 복사하세요."); }
   };
   return <section className="coverage-summary">
-    <div><h4><CoverageIcon kind="summary" />{review.generatedBy === "rule" ? "규칙 기반 요약" : "AI 요약 의견"}</h4>
+    <div><h4><CoverageIcon kind="summary" />{review.assessmentMethod === "server-criteria-aggregation" ? "조건별 검토 요약" : "AI 요약 의견"}</h4>
       <Button type="button" onClick={copy}>요약 내용 복사</Button></div>
     <p>{summary}</p><span role="status">{copied}</span>
   </section>;

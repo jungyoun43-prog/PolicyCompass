@@ -200,7 +200,7 @@ test("AI 검토는 전송 단계와 전송 내역을 화면에 남기고 판정 
 test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 뒤 명시적으로 시작한다", async () => {
   // Given
   const rx = await componentMarkup("components/emr/prescription-dialog.jsx");
-  const medication = findMedicationInCatalog("benralizumab-30");
+  const medication = findMedicationInCatalog("durvalumab-500");
   const base = buildMedicationClaimComparison({
     patient: demo.patients.find(({ name }) => name === "김비타"),
     medication,
@@ -229,7 +229,7 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   // Then — 세 섹션은 각자 채워져 있고 직접식별자를 담지 않는다.
   assert.ok(dataText.trim().length > 0, "진료데이터");
   assert.equal(dataText.includes("김비타"), false);
-  assert.match(noticeText, /고시 제2026-92호/);
+  assert.match(noticeText, /관해공고요법/);
   assert.match(promptText, /### 판정 원칙/);
   const initial = medicationReviewRequest(base);
   assert.equal(JSON.parse(initial.input).noticeText, noticeText);
@@ -248,7 +248,7 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   assert.match(rx, /setSettingsOpen\(true\)/);
   assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
   assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
-  assert.match(rx, /promptText: medicationReviewInstructions\(reviewModel \|\| capability\.model\)/);
+  assert.match(rx, /promptText: reviewInstructionsFor\(medicationId, REGISTERED_COVERAGE_POLICY, reviewModel \|\| capability\.model\)/);
   assert.match(rx, /coverage-settings--prepare/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);
@@ -257,7 +257,7 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   assert.match(rx, /id="reviewPreviewData"[^>]*value=\{reviewPreview\.dataText\}/);
   assert.match(rx, /id="reviewPreviewNoticeText"[^>]*value=\{reviewPreview\.noticeText\}/);
   assert.match(rx, /id="reviewPreviewPrompt"[^>]*value=\{reviewPreview\.promptText\}/);
-  assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText, policyId: input\.policyId \}/);
+  assert.match(rx, /overrides = \{ patientData: dataText, notice: noticeText, instructions: promptText, policyId: input\.policyId,/);
   assert.match(rx, /comparison: base, provider: activeProvider, overrides/);
   assert.match(rx, /id="reviewPreviewSend"[^>]*onClick=\{\(\) => sendReview\(\)\}/);
   // 고시 기반 모델 보고가 있으면 예시 규칙 대조표 대신 보고만 보인다.

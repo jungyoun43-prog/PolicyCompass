@@ -3,6 +3,8 @@ import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
 import { medicationReviewRequest } from "../../src/medication-review-prompt.js";
 import { medicationCoveragePolicy } from "../../src/medication-coverage-policies.js";
+import { medicationCriteriaProfile } from "../../src/medication-policy-criteria.js";
+import { assertCriteriaSource, structuredMedicationRequest, validateMedicationCriteria } from "../medication-criteria-review.mjs";
 import { assertModelContextAccepted, ModelContextError } from "../../lib/model-errors.js";
 import { isJevReviewModel } from "../../src/medication-review-decision.js";
 import { jevMedicationDraft } from "../medication-jev-review.mjs";
@@ -158,7 +160,7 @@ export function sanitizeMedicationClaimComparison(payload = {}) {
 function sanitizeOverrides(input, comparison) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const overrides = {};
-  for (const key of ["instructions", "notice", "patientData"]) {
+  for (const key of ["instructions", "notice", "patientData", "criteriaSourceNotice"]) {
     if (!Object.hasOwn(input, key)) continue;
     if (typeof input[key] !== "string" || !input[key].trim()) {
       throw new TypeError("검토 지시문, 고시정보, 진료데이터는 비어 있지 않은 문자열이어야 합니다.");
@@ -167,10 +169,13 @@ function sanitizeOverrides(input, comparison) {
   }
   const model = cleanText(input.model, 120);
   if (model && isAllowedFrontierModel(model)) overrides.model = model;
+  overrides.treatmentPhase = input.treatmentPhase ?? "initial";
+  if (!["initial", "continuation"].includes(overrides.treatmentPhase)) throw new TypeError("초기 또는 지속 투여 경로를 선택해 주세요.");
   if (input.policyId !== undefined) {
-    const policy = medicationCoveragePolicy(comparison.medication.id, input.policyId);
+    overrides.policyId = input.policyId;
+    const policy = medicationCoveragePolicy(comparison.medication.id, overrides.policyId);
     if (!policy) throw new TypeError("이 약제에 등록되지 않은 보험 기준입니다.");
-    overrides.policyContext = { country: policy.country, payer: policy.payer, program: policy.program, indication: policy.indication };
+    overrides.policyContext = { countryCode: policy.countryCode, country: policy.country, payer: policy.payer, program: policy.program, indication: policy.indication };
   }
   return overrides;
 }
@@ -201,8 +206,15 @@ function validateDraft(raw, _comparison) {
   return { verdict, markdown };
 }
 
+function reviewRequest(comparison, options, feedback) {
+  const request = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
+  return options.criteriaProfile
+    ? structuredMedicationRequest(request, comparison, { ...options.overrides, retryFeedback: feedback }, options.criteriaProfile)
+    : request;
+}
+
 async function localDraft(comparison, options, feedback) {
-  const { instructions, input } = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
+  const { instructions, input } = reviewRequest(comparison, options, feedback);
   const messages = [
     { role: "system", content: instructions },
     { role: "user", content: input },
@@ -241,7 +253,7 @@ async function localDraft(comparison, options, feedback) {
 }
 
 async function frontierDraft(comparison, options, feedback) {
-  const { instructions, input } = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
+  const { instructions, input } = reviewRequest(comparison, options, feedback);
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
@@ -249,7 +261,7 @@ async function frontierDraft(comparison, options, feedback) {
     input,
     preserveInput: true,
     requireCompleteOutput: true,
-    maxOutputTokens: 2_600,
+    maxOutputTokens: options.criteriaProfile ? 6_000 : 2_600,
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
     environment: options.environment ?? process.env,
@@ -273,8 +285,12 @@ function medicationClaimReviewGraph() {
   compiledGraph ??= new StateGraph(MedicationClaimReviewState)
     .addNode("compare", async (state, config) => {
       const options = config?.configurable?.medicationReviewOptions ?? {};
+      if (options.sourceError) return { draft: { status: "incomplete", verdict: null, generatedBy: "none", note: options.sourceError } };
       if (!options.model) {
-        return { draft: { generatedBy: "rule", note: "AI 모델이 설정되지 않아 규칙 판정을 그대로 사용했습니다." } };
+        return { draft: { status: "failed", verdict: null, generatedBy: "none", note: "AI 모델이 설정되지 않아 검토를 완료하지 못했습니다." } };
+      }
+      if (options.criteriaProfile && isJevReviewModel(options.model)) {
+        return { draft: { status: "incomplete", verdict: null, generatedBy: "none", note: "이 조건표 검토에는 조건별 근거를 반환하는 모델이 필요합니다. 다른 검토 모델을 선택해 주세요." } };
       }
       let feedback = "";
       let rawSample = "";
@@ -288,12 +304,16 @@ function medicationClaimReviewGraph() {
         let raw = null;
         try {
           if (options.provider === "frontier" && isJevReviewModel(options.model)) {
-            return { draft: await jevMedicationDraft(state.comparison, attemptOptions) };
+            return { draft: { ...await jevMedicationDraft(state.comparison, attemptOptions), status: "completed" } };
           }
           raw = options.provider === "frontier"
             ? await frontierDraft(state.comparison, attemptOptions, feedback)
             : await localDraft(state.comparison, attemptOptions, feedback);
-          return { draft: { ...validateDraft(raw.text, state.comparison), model: raw.model, generatedBy: raw.generatedBy } };
+          const draft = options.criteriaProfile
+            ? validateMedicationCriteria(raw.text, options.criteriaProfile, reviewRequest(state.comparison, options, feedback), state.comparison)
+            : { ...validateDraft(raw.text, state.comparison), status: "completed", assessmentMethod: "model-report" };
+          if (draft.criteria) safeGeneratedText(draft.criteria.map(row => row.reason).join("\n"), Infinity);
+          return { draft: { ...draft, model: raw.model, generatedBy: draft.status === "completed" ? raw.generatedBy : "none" } };
         } catch (error) {
           if (error instanceof ModelContextError) throw error;
           feedback = cleanText(error?.message, 300);
@@ -303,8 +323,8 @@ function medicationClaimReviewGraph() {
       }
       return {
         draft: {
-          generatedBy: "rule",
-          note: `모델 검토 실패로 규칙 판정을 사용했습니다: ${feedback}${rawSample ? ` — 모델 응답 원문(앞부분): "${rawSample}"` : ""}`,
+          status: "failed", verdict: null, generatedBy: "none",
+          note: `모델 검토를 완료하지 못했습니다: ${feedback}${rawSample ? ` — 모델 응답 원문(앞부분): "${rawSample}"` : ""}`,
         },
         attempts: [feedback],
       };
@@ -332,6 +352,14 @@ export async function runMedicationClaimReview(payload = {}, {
   const overrides = sanitizeOverrides(payload?.overrides, comparison);
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
   const status = medicationClaimReviewStatus(environment);
+  const criteriaProfile = medicationCriteriaProfile(comparison.medication.id, overrides.policyId, overrides.treatmentPhase);
+  let sourceError = "";
+  if (criteriaProfile) {
+    try {
+      const request = medicationReviewRequest(comparison, overrides);
+      assertCriteriaSource(criteriaProfile, overrides.criteriaSourceNotice ?? JSON.parse(request.input).noticeText);
+    } catch (error) { sourceError = error.message; }
+  }
   const options = provider === "frontier"
     ? {
       provider,
@@ -351,11 +379,12 @@ export async function runMedicationClaimReview(payload = {}, {
       timeoutMs,
     };
   const state = await medicationClaimReviewGraph().invoke({ comparison }, {
-    configurable: { medicationReviewOptions: options },
+    configurable: { medicationReviewOptions: { ...options, criteriaProfile, sourceError } },
   });
   return {
     schema: COMPARISON_SCHEMA,
     provider,
+    status: state.draft.status,
     draft: state.draft,
     disclaimer: "청구 전 사전점검 초안입니다. 급여 인정이나 삭감을 확정하지 않으며 처방 결정은 의료진이 합니다.",
   };

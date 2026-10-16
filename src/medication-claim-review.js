@@ -697,6 +697,7 @@ export function buildMedicationClaimComparison({
  */
 export function applyMedicationReviewDraft(comparison, draft = {}) {
   if (!comparison || typeof comparison !== "object") throw new TypeError("규칙 비교 결과가 필요합니다.");
+  if ((draft.status && draft.status !== "completed") || draft.generatedBy === "none") throw new Error(draft.note || "검토를 완료하지 못했습니다.");
   const checkIds = new Set(comparison.checks.map(({ id }) => id));
   const citedCheckIds = (Array.isArray(draft.citedCheckIds) ? draft.citedCheckIds : [])
     .map((value) => cleanText(value, 80))

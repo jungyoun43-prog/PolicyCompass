@@ -30,11 +30,22 @@ import { MEDICATION_PRODUCTS, MedicationCoverageOverview, MedicationCoverageSumm
 import { CoveragePolicyPicker, CoveragePolicySource } from "./coverage-policy-picker.jsx";
 import { REGISTERED_COVERAGE_POLICY, applyMedicationPolicySource, isForeignCoveragePolicy, medicationCoveragePolicy, medicationCoveragePolicyNotice, switchMedicationCoveragePolicy } from "../../src/medication-coverage-policies.js";
 import { applyCoveragePolicyReview } from "../../src/medication-coverage-review.js";
+import { medicationCriteriaProfile } from "../../src/medication-policy-criteria.js";
 import { CoverageTranslationControls } from "./coverage-translation-controls.jsx";
 import { COVERAGE_TRANSLATION_FIELDS, coverageTranslationFields, coverageTranslationLanguage, coverageTranslationView } from "../../src/medication-coverage-translation.js";
 
 const MEDICATION_REVIEW_ENDPOINT = "/api/medication-claim-review";
 const HIGHLIGHT_PAIR_COLORS = 5;
+
+function reviewInstructionsFor(medicationId, policyId, model) {
+  return medicationReviewInstructions(model, { structured: Boolean(medicationCriteriaProfile(medicationId, policyId)) });
+}
+
+function MedicationOrderName({ name }) {
+  return name.split(/(?=\()/).map((part, index) => (
+    <Fragment key={index}>{index ? <wbr /> : null}{part}</Fragment>
+  ));
+}
 
 
 
@@ -378,12 +389,13 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       name: medication.label,
       base,
       policyId: REGISTERED_COVERAGE_POLICY,
+      treatmentPhase: "initial",
       noticeDrafts: {},
       sourceDocuments: {},
       noticeSource: null,
       dataText: medicationReviewPatientDataText(base),
       noticeText: medicationReviewNotice(medicationId),
-      promptText: medicationReviewInstructions(reviewModel || capability.model),
+      promptText: reviewInstructionsFor(medicationId, REGISTERED_COVERAGE_POLICY, reviewModel || capability.model),
     };
     cancelTranslation();
     cancelPolicySource();
@@ -422,6 +434,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     cancelPolicySource();
     setTranslation(null);
     const next = switchMedicationCoveragePolicy(sourcePreview, policyId);
+    if (sourcePreview.promptText === reviewInstructionsFor(sourcePreview.medicationId, sourcePreview.policyId, reviewModel || capability.model)) {
+      next.promptText = reviewInstructionsFor(next.medicationId, policyId, reviewModel || capability.model);
+    }
     setReviewPreview(next);
     setReview(null);
     setExpandedField("");
@@ -526,7 +541,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     setReviewInputError("");
     const version = ++requestVersion.current;
     const { medicationId, name, base, dataText, noticeText, promptText } = input;
-    const foreign = isForeignCoveragePolicy(input);
     requestAbort.current?.abort();
     const controller = new AbortController();
     requestAbort.current = controller;
@@ -544,11 +558,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         setCapability({checked:true,local:activeProvider === "local",frontier:activeProvider === "frontier",model:status.local?.model || status.frontier?.model || "",translation:status.translation?.configured === true});
       }
       if (!activeProvider) {
-        if (foreign) throw new Error("해외 보험 기준 검토에는 AI 모델 연결이 필요합니다.");
-        setReview(applyCoveragePolicyReview(input, { generatedBy: "rule", note: "모델 미설정 · 규칙 기반 결과입니다." }));
-        return;
+        throw new Error("AI 모델이 설정되지 않아 검토를 완료할 수 없습니다.");
       }
-      const overrides = { patientData: dataText, notice: noticeText, instructions: promptText, policyId: input.policyId };
+      const overrides = { patientData: dataText, notice: noticeText, instructions: promptText, policyId: input.policyId,
+        treatmentPhase: input.treatmentPhase ?? "initial",
+        ...(translatedView.active ? { criteriaSourceNotice: sourcePreview.noticeText } : {}) };
       if (activeProvider === "frontier" && reviewModel) overrides.model = reviewModel;
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
         signal: controller.signal,
@@ -562,25 +576,16 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         setReviewInputError(result.message || "모델 입력 한도를 초과했습니다. 검토 모델이나 입력을 조정해 주세요.");
         return;
       }
-      if (!response.ok) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
+      if (!response.ok || result.code) throw new Error(result.message || "AI 검토를 사용할 수 없습니다.");
       if (version !== requestVersion.current) return;
       const merged = applyCoveragePolicyReview(input, result.draft ?? {});
       setReview(merged);
-      if (merged.generatedBy === "rule") {
-        setStatus(merged.note || "모델 검토가 실패해 규칙 기반 사전점검을 표시합니다.", "error");
-      } else {
-        setStatus(`${reviewedModelLabelFor(merged.model)} 검토를 완료했습니다.`, "success");
-      }
+      setStatus(`${reviewedModelLabelFor(merged.model)} 검토를 완료했습니다.`, "success");
     } catch (error) {
       if (version !== requestVersion.current) return;
-      if (foreign) {
-        setReview(null);
-        setSettingsOpen(true);
-        setReviewInputError(`${error instanceof Error ? error.message : "해외 기준 검토 연결 실패"} 입력을 확인하고 다시 시도해 주세요.`);
-      } else {
-        setReview(applyCoveragePolicyReview(input, { generatedBy: "rule", note: "AI 연결 실패 · 규칙 기반 결과입니다." }));
-        setStatus(`${error instanceof Error ? error.message : "AI 검토 연결 실패"} 규칙 기반 사전점검을 유지합니다.`);
-      }
+      setReview(null);
+      setSettingsOpen(true);
+      setReviewInputError(`검토 미완료 · ${error instanceof Error ? error.message : "AI 검토 연결 실패"} 입력을 확인하고 다시 시도해 주세요.`);
     } finally {
       if (version === requestVersion.current) {
         setPendingReview(null);
@@ -644,11 +649,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
 
   const changeReviewModel = (event) => {
     const nextModel = event.target.value;
-    const previousInstructions = medicationReviewInstructions(reviewModel || capability.model);
+    const previousInstructions = reviewInstructionsFor(sourcePreview?.medicationId, sourcePreview?.policyId, reviewModel || capability.model);
     setReviewModel(nextModel);
     setTranslation(null);
     setReviewPreview((current) => current && current.promptText === previousInstructions
-      ? { ...current, promptText: medicationReviewInstructions(nextModel || capability.model) }
+      ? { ...current, promptText: reviewInstructionsFor(current.medicationId, current.policyId, nextModel || capability.model) }
       : current);
   };
 
@@ -681,7 +686,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     return (
         <form className="inline-clinical-form rx-form" id={"prescriptionForm-" + medication.id} noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => submit(event, form, medication.id)}>
           <div className="rx-order-line" data-infusion={usesInfusionRate(form.route) || undefined}>
-            <div className="rx-order-line__product" id={"medicationSelectedSummary-" + medication.id}><strong>{MEDICATION_PRODUCTS[medication.id]?.orderName || form.name}</strong><input id={"medicationName-" + medication.id} name="name" type="hidden" value={form.name} /></div>
+            <div className="rx-order-line__product" id={"medicationSelectedSummary-" + medication.id}><strong><MedicationOrderName name={MEDICATION_PRODUCTS[medication.id]?.orderName || form.name} /></strong><input id={"medicationName-" + medication.id} name="name" type="hidden" value={form.name} /></div>
             <label><span className="rx-order-field-label">1회 용량</span><input id={"medicationDose-" + medication.id} name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
             <label><span className="rx-order-field-label">용량 단위</span><select id={"medicationDoseUnit-" + medication.id} name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
             <label><span className="rx-order-field-label">투여 빈도</span><select id={"medicationFrequency-" + medication.id} name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -762,9 +767,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           noticeId="coverageNotice" notice="입력된 자료에 대한 참고용 검토이며 최종 판단은 의료진이 확인해야 합니다."
           footer={<>
             {settingsOpen && reviewPreview ? <div className="review-preview__actions">
-              <span className="coverage-input-note">{policySourceBusy ? "공식 보험 기준 원문을 불러오고 있습니다." : foreignPolicy && !provider ? "해외 기준 검토는 AI 모델 연결 후 사용할 수 있습니다." : "검토 시작을 누를 때만 입력 내용을 전송합니다."}</span>
-              <Button variant="primary" type="button" id="reviewPreviewSend" disabled={Boolean(reviewBusyId) || policySourceBusy || translationBusy || !capability.checked || (foreignPolicy && !provider)} onClick={() => sendReview()}>
-                {!provider ? foreignPolicy ? "AI 모델 연결 필요" : "규칙 기반 검토 시작" : `${requestedModelLabel || "선택한 모델"}로 검토 시작`}
+              <span className="coverage-input-note">{policySourceBusy ? "공식 보험 기준 원문을 불러오고 있습니다." : !provider ? "AI 모델 연결 후 검토할 수 있습니다." : "검토 시작을 누를 때만 입력 내용을 전송합니다."}</span>
+              <Button variant="primary" type="button" id="reviewPreviewSend" disabled={Boolean(reviewBusyId) || policySourceBusy || translationBusy || !capability.checked || !provider} onClick={() => sendReview()}>
+                {!provider ? "AI 모델 연결 필요" : `${requestedModelLabel || "선택한 모델"}로 검토 시작`}
               </Button>
             </div> : null}
             <p className="coverage-footer">{foreignPolicy ? "선택한 보험자·제도의 비교용 검토입니다. 실제 보장 여부는 가입 조건과 최신 기준·심사에 따라 달라질 수 있습니다." : "입력된 자료와 등록 기준에 따른 참고 결과입니다. 최종 급여 인정 여부는 최신 고시와 심사에 따라 달라질 수 있습니다."}</p>
@@ -779,7 +784,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                     ["1", "진료데이터 추출", "환자 구조화 기록에서 판정에 쓰일 검사·처방·진단 기록을 추립니다."],
                     ["2", "고시·진료데이터 전송", `같은 출처 API ${MEDICATION_REVIEW_ENDPOINT}로 아래 내역만 보냅니다.`],
                     ["3", review.generatedBy === "rule" ? cloudLabel : cloudLabelFor(reviewedModelLabel), "급여 고시 기준과 환자 의료데이터만으로 충족 여부를 판정합니다."],
-                    ["4", review.outputKind === "decision" ? "판정·확률 반환" : "판정 보고 반환", review.outputKind === "decision" ? "선택된 판정과 세 선택지의 확률을 확인해 표시합니다." : "출력 형식(판정·사유·기준별 표)을 지키지 않은 보고는 서버가 되돌립니다."],
+                    ["4", review.assessmentMethod === "server-criteria-aggregation" ? "조건별 결과 집계" : review.outputKind === "decision" ? "판정·확률 반환" : "판정 보고 반환", review.assessmentMethod === "server-criteria-aggregation" ? "조건별 근거·수치·기간을 확인한 뒤 AND/OR와 제외 조건에 따라 최종 판정을 계산합니다." : "반환된 보고의 판정과 근거를 확인해 표시합니다."],
                   ].map(([index, title, detail]) => (
                     <li className="rx-pipeline__step" key={index}>
                       <span className="rx-pipeline__index">{index}</span>
@@ -791,11 +796,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   <summary className="rx-result__details-summary">전송 내역 보기</summary>
                   <DetailList rows={medicationReviewTransmission(review)} />
                 </details>
-                {!provider ? (
-                  <p className="rx-review__boundary">지금은 모델이 설정되지 않아 2~3단계를 실행하지 않았습니다. 환자 자료를 전송하지 않고 규칙 판정만 표시합니다.</p>
-                ) : review.generatedBy === "rule" ? (
-                  <p className="rx-review__boundary">모델 검토가 실패해 4단계의 판정 보고 대신 규칙 판정을 표시합니다. {review.note}</p>
-                ) : null}
               </>
             )} />
         ) : null}{selectedPolicy ? <CoveragePolicyPicker key={coverageMedication.id} medicationId={coverageMedication.id} selectedPolicy={selectedPolicy} disabled={Boolean(reviewBusyId)} onSelect={selectCoveragePolicy} /> : null}</>}>
@@ -814,10 +814,10 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           {selectedPolicy ? <p className="visually-hidden" role="status">{selectedPolicy.country} {selectedPolicy.payer} 기준을 선택했습니다.</p> : null}
           {!settingsOpen && (review || pendingReview) ? <>
           <MedicationCoverageOverview key={coverageMedication.id} medication={coverageMedication} policy={review?.coveragePolicy || { ...sourcePolicy, noticeText: reviewPreview?.noticeText, criteria: reviewPreview?.translatedCriteria || [] }}>
-          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label={foreignPolicy ? "선택 기준 검토" : "종합 삭감 위험"}>
+          {review ? <section className="coverage-risk" id="medicationReviewVerdict" data-tone={review.verdictTone} aria-label="급여기준 검토">
             <div className="coverage-risk__text">
-            <h4><CoverageIcon kind="risk" />{foreignPolicy ? "선택 기준 검토" : "종합 삭감 위험"}</h4>
-            <strong>{foreignPolicy ? review.verdictLabel : review.verdict === "cross" ? "삭감 위험 높음" : review.verdict === "circle" ? "삭감 위험 낮음" : "삭감 위험 모름"}</strong>
+            <h4><CoverageIcon kind="risk" />급여기준 검토</h4>
+            <strong>{{circle: "기준 충족", triangle: "판정 제한", cross: "기준 미충족"}[review.verdict]}</strong>
             <p>{review.verdict === "triangle" ? "현재 자료로는 판단하기 어려워 추가 근거 확인이 필요합니다." : "검토 결과에 따른 참고 판단이며, 최종 급여 인정 여부를 확정하지 않습니다."}</p>
             </div>
             <ReviewMark verdict={review.verdict} />
@@ -975,6 +975,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             <header><h4>검토할 내용과 모델</h4><Button type="button" onClick={() => review ? setSettingsOpen(false) : closeCoverage()}>취소</Button></header>
             {reviewInputError ? <p id="coverageInputError" className="coverage-input-error" role="alert">{reviewInputError}</p> : null}
           <div className="review-preview" data-focus={expandedField || undefined}>
+                {medicationCriteriaProfile(reviewPreview.medicationId, reviewPreview.policyId) ? <label className="review-preview__phase">검토 경로
+                  <select id="reviewPreviewPhase" value={reviewPreview.treatmentPhase ?? "initial"} disabled={translationBusy || Boolean(reviewBusyId)} onChange={editPreview("treatmentPhase")}>
+                    <option value="initial">초기 투여</option><option value="continuation">지속 투여 · 재평가</option>
+                  </select>
+                </label> : null}
                 <label className="review-preview__model">검토 모델
                   <select id="reviewPreviewModel" name="reviewModel" value={reviewModel} onChange={changeReviewModel} disabled={!capability.frontier || translationBusy}>
                     <option value="">서버 기본 · {defaultModelLabel || "미설정"}</option>

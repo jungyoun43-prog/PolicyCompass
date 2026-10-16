@@ -152,7 +152,7 @@ test("모델 거부와 실패 응답은 그대로 오류로 올라온다", async
 test("약제 삭감 검토도 OpenRouter 설정을 그대로 따른다", async () => {
   // Given
   const demo = createDemoEmrState("2026-07-20");
-  const medication = findMedicationInCatalog("benralizumab-30");
+  const medication = findMedicationInCatalog("durvalumab-500");
   const comparison = buildMedicationClaimComparison({
     patient: demo.patients.find(({ name }) => name === "김비타"),
     medication,
@@ -257,7 +257,7 @@ test("설정 상태는 어떤 환경변수가 서버에 도달했는지 이름�
   assert.equal(Object.hasOwn(configured, "detected"), false, "설정이 끝나면 진단 정보를 붙이지 않는다");
 });
 
-test("모델이 설정되지 않으면 화면이 규칙 기반임을 밝히고 전송하지 않는다", async () => {
+test("모델이 설정되지 않으면 검토 미완료를 안내하고 전송하지 않는다", async () => {
   // Given — 서버 상태 조회 전(모델 미설정)의 열린 처방 팝업.
   const demo = createDemoEmrState("2026-09-02T00:00:00.000Z");
   const patient = demo.patients[0];
@@ -272,7 +272,9 @@ test("모델이 설정되지 않으면 화면이 규칙 기반임을 밝히고 �
   assert.doesNotMatch(html, /medicationReviewMode/, "모델 상태는 약 검색 화면에 표시하지 않는다");
   assert.doesNotMatch(html, /medicationFrontierConsent|rxConsentField/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
   // source-check: 전송 생략 안내는 검토 결과가 있을 때만 그려지고, 전송 확인 팝업은 검토 요청 뒤에만 열려 서버 렌더가 재현할 수 없다.
-  assert.match(rx, /환자 자료를 전송하지 않고 규칙 판정만 표시합니다/);
+  assert.match(rx, /AI 모델이 설정되지 않아 검토를 완료할 수 없습니다/);
+  assert.match(rx, /검토 미완료/);
+  assert.doesNotMatch(rx, /환자 자료를 전송하지 않고 규칙 판정만 표시합니다/);
   assert.doesNotMatch(rx, /medicationFrontierConsent/, "합성 환자 데모에서는 전송 동의 항목을 두지 않는다");
   assert.doesNotMatch(rx, /rxConsentField/);
 });

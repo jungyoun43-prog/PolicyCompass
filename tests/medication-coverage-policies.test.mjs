@@ -64,7 +64,7 @@ test("selected foreign text reaches the existing LLM payload without Korean crit
       assert.equal(parsed.patientDataText, input.dataText);
       assert.ok(payload.instructions.includes(input.promptText));
       assert.ok(!parsed.noticeText.includes("프로젝트 등록 기준"));
-      assert.ok(!Object.hasOwn(parsed.reviewContext, "checks"));
+      assert.ok(!Object.hasOwn(parsed.reviewScope, "checks"));
     }
   }
 });
@@ -131,13 +131,9 @@ test("foreign report uses model verdict independently of Korean rules and snapsh
   assert.notEqual(result.coveragePolicy.noticeText, input.noticeText);
 });
 
-test("Korean fallback keeps the existing rule result and records its actual input", () => {
+test("Korean fallback cannot become an overall coverage verdict", () => {
   const input = makeInput();
-  const result = applyCoveragePolicyReview(input, { generatedBy: "rule", note: "모델 미설정" });
-  assert.equal(result.verdict, input.base.verdict);
-  assert.equal(result.checks, input.base.checks);
-  assert.equal(result.coveragePolicy.id, "kr-registered");
-  assert.equal(result.coveragePolicy.edited, false);
+  assert.throws(() => applyCoveragePolicyReview(input, { generatedBy: "rule", note: "모델 미설정" }), /모델 미설정/);
 });
 
 test("foreign decision probabilities are accepted only as a complete distribution", () => {

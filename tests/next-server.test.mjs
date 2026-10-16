@@ -4,6 +4,9 @@ import http from "node:http";
 import test from "node:test";
 
 import { freePort, startNextServer, stopNextServer } from "./helpers/next-app.mjs";
+import { createDemoEmrState } from "../src/emr-demo-state.js";
+import { findMedicationInCatalog } from "../src/medication-catalog.js";
+import { buildMedicationClaimComparison } from "../src/medication-claim-review.js";
 
 function post(baseUrl, path, body, headers = {}) {
   return fetch(`${baseUrl}${path}`, { method: "POST", headers, body });
@@ -68,7 +71,9 @@ test("Next 서버는 보안 헤더와 출처·JSON·크기·오류 상태 계약
     assert.equal(frontierUnconfigured.status, 503);
     assert.equal((await frontierUnconfigured.json()).code, "FRONTIER_NOT_CONFIGURED");
 
-    const largeReview = await post(baseUrl, "/api/medication-claim-review", JSON.stringify({ overrides: { patientData: "진료기록".repeat(70_000) } }), jsonHeaders);
+    const medication = findMedicationInCatalog("durvalumab-500");
+    const comparison = buildMedicationClaimComparison({ patient: createDemoEmrState("2026-10-16").patients[0], medication, prescription: medication.dosing, asOf:"2026-10-16" });
+    const largeReview = await post(baseUrl, "/api/medication-claim-review", JSON.stringify({ comparison, overrides: { patientData: "진료기록".repeat(70_000) } }), jsonHeaders);
     assert.equal(largeReview.status, 503, "약제 검토는 256KB 문자 제한 없이 제공자 설정 검사까지 도달한다");
     assert.equal((await largeReview.json()).code, "LOCAL_AI_NOT_CONFIGURED");
 

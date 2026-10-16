@@ -146,10 +146,12 @@ body.emr-page {
 
 .emr-page #prescriptionDialog .rx-result--compact { margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
 .emr-page #prescriptionDialog .rx-result--compact .rx-order-line { gap: 8px; padding: 12px 0; background: transparent; }
-.emr-page #prescriptionDialog .rx-result--compact .rx-order-line__product { font-size: .8125rem; font-weight: 600; line-height: 1.5; white-space: normal; }
+.emr-page #prescriptionDialog .rx-result--compact .rx-order-line__product { font-size: .8125rem; font-weight: 600; line-height: 1.5; white-space: normal; word-break: keep-all; overflow-wrap: break-word; }
 .emr-page .rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line :is(input, select, button) { min-height: var(--control-height); height: var(--control-height); padding: 6px 8px; border-radius: 6px; font-size: .8125rem; }
 .emr-page #prescriptionDialog .rx-order-line__actions { gap: 6px; }
 .emr-page #prescriptionDialog .rx-result--compact .rx-order-line .rx-order-line__actions button { min-height: var(--control-height); height: var(--control-height); padding-inline: 10px; font-size: .8125rem; }
+.emr-page #medicationCoverageDialog .review-preview__phase { display: grid; grid-column: 1 / -1; gap: 6px; font-size: .8125rem; font-weight: 600; }
+.emr-page #medicationCoverageDialog .review-preview__phase select { width: 100%; max-width: 480px; }
 
 .emr-page #medicationCoverageDialog { --coverage-content-width: 72rem; display: flex; flex-direction: column; overflow: clip; color: var(--ink); border: 0; border-radius: 12px; }
 .emr-page .rx-dialog#medicationCoverageDialog .rx-dialog__panel { flex: 1 1 auto; min-height: 0; height: auto; max-height: none; scroll-padding-block: calc(var(--rx-sticky-header-height, 0px) + 12px) 12px; }

@@ -473,6 +473,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const translateCoverage = async () => {
     if (!sourcePreview || translationBusy || policySourceBusy || reviewBusyId) return;
     const policy = medicationCoveragePolicy(sourcePreview.medicationId, sourcePreview.policyId);
+    const language = coverageTranslationLanguage(policy.countryCode);
     const source = coverageTranslationFields(sourcePreview, sourceReview, policy);
     if (translation && COVERAGE_TRANSLATION_FIELDS.every(key => translation.source[key] === source[key])) {
       setTranslation({ ...translation, show: true });
@@ -491,7 +492,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       const response = await fetch(`${MEDICATION_REVIEW_ENDPOINT}/translate`, {
         method: "POST", signal: controller.signal,
         headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId, fields: source }),
+        body: JSON.stringify({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId, fields: source,
+          noticeLanguage: language?.code === "en" && sourcePreview.noticeSource?.original && sourcePreview.noticeSource.text === source.noticeText ? "en" : undefined }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.code) throw new Error(result.message || "Haiku 번역에 연결하지 못했습니다.");
@@ -500,7 +502,6 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         || ![result.fields.dataText, result.fields.noticeText, result.fields.promptText].every(value => value.trim())) throw new Error("번역 결과가 완전하지 않습니다.");
       const criteria = JSON.parse(result.fields.criteriaText);
       if (!Array.isArray(criteria) || criteria.some(value => typeof value !== "string")) throw new Error("번역된 보험 기준 형식이 올바르지 않습니다.");
-      const language = coverageTranslationLanguage(policy.countryCode);
       setTranslation({ medicationId: sourcePreview.medicationId, policyId: sourcePreview.policyId,
         source, fields: result.fields, model: result.model, language, show: true });
     } catch (error) {

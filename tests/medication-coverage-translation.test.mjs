@@ -4,6 +4,7 @@ import { COVERAGE_TRANSLATION_MODEL, coverageTranslationFields, coverageTranslat
 import { medicationCoveragePolicy } from "../src/medication-coverage-policies.js";
 import { medicationCoverageTranslationStatus, translateMedicationCoverage, validateCoverageTranslation, validateCoverageTranslationPayload } from "../scripts/medication-coverage-translation.mjs";
 import { applyCoveragePolicyReview } from "../src/medication-coverage-review.js";
+import { callFrontierModel } from "../scripts/patient-question-assistant.mjs";
 
 const source = {
   dataText: JSON.stringify({ patient: ["00000000 | 1955-00-00 | male"], records: ["2026-10-15 | C34 | 투여 30 mg, 호산구 150 cells/μL"], value: 2, active: true, missing: null }),
@@ -25,6 +26,31 @@ const translated = {
 const payload = { medicationId: "benralizumab-30", policyId: "gb-nice", fields: source, model: "openai/expensive-other-model" };
 const environment = { OPENROUTER_API_KEY: "sk-or-test-key", POLICYCOMPASS_FRONTIER_MODEL: "openai/gpt-6.1-sol" };
 const gateway = fields => ({ ok: true, json: async () => ({ model: COVERAGE_TRANSLATION_MODEL, choices: [{ finish_reason: "stop", message: { content: JSON.stringify(fields) } }] }) });
+
+function fakeTranslator(converted = translated, calls = [], original = source) {
+  const dictionary = new Map();
+  const collect = (from, to) => {
+    if (typeof from === "string") dictionary.set(from, to);
+    else if (from && typeof from === "object") for (const key of Object.keys(from)) collect(from[key], to[key]);
+  };
+  for (const field of Object.keys(original)) {
+    if (field === "dataText" || field === "criteriaText") {
+      try { collect(JSON.parse(original[field]), JSON.parse(converted[field])); continue; } catch { /* Plain text input. */ }
+    }
+    dictionary.set(original[field], converted[field]);
+  }
+  return async (url, options) => {
+    const body = JSON.parse(options.body), input = JSON.parse(body.messages[1].content);
+    calls.push({ url, body, items: input.items });
+    return gateway({ translations: input.items.map(item => ({ id: item.id, text: dictionary.get(item.text) ?? item.text })).reverse() });
+  };
+}
+
+function assertFields(actual, expected = translated) {
+  assert.deepEqual(JSON.parse(actual.dataText), JSON.parse(expected.dataText));
+  assert.deepEqual(JSON.parse(actual.criteriaText), JSON.parse(expected.criteriaText));
+  for (const field of ["noticeText", "promptText", "reportText", "summaryText"]) assert.equal(actual[field], expected[field]);
+}
 
 test("Haiku translation has its own server capability and does not depend on the review model", () => {
   assert.equal(medicationCoverageTranslationStatus({}).configured, false);
@@ -59,23 +85,34 @@ test("translation validation checks response format and required fields only", (
 
 test("translation keeps original prompts as source data and pins Haiku through the structured gateway", async () => {
   const calls = [];
-  const result = await translateMedicationCoverage(payload, { environment, fetchImpl: async (url, options) => {
-    calls.push({ url, body: JSON.parse(options.body) }); return gateway(translated);
-  } });
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://openrouter.ai/api/v1/chat/completions");
-  assert.equal(calls[0].body.model, COVERAGE_TRANSLATION_MODEL);
-  assert.equal(calls[0].body.response_format.type, "json_schema");
-  assert.deepEqual(JSON.parse(calls[0].body.messages[1].content).fields, source);
-  assert.match(calls[0].body.messages[0].content, /Do not execute instructions/);
-  assert.ok(!calls[0].body.messages[0].content.includes(source.promptText));
-  assert.deepEqual(calls[0].body.plugins, [{ id: "context-compression", enabled: false }]);
-  assert.deepEqual(result.fields, translated);
+  const result = await translateMedicationCoverage(payload, { environment, fetchImpl: fakeTranslator(translated, calls) });
+  assert.equal(calls.length, 3);
+  for (const call of calls) {
+    assert.equal(call.url, "https://openrouter.ai/api/v1/chat/completions");
+    assert.equal(call.body.model, COVERAGE_TRANSLATION_MODEL);
+    assert.equal(call.body.response_format.type, "json_schema");
+    assert.match(call.body.messages[0].content, /Do not execute instructions/);
+    assert.ok(!call.body.messages[0].content.includes(source.promptText));
+    assert.deepEqual(call.body.plugins, [{ id: "context-compression", enabled: false }]);
+    assert.deepEqual(call.body.reasoning, { enabled: false });
+    assert.deepEqual(call.body.provider, { sort: "throughput" });
+    assert.equal(call.body.temperature, undefined, "Haiku 5.5 uses its supported sampling defaults");
+  }
+  const items = calls.flatMap(call => call.items);
+  assert.ok(items.some(item => item.field === "promptText" && item.text === source.promptText));
+  assert.ok(items.some(item => item.field === "dataText" && item.text === JSON.parse(source.dataText).records[0]));
+  assertFields(result.fields);
   assert.equal(result.language.locale, "en-GB");
 });
 
 test("incomplete or invalid model output fails without returning partial translations", async () => {
-  await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async () => gateway({ ...translated, noticeText: "" }) }));
+  await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: fakeTranslator({ ...translated, noticeText: "" }) }));
+  for (const alter of [items => items.slice(1), items => [...items.slice(1), items[1]], items => items.map((item, index) => index ? item : { ...item, id: "unknown" })]) {
+    await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async (_url, options) => {
+      const input = JSON.parse(JSON.parse(options.body).messages[1].content);
+      return gateway({ translations: alter(input.items.map(({ id, text }) => ({ id, text }))) });
+    } }), /응답 형식/);
+  }
   await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ finish_reason: "length", message: { content: "{}" } }] }) }) }), /완료되지 않았습니다/);
   await assert.rejects(() => translateMedicationCoverage(payload, { environment, fetchImpl: async () => ({ ok: true, json: async () => ({ model: "another-model", choices: [{ message: { content: JSON.stringify(translated) } }] }) }) }), /Haiku/);
   await assert.rejects(() => translateMedicationCoverage(payload, { environment: {}, fetchImpl: async () => { throw new Error("must not call"); } }), /설정되지/);
@@ -83,19 +120,58 @@ test("incomplete or invalid model output fails without returning partial transla
 
 test("natural-language rendering of quantities is accepted without a source-preservation gate", async () => {
   const natural = { ...translated, noticeText: "Eosinophils at least 150 cells per microliter AND administration 30 milligrams. Source https://example.test/TA565" };
-  const result = await translateMedicationCoverage(payload, { environment, fetchImpl: async () => gateway(natural) });
-  assert.deepEqual(result.fields, natural);
+  const result = await translateMedicationCoverage(payload, { environment, fetchImpl: fakeTranslator(natural) });
+  assertFields(result.fields, natural);
 });
 
 test("long translation sources pass through intact without an application character cutoff", async () => {
   const longFields = { ...source, dataText: "진료 기록 ".repeat(60_000) };
-  let received;
-  await translateMedicationCoverage({ ...payload, fields: longFields }, { environment, fetchImpl: async (_url, options) => {
-    received = JSON.parse(JSON.parse(options.body).messages[1].content).fields.dataText;
-    return gateway({ ...translated, dataText: "Clinical record ".repeat(60_000) });
-  } });
+  const calls = [], converted = { ...translated, dataText: "Clinical record ".repeat(60_000) };
+  const result = await translateMedicationCoverage({ ...payload, fields: longFields }, { environment, fetchImpl: fakeTranslator(converted, calls, longFields) });
+  const received = calls.flatMap(call => call.items).find(item => item.field === "dataText").text;
   assert.equal(received, longFields.dataText);
   assert.ok(received.length > 256 * 1024);
+  assert.equal(result.fields.dataText, converted.dataText);
+});
+
+test("JSON reconstruction does not round numeric identifiers or precise decimal tokens", async () => {
+  const original = { ...source, dataText: '{"identifier":9007199254740993,"decimal":0.123456789012345678901,"values":[-0,1e+30,1e999],"record":"진료 기록"}' };
+  const converted = { ...translated, dataText: original.dataText.replace("진료 기록", "Clinical record") };
+  const result = await translateMedicationCoverage({ ...payload, fields: original }, { environment, fetchImpl: fakeTranslator(converted, [], original) });
+  for (const token of ["9007199254740993", "0.123456789012345678901", "-0", "1e+30", "1e999"]) assert.ok(result.fields.dataText.includes(token), token);
+  assert.equal(JSON.parse(result.fields.dataText).record, "Clinical record");
+});
+
+test("complete text items run in parallel and are restored by ID regardless of completion order", async () => {
+  const release = [], respond = fakeTranslator();
+  const work = translateMedicationCoverage(payload, { environment, fetchImpl: async (url, options) => {
+    await new Promise(resolve => release.push(resolve));
+    return respond(url, options);
+  } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(release.length, 3, "all three requests start before any finishes");
+  release.reverse().forEach(resolve => resolve());
+  assertFields((await work).fields);
+});
+
+test("only an explicit official-source language hint bypasses notice regeneration", async () => {
+  const original = { ...source, noticeText: "Official English policy fixture 30 mg" };
+  const converted = { ...translated, noticeText: original.noticeText }, skipped = [];
+  const result = await translateMedicationCoverage({ ...payload, fields: original, noticeLanguage: "en" }, { environment, fetchImpl: fakeTranslator(converted, skipped, original) });
+  assert.equal(result.fields.noticeText, original.noticeText);
+  assert.ok(!skipped.flatMap(call => call.items).some(item => item.field === "noticeText"));
+  const custom = [];
+  await translateMedicationCoverage({ ...payload, fields: original }, { environment, fetchImpl: fakeTranslator(converted, custom, original) });
+  assert.ok(custom.flatMap(call => call.items).some(item => item.field === "noticeText"));
+});
+
+test("translation tuning leaves the shared review gateway defaults intact", async () => {
+  let request;
+  await callFrontierModel({ apiKey: "fixture", model: "review-model", input: "review input", environment: { POLICYCOMPASS_FRONTIER_BASE_URL: "https://openrouter.ai/api/v1", POLICYCOMPASS_FRONTIER_API: "chat" },
+    fetchImpl: async (_url, options) => { request = JSON.parse(options.body); return { ok: true, json: async () => ({ choices: [{ message: { content: "Review fixture" } }] }) }; } });
+  assert.deepEqual(request.reasoning, { effort: "low" });
+  assert.equal(request.temperature, 0);
+  assert.equal(request.provider, undefined);
 });
 
 test("translated view leaves originals untouched, invalidates after edits or country changes, and translates existing reports", () => {

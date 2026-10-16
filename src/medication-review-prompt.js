@@ -54,7 +54,7 @@ export function medicationReviewInstructions(model, { structured = false } = {})
       + "선택지 중 하나를 판정하고 선택지별 확률을 반환합니다. 설명문은 작성하지 않습니다.";
   }
   if (structured) return REVIEW_INSTRUCTIONS.split("### 출력 형식")[0]
-    + "### 출력 형식\n\n서버가 제공하는 조건표의 모든 ID마다 상태(met/not_met/missing/ambiguous), 진료기록 근거와 날짜, 수치·단위, 설명을 JSON으로 반환합니다. 누락된 필수 정보는 missing, 실제 관련 근거의 해석이 불명확하면 ambiguous입니다. 종합 판정과 보고서는 조건별 결과를 바탕으로 서버가 생성합니다.";
+    + "### 출력 형식\n\n서버가 제공하는 조건표의 모든 ID마다 상태(met/not_met/missing/ambiguous), 근거 E번호, 수치·단위, 설명을 JSON으로 반환합니다. 근거 문구와 날짜는 서버가 원문에서 연결하므로 복사하지 않습니다. 누락된 필수 정보는 missing, 실제 관련 근거의 해석이 불명확하면 ambiguous입니다. 종합 판정과 보고서는 조건별 결과를 바탕으로 서버가 생성합니다.";
   return REVIEW_INSTRUCTIONS;
 }
 

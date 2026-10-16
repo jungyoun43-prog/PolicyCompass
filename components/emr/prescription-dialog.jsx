@@ -1007,7 +1007,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             </section>
             <section className="review-preview__section review-preview__section--instructions" data-expanded={expandedField === "promptText" || undefined}>
               <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewPrompt">검토 지시문 (프롬프트)</label></h4>{expandToggle("promptText", "검토 지시문")}</header>
-              <p className="review-preview__hint" id="reviewPreviewPromptHint">검토 방법과 답변 형식을 직접 수정할 수 있습니다.</p>
+              <p className="review-preview__hint" id="reviewPreviewPromptHint">{medicationCriteriaProfile(reviewPreview.medicationId, reviewPreview.policyId) ? "검토 원칙과 근거 설명 지시를 수정할 수 있습니다. 조건별 결과 형식은 유지됩니다." : "검토 방법과 답변 형식을 직접 수정할 수 있습니다."}</p>
               <textarea className="review-preview__prose review-preview__prose--prompt" id="reviewPreviewPrompt" name="instructions" autoComplete="off" readOnly={translatedView.active || translationBusy} lang={translatedView.active ? translationLanguage?.code : undefined} aria-invalid={missingReviewFields.promptText || undefined} aria-describedby={`reviewPreviewPromptHint${missingReviewFields.promptText ? " reviewPreviewPromptError" : ""}`} rows={10} value={reviewPreview.promptText} onChange={editPreview("promptText")} spellCheck={false} />
               {missingReviewFields.promptText ? <p className="coverage-field-error" id="reviewPreviewPromptError">검토 지시문을 입력해 주세요.</p> : null}
             </section>

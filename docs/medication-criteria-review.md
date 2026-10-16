@@ -23,7 +23,12 @@ not establish actual foreign insurance enrollment. Aetna's contract-specific
 preferred-drug and linked-document details remain an explicit scope limitation.
 
 The model returns every requested criterion once, with `met`, `not_met`, `missing`
-or `ambiguous`, evidence source IDs/quotes/dates, typed numeric facts and a reason.
+or `ambiguous`, evidence IDs (`E1`, `E2`, ...), typed numeric facts and a reason.
+The server attaches source text and available dates directly, so the model need not
+copy clinical prose. JSON records retain their paths; plain text is indexed by
+paragraph, keeping date headings and their multiline laboratory values together.
+The complete input is still supplied intact. Any unsolicited model-authored quotes
+or dates are discarded; unknown IDs cannot become evidence.
 The server checks completeness and source references, binds laboratory values to
 their recorded units, computes thresholds, dates and reductions, then aggregates
 the verified tree. Missing information is distinct from documented nonfulfillment;
@@ -45,6 +50,9 @@ All failures have a null verdict. The UI restores editable inputs and displays
 `검토 미완료`; basic age/allergy/duplicate checks are not promoted to an overall
 coverage verdict. The API uses the existing JSON heartbeat to survive proxy idle
 timeouts, and the client handles delayed `code/message` errors after HTTP 200.
+Failed responses retain per-attempt validation issues and the rejected model text
+for diagnosis in the requesting client's response, never as an accepted report.
+This diagnostic text is not written to a database or production log.
 
 Translations continue using Haiku. No original-versus-translation number, unit or
 code comparison gate is introduced. A translated review carries its original notice

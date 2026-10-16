@@ -18,18 +18,23 @@ export function assertCriteriaSource(profile, notice) {
 // decoded JSON strings. Official policy/context can never serve as patient proof.
 export function medicationEvidenceSources(patientDataText, patientFacts, prescription) {
   const sources = [];
+  const add = (path, text) => {
+    let date = validDate(text.slice(0,10)) ? text.slice(0,10) : "";
+    try { const record=JSON.parse(text); if (validDate(record?.date)) date=record.date; } catch { /* Plain chart text. */ }
+    sources.push({ id:`E${sources.length+1}`, path, kind:"patient-data", text, date });
+  };
   const visit = (value, path) => {
     if (Array.isArray(value)) value.forEach((item, index) => {
-      if (item && typeof item === "object" && !Array.isArray(item)) sources.push({ id: `${path}/${index}`, text: JSON.stringify(item) });
+      if (item && typeof item === "object" && !Array.isArray(item)) add(`${path}/${index}`,JSON.stringify(item));
       else visit(item, `${path}/${index}`);
     });
     else if (value && typeof value === "object") Object.entries(value).forEach(([key, item]) => visit(item, `${path}/${key}`));
-    else if (value !== null && value !== undefined) sources.push({ id: path, text: String(value) });
+    else if (value !== null && value !== undefined) add(path,String(value));
   };
   try { visit(JSON.parse(patientDataText), "patient"); }
-  catch { sources.push({ id: "patient", text: patientDataText }); }
-  sources.push({ id: "patientFacts", text: JSON.stringify(patientFacts) });
-  sources.push({ id: "plannedPrescription", text: JSON.stringify(prescription) });
+  catch { patientDataText.split(/\r?\n\s*\r?\n/).forEach((block,index)=>{ if(block.trim()) add(`patient/block/${index+1}`,block); }); }
+  sources.push({ id: "patientFacts", kind:"metadata", text: JSON.stringify(patientFacts) });
+  sources.push({ id: "plannedPrescription", kind:"metadata", text: JSON.stringify(prescription) });
   return sources;
 }
 
@@ -51,6 +56,16 @@ EGFR 음성 경로와 조직 부족 예외는 별도 행으로 반환한다. 음
 export function structuredMedicationRequest(request, comparison, overrides, profile) {
   const input = JSON.parse(request.input);
   const sources = medicationEvidenceSources(input.patientDataText, comparison.patient, comparison.prescription);
+  const kinds=new Set(profile.criteria.map(c=>c.kind));
+  const factsInstructions=FACT_INSTRUCTIONS.split("\n").filter((line,index)=>{
+    const kind=line.match(/^([a-z_]+)(?:\/adult)?:/)?.[1];
+    if(kind)return kinds.has(kind);
+    if(index===0)return true;
+    if(line.startsWith("투여 경로"))return profile.medicationId==="benralizumab-30" && profile.phase==="initial";
+    if(line.startsWith("annual_assessment"))return profile.medicationId==="benralizumab-30" && profile.phase==="continuation";
+    if(line.startsWith("EGFR"))return profile.policyId==="us-aetna" && profile.phase==="initial";
+    return false;
+  }).join("\n");
   const reviewScope = {
     mode: overrides.policyContext?.countryCode === "US" ? "international-comparison" : "registered-policy-review",
     reviewDate: comparison.asOf, treatmentPhase: profile.phase,
@@ -59,11 +74,11 @@ export function structuredMedicationRequest(request, comparison, overrides, prof
     limitations: profile.limitations ?? "프로젝트에 등록한 원문 범위의 참고 검토입니다.",
   };
   return {
-    instructions: `${request.instructions}\n\n### 조건별 근거 반환 계약\n최종 종합 판정과 Markdown 보고서는 서버가 만듭니다. 위 지시문의 출력 예시보다 아래 JSON 반환 규격을 우선합니다.\n보험 기준·검토 적응증은 환자 사실이 아닙니다. 국제 비교에서는 실제 보험 가입 여부를 이 가상 비교의 임상 탈락 근거로 쓰지 마세요.\ncriteriaProfile.criteria의 모든 ID를 정확히 한 번씩 반환하세요. 최종 verdict는 작성하지 마세요.\n각 행의 status는 met(충족), not_met(명시적 미충족), missing(필수 정보 없음), ambiguous(실제 관련 근거는 있으나 해석 불명확) 중 하나입니다. missing은 evidence:[]로 반환합니다. 나머지는 patientEvidenceSources의 sourceId와 실제 문구를 evidence에 붙입니다. 정책 문구를 환자 근거로 인용하지 마세요. 임의의 sourceId·날짜·사실을 만들지 마세요.\n${FACT_INSTRUCTIONS}\nJSON 객체 하나만 반환합니다. 코드펜스와 부연설명은 쓰지 마세요.\n{"schema":"${MEDICATION_CRITERIA_SCHEMA}","version":1,"profileId":"${profile.id}","criteria":[{"id":"조건 ID","status":"missing","evidence":[],"facts":{},"reason":"정보 없음"}]}${overrides.retryFeedback ? "\n이전 응답이 검증을 통과하지 못했습니다. 조건 ID, 근거 원문과 날짜, 수치·단위를 확인하여 JSON 전체를 다시 반환하세요." : ""}`,
+    instructions: `${request.instructions}\n\n### 조건별 근거 반환 계약\n최종 종합 판정과 Markdown 보고서는 서버가 만듭니다. 위 지시문의 출력 예시보다 아래 JSON 반환 규격을 우선합니다.\n보험 기준·검토 적응증은 환자 사실이 아닙니다. 국제 비교에서는 실제 보험 가입 여부를 이 가상 비교의 임상 탈락 근거로 쓰지 마세요.\ncriteriaProfile.criteria에 나열된 ID만 정확히 한 번씩 반환하세요. logic의 파생 ID는 서버가 계산하므로 반환하지 마세요. 최종 verdict는 작성하지 마세요.\n각 행의 status는 met(충족), not_met(명시적 미충족), missing(필수 정보 없음), ambiguous(실제 관련 근거는 있으나 해석 불명확) 중 하나입니다. missing은 evidence:[]로 반환합니다. 나머지는 patientEvidenceSources에 제시된 E번호를 선택해 evidence:["E1"] 형식으로 반환합니다. 근거 문구(quote)와 날짜(date)는 서버가 원문에서 연결하므로 다시 베껴 쓰지 마세요. 정책 문구·환자 기본정보·선택한 처방만으로 임상 근거를 대신하지 마세요. 임의의 E번호·날짜·사실을 만들지 마세요. reason은 해당 조건의 설명 한 문장으로 쓰고 근거 원문을 반복하지 마세요.\n${factsInstructions}\nJSON 객체 하나만 반환합니다. 코드펜스와 부연설명은 쓰지 마세요.\n{"schema":"${MEDICATION_CRITERIA_SCHEMA}","version":1,"profileId":"${profile.id}","criteria":[{"id":"조건 ID","status":"missing","evidence":[],"facts":{},"reason":"정보 없음"}]}${overrides.retryFeedback ? "\n이전 응답이 검증을 통과하지 못했습니다. 조건 ID, 근거 E번호, 수치·단위를 확인하여 JSON 전체를 다시 반환하세요." : ""}`,
     input: JSON.stringify({ reviewScope, patientFacts: comparison.patient,
       plannedTreatment: { selectedPrescription: comparison.prescription, wholeRegimen: "unknown-unless-documented-in-patient-data" },
       noticeText: input.noticeText, patientDataText: input.patientDataText,
-      criteriaProfile: { id: profile.id, criteria: profile.criteria, logic: profile.logic }, patientEvidenceSources: sources }),
+      criteriaProfile: { id: profile.id, criteria: profile.criteria, logic: profile.logic }, patientEvidenceSources: sources.filter(source=>source.kind==="patient-data") }),
     sources, reviewScope,
   };
 }
@@ -71,11 +86,12 @@ export function structuredMedicationRequest(request, comparison, overrides, prof
 function evidenceList(raw, sources) {
   if (!Array.isArray(raw)) throw new Error("조건별 evidence 배열이 필요합니다.");
   return raw.map(item => {
-    const source = sources.find(s => s.id === item?.sourceId);
-    if (!source || typeof item.quote !== "string" || !item.quote.trim()
-      || !normalize(source.text).includes(normalize(item.quote))) throw new Error("실제 진료기록에서 조건별 근거를 찾지 못했습니다.");
-    if (item.date && (!validDate(item.date) || !source.text.includes(item.date))) throw new Error("인용 기록에서 근거 날짜를 확인할 수 없습니다.");
-    return { sourceId: item.sourceId, quote: item.quote, date: item.date || "" };
+    const id=typeof item==="string" ? item : item?.sourceId;
+    const source = sources.find(s => s.id === id);
+    if (!source) throw new Error(`실제 진료기록에서 조건별 근거를 찾지 못했습니다: ${id ?? "ID 없음"}`);
+    // Only the source ID is model-authored. Text/date always come from the
+    // supplied record, even if the model sends unsolicited quote/date fields.
+    return { sourceId: source.id, sourcePath:source.path, sourceKind:source.kind, quote: source.text, date: source.date || "" };
   });
 }
 
@@ -126,7 +142,7 @@ function evaluateNumeric(c, row, context) {
     return Number.isInteger(age) ? { ...row, status: stateFor(age >= 18), patientInfo: `만 ${age}세`, evidence: [{ sourceId: "patientFacts", quote: `ageYears: ${age}`, date: "" }] } : { ...row, status: "missing" };
   }
   if (c.kind === "single_agent") {
-    const patientProof = evidence.filter(e => e.sourceId.startsWith("patient") && e.sourceId !== "patientFacts");
+    const patientProof = evidence.filter(e => e.sourceKind === "patient-data");
     const quote = textOf(patientProof);
     const explicit = /단독|single[ -]agent|monotherapy/i.test(quote);
     const uncertain = /정보\s*없|기록\s*없|미정|불명|미기재|not\s+(?:documented|specified)|unknown|no\s+(?:documentation|information)/i.test(quote);
@@ -230,11 +246,12 @@ export function validateMedicationCriteria(raw, profile, request, comparison) {
     || body.criteria.some(row => !profile.criteria.some(c => c.id === row?.id))) throw new Error("필수 조건의 결과가 누락되거나 중복되었습니다.");
   if (!validDate(comparison.asOf)) throw new Error("검토 기준일이 올바르지 않습니다.");
   const criteria = profile.criteria.map(c => {
-    const item = body.criteria.find(row => row.id === c.id);
+    const received = body.criteria.find(row => row.id === c.id);
+    const item = { ...received, facts: received.facts ?? (["clinical","adult"].includes(c.kind) ? {} : undefined) };
     if (!Object.hasOwn(CRITERIA_STATUS_LABELS, item.status) || typeof item.reason !== "string" || !item.facts || typeof item.facts !== "object" || Array.isArray(item.facts)) throw new Error(`조건별 상태·설명·facts가 올바르지 않습니다: ${c.id}`);
     const evidence = evidenceList(item.evidence, request.sources);
     if (item.status !== "missing" && c.kind !== "adult" && !evidence.length) throw new Error(`충족 여부를 뒷받침할 환자 근거가 없습니다: ${c.id}`);
-    if (item.status !== "missing" && !["adult","single_agent"].includes(c.kind) && !evidence.some(e => e.sourceId === "patient" || e.sourceId.startsWith("patient/"))) throw new Error(`환자 기본정보나 처방 한 건으로 임상 조건을 대신할 수 없습니다: ${c.id}`);
+    if (item.status !== "missing" && !["adult","single_agent"].includes(c.kind) && !evidence.some(e => e.sourceKind === "patient-data")) throw new Error(`환자 기본정보나 처방 한 건으로 임상 조건을 대신할 수 없습니다: ${c.id}`);
     const row = evaluateNumeric(c, { ...item, evidence }, { comparison, sources: request.sources, date: comparison.asOf });
     return { ...row, reason: row.status !== item.status ? `${CRITERIA_STATUS_LABELS[row.status]} · ${row.patientInfo || "조건을 확인할 수치·기간·명시적 근거를 확인해 주세요."}` : row.reason,
       label: c.label, sourceQuote: c.sourceQuote, statusLabel: CRITERIA_STATUS_LABELS[row.status] };

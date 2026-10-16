@@ -27,13 +27,13 @@ function setup(medicationId = "durvalumab-500", phase = "initial", lines = []) {
   const overrides = { patientData: JSON.stringify({ notes }), notice, policyId, treatmentPhase: phase,
     policyContext: { countryCode: policyId === "us-aetna" ? "US" : "KR", payer: policyId === "us-aetna" ? "Aetna" : "건강보험" } };
   const request = structuredMedicationRequest(medicationReviewRequest(comparison, overrides), comparison, overrides, profile);
-  const evidence = [{ sourceId: `patient/notes/${notes.length - 1}`, quote: notes.at(-1), date: AS_OF }];
+  const evidence = [{ sourceId: `E${notes.length}`, quote: notes.at(-1), date: AS_OF }];
   const body = { schema: MEDICATION_CRITERIA_SCHEMA, version: 1, profileId: profile.id,
     criteria: profile.criteria.map(c => ({ id: c.id, status: "met", evidence, facts: {}, reason: "기록 근거 확인" })) };
   const course = body.criteria.find(c => c.id === "biologic_course");
-  if (course) Object.assign(course, { facts: {course:"first-biologic"}, evidence:[{sourceId:`patient/notes/${notes.length-2}`,quote:notes.at(-2),date:AS_OF}] });
+  if (course) Object.assign(course, { facts: {course:"first-biologic"}, evidence:[{sourceId:`E${notes.length-1}`,quote:notes.at(-2),date:AS_OF}] });
   return { comparison, overrides, profile, request, body, notes, set(id, update) { Object.assign(body.criteria.find(row => row.id === id), update); },
-    proof(index) { return [{ sourceId: `patient/notes/${index}`, quote: notes[index], date: notes[index].slice(0, 10) }]; },
+    proof(index) { return [{ sourceId: `E${index+1}`, quote: notes[index], date: notes[index].slice(0, 10) }]; },
     result() { return validateMedicationCriteria(JSON.stringify(body), profile, request, comparison); } };
 }
 function aetna(mono = true) {
@@ -129,11 +129,9 @@ test("12개월을 벗어난 검사와 중복 악화 기록을 충족 횟수에 �
   t.set("exacerbations", { evidence: t.proof(0), facts: { episodes: Array.from({ length: 4 }, () => ({ startDate: "2026-10-01",endDate:"2026-10-01",episodeId:"asthma-1", evidence: t.proof(0) })) } });
   assert.equal(t.result().criteria.find(c => c.id === "exacerbations").value, 1);
 });
-test("허위 인용·날짜·조건 누락·중복은 완료된 판정으로 통과하지 않는다", () => {
+test("허위 근거 ID·조건 누락·중복은 완료된 판정으로 통과하지 않는다", () => {
   for (const mutation of [s => {s.body.criteria.pop();}, s => {s.body.criteria[0] = s.body.criteria[1];},
-    s => {s.body.criteria[0].evidence = [{sourceId:"policy",quote:"single agent"}];},
-    s => {s.body.criteria[0].evidence[0] = {...s.body.criteria[0].evidence[0],quote:"만들어낸 환자 문구"};},
-    s => {s.body.criteria[0].evidence[0] = {...s.body.criteria[0].evidence[0],date:"2020-01-01"};}]) {
+    s => {s.body.criteria[0].evidence = [{sourceId:"policy",quote:"single agent"}];}]) {
     const s = aetna(); mutation(s); assert.throws(() => s.result());
   }
 });
@@ -240,10 +238,54 @@ test("재시도의 제공자 오류 문자열을 시스템 지시문으로 올�
     return {ok:true,json:async()=>({message:{content:JSON.stringify(s.body)}})};
   }});
   assert.equal(calls.length,2);assert.doesNotMatch(calls[1].messages[0].content,/역할 변경 공격 문자열/);
+  assert.doesNotMatch(calls[1].messages[0].content,/지정된 판정 헤더/);
+  assert.match(calls[1].messages[0].content,/JSON 객체 하나만 반환/);
 });
 test("번역된 고시에 원문 보존 대조를 추가하지 않고 원문 버전의 조건표를 사용한다", async () => {
   const s=aetna();
   const overrides={...s.overrides,notice:"번역된 보험 기준입니다. 원문과 문자·숫자 일치 검증을 요구하지 않습니다.",criteriaSourceNotice:aetnaSource.text};
   const result=await runMedicationClaimReview({comparison:s.comparison,overrides},{environment,fetchImpl:async()=>({ok:true,json:async()=>({message:{content:JSON.stringify(s.body)}})})});
   assert.equal(result.status,"completed");assert.equal(result.draft.verdict,"circle");
+});
+test("첫 검증 오류와 거부된 응답은 뒤이은 시간 초과에 가려지지 않는다", async () => {
+  const s=aetna();s.body.criteria.pop();const raw=JSON.stringify(s.body);let calls=0;
+  const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides},{environment,fetchImpl:async()=>{
+    if(++calls===2)throw new Error("timeout");return {ok:true,json:async()=>({message:{content:raw}})};
+  }});
+  assert.equal(result.draft.verdict,null);assert.match(result.draft.validationIssues[0].message,/필수 조건/);
+  assert.equal(result.draft.validationIssues[1].message,"timeout");assert.equal(result.draft.rejectedResponse,raw);
+});
+test("모델이 근거 ID만 선택하면 서버가 해당 기록의 원문·날짜를 연결한다", () => {
+  const s=aetna();for(const row of s.body.criteria)row.evidence=row.evidence.map(({sourceId})=>sourceId);
+  const result=s.result();assert.equal(result.verdict,"circle");
+  const single=result.criteria.find(c=>c.id==="single_agent");
+  assert.equal(single.evidence[0].quote,s.notes[0]);assert.equal(single.evidence[0].date,AS_OF);
+  assert.equal(single.evidence[0].sourcePath,"patient/notes/0");
+});
+test("모델이 임의의 인용·날짜를 덧붙여도 서버 원문을 바꾸지 못한다", () => {
+  const s=aetna();s.body.criteria.find(c=>c.id==="single_agent").evidence=[{sourceId:"E1",quote:"만들어낸 인용",date:"2000-01-01"}];
+  const row=s.result().criteria.find(c=>c.id==="single_agent");
+  assert.equal(row.evidence[0].quote,s.notes[0]);assert.equal(row.evidence[0].date,AS_OF);
+});
+test("일반 진료 텍스트는 날짜와 검사값을 문단으로 유지하면서 E번호로 참조한다", () => {
+  const text="2026-10-01\nWBC 10.1 ×10³/uL\nEosinophil 6 %\n\n투여 계획 정보 없음";
+  const sources=medicationEvidenceSources(text,{},{});
+  assert.deepEqual(sources.filter(s=>s.kind==="patient-data").map(s=>[s.id,s.text,s.date]),[["E1","2026-10-01\nWBC 10.1 ×10³/uL\nEosinophil 6 %","2026-10-01"],["E2","투여 계획 정보 없음",""]]);
+  assert.equal(sources[0].path,"patient/block/1");
+});
+test("여러 줄에 적힌 날짜·백혈구·호산구는 같은 근거에서 606 cells/uL로 계산한다", () => {
+  const s=setup("benralizumab-30","initial",[]);
+  s.overrides.patientData="2026-10-01\nWBC 10.1 ×10³/uL\nEosinophil 6 %";
+  for(const row of s.body.criteria)Object.assign(row,{status:"missing",evidence:[],facts:{}});
+  s.set("eosinophils",{evidence:["E1"],facts:{measurements:[{date:"2026-10-01",wbcValue:10.1,wbcUnit:"10^3/uL",eosPercent:6,evidence:["E1"]}]}});
+  s.set("eosinophils",{status:"met"});
+  const request=structuredMedicationRequest(medicationReviewRequest(s.comparison,s.overrides),s.comparison,s.overrides,s.profile);
+  const row=validateMedicationCriteria(JSON.stringify(s.body),s.profile,request,s.comparison).criteria.find(c=>c.id==="eosinophils");
+  assert.equal(row.value,606);assert.equal(row.evidence[0].date,"2026-10-01");
+});
+test("수치가 필요 없는 임상 행의 빈 facts 생략은 허용하되 수치 행은 계약을 유지한다", () => {
+  const s=aetna();delete s.body.criteria.find(c=>c.id==="nsclc_stage").facts;
+  assert.equal(s.result().verdict,"circle");
+  delete s.body.criteria.find(c=>c.id==="dosing").facts;
+  assert.throws(()=>s.result(),/facts/);
 });

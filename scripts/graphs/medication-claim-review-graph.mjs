@@ -1,7 +1,7 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 
 import { isAllowedFrontierModel } from "../../src/frontier-model-catalog.js";
-import { medicationReviewRequest } from "../../src/medication-review-prompt.js";
+import { medicationReviewInstructions, medicationReviewRequest } from "../../src/medication-review-prompt.js";
 import { medicationCoveragePolicy } from "../../src/medication-coverage-policies.js";
 import { medicationCriteriaProfile } from "../../src/medication-policy-criteria.js";
 import { assertCriteriaSource, structuredMedicationRequest, validateMedicationCriteria } from "../medication-criteria-review.mjs";
@@ -207,7 +207,9 @@ function validateDraft(raw, _comparison) {
 }
 
 function reviewRequest(comparison, options, feedback) {
-  const request = medicationReviewRequest(comparison, options.overrides ?? {}, Boolean(feedback));
+  const overrides = { ...options.overrides };
+  if (options.criteriaProfile && !overrides.instructions) overrides.instructions = medicationReviewInstructions(options.model, { structured: true });
+  const request = medicationReviewRequest(comparison, overrides, Boolean(feedback) && !options.criteriaProfile);
   return options.criteriaProfile
     ? structuredMedicationRequest(request, comparison, { ...options.overrides, retryFeedback: feedback }, options.criteriaProfile)
     : request;
@@ -294,6 +296,8 @@ function medicationClaimReviewGraph() {
       }
       let feedback = "";
       let rawSample = "";
+      let rejectedResponse = "";
+      const validationIssues = [];
       // Leave time for a structured error response within the route's 120s budget.
       const startedAt = Date.now();
       const budgetMs = options.budgetMs ?? 110_000;
@@ -317,13 +321,18 @@ function medicationClaimReviewGraph() {
         } catch (error) {
           if (error instanceof ModelContextError) throw error;
           feedback = cleanText(error?.message, 300);
+          validationIssues.push({ attempt, message: feedback });
           // 검증에 걸린 시도의 모델 원문 앞부분을 보존해 실패 사유와 함께 보여 준다.
-          if (raw?.text) rawSample = markdownText(raw.text).slice(0, 200).replace(/\n+/g, " ");
+          if (raw?.text) {
+            rejectedResponse = raw.text;
+            rawSample = markdownText(raw.text).slice(0, 200).replace(/\n+/g, " ");
+          }
         }
       }
       return {
         draft: {
           status: "failed", verdict: null, generatedBy: "none",
+          validationIssues, rejectedResponse,
           note: `모델 검토를 완료하지 못했습니다: ${feedback}${rawSample ? ` — 모델 응답 원문(앞부분): "${rawSample}"` : ""}`,
         },
         attempts: [feedback],

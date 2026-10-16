@@ -177,7 +177,44 @@ test("프론티어 검토는 응답 JSON 스키마와 이를 지원하는 경로
   assert.equal(calls[0].provider.require_parameters,true);
   assert.equal(calls[0].response_format.type,"json_schema");
   assert.equal(calls[0].response_format.json_schema.strict,true);
+  assert.equal(calls[0].temperature,0);
   assert.deepEqual(calls[0].response_format.json_schema.schema.properties.profileId.enum,[s.profile.id]);
+});
+test("OpenAI·Claude 추론 모델은 미지원 temperature 없이 구조화 출력 경로를 요청한다", async () => {
+  const s=aetna();
+  for(const model of ["openai/gpt-6.1-sol","anthropic/claude-haiku-5.5"]){
+    const calls=[];
+    const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides,provider:"frontier"},{
+      environment:{OPENROUTER_API_KEY:"test-key",POLICYCOMPASS_FRONTIER_MODEL:model},
+      fetchImpl:async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(s.body)},finish_reason:"stop"}]})};},
+    });
+    assert.equal(result.status,"completed");assert.equal(calls.length,1);
+    assert.equal(Object.hasOwn(calls[0],"temperature"),false);
+    assert.equal(calls[0].reasoning.effort,"low");assert.equal(calls[0].provider.require_parameters,true);
+    assert.equal(calls[0].response_format.type,"json_schema");
+  }
+});
+test("비추론 소형 모델의 native schema 요청에는 reasoning 옵션을 보내지 않는다", async () => {
+  const s=aetna();
+  for(const model of ["meta-llama/llama-3.1-8b-instruct","google/gemma-3-4b-it"]){
+    const calls=[];
+    const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides,provider:"frontier"},{
+      environment:{OPENROUTER_API_KEY:"test-key",POLICYCOMPASS_FRONTIER_MODEL:model},
+      fetchImpl:async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(s.body)},finish_reason:"stop"}]})};},
+    });
+    assert.equal(result.status,"completed");assert.equal(Object.hasOwn(calls[0],"reasoning"),false);
+    assert.equal(calls[0].temperature,0);assert.equal(calls[0].response_format.type,"json_schema");
+  }
+});
+test("native schema가 없는 Qwen3 8B도 동일한 JSON 계약과 서버 집계를 사용한다", async () => {
+  const s=aetna(false);const calls=[];
+  const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides,provider:"frontier"},{
+    environment:{OPENROUTER_API_KEY:"test-key",POLICYCOMPASS_FRONTIER_MODEL:"qwen/qwen3-8b"},
+    fetchImpl:async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(s.body)},finish_reason:"stop"}]})};},
+  });
+  assert.equal(result.status,"completed");assert.equal(result.draft.verdict,"cross");
+  assert.equal(Object.hasOwn(calls[0],"response_format"),false);assert.equal(Object.hasOwn(calls[0],"provider"),false);
+  assert.match(calls[0].messages[0].content,/조건별 근거 반환 계약/);
 });
 test("잘린 응답·타임아웃·출력 미완료는 실패 상태와 null 판정", async () => {
   const s = aetna();

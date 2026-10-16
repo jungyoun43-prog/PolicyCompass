@@ -380,7 +380,7 @@ export async function callFrontierModel({
       ],
       max_tokens: maxOutputTokens,
       ...(temperature === null ? {} : { temperature }),
-      reasoning,
+      ...(reasoning === null ? {} : { reasoning }),
       ...(providerRouting && new URL(baseUrl).hostname === "openrouter.ai" ? { provider: providerRouting } : {}),
       ...(preserveInput && new URL(baseUrl).hostname === "openrouter.ai" ? { plugins: [{ id: "context-compression", enabled: false }] } : {}),
       ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } } } : {}),
@@ -388,7 +388,7 @@ export async function callFrontierModel({
     : {
       model: name,
       store: false,
-      reasoning,
+      ...(reasoning === null ? {} : { reasoning }),
       ...(instructions ? { instructions } : {}),
       input,
       max_output_tokens: maxOutputTokens,

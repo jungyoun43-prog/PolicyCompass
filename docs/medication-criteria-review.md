@@ -39,6 +39,11 @@ and local Ollama `format`. OpenRouter requires supporting parameters when routin
 the request. See the [OpenRouter structured-output contract](https://openrouter.ai/docs/guides/features/structured-outputs)
 and [Ollama schema format](https://docs.ollama.com/capabilities/structured-outputs).
 Schema support differs by endpoint, so server validation remains authoritative.
+OpenAI/Claude reasoning routes omit unsupported sampling temperature; the selected
+non-reasoning Llama 3 and Gemma 3 routes omit the reasoning parameter. These traits
+were checked against the selected models' public endpoint metadata on 2026-10-16.
+Qwen3 8B currently lacks a native-schema endpoint, so it uses the same JSON prompt
+contract and server validation without requesting native schema enforcement.
 An annual-count summary accidentally wrapped as one `episodes` item is normalized
 only when it contains exactly `count` and `windowMonths`, with no episode records.
 The server checks completeness and source references, binds laboratory values to

@@ -257,6 +257,9 @@ async function localDraft(comparison, options, feedback) {
 
 async function frontierDraft(comparison, options, feedback) {
   const { instructions, input, schema } = reviewRequest(comparison, options, feedback);
+  // This catalog entry currently has no native-schema endpoint. It still uses
+  // the identical JSON prompt contract and authoritative server validation.
+  const nativeSchema = options.model === "qwen/qwen3-8b" ? undefined : schema;
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
@@ -265,7 +268,12 @@ async function frontierDraft(comparison, options, feedback) {
     preserveInput: true,
     requireCompleteOutput: true,
     maxOutputTokens: options.criteriaProfile ? 6_000 : 2_600,
-    ...(schema ? { schemaName: "medication_criteria_review", schema, providerRouting: { require_parameters: true } } : {}),
+    ...(nativeSchema ? {
+      schemaName: "medication_criteria_review", schema: nativeSchema, providerRouting: { require_parameters: true },
+      // Parameter requirements include optional sampling/reasoning settings.
+      temperature: /^(?:openai|anthropic)\//.test(options.model) ? null : 0,
+      reasoning: /^(?:google\/gemma-3-|meta-llama\/llama-3\.)/.test(options.model) ? null : { effort: "low" },
+    } : {}),
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
     environment: options.environment ?? process.env,

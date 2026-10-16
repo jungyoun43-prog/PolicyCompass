@@ -5,7 +5,13 @@ import {
   buildPatientQuestionContext,
   patientQuestionAssistantStatus,
   runPatientQuestionAssistant,
+  safeGeneratedText,
 } from "../scripts/patient-question-assistant.mjs";
+
+test("환자용 기본 출력 검사는 진단 단정과 복약 변경 지시를 계속 거부한다", () => {
+  assert.throws(()=>safeGeneratedText("폐암으로 진단되었습니다."),/진단 또는 복약 변경/);
+  assert.throws(()=>safeGeneratedText("약을 중단하세요."),/진단 또는 복약 변경/);
+});
 
 const snapshot = {
   schema: "policycompass-clinical-snapshot",

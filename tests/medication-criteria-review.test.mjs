@@ -173,6 +173,21 @@ test("잘린 응답·타임아웃·출력 미완료는 실패 상태와 null 판
     assert.equal(result.status,"failed"); assert.equal(result.draft.verdict,null); assert.equal(result.draft.generatedBy,"none");
   }
 });
+test("기록된 진단 요약을 새 진단 지시로 막지 않으며 근거 없는 단독요법은 교정한다", async () => {
+  const s=aetna(false);let calls=0;
+  s.body.criteria.find(c=>c.id==="nsclc_stage").reason="절제 불가능한 III기 비소세포폐암으로 진단되었습니다.";
+  s.set("single_agent",{status:"met",evidence:s.proof(1),facts:{regimen:"single-agent"},reason:"Durvalumab 단독 공고요법 예정입니다."});
+  const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides},{environment,fetchImpl:async()=>{
+    calls++;return {ok:true,json:async()=>({message:{content:JSON.stringify(s.body)}})};
+  }});
+  assert.equal(calls,1);assert.equal(result.status,"completed");assert.equal(result.draft.verdict,"cross");
+  assert.equal(result.draft.criteria.find(c=>c.id==="single_agent").status,"missing");
+});
+test("급여 검토에서도 직접적인 약 중단 지시는 완료된 결과가 될 수 없다", async () => {
+  const s=aetna();s.body.criteria[0].reason="처방을 중단하세요.";
+  const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides},{environment,fetchImpl:async()=>({ok:true,json:async()=>({message:{content:JSON.stringify(s.body)}})})});
+  assert.equal(result.status,"failed");assert.equal(result.draft.verdict,null);assert.match(result.draft.note,/복약 변경/);
+});
 test("고시 버전 변경 시 모델 호출 전에 미완료로 중단하며 번역본의 숫자 대조는 하지 않는다", async () => {
   const s = aetna(); let calls = 0;
   const result = await runMedicationClaimReview({comparison:s.comparison,overrides:{...s.overrides,notice:"편집된 고시"}},{environment,fetchImpl:async()=>{calls++;}});
@@ -288,4 +303,25 @@ test("수치가 필요 없는 임상 행의 빈 facts 생략은 허용하되 수
   assert.equal(s.result().verdict,"circle");
   delete s.body.criteria.find(c=>c.id==="dosing").facts;
   assert.throws(()=>s.result(),/facts/);
+});
+test("Gemma의 한 겹 감싼 facts와 미사용 빈 facts 생략은 값·근거 검증 후 집계한다", () => {
+  const s=benra(600,3);
+  for(const id of ["omalizumab_trial","omalizumab_insufficient","omalizumab_intolerance","adherence_improvement","switch_letter"])s.set(id,{status:"missing",evidence:[]});
+  for(const row of s.body.criteria){
+    const kind=s.profile.criteria.find(c=>c.id===row.id).kind;
+    if(kind==="biologic_course")row.facts={biologic_course:row.facts.course};
+    else if(Object.keys(row.facts).length)row.facts={[kind]:row.facts};
+    else delete row.facts;
+  }
+  const result=s.result();assert.equal(result.verdict,"circle");
+  assert.equal(result.criteria.find(c=>c.id==="eosinophils").value,600);
+  assert.equal(result.criteria.find(c=>c.id==="exacerbations").value,3);
+  s.body.criteria.find(c=>c.id==="eosinophils").facts.eosinophils.measurements[0].value=500;
+  assert.throws(()=>s.result(),/값·단위·근거/);
+});
+test("처음 생물학적 제제라는 명시적 기록도 첫 투여 경로의 근거로 연결한다", () => {
+  const s=setup("benralizumab-30","initial",["2026-10-16 | 처음 생물학적 제제로 benralizumab 투여 예정."]);
+  s.set("biologic_course",{facts:{course:"first-biologic"},evidence:s.proof(0)});
+  const row=s.result().criteria.find(c=>c.id==="biologic_course");
+  assert.equal(row.status,"met");assert.equal(row.course,"first-biologic");
 });

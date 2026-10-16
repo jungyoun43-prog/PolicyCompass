@@ -59,8 +59,8 @@ const DIRECT_IDENTIFIER_PATTERNS = [
   /(?:서울특별시|서울시|부산광역시|부산시|대구광역시|대구시|인천광역시|인천시|광주광역시|광주시|대전광역시|대전시|울산광역시|울산시|세종특별자치시|세종시|경기도|강원특별자치도|강원도|충청북도|충청남도|전북특별자치도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|제주도)\s+[가-힣0-9-]+(?:시|군|구)(?:\s+[가-힣0-9-]+(?:로|길|동|읍|면)?)?(?:\s+\d+(?:-\d+)?)?/g,
 ];
 
+const GENERATED_DIAGNOSIS_CLAIM = /(?:진단|확진)(?:입니다|이다|됐습니다|되었습니다|으로\s*보입니다)/i;
 const UNSAFE_GENERATED_CLAIM = new RegExp([
-  "(?:진단|확진)(?:입니다|이다|됐습니다|되었습니다|으로\\s*보입니다)",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)하세요",
   "(?:약|약물|복용량|처방)을?\\s*(?:중단|증량|감량|변경)해야\\s*합니다",
   "(?:반드시|즉시)\\s*(?:복용|중단)하세요",
@@ -80,9 +80,9 @@ export function scrubDirectIdentifiers(value, maximum = 500) {
   return cleanText(text, maximum);
 }
 
-export function safeGeneratedText(value, maximum = 500) {
+export function safeGeneratedText(value, maximum = 500, { allowDiagnosisStatements = false } = {}) {
   const text = cleanText(value, maximum);
-  if (UNSAFE_GENERATED_CLAIM.test(text)) {
+  if (UNSAFE_GENERATED_CLAIM.test(text) || (!allowDiagnosisStatements && GENERATED_DIAGNOSIS_CLAIM.test(text))) {
     throw new Error("모델이 진단 또는 복약 변경으로 오해할 수 있는 문장을 반환했습니다.");
   }
   return text;

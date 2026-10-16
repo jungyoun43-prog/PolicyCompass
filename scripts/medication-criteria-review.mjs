@@ -38,7 +38,8 @@ export function medicationEvidenceSources(patientDataText, patientFacts, prescri
   return sources;
 }
 
-const FACT_INSTRUCTIONS = `facts 규격 (해당 kind에서만 사용):
+const FACT_INSTRUCTIONS = `facts는 각 조건 행 안의 객체입니다. 아래 kind 이름으로 다시 감싸지 마세요. 예: {"id":"eosinophils","facts":{"measurements":[...]}}. 임상 상태만으로 설명하는 행과 missing/not_met/ambiguous 행에 수치가 없으면 facts:{}로 반환합니다.
+facts 내부 규격 (해당 kind에서만 사용):
 eosinophils: {measurements:[{date:"YYYY-MM-DD",value:숫자,unit:"cells/uL",evidence:[근거]}]}. 백혈구와 분율로 계산할 때 value 대신 wbcValue, wbcUnit("10^3/uL" 또는 "cells/uL"), eosPercent를 주고 같은 날짜의 두 검사 근거를 함께 넣는다. 모든 해당 검사 후보를 반환한다.
 exacerbations: {episodes:[{startDate:"YYYY-MM-DD",endDate:"YYYY-MM-DD",episodeId:"기록에 명시된 사건/입원 식별자",evidence:[근거]}]}. 같은 입원·악화 기간의 경과 기록은 한 사건으로 묶는다. 날짜별 진단·진료기록을 새로운 악화로 세지 않는다. 별도 악화인지 확인 불가능하면 status:ambiguous이다. 반드시 천식 악화이며 전신 스테로이드가 요구된 사건만 포함한다. 개별 사건 없이 명시된 연간 횟수만 있으면 {count:숫자,windowMonths:12}; 이 경우 근거에 천식 악화·전신 스테로이드·12개월·횟수가 명시되어야 한다. CAP/패혈증의 스테로이드 투여는 제외한다.
 oral_steroids: {startDate:"YYYY-MM-DD",endDate:"YYYY-MM-DD",prednisoloneEquivalentMgPerDay:숫자,continuous:true}. 경구 투여와 prednisolone 또는 명시된 동등 용량의 근거가 필요하다. 다른 스테로이드의 동등용량을 외부 지식으로 계산하지 않는다.
@@ -60,7 +61,7 @@ export function structuredMedicationRequest(request, comparison, overrides, prof
   const factsInstructions=FACT_INSTRUCTIONS.split("\n").filter((line,index)=>{
     const kind=line.match(/^([a-z_]+)(?:\/adult)?:/)?.[1];
     if(kind)return kinds.has(kind);
-    if(index===0)return true;
+    if(index<=1)return true;
     if(line.startsWith("투여 경로"))return profile.medicationId==="benralizumab-30" && profile.phase==="initial";
     if(line.startsWith("annual_assessment"))return profile.medicationId==="benralizumab-30" && profile.phase==="continuation";
     if(line.startsWith("EGFR"))return profile.policyId==="us-aetna" && profile.phase==="initial";
@@ -229,7 +230,7 @@ function evaluateNumeric(c, row, context) {
   if (c.kind === "biologic_course") {
     const course = facts.course;
     if (!["first-biologic", "from-omalizumab", "other-switch"].includes(course)) return { ...row, status: "missing" };
-    if (course === "first-biologic" && !/biologic[ -]naive|first.{0,30}biologic|첫.{0,20}생물학|생물학.{0,20}(처음|첫)|no.{0,20}prior.{0,20}biologic|생물학.{0,20}(투여|사용).{0,10}없/i.test(text)) return { ...row, status: "missing" };
+    if (course === "first-biologic" && !/biologic[ -]naive|first.{0,30}biologic|(?:첫|처음).{0,20}생물학|생물학.{0,20}(처음|첫)|no.{0,20}prior.{0,20}biologic|생물학.{0,20}(투여|사용).{0,10}없/i.test(text)) return { ...row, status: "missing" };
     if (course === "from-omalizumab" && (!/omalizumab|오말리주맙/i.test(text) || !/교체|switch|전환/i.test(text))) return { ...row, status: "missing" };
     return { ...row, course, patientInfo: {"first-biologic":"첫 생물학적 제제", "from-omalizumab":"Omalizumab에서 교체", "other-switch":"검증된 조건표 범위 밖의 교체 경로"}[course] };
   }
@@ -237,6 +238,16 @@ function evaluateNumeric(c, row, context) {
 }
 
 function reportText(value) { return String(value ?? "").replace(/[|\r\n]/g, " ").replace(/[<>]/g, ""); }
+function criterionFacts(received, criterion) {
+  // Known transport variants do not add facts or bypass their source checks.
+  let facts=received.facts ?? (["clinical","adult"].includes(criterion.kind) || received.status !== "met" ? {} : undefined);
+  if (facts && typeof facts === "object" && !Array.isArray(facts) && Object.keys(facts).length === 1 && Object.hasOwn(facts,criterion.kind)) {
+    const nested=facts[criterion.kind];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) facts=nested;
+    else if (criterion.kind === "biologic_course" && typeof nested === "string") facts={course:nested};
+  }
+  return facts;
+}
 export function validateMedicationCriteria(raw, profile, request, comparison) {
   let body;
   try { body = JSON.parse(raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
@@ -247,7 +258,7 @@ export function validateMedicationCriteria(raw, profile, request, comparison) {
   if (!validDate(comparison.asOf)) throw new Error("검토 기준일이 올바르지 않습니다.");
   const criteria = profile.criteria.map(c => {
     const received = body.criteria.find(row => row.id === c.id);
-    const item = { ...received, facts: received.facts ?? (["clinical","adult"].includes(c.kind) ? {} : undefined) };
+    const item = { ...received, facts: criterionFacts(received,c) };
     if (!Object.hasOwn(CRITERIA_STATUS_LABELS, item.status) || typeof item.reason !== "string" || !item.facts || typeof item.facts !== "object" || Array.isArray(item.facts)) throw new Error(`조건별 상태·설명·facts가 올바르지 않습니다: ${c.id}`);
     const evidence = evidenceList(item.evidence, request.sources);
     if (item.status !== "missing" && c.kind !== "adult" && !evidence.length) throw new Error(`충족 여부를 뒷받침할 환자 근거가 없습니다: ${c.id}`);

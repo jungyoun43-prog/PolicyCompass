@@ -202,7 +202,7 @@ function validateDraft(raw, _comparison) {
   const symbol = heading ? (heading[1] || heading[2]) : "";
   const verdict = VERDICT_SYMBOLS[symbol];
   if (!verdict) throw new Error("출력 형식의 판정 헤더(## [\u25cb/\u25b3/\u2715])가 없습니다.");
-  safeGeneratedText(markdown, markdown.length);
+  safeGeneratedText(markdown, markdown.length, { allowDiagnosisStatements: true });
   return { verdict, markdown };
 }
 
@@ -316,7 +316,7 @@ function medicationClaimReviewGraph() {
           const draft = options.criteriaProfile
             ? validateMedicationCriteria(raw.text, options.criteriaProfile, reviewRequest(state.comparison, options, feedback), state.comparison)
             : { ...validateDraft(raw.text, state.comparison), status: "completed", assessmentMethod: "model-report" };
-          if (draft.criteria) safeGeneratedText(draft.criteria.map(row => row.reason).join("\n"), Infinity);
+          if (draft.criteria) safeGeneratedText(draft.criteria.map(row => row.reason).join("\n"), Infinity, { allowDiagnosisStatements: true });
           return { draft: { ...draft, model: raw.model, generatedBy: draft.status === "completed" ? raw.generatedBy : "none" } };
         } catch (error) {
           if (error instanceof ModelContextError) throw error;

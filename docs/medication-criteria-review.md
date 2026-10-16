@@ -29,6 +29,10 @@ copy clinical prose. JSON records retain their paths; plain text is indexed by
 paragraph, keeping date headings and their multiline laboratory values together.
 The complete input is still supplied intact. Any unsolicited model-authored quotes
 or dates are discarded; unknown IDs cannot become evidence.
+One known model transport variant wraps `facts` in the criterion's kind. The server
+unwraps that single level, and permits absent empty facts for non-numeric or
+non-`met` rows. Numeric values, units, dates and evidence still undergo the same
+checks; missing facts on a numeric `met` row remain invalid.
 The server checks completeness and source references, binds laboratory values to
 their recorded units, computes thresholds, dates and reductions, then aggregates
 the verified tree. Missing information is distinct from documented nonfulfillment;
@@ -53,6 +57,10 @@ timeouts, and the client handles delayed `code/message` errors after HTTP 200.
 Failed responses retain per-attempt validation issues and the rejected model text
 for diagnosis in the requesting client's response, never as an accepted report.
 This diagnostic text is not written to a database or production log.
+Coverage summaries may describe a diagnosis already in the chart. Their output
+check retains the block on medication-change instructions without applying the
+patient-question assistant's blanket diagnosis-wording block. The patient-facing
+assistant keeps both checks.
 
 Translations continue using Haiku. No original-versus-translation number, unit or
 code comparison gate is introduced. A translated review carries its original notice

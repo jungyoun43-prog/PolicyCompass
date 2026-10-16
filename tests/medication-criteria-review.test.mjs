@@ -164,6 +164,20 @@ test("실제 graph의 한 번 요청은 조건 JSON을 받아 서버 판정과 �
   }});
   assert.equal(result.status,"completed"); assert.equal(result.draft.verdict,"cross"); assert.equal(calls.length,1);
   assert.equal(JSON.parse(calls[0].messages[1].content).reviewScope.mode,"international-comparison");
+  assert.deepEqual(calls[0].format.properties.profileId.enum,[s.profile.id]);
+});
+test("프론티어 검토는 응답 JSON 스키마와 이를 지원하는 경로를 요청한다", async () => {
+  const s=aetna();const calls=[];
+  for(const row of s.body.criteria)row.evidence=row.evidence.map(e=>e.sourceId);
+  const result=await runMedicationClaimReview({comparison:s.comparison,overrides:s.overrides,provider:"frontier"},{
+    environment:{OPENROUTER_API_KEY:"test-key",POLICYCOMPASS_FRONTIER_MODEL:"google/gemma-4-31b-it"},
+    fetchImpl:async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(s.body)},finish_reason:"stop"}]})};},
+  });
+  assert.equal(result.status,"completed");assert.equal(calls.length,1);
+  assert.equal(calls[0].provider.require_parameters,true);
+  assert.equal(calls[0].response_format.type,"json_schema");
+  assert.equal(calls[0].response_format.json_schema.strict,true);
+  assert.deepEqual(calls[0].response_format.json_schema.schema.properties.profileId.enum,[s.profile.id]);
 });
 test("잘린 응답·타임아웃·출력 미완료는 실패 상태와 null 판정", async () => {
   const s = aetna();
@@ -324,4 +338,14 @@ test("처음 생물학적 제제라는 명시적 기록도 첫 투여 경로의 
   s.set("biologic_course",{facts:{course:"first-biologic"},evidence:s.proof(0)});
   const row=s.result().criteria.find(c=>c.id==="biologic_course");
   assert.equal(row.status,"met");assert.equal(row.course,"first-biologic");
+});
+test("연간 횟수 요약 한 건은 개별 악화 사건으로 세지 않고 원문 횟수로 검증한다", () => {
+  const s=benra(600,3);
+  s.set("exacerbations",{facts:{episodes:[{count:3,windowMonths:12}]}});
+  assert.equal(s.result().verdict,"circle");
+  assert.equal(s.result().criteria.find(c=>c.id==="exacerbations").value,3);
+  s.set("exacerbations",{facts:{episodes:[{count:4,windowMonths:12}]}});
+  assert.equal(s.result().verdict,"cross");
+  s.set("exacerbations",{facts:{episodes:[{count:3,windowMonths:12},{episodeId:"A-1"}]}});
+  assert.throws(()=>s.result(),/근거|evidence/);
 });

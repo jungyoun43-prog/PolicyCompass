@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { MEDICATION_CRITERIA_SCHEMA, CRITERIA_STATUS_LABELS, aggregateCriteriaLogic } from "../src/medication-policy-criteria.js";
+import { medicationCriteriaResponseSchema } from "./medication-criteria-schema.mjs";
 
 const normalize = text => String(text).replace(/\s+/g, " ").trim();
 const hash = text => createHash("sha256").update(normalize(text)).digest("hex");
@@ -41,7 +42,7 @@ export function medicationEvidenceSources(patientDataText, patientFacts, prescri
 const FACT_INSTRUCTIONS = `facts는 각 조건 행 안의 객체입니다. 아래 kind 이름으로 다시 감싸지 마세요. 예: {"id":"eosinophils","facts":{"measurements":[...]}}. 임상 상태만으로 설명하는 행과 missing/not_met/ambiguous 행에 수치가 없으면 facts:{}로 반환합니다.
 facts 내부 규격 (해당 kind에서만 사용):
 eosinophils: {measurements:[{date:"YYYY-MM-DD",value:숫자,unit:"cells/uL",evidence:[근거]}]}. 백혈구와 분율로 계산할 때 value 대신 wbcValue, wbcUnit("10^3/uL" 또는 "cells/uL"), eosPercent를 주고 같은 날짜의 두 검사 근거를 함께 넣는다. 모든 해당 검사 후보를 반환한다.
-exacerbations: {episodes:[{startDate:"YYYY-MM-DD",endDate:"YYYY-MM-DD",episodeId:"기록에 명시된 사건/입원 식별자",evidence:[근거]}]}. 같은 입원·악화 기간의 경과 기록은 한 사건으로 묶는다. 날짜별 진단·진료기록을 새로운 악화로 세지 않는다. 별도 악화인지 확인 불가능하면 status:ambiguous이다. 반드시 천식 악화이며 전신 스테로이드가 요구된 사건만 포함한다. 개별 사건 없이 명시된 연간 횟수만 있으면 {count:숫자,windowMonths:12}; 이 경우 근거에 천식 악화·전신 스테로이드·12개월·횟수가 명시되어야 한다. CAP/패혈증의 스테로이드 투여는 제외한다.
+exacerbations: 개별 사건 없이 명시된 연간 횟수만 있으면 {count:숫자,windowMonths:12}. 이 요약을 episodes 안에 넣지 않는다. 근거에 천식 악화·전신 스테로이드·12개월·횟수가 명시되어야 한다. 개별 사건의 식별자·시작일·종료일이 원문에 있을 때만 {episodes:[{startDate:"YYYY-MM-DD",endDate:"YYYY-MM-DD",episodeId:"기록에 명시된 사건/입원 식별자",evidence:[근거]}]}를 사용한다. 같은 입원·악화 기간의 경과 기록은 한 사건으로 묶는다. 날짜별 진단·진료기록을 새로운 악화로 세지 않는다. 별도 악화인지 확인 불가능하면 status:ambiguous이다. 반드시 천식 악화이며 전신 스테로이드가 요구된 사건만 포함한다. CAP/패혈증의 스테로이드 투여는 제외한다.
 oral_steroids: {startDate:"YYYY-MM-DD",endDate:"YYYY-MM-DD",prednisoloneEquivalentMgPerDay:숫자,continuous:true}. 경구 투여와 prednisolone 또는 명시된 동등 용량의 근거가 필요하다. 다른 스테로이드의 동등용량을 외부 지식으로 계산하지 않는다.
 single_agent: {regimen:"single-agent" 또는 "combination"}. 환자 진료기록에서 이번 전체 요법이 단독이라는 명시적 근거가 필요하다. 고시의 적응증이나 선택한 약 하나로 추정하지 않는다.
 durvalumab_dosing: {weightKg:숫자 또는 null,totalMonths:숫자}. 체중·계획한 총 기간의 진료기록 근거를 붙인다. prescription.durationDays는 이번 처방 기간이며 총 공고요법 기간이 아니다. 용량과 간격은 plannedTreatment.selectedPrescription에서 서버가 계산한다.
@@ -80,7 +81,7 @@ export function structuredMedicationRequest(request, comparison, overrides, prof
       plannedTreatment: { selectedPrescription: comparison.prescription, wholeRegimen: "unknown-unless-documented-in-patient-data" },
       noticeText: input.noticeText, patientDataText: input.patientDataText,
       criteriaProfile: { id: profile.id, criteria: profile.criteria, logic: profile.logic }, patientEvidenceSources: sources.filter(source=>source.kind==="patient-data") }),
-    sources, reviewScope,
+    sources, reviewScope, schema: medicationCriteriaResponseSchema(profile),
   };
 }
 
@@ -245,6 +246,13 @@ function criterionFacts(received, criterion) {
     const nested=facts[criterion.kind];
     if (nested && typeof nested === "object" && !Array.isArray(nested)) facts=nested;
     else if (criterion.kind === "biologic_course" && typeof nested === "string") facts={course:nested};
+  }
+  // A single annual-count summary is not an individual episode. Preserve that
+  // distinction; the same count/window/source checks still run below.
+  if (criterion.kind === "exacerbations" && Array.isArray(facts?.episodes) && facts.episodes.length === 1) {
+    const summary = facts.episodes[0];
+    if (summary && typeof summary === "object" && Object.keys(facts).length === 1
+      && Object.keys(summary).length === 2 && Object.hasOwn(summary,"count") && Object.hasOwn(summary,"windowMonths")) facts=summary;
   }
   return facts;
 }

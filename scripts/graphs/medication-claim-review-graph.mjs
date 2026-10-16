@@ -216,7 +216,7 @@ function reviewRequest(comparison, options, feedback) {
 }
 
 async function localDraft(comparison, options, feedback) {
-  const { instructions, input } = reviewRequest(comparison, options, feedback);
+  const { instructions, input, schema } = reviewRequest(comparison, options, feedback);
   const messages = [
     { role: "system", content: instructions },
     { role: "user", content: input },
@@ -232,6 +232,7 @@ async function localDraft(comparison, options, feedback) {
       truncate: false,
       shift: false,
       options: { temperature: 0 },
+      ...(schema ? { format: schema } : {}),
     }),
     redirect: "error",
     signal: AbortSignal.timeout(options.timeoutMs),
@@ -255,7 +256,7 @@ async function localDraft(comparison, options, feedback) {
 }
 
 async function frontierDraft(comparison, options, feedback) {
-  const { instructions, input } = reviewRequest(comparison, options, feedback);
+  const { instructions, input, schema } = reviewRequest(comparison, options, feedback);
   const result = await callFrontierModel({
     apiKey: options.apiKey,
     model: options.model,
@@ -264,6 +265,7 @@ async function frontierDraft(comparison, options, feedback) {
     preserveInput: true,
     requireCompleteOutput: true,
     maxOutputTokens: options.criteriaProfile ? 6_000 : 2_600,
+    ...(schema ? { schemaName: "medication_criteria_review", schema, providerRouting: { require_parameters: true } } : {}),
     fetchImpl: options.fetchImpl,
     timeoutMs: options.timeoutMs,
     environment: options.environment ?? process.env,

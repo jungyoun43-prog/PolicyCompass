@@ -33,6 +33,14 @@ One known model transport variant wraps `facts` in the criterion's kind. The ser
 unwraps that single level, and permits absent empty facts for non-numeric or
 non-`met` rows. Numeric values, units, dates and evidence still undergo the same
 checks; missing facts on a numeric `met` row remain invalid.
+`scripts/medication-criteria-schema.mjs` also supplies criterion-specific JSON
+Schemas through OpenRouter/OpenAI `response_format` (or Responses `text.format`)
+and local Ollama `format`. OpenRouter requires supporting parameters when routing
+the request. See the [OpenRouter structured-output contract](https://openrouter.ai/docs/guides/features/structured-outputs)
+and [Ollama schema format](https://docs.ollama.com/capabilities/structured-outputs).
+Schema support differs by endpoint, so server validation remains authoritative.
+An annual-count summary accidentally wrapped as one `episodes` item is normalized
+only when it contains exactly `count` and `windowMonths`, with no episode records.
 The server checks completeness and source references, binds laboratory values to
 their recorded units, computes thresholds, dates and reductions, then aggregates
 the verified tree. Missing information is distinct from documented nonfulfillment;

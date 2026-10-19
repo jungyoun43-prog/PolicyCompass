@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: python3 -m unittest discover -s tests -p 'test_deploy_ecs.py'
+      - run: python3 -m unittest discover -s tests -p 'test_deploy*.py'
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -37,9 +37,9 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ap-northeast-2
-      ECS_SERVICE_ARN: arn:aws:ecs:ap-northeast-2:782419713811:service/default/policycompass
       ECR_REPOSITORY: 782419713811.dkr.ecr.ap-northeast-2.amazonaws.com/policycompass
-      APP_URL: https://po-2a4759f461a046a086405596fcc8950f.ecs.ap-northeast-2.on.aws
+      APP_URL: https://3.34.51.246
+      LIGHTSAIL_HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPDnj/kF0gjcB1DXpaL9nNtabq3lMg8D7Sa62ADJv4oX
     steps:
       - uses: actions/checkout@v4
       - name: Skip a superseded commit
@@ -81,4 +81,7 @@ jobs:
         if: steps.current.outputs.deploy == 'true'
         env:
           DEPLOY_IMAGE: ${{ env.ECR_REPOSITORY }}@${{ steps.image.outputs.digest }}
-        run: python3 scripts/deploy-ecs.py
+          APP_REVISION: ${{ github.sha }}
+          LIGHTSAIL_DEPLOY_SSH_KEY: ${{ secrets.LIGHTSAIL_DEPLOY_SSH_KEY }}
+          LIGHTSAIL_INSTALL_RECEIVER: ${{ vars.LIGHTSAIL_INSTALL_RECEIVER }}
+        run: python3 scripts/deploy-lightsail.py

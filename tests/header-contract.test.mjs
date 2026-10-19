@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
+import { load } from "cheerio";
 
 import GatewayPage from "../app/(gateway)/page.jsx";
 import PatientPage from "../app/(landing)/patient/page.jsx";
@@ -108,7 +109,9 @@ test("EMR 환자 화면은 한 개의 탭 목록과 일관된 명칭을 사용�
   const tablists = html.match(/role="tablist"/g) ?? [];
 
   assert.equal(tablists.length, 1);
-  const tabLabels = [...html.matchAll(/<button[^>]*role="tab"[^>]*>([^<]+)<\/button>/g)].map(([, label]) => label);
+  // Decorative icons must not change the text or accessible tab names.
+  const $ = load(html);
+  const tabLabels = $('[role="tab"]').toArray().map((tab) => $(tab).text());
   assert.deepEqual(tabLabels, ["오늘 진료", "환자 요약", "과거 기록", "신체 지도", "급여 보드", "Journey", "감사·데이터"]);
   assert.doesNotMatch(html, /차트|급여 칸반/);
 });

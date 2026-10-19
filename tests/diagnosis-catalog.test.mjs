@@ -108,5 +108,7 @@ test("약품 검색 결과는 간결한 처방명과 처방 버튼을 보여 주
   assert.match(dialog, /class="rx-form__submit" type="submit"/);
   assert.doesNotMatch(dialog, /pickMedication\(/, "처방 버튼을 눌러야 입력칸이 열리는 이전 흐름은 제거한다");
   assert.doesNotMatch(dialog, /<details class="rx-result__details"/);
-  assert.match(dialog, /label === "급여인정확인" \? openCoverage\(medication\)/);
+  // 메뉴 항목은 닫히면 사라지므로 같은 약의 연결된 목록 행을 복귀 대상으로 넘긴다.
+  assert.match(dialog, /label === "급여인정확인"\s*\?\s*openCoverage\(\s*medication,\s*document\.getElementById\(`prescriptionForm-\$\{medication\.id\}`\)\?\.closest\("\[data-medication-id\]"\)\s*\)/,
+    "급여 메뉴는 해당 medication과 그 약의 기존 목록 행을 함께 전달한다");
 });

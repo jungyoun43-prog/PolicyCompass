@@ -235,6 +235,8 @@ function DetailList({ rows }) {
 // handed down by the parent that renders it; the launcher button portals there.
 export function PrescriptionDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot, standalone = false, initialCoverage, onStandaloneClose, prescriptionStandalone = false, onPrescriptionSubmit, windowMessage }) {
   const open = activeDialog === "prescription";
+  const launcherRef = useRef(null);
+  const coverageReturnFocusRef = useRef(null);
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -341,8 +343,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     if (prescriptionStandalone) onStandaloneClose?.();
     setActiveDialog((current) => (current === "prescription" ? "" : current));
   };
-  const openCoverage = (medication) => {
+  const openCoverage = (medication, returnTarget = null) => {
     if (!standalone && openCoverageWindow({ patient, encounter, medicationId: medication.id, prescription: currentDosing(medication) })) return;
+    coverageReturnFocusRef.current = returnTarget;
     requestVersion.current += 1;
     setReview(null);
     setReviewPreview(null);
@@ -692,12 +695,12 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
         <form className="inline-clinical-form rx-form" id={"prescriptionForm-" + medication.id} noValidate autoComplete="off" spellCheck="false" onSubmit={(event) => submit(event, form, medication.id)}>
           <div className="rx-order-line" data-infusion={usesInfusionRate(form.route) || undefined}>
             <div className="rx-order-line__product" id={"medicationSelectedSummary-" + medication.id}><strong><MedicationOrderName name={MEDICATION_PRODUCTS[medication.id]?.orderName || form.name} /></strong><input id={"medicationName-" + medication.id} name="name" type="hidden" value={form.name} /></div>
-            <label><span className="rx-order-field-label">1회 용량</span><input id={"medicationDose-" + medication.id} name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
-            <label><span className="rx-order-field-label">용량 단위</span><select id={"medicationDoseUnit-" + medication.id} name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
-            <label><span className="rx-order-field-label">투여 빈도</span><select id={"medicationFrequency-" + medication.id} name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            {usesInfusionRate(form.route) ? <label><span className="rx-order-field-label">주입속도 (필요 시)</span><input id={"medicationInfusionRate-" + medication.id} name="infusionRate" maxLength={80} placeholder="단위 포함 입력" value={form.infusionRate} onChange={(event) => setForm((current) => ({ ...current, infusionRate: event.target.value }))} /></label> : null}
-            <div className="rx-order-line__actions">
-              <Button className="rx-coverage-launch" onClick={() => openCoverage(medication)} aria-label={`${medication.label} 급여인정확인`} aria-haspopup="dialog">급여인정확인</Button>
+            <label className="rx-dose-field"><span className="rx-order-field-label">1회 용량</span><input id={"medicationDose-" + medication.id} name="dose" maxLength={40} inputMode="decimal" placeholder="예: 1" value={form.dose} onChange={(event) => setForm((current) => ({ ...current, dose: event.target.value }))} /></label>
+            <label className="rx-unit-field"><span className="rx-order-field-label">용량 단위</span><select id={"medicationDoseUnit-" + medication.id} name="doseUnit" value={form.doseUnit} onChange={(event) => setForm((current) => ({ ...current, doseUnit: event.target.value }))}>{["정", "캡슐", "포", "mg", "mg/kg", "g", "mL", "흡입", "앰플", "바이알", "패치", "방울"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}</select></label>
+            <label className="rx-frequency-field"><span className="rx-order-field-label">투여 빈도</span><select id={"medicationFrequency-" + medication.id} name="frequency" value={form.frequency} onChange={(event) => setForm((current) => ({ ...current, frequency: event.target.value }))}>{[["4주 1회(첫 3회) 후 8주 1회", "4주 1회(첫 3회) 후 8주 1회"], ["2주 1회", "2주 1회"], ["1일 1회", "1일 1회 · QD"], ["1일 2회", "1일 2회 · BID"], ["1일 3회", "1일 3회 · TID"], ["1일 4회", "1일 4회 · QID"], ["격일 1회", "격일 1회 · QOD"], ["주 1회", "주 1회 · QW"], ["취침 전", "취침 전 · HS"], ["필요 시", "필요 시 · PRN"]].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            {usesInfusionRate(form.route) ? <label className="rx-infusion-field"><span className="rx-order-field-label">주입속도 (필요 시)</span><input id={"medicationInfusionRate-" + medication.id} name="infusionRate" maxLength={80} placeholder="단위 포함 입력" value={form.infusionRate} onChange={(event) => setForm((current) => ({ ...current, infusionRate: event.target.value }))} /></label> : null}
+            <div className="rx-order-line__actions" role="group" aria-label={`${medication.label} 처방 작업`}>
+              <Button className="rx-coverage-launch" onClick={(event) => openCoverage(medication, event.currentTarget)} aria-label={`${medication.label} 급여인정확인`} aria-haspopup="dialog">급여인정확인</Button>
               <Button variant="primary" className="rx-form__submit" type="submit" disabled={saving || !editable}>{saving ? "저장 중…" : "처방"}</Button>
             </div>
           </div>
@@ -721,9 +724,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button size="sm" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방</Button>,
+        <Button ref={launcherRef} size="sm" id="openPrescriptionDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>약 처방</Button>,
         launcherSlot) : null}
-      <RxDialog id="prescriptionDialog" embedded={prescriptionStandalone} open={open && !standalone} onClose={close} eyebrow="PRESCRIPTION SEARCH" title="약 처방" titleId="rxDialogTitle" context={context} showNotice={false}
+      <RxDialog id="prescriptionDialog" embedded={prescriptionStandalone} open={open && !standalone} onClose={close} returnFocusRef={launcherRef} eyebrow="PRESCRIPTION SEARCH" title="약 처방" titleId="rxDialogTitle" context={context} showNotice={false}
         notice="급여 인정이나 삭감을 확정하지 않습니다. 용법·상호작용·금기 판단과 최종 처방 결정은 의료진에게 있습니다." noticeId="prescriptionNotice"
       >
         {windowMessage ? <p role="status" className="prescription-window-status">{windowMessage}</p> : null}
@@ -747,7 +750,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   <ContextMenu.Portal>
                     <ContextMenu.Content className="rx-medication-menu" collisionPadding={12}>
                       {["처방이력조회", "기록항목으로 보내기", "처방일괄적용", "메인그래프로 보내기", "약물이상반응 One Click 보고", "약물이상반응 직접보고", "약품정보", "급여인정확인", "수가정보"].map((label) => (
-                        <ContextMenu.Item key={label} className="rx-medication-menu__item" onSelect={() => label === "급여인정확인" ? openCoverage(medication) : setStatus(`${label} 기능은 준비 중입니다.`)}>{label}</ContextMenu.Item>
+                        <ContextMenu.Item key={label} className="rx-medication-menu__item" onSelect={() => label === "급여인정확인" ? openCoverage(medication, document.getElementById(`prescriptionForm-${medication.id}`)?.closest("[data-medication-id]")) : setStatus(`${label} 기능은 준비 중입니다.`)}>{label}</ContextMenu.Item>
                       ))}
                     </ContextMenu.Content>
                   </ContextMenu.Portal>
@@ -763,7 +766,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       </RxDialog>
 
       {coverageMedication && open ? (
-        <RxDialog id="medicationCoverageDialog" embedded={standalone} open onClose={closeCoverage} eyebrow="급여인정확인"
+        <RxDialog id="medicationCoverageDialog" embedded={standalone} open onClose={closeCoverage} returnFocusRef={coverageReturnFocusRef} eyebrow="급여인정확인"
           onEscapeKeyDown={(event) => { if (settingsOpen && review) { event.preventDefault(); setSettingsOpen(false); } }}
           title="약제 급여 검토" titleId="coverageDialogTitle" context={<>
             <span className="coverage-header__medication">{coverageMedication.label}</span>

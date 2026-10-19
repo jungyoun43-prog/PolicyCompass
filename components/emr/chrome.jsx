@@ -3,10 +3,9 @@
 import { Button } from "@/components/ui/button";
 
 /** Static chrome around the workspace: header, command bar, trust strip, footer. */
-export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai = null, nav = null }) {
+export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai = null, nav = null, help = null }) {
   return (
     <header className="app-header clinical-header">
-      {/* Two columns that mirror the workspace grid, so the tab bar starts where the chart column does. */}
       <div className="app-header__inner">
         <div className="app-header__identity">
           <a className="app-brand" href="/emr" aria-label="PolicyCompass Clinical EMR 홈으로 이동">
@@ -22,15 +21,16 @@ export function ClinicalHeader({ demo = false, onExitDemo, utilities = null, ai 
           ) : null}
         </div>
         <div className="app-header__workspace">
-          {nav}
           {utilities || onExitDemo ? (
             <div className="command-actions" aria-label="로컬 데이터 작업">
               <Button id="exitDemo" hidden={!demo} onClick={onExitDemo}>내 로컬 기록으로</Button>
               {utilities}
             </div>
           ) : null}
+          {help}
         </div>
       </div>
+      {nav ? <div className="clinical-navigation"><span className="app-brand__mark clinical-navigation__mark" aria-hidden="true" />{nav}</div> : null}
     </header>
   );
 }

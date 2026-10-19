@@ -35,12 +35,23 @@ export function HoverPopover({ hostClassName, trigger, triggerClassName, trigger
   );
 }
 
+/** Restore only a connected, visible launcher in this document. */
+export function restoreDialogFocus(event, returnFocusRef, embedded = false) {
+  const target = returnFocusRef?.current;
+  if (event.defaultPrevented || embedded || !target?.isConnected || target.matches(":disabled")
+    || target.closest("[hidden], [inert]") || target.getClientRects().length === 0) return;
+  const visibility = target.ownerDocument.defaultView.getComputedStyle(target).visibility;
+  if (visibility === "hidden" || visibility === "collapse") return;
+  event.preventDefault();
+  target.focus();
+}
+
 /**
  * The shared entry-dialog frame: a real <dialog>, a sticky header carrying the
  * title, its scope notice, any extra header actions, and the way out. Optional
  * footer content stays outside the scrolling panel.
  */
-export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false, eyebrow, title, titleId, context, notice, noticeId, showNotice = true, headerExtra, footer, children }) {
+export function RxDialog({ id, open, onClose, onEscapeKeyDown, returnFocusRef, embedded = false, eyebrow, title, titleId, context, notice, noticeId, showNotice = true, headerExtra, footer, children }) {
   const contentRef = useRef(null);
   const drag = useRef(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -72,7 +83,7 @@ export function RxDialog({ id, open, onClose, onEscapeKeyDown, embedded = false,
     <DialogPrimitive.Root open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogPrimitive.Portal>
         {!embedded ? <DialogPrimitive.Overlay className="rx-dialog-overlay" /> : null}
-        <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" data-embedded={embedded || undefined} id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
+        <DialogPrimitive.Content ref={contentRef} onEscapeKeyDown={onEscapeKeyDown} onCloseAutoFocus={(event) => restoreDialogFocus(event, returnFocusRef, embedded)} style={{ translate: `${offset.x}px ${offset.y}px` }} className="rx-dialog" data-embedded={embedded || undefined} id={id} aria-labelledby={titleId} aria-describedby={undefined} data-radix-rx-dialog>
           <DialogPrimitive.Title className="visually-hidden">{title}</DialogPrimitive.Title>
           <div className="rx-dialog__panel">
             <header ref={observeCoverageHeader} className="rx-dialog__header rx-dialog__drag-handle" tabIndex={embedded ? undefined : 0} aria-label={embedded ? title : `${title} 창 이동`} title={embedded ? undefined : "드래그 또는 방향키로 이동 · 더블클릭으로 가운데 정렬"}

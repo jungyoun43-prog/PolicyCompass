@@ -6,9 +6,7 @@ import { displayTimestamp, patientAgeLabel, SEX_LABELS } from "../../lib/emr/for
 import { confirmedActiveConditions, finalizedPatient } from "../../lib/emr/selectors.js";
 
 /**
- * The selected patient's identity and safety context. It lives in the patient
- * rail so the sticky navigation stays a slim tab bar instead of a tall header
- * that covers the chart while scrolling.
+ * Identity and safety stay in the workspace when the mobile queue is closed.
  */
 export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) {
   const conditions = confirmedActiveConditions(patient);
@@ -21,7 +19,8 @@ export function PatientSummaryCard({ patient, demo, updatedAt, onEditPatient }) 
       <div className="patient-identity">
         <div className="patient-identity__row">
           <div>
-            <h1 id="selectedPatientName">{patient.name}</h1>
+            <h1 id="selectedPatientName" tabIndex={-1}>{patient.name}</h1>
+            {patient.mrn ? <span className="patient-mrn">MRN {patient.mrn}</span> : null}
             <span id="selectedPatientMeta">{[
               patientAgeLabel(patient).replace(/^만\s*/, ""),
               SEX_LABELS[patient.sex],

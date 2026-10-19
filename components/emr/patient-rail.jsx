@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 import { centerSelectedPatientCard, useHorizontalScrollPosition } from "./use-horizontal-scroll.js";
-import { PatientSummaryCard } from "./patient-summary.jsx";
 
 import { patientAgeLabel, QUEUE_LABELS, SEX_LABELS, ageFromBirthDate } from "../../lib/emr/format.js";
 import { encounterQueueStatus, todayEncounterForPatient } from "../../lib/emr/selectors.js";
@@ -33,17 +32,12 @@ export function patientFormHasPendingInput(form, mode) {
 export function PatientRail({
   patients,
   selectedPatientId,
-  demo,
-  updatedAt,
   onSelectPatient,
   onLoadDemo,
   onSavePatient,
-  onEditPatient,
   editRequest,
   onFormStateChange,
-  visitSlotRef,
 }) {
-  const selectedPatient = patients.find(({ id }) => id === selectedPatientId) ?? null;
   const [query, setQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState("all");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -152,12 +146,6 @@ export function PatientRail({
 
   return (
     <aside className="patient-rail" aria-labelledby="patientRailTitle">
-      {selectedPatient ? (
-        <PatientSummaryCard patient={selectedPatient} demo={demo} updatedAt={updatedAt} onEditPatient={onEditPatient} />
-      ) : null}
-      {/* The encounter tab portals its visit-context cards here; the parent
-          receives the element through this ref instead of looking up the id. */}
-      <div id="visitContextSlot" className="rail-visit-slot" ref={visitSlotRef} />
       <div className="rail-heading">
         <div>
           <h2 id="patientRailTitle">오늘 환자</h2>

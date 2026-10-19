@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { addEncounterDiagnosis, addEncounterOrder } from "../../src/emr-encounter.js";
@@ -55,6 +55,7 @@ function ResultItem({ heading, category, sub, selected, action, onPick, extra })
 // `launcherSlot` is the disclosure header's #entryLauncher-* element, handed
 // down by the parent that renders it; the launcher button portals there.
 export function DiagnosisDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot }) {
+  const launcherRef = useRef(null);
   const { open, requestOpen, close, context } = useOpenGuard({
     patient, encounter, editable, setStatus, activeDialog, setActiveDialog,
     name: "diagnosis", blockedMessage: "진료를 시작한 뒤 진단을 담을 수 있습니다.",
@@ -102,9 +103,9 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button size="sm" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>,
+        <Button ref={launcherRef} size="sm" id="openDiagnosisDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>진단 추가</Button>,
         launcherSlot) : null}
-      <RxDialog id="diagnosisDialog" open={open} onClose={close} eyebrow="DIAGNOSIS SEARCH" title="진단 추가" titleId="dxDialogTitle" context={context}
+      <RxDialog id="diagnosisDialog" open={open} onClose={close} returnFocusRef={launcherRef} eyebrow="DIAGNOSIS SEARCH" title="진단 추가" titleId="dxDialogTitle" context={context}
         notice="상병과 코드는 의료진이 선택해 확정합니다. 자동 코딩을 대신하지 않습니다." noticeId="diagnosisNotice">
         <RxSearch id="diagnosisSearchForm" inputId="diagnosisSearchInput" label="진단명 검색" placeholder="진단명·증상·코드 (예: 고혈압, 당뇨, J44)" value={query} onChange={setQuery} />
         <section className="dx-results" aria-labelledby="dxResultsTitle">
@@ -152,6 +153,7 @@ export function DiagnosisDialog({ patient, encounter, editable, applyMutation, w
 }
 
 export function OrderDialog({ patient, encounter, editable, applyMutation, withDraftPreserved, setStatus, activeDialog, setActiveDialog, registerDirty, launcherSlot }) {
+  const launcherRef = useRef(null);
   const { open, requestOpen, close, context } = useOpenGuard({
     patient, encounter, editable, setStatus, activeDialog, setActiveDialog,
     name: "order", blockedMessage: "진료를 시작한 뒤 오더를 담을 수 있습니다.",
@@ -192,9 +194,9 @@ export function OrderDialog({ patient, encounter, editable, applyMutation, withD
   return (
     <>
       {launcherSlot ? createPortal(
-        <Button size="sm" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>,
+        <Button ref={launcherRef} size="sm" id="openOrderDialog" type="button" aria-haspopup="dialog" onClick={requestOpen}>오더 추가</Button>,
         launcherSlot) : null}
-      <RxDialog id="orderDialog" open={open} onClose={close} eyebrow="ORDER SEARCH" title="오더 추가" titleId="orderDialogTitle" context={context}
+      <RxDialog id="orderDialog" open={open} onClose={close} returnFocusRef={launcherRef} eyebrow="ORDER SEARCH" title="오더 추가" titleId="orderDialogTitle" context={context}
         notice="오더 필요성을 자동으로 판단하지 않습니다. 실제 오더 전송 기능이 아닙니다." noticeId="orderNotice">
         <RxSearch id="orderSearchForm" inputId="orderSearchInput" label="오더 검색" placeholder="오더명·유형·코드 (예: 폐기능, 흉부, 의뢰)" value={query} onChange={setQuery} />
         <section className="dx-results" aria-labelledby="orderResultsTitle">

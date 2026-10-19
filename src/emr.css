@@ -1197,7 +1197,7 @@ body.emr-page {
   padding-inline: var(--space-2);
 }
 
-.encounter-save-bar:has(.form-message:empty) {
+.encounter-save-bar .form-message:empty {
   display: none;
 }
 
@@ -8772,15 +8772,6 @@ model-viewer::part(default-progress-mask) {
   background: var(--accent-wash);
 }
 
-.rx-result.is-selected::before,
-.rx-result.is-reviewing::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--accent);
-}
-
 /* Bigger name; a small edit control in the card's top-right corner. */
 .patient-identity__row {
   display: flex;
@@ -9941,104 +9932,6 @@ model-viewer::part(default-progress-mask) {
   font-size: 0.85rem;
 }
 
-/* --- App-shell layout: the page never scrolls; each region scrolls inside --- */
-@media (min-width: 1180px) {
-  body.emr-page {
-    height: 100dvh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .emr-page .clinical-header,
-  .emr-page .clinical-footer {
-    flex: 0 0 auto;
-  }
-
-  .emr-page .emr-shell {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding-bottom: var(--space-3);
-  }
-
-  .emr-page .clinical-layout {
-    flex: 1;
-    min-height: 0;
-    align-items: stretch;
-  }
-
-  .emr-page .patient-rail {
-    position: static;
-    top: auto;
-    height: 100%;
-    max-height: none;
-  }
-
-  .emr-page .patient-workspace {
-    min-height: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .emr-page #workspaceContent {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .emr-page .workspace-panel {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    scrollbar-gutter: stable;
-    scrollbar-color: var(--line) transparent;
-    scrollbar-width: thin;
-  }
-
-  /* 진료 탭: 중앙 기록과 우측 환자 기록 레일이 따로 스크롤된다. */
-  .emr-page #panel-encounter {
-    overflow: hidden;
-  }
-
-  .emr-page #panel-encounter .encounter-layout {
-    height: 100%;
-    min-height: 0;
-    align-items: stretch;
-  }
-
-  .emr-page .encounter-flow {
-    height: 100%;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: var(--space-2);
-    scrollbar-color: var(--line) transparent;
-    scrollbar-width: thin;
-  }
-
-  .emr-page .encounter-context-rail {
-    position: static;
-    top: auto;
-    height: 100%;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-    align-content: start;
-    padding-right: 2px;
-    scrollbar-color: var(--line) transparent;
-    scrollbar-width: thin;
-  }
-
-  .emr-page .stream-scroll {
-    max-height: none;
-    min-height: 0;
-  }
-}
-
 /* 진료 헤더(날짜·진료과·상태·시작 버튼)는 왼쪽 레일의 진료 기본정보 위에 산다. */
 .rail-visit-slot .encounter-command-card {
   border: 1px solid var(--line);
@@ -10078,25 +9971,6 @@ model-viewer::part(default-progress-mask) {
 
 .rail-visit-slot .encounter-quick-actions .clinical-button[hidden] {
   display: none;
-}
-
-/* App-shell corrections: the center column is the scroller, and the tab strip
-   sits in flow instead of floating over panel content. */
-@media (min-width: 1180px) {
-  .emr-page .patient-workspace-navigation {
-    position: static;
-    top: auto;
-    margin-bottom: var(--space-2);
-  }
-
-  .emr-page .encounter-main {
-    height: 100%;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: var(--space-2);
-    scrollbar-color: var(--line) transparent;
-    scrollbar-width: thin;
-  }
 }
 
 /* --- Tabs live in the top chrome row, next to the brand --------------------- */
@@ -10142,8 +10016,7 @@ model-viewer::part(default-progress-mask) {
 }
 
 @media (min-width: 1180px) {
-  .emr-page .clinical-layout,
-  .emr-page #panel-encounter .encounter-layout {
+  .emr-page .clinical-layout {
     gap: var(--space-2);
   }
 
@@ -10360,43 +10233,6 @@ model-viewer::part(default-progress-mask) {
   grid-template-columns: minmax(0, 1fr) var(--emr-context-width);
 }
 
-@media (min-width: 1181px) {
-  .emr-page .encounter-main {
-    grid-template-rows: minmax(min-content, 1fr) auto;
-    align-content: stretch;
-  }
-
-  .emr-page .encounter-form,
-  .emr-page .soap-card {
-    min-height: 0;
-  }
-
-  .emr-page .soap-card {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .emr-page .soap-card > .workflow-disclosure__body {
-    display: flex;
-    flex: 1;
-  }
-
-  .emr-page .soap-grid {
-    flex: 1;
-    grid-template-rows: auto minmax(min-content, 1fr) minmax(min-content, 1fr);
-  }
-
-  .emr-page .soap-field {
-    grid-template-rows: auto minmax(min-content, 1fr);
-  }
-
-  .emr-page .soap-field textarea {
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-  }
-}
-
 /* Above phone widths the header never grows a second row: actions stay on
    one line and the patient chip yields before the scrolling tab list does. */
 @media (min-width: 621px) {
@@ -10431,56 +10267,6 @@ model-viewer::part(default-progress-mask) {
   .emr-shell,
   .clinical-header .app-header__inner {
     width: min(calc(100% - var(--space-4)), var(--emr-max-width));
-  }
-}
-
-/* --- Phone header: two rows, tabs on their own line ------------------------- */
-
-/* Keep identity and utility actions compact above the full-width tab row. */
-@media (max-width: 620px) {
-  .clinical-header .app-brand {
-    flex: 0 0 auto;
-  }
-
-  .clinical-header .app-brand > span:not(.app-brand__mark) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .clinical-header .header-ai-status {
-    flex: 0 0 auto;
-  }
-
-  .clinical-header .header-ai-status > b {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
-  .clinical-header .patient-workspace-navigation {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  .clinical-header .command-actions {
-    display: flex;
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-    width: auto;
-  }
-
-  .clinical-header .command-actions .clinical-button {
-    width: auto;
-    padding-inline: var(--space-2);
-    font-size: 0.72rem;
-    white-space: nowrap;
   }
 }
 
@@ -10628,53 +10414,6 @@ model-viewer::part(default-progress-mask) {
   .entry-grid .entry-launcher-slot {
     grid-column: 3;
     grid-row: 1;
-  }
-}
-
-/* On phones the patient tabs need their own rail below the utility actions. */
-@media (max-width: 620px) {
-  body.emr-page {
-    --header-height: 108px;
-  }
-
-  .clinical-header .app-header__inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px 44px;
-    gap: var(--space-1) var(--space-2);
-    padding-block: var(--space-2);
-  }
-
-  .clinical-header .app-header__workspace {
-    display: contents;
-  }
-
-  .clinical-header .app-header__identity {
-    grid-column: 1;
-    grid-row: 1;
-    gap: var(--space-2);
-  }
-
-  .clinical-header .command-actions {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .clinical-header .patient-workspace-navigation {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-  }
-
-  .clinical-header .header-ai-status {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .clinical-header #aiStatusDetail {
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 

@@ -17,6 +17,7 @@ import { declarationsFor, stylesheet } from "./helpers/css.mjs";
 import { renderComponent } from "./helpers/render.mjs";
 
 const sheet = await stylesheet("src/emr.css");
+const flowSheet = await stylesheet("src/clinical-ui.css");
 const demo = createDemoEmrState("2026-09-02T00:00:00.000Z");
 const patient = demo.patients.find(({ id }) => id === demo.selectedPatientId);
 const encounter = currentEncounterFor(patient, { viewedEncounterId: "", selectedEncounterId: demo.selectedEncounterId });
@@ -34,7 +35,7 @@ const renderEncounterTab = () => renderComponent(EncounterTab, {
   viewedEncounterId: "", setViewedEncounterId: noop, selectTab: noop,
   dirtyGuardsRef: { current: {} }, blockClinicalContextChange: () => false, visitSlot: null,
 });
-const renderWorkspaceHeader = () => renderComponent(() => createElement(TabsPrimitive.Root, { value: "encounter" }, createElement(WorkspaceHeader, { onSelectTab: noop })));
+const renderWorkspaceHeader = (orientation = "horizontal") => renderComponent(() => createElement(TabsPrimitive.Root, { value: "encounter", orientation }, createElement(WorkspaceHeader, { onSelectTab: noop })));
 const renderAssessment = () => renderComponent(DiseaseAssessmentCard, { state: demo, patient, selectedDiseaseId: "", onSelectDisease: noop });
 
 function isInsideDetails(html, index) {
@@ -65,7 +66,7 @@ test("EMR 안전 맥락과 최종 서명은 점진적 공개 밖에 남는다", 
     assert.equal(isInsideDetails(encounterHtml, index), false, marker);
   }
   assert.match(encounterHtml, /class="encounter-save-bar" aria-labelledby="encounterSignoffTitle"/);
-  assert.match(encounterHtml, /id="encounterSignoffTitle">진료 최종 검토 및 서명/);
+  assert.match(encounterHtml, /id="encounterSignoffTitle"[^>]*>진료 최종 검토 및 서명/);
 });
 
 test("EMR 보조 입력은 이름 있는 네이티브 disclosure로 접힌다", async () => {
@@ -142,27 +143,27 @@ test("진료 시작과 재개는 열린 SOAP 입력으로 초점을 옮긴다", 
   assert.match(encounterSource, /reopenEncounter\(current, patient\.id, encounter\.id\)[\s\S]*?getElementById\("soapSubjective"\)\?\.focus\(\)/);
 });
 
-test("EMR 헤더는 데스크톱에서 한 줄, 모바일에서 탭 전용 줄을 확보한다", () => {
-  assert.equal(declarationsFor(sheet, "body.emr-page")["--header-height"], "56px");
-  const mobile = { container: "@media (max-width: 620px)" };
-  assert.equal(declarationsFor(sheet, "body.emr-page", mobile)["--header-height"], "108px");
-  const navigation = declarationsFor(sheet, ".clinical-header .patient-workspace-navigation", mobile);
-  assert.equal(navigation["grid-column"], "1 / -1");
-  assert.equal(navigation["grid-row"], "2");
-  const header = declarationsFor(sheet, ".clinical-header");
+test("EMR은 수직 임상 rail과 작은 화면의 가로 탭 영역을 분리한다", () => {
+  // The approved clinical flow replaces the old top-only navigation. Read
+  // the final imported clinical sheet, not the superseded legacy declarations.
+  assert.equal(declarationsFor(flowSheet, "body.emr-page")["--header-height"], "64px");
+  const compact = { container: "@media (max-width: 900px)" };
+  assert.equal(declarationsFor(flowSheet, "body.emr-page", compact)["--header-height"], "112px");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .clinical-header .workspace-tabs")["flex-direction"], "column");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .clinical-header .workspace-tabs", compact)["flex-direction"], "row");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .clinical-navigation").position, "fixed");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .clinical-navigation", compact).position, "static");
+  const header = declarationsFor(flowSheet, ".emr-page .clinical-header");
   assert.equal(header.height, "var(--header-height)");
   assert.equal(header["min-height"], "var(--header-height)");
 });
 
-test("EMR 헤더는 워크스페이스 여백에 맞춰 단일 로고 열을 정렬한다", () => {
-  const inner = ".clinical-header .app-header__inner";
-
-  // The winning declarations, not whichever rule happens to appear first.
-  const desktop = declarationsFor(sheet, inner);
-  assert.equal(desktop.width, "min(calc(100% - var(--space-6)), var(--emr-max-width))");
-  assert.equal(desktop["grid-template-columns"], "minmax(0, 1fr)");
-  const narrow = declarationsFor(sheet, inner, { container: "@media (max-width: 620px)" });
-  assert.equal(narrow.width, "min(calc(100% - var(--space-4)), var(--emr-max-width))");
+test("EMR 기록면은 넓게 흐르고 SOAP은 세로 labelled rows를 사용한다", () => {
+  assert.equal(declarationsFor(flowSheet, ".emr-page .emr-shell").width, "100%");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .emr-shell").overflow, "visible");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .soap-grid")["grid-template-columns"], "minmax(0, 1fr)");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .soap-field", { container: "@media (max-width: 900px)" })["grid-template-columns"], "minmax(0, 1fr)");
+  assert.equal(declarationsFor(flowSheet, ".emr-page .patient-queue-region[data-open=\"false\"]", { container: "@media (max-width: 900px)" }).display, "none");
 });
 
 test("EMR 워크스페이스 탭과 질환 평가 탭은 각각 독립된 키보드 모델을 사용한다", () => {
@@ -179,5 +180,11 @@ test("EMR 워크스페이스 탭과 질환 평가 탭은 각각 독립된 키보
     assert.ok(tabs.length >= 1);
     assert.equal(tabs.filter((match) => match[1] === "true").length, 1, "정확히 한 탭만 선택돼 있다");
   }
-  assert.equal(declarationsFor(sheet, ".workspace-tabs button:focus").outline, "3px solid var(--focus-ring)");
+  // The desktop rail announces the same orientation as its visual layout;
+  // Radix therefore uses Up/Down instead of Left/Right, with Home/End in both.
+  const vertical = renderWorkspaceHeader("vertical");
+  assert.match(vertical, /role="tablist" aria-orientation="vertical"/);
+  assert.equal((vertical.match(/role="tab"/g) ?? []).length, 7);
+  assert.equal((vertical.match(/data-orientation="vertical"/g) ?? []).length, 9);
+  assert.equal(declarationsFor(flowSheet, ".emr-page .clinical-header .workspace-tabs button:focus-visible").outline, "2px solid #fff");
 });

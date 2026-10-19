@@ -31,7 +31,7 @@ def docker(*args, input_text=None, missing_ok=False):
     result = subprocess.run(["/usr/bin/docker", *args], input=input_text,
                             capture_output=True, text=True, timeout=240)
     if result.returncode:
-        if missing_ok and "No such" in result.stderr:
+        if missing_ok and "no such" in result.stderr.lower():
             return None
         raise RuntimeError(f"Docker operation {args[0]} failed (exit {result.returncode})")
     return result.stdout.strip()

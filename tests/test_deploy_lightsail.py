@@ -71,6 +71,19 @@ class LightsailDeploymentTests(unittest.TestCase):
                 receiver.owned(receiver.PREVIOUS)
             self.assertEqual(docker.call_count, 1)
 
+    def test_missing_previous_container_handles_docker_error_case_changes(self):
+        for message in ["Error: No such object: policycompass-emr-previous",
+                        "error: no such object: policycompass-emr-previous"]:
+            result = subprocess.CompletedProcess([], 1, "", message)
+            with self.subTest(message=message), patch.object(receiver.subprocess, "run", return_value=result):
+                self.assertFalse(receiver.owned(receiver.PREVIOUS))
+
+    def test_daemon_failure_is_not_treated_as_a_missing_container(self):
+        result = subprocess.CompletedProcess([], 1, "", "Cannot connect to the Docker daemon")
+        with patch.object(receiver.subprocess, "run", return_value=result):
+            with self.assertRaises(RuntimeError):
+                receiver.owned(receiver.PREVIOUS)
+
     def test_rename_failure_restarts_the_original_container(self):
         def docker_command(*args, **kwargs):
             if args[0] == "rename":

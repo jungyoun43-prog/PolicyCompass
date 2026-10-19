@@ -620,7 +620,12 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       };
       if (prescriptionStandalone) await onPrescriptionSubmit(prescription);
       else await applyMutation(withDraftPreserved((current) => addEncounterPrescription(current, patient.id, encounter.id, prescription)), "처방 초안을 추가했습니다.");
-      setDrafts({});
+      setDrafts((current) => {
+        if (current[medicationId] !== form) return current;
+        const next = { ...current };
+        delete next[medicationId];
+        return next;
+      });
       setSelectedMedicationId("");
       close();
     } catch (error) {

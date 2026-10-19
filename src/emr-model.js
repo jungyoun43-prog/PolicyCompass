@@ -2237,7 +2237,7 @@ const EMR_WRITE_LOCK_NAME = `${EMR_STORAGE_KEY}:write`;
 
 function resolveEmrWriteLock(storage, options) {
   if (Object.hasOwn(options, "lockManager")) return options.lockManager;
-  const lockManager = globalThis.navigator?.locks;
+  const lockManager = globalThis.window === globalThis ? globalThis.navigator?.locks : null;
   if (typeof lockManager?.request === "function") return lockManager;
   const usesBrowserStorage = storage === undefined
     && typeof globalThis.window !== "undefined"

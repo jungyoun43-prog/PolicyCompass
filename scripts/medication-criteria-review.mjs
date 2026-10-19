@@ -266,7 +266,14 @@ export function validateMedicationCriteria(raw, profile, request, comparison) {
   if (!validDate(comparison.asOf)) throw new Error("검토 기준일이 올바르지 않습니다.");
   const criteria = profile.criteria.map(c => {
     const received = body.criteria.find(row => row.id === c.id);
-    const item = { ...received, facts: criterionFacts(received,c) };
+    // Derived values and report fields belong to the server, not the model.
+    const item = {
+      id: c.id,
+      status: received.status,
+      evidence: received.evidence,
+      facts: criterionFacts(received,c),
+      reason: received.reason,
+    };
     if (!Object.hasOwn(CRITERIA_STATUS_LABELS, item.status) || typeof item.reason !== "string" || !item.facts || typeof item.facts !== "object" || Array.isArray(item.facts)) throw new Error(`조건별 상태·설명·facts가 올바르지 않습니다: ${c.id}`);
     const evidence = evidenceList(item.evidence, request.sources);
     if (item.status !== "missing" && c.kind !== "adult" && !evidence.length) throw new Error(`충족 여부를 뒷받침할 환자 근거가 없습니다: ${c.id}`);

@@ -47,6 +47,22 @@ function memoryLockManager() {
   };
 }
 
+async function withMockedGlobals(values, callback) {
+  const descriptors = Object.fromEntries(Object.keys(values)
+    .map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  try {
+    for (const [key, value] of Object.entries(values)) {
+      Object.defineProperty(globalThis, key, { configurable: true, value });
+    }
+    return await callback();
+  } finally {
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+}
+
 test("EMR은 샘플을 자동 저장하지 않는 빈 로컬 상태로 시작한다", async () => {
   const state = createEmptyEmrState("2026-07-19T10:00:00.000Z");
   let raw = "";
@@ -594,6 +610,79 @@ test("오래된 탭은 새 리비전을 덮어쓰지 못한다", async () => {
   await saveEmrState(firstTab, storage, initial.revision);
   await assert.rejects(() => saveEmrState(staleTab, storage, initial.revision), /다른 탭.*변경/);
   assert.deepEqual(loadEmrState(storage).patients.map(({ id }) => id), ["first"]);
+});
+
+test("Node 메모리 저장은 전역 잠금 없이 검증 오류 뒤에도 다시 저장된다", { timeout: 2_000 }, async () => {
+  let globalLockRequests = 0;
+  const navigator = { locks: { request() {
+    globalLockRequests += 1;
+    throw new Error("Node 전역 잠금은 메모리 저장에 사용하면 안 됩니다.");
+  } } };
+  for (const window of [undefined, {}]) {
+    await withMockedGlobals({ window, navigator }, async () => {
+      const storage = memoryStorage();
+      const initial = addPatient(createEmptyEmrState("2026-07-19T10:00:00.000Z"), {
+        id: "memory-patient", mrn: "MEMORY-LOCK", name: "저장 환자", birthDate: "1980-01-01",
+      }, "2026-07-19T10:00:00.000Z");
+      await saveEmrState(initial, storage);
+      const originalRaw = storage.getItem(EMR_STORAGE_KEY);
+      const invalid = structuredClone(initial);
+      invalid.patients[0].birthDate = "2099-01-01";
+      await assert.rejects(() => saveEmrState(invalid, storage), /미래/);
+      assert.equal(storage.getItem(EMR_STORAGE_KEY), originalRaw);
+
+      const next = updatePatient(initial, "memory-patient", { name: "재저장 환자" }, "2026-07-19T10:01:00.000Z");
+      await saveEmrState(next, storage, initial.revision);
+      assert.equal(loadEmrState(storage).patients[0].name, "재저장 환자");
+
+      let injectedLockRequests = 0;
+      const lockManager = memoryLockManager();
+      await saveEmrState(next, storage, next.revision, { lockManager: {
+        request(...args) {
+          injectedLockRequests += 1;
+          return lockManager.request(...args);
+        },
+      } });
+      assert.equal(injectedLockRequests, 1);
+    });
+  }
+  assert.equal(globalLockRequests, 0);
+});
+
+test("실제 Window 저장은 전역 잠금 안에서 쓰고 잠금 미지원 시 거부한다", { timeout: 2_000 }, async () => {
+  const storage = memoryStorage();
+  const setItem = storage.setItem;
+  let holdsLock = false;
+  let globalLockRequests = 0;
+  storage.setItem = (...args) => {
+    assert.equal(holdsLock, true);
+    setItem(...args);
+  };
+  const lockManager = memoryLockManager();
+  const navigator = { locks: {
+    request(name, options, callback) {
+      globalLockRequests += 1;
+      assert.equal(name, `${EMR_STORAGE_KEY}:write`);
+      assert.deepEqual(options, { mode: "exclusive" });
+      return lockManager.request(name, options, () => {
+        holdsLock = true;
+        try { return callback(); } finally { holdsLock = false; }
+      });
+    },
+  } };
+  await withMockedGlobals({ window: globalThis, navigator, localStorage: storage }, async () => {
+    const initial = createEmptyEmrState("2026-07-19T10:00:00.000Z");
+    await saveEmrState(initial);
+    assert.equal(globalLockRequests, 1);
+    assert.deepEqual(loadEmrState(), initial);
+    const originalRaw = storage.getItem(EMR_STORAGE_KEY);
+    for (const locks of [undefined, {}]) {
+      navigator.locks = locks;
+      await assert.rejects(() => saveEmrState(initial), /브라우저.*잠금을 지원하지 않습니다/);
+      assert.equal(storage.getItem(EMR_STORAGE_KEY), originalRaw);
+    }
+    assert.equal(globalLockRequests, 1);
+  });
 });
 
 test("동시 탭 저장은 브라우저 잠금 안에서 직렬화되어 한쪽을 충돌로 차단한다", async () => {

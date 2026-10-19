@@ -60,6 +60,92 @@ function benra(eos = 350, count = 3, chronic = false) {
   return s;
 }
 
+async function stubbedCriteriaReview(s, provider, body = s.body) {
+  let calls = 0;
+  const result = await runMedicationClaimReview({ comparison: s.comparison, overrides: s.overrides, provider }, {
+    environment: provider === "local" ? environment : { OPENROUTER_API_KEY: "test-key", POLICYCOMPASS_FRONTIER_MODEL: "qwen/qwen3-8b" },
+    fetchImpl: async () => {
+      calls += 1;
+      const content = JSON.stringify(body);
+      return { ok: true, json: async () => provider === "local"
+        ? { message: { content } }
+        : { choices: [{ message: { content }, finish_reason: "stop" }] } };
+    },
+  });
+  return { ...result, calls };
+}
+
+for (const [provider, label] of [["local", "Ollama"], ["frontier", "Qwen3 8B"]]) {
+  test(label + ": 모델 추가 value가 미검증 수치 행의 상태·판정을 바꾸지 않는다", async () => {
+    for (const id of ["eosinophils", "exacerbations"]) {
+      for (const status of ["missing", "ambiguous", "not_met"]) {
+        const s = id === "eosinophils" ? benra(600, 3) : benra(350, 4);
+        const row = s.body.criteria.find(c => c.id === id);
+        s.set(id, { status, evidence: status === "missing" ? [] : row.evidence, facts: {} });
+        const before = await stubbedCriteriaReview(s, provider);
+        assert.equal(before.draft.verdict, status === "ambiguous" ? "triangle" : "cross");
+        const altered = structuredClone(s.body);
+        altered.criteria.find(c => c.id === id).value = id === "eosinophils" ? 600 : 4;
+        const after = await stubbedCriteriaReview(s, provider, altered);
+        assert.deepEqual(after.draft, before.draft, id + " / " + status);
+        assert.equal(after.calls, 1);
+      }
+    }
+  });
+
+  test(label + ": 모델 추가 course가 누락·불명확·검증 실패한 교체 경로를 충족시키지 않는다", async () => {
+    for (const status of ["missing", "ambiguous", "not_met", "met"]) {
+      const s = benra(600, 3);
+      const row = s.body.criteria.find(c => c.id === "biologic_course");
+      s.set("biologic_course", {
+        status, evidence: status === "missing" ? [] : row.evidence,
+        facts: status === "met" ? { course: "unknown" } : {},
+      });
+      const before = await stubbedCriteriaReview(s, provider);
+      assert.equal(before.draft.verdict, status === "ambiguous" ? "triangle" : "cross");
+      const altered = structuredClone(s.body);
+      altered.criteria.find(c => c.id === "biologic_course").course = "first-biologic";
+      const after = await stubbedCriteriaReview(s, provider, altered);
+      assert.deepEqual(after.draft, before.draft, status);
+      assert.equal(after.calls, 1);
+    }
+  });
+
+  test(label + ": 모델 추가 파생 필드와 무관하게 검증한 사실·원문·정상 결과를 유지한다", async () => {
+    for (const [s, verdict] of [[benra(600, 3), "circle"], [benra(350, 3), "cross"], [aetna(), "circle"]]) {
+      const before = await stubbedCriteriaReview(s, provider);
+      assert.equal(before.status, "completed");
+      assert.equal(before.draft.verdict, verdict);
+      const altered = structuredClone(s.body);
+      for (const row of altered.criteria) Object.assign(row, {
+        value: 9999, course: "other-switch", patientInfo: "모델이 덧붙인 환자 정보",
+        measurements: [{ value: 9999 }], label: "모델 항목", sourceQuote: "모델 고시", statusLabel: "모델 상태",
+      });
+      const after = await stubbedCriteriaReview(s, provider, altered);
+      assert.deepEqual(after.draft, before.draft);
+      assert.equal(after.calls, 1);
+    }
+  });
+
+  test(label + ": 모델 추가 파생 필드가 있어도 범위 밖 경로·잘못된 근거는 미완료로 남는다", async () => {
+    for (const scenario of ["other-switch", "unknown-evidence", "unrecorded-measurement"]) {
+      const s = benra(600, 3);
+      if (scenario === "other-switch") s.set("biologic_course", { facts: { course: "other-switch" } });
+      else {
+        const row = s.body.criteria.find(c => c.id === "eosinophils");
+        if (scenario === "unknown-evidence") row.facts.measurements[0].evidence = ["E99999"];
+        else row.facts.measurements[0].value = 9999;
+      }
+      for (const row of s.body.criteria) Object.assign(row, { value: 600, course: "first-biologic" });
+      const result = await stubbedCriteriaReview(s, provider);
+      assert.equal(result.status, scenario === "other-switch" ? "incomplete" : "failed", scenario);
+      assert.equal(result.draft.verdict, null, scenario);
+      assert.equal(result.draft.generatedBy, "none", scenario);
+      assert.equal(result.calls, scenario === "other-switch" ? 1 : 2, scenario);
+    }
+  });
+}
+
 test("두 조건표의 모든 원문 앵커와 버전이 등록 원문에 연결된다", () => {
   for (const phase of ["initial", "continuation"]) {
     assert.doesNotThrow(() => assertCriteriaSource(medicationCriteriaProfile("benralizumab-30", "kr-registered", phase), medicationReviewNotice("benralizumab-30")));

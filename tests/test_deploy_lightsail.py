@@ -94,7 +94,7 @@ class LightsailDeploymentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             def run_command(command, **kwargs):
                 if command[0] == "ssh-keygen":
-                    return subprocess.CompletedProcess(command, 0, public_key + "\n", "")
+                    return subprocess.CompletedProcess(command, 0, public_key + " deployment key comment\n", "")
                 self.assertEqual((Path(directory) / "bootstrap_key").read_text(), "temporary private key\n")
                 self.assertEqual((Path(directory) / "bootstrap_key-cert.pub").read_text(), "temporary certificate\n")
                 self.assertIn("ubuntu@192.0.2.2", command)

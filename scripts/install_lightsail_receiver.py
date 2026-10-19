@@ -49,7 +49,9 @@ def install_receiver(aws, server_ip, directory, private_key, known_hosts):
     certificate = Path(str(key) + "-cert.pub")
     certificate.write_text(details["certKey"].strip() + "\n")
     public = subprocess.run(["ssh-keygen", "-y", "-f", str(private_key)], capture_output=True, text=True, check=True)
-    payload = {"publicKey": public.stdout.strip(), "receiver": Path(__file__).with_name("lightsail-receive.py").read_text()}
+    # OpenSSH may include the private key's comment after the key data.
+    public_key = " ".join(public.stdout.split()[:2])
+    payload = {"publicKey": public_key, "receiver": Path(__file__).with_name("lightsail-receive.py").read_text()}
     command = ["ssh", "-T", "-i", str(key), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
                "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=15", "-o",
                "HostKeyAlias=policycompass-lightsail", "-o", "UserKnownHostsFile=" + str(known_hosts),

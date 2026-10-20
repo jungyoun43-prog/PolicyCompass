@@ -1,6 +1,7 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { textCleaner } from "../src/text.js";
 import { assertModelContextAccepted } from "../lib/model-errors.js";
+import { hermesSettings, fetchHermesChat, configuredLocalChat } from "./hermes-gateway.mjs";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -184,6 +185,8 @@ const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
 
 /** The clinician-side loopback model: one pair of variables, no fallback. */
 export function clinicalLocalModel(environment = process.env) {
+  const hermes = hermesSettings(environment);
+  if (hermes.enabled) return { endpoint: hermes.baseUrl, model: hermes.configured ? hermes.model : "", provider: "hermes" };
   return {
     endpoint: environment.POLICYCOMPASS_OLLAMA_URL ?? DEFAULT_OLLAMA_URL,
     model: environment.POLICYCOMPASS_OLLAMA_MODEL ?? "",
@@ -192,6 +195,7 @@ export function clinicalLocalModel(environment = process.env) {
 
 /** The patient-side model can be pinned separately and otherwise shares the clinician's. */
 export function patientLocalModel(environment = process.env) {
+  if (hermesSettings(environment).enabled) return clinicalLocalModel(environment);
   return {
     endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
       ?? environment.POLICYCOMPASS_OLLAMA_URL
@@ -211,6 +215,8 @@ const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
  * overridable for other OpenAI-compatible gateways.
  */
 const FRONTIER_VARIABLE_NAMES = Object.freeze([
+  "POLICYCOMPASS_HERMES_BASE_URL",
+  "POLICYCOMPASS_HERMES_API_KEY",
   "OPENROUTER_API_KEY",
   "OPENAI_API_KEY",
   "POLICYCOMPASS_FRONTIER_MODEL",
@@ -232,6 +238,8 @@ export function frontierVariablesPresent(environment = process.env) {
 }
 
 export function frontierCredentials(environment = process.env) {
+  const hermes = hermesSettings(environment);
+  if (hermes.enabled) return { ...hermes, viaOpenRouter: false, provider: "hermes" };
   const openRouterKey = cleanText(environment.OPENROUTER_API_KEY ?? "", 500);
   const openAiKey = cleanText(environment.OPENAI_API_KEY ?? "", 500);
   const apiKey = openRouterKey || openAiKey;
@@ -263,6 +271,11 @@ export function frontierCredentials(environment = process.env) {
  * context never leaves over an unencrypted hop.
  */
 export function frontierBaseUrl(environment = process.env) {
+  const hermes = hermesSettings(environment);
+  if (hermes.enabled) {
+    if (!hermes.configured) throw new Error(hermes.reason);
+    return hermes.baseUrl;
+  }
   const fallback = frontierCredentials(environment).viaOpenRouter ? OPENROUTER_BASE : OPENAI_RESPONSES_BASE;
   const raw = cleanText(environment.POLICYCOMPASS_FRONTIER_BASE_URL ?? "", 300) || fallback;
   let url;
@@ -294,6 +307,7 @@ export function frontierEndpoint(environment = process.env) {
 }
 
 export function frontierApiStyle(environment = process.env) {
+  if (hermesSettings(environment).enabled) return "chat";
   const declared = cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase();
   if (declared === "chat" || declared === "responses") return declared;
   return frontierCredentials(environment).viaOpenRouter ? "chat" : "responses";
@@ -364,6 +378,15 @@ export async function callFrontierModel({
   timeoutMs = 30_000,
   environment = process.env,
 }) {
+  if (hermesSettings(environment).enabled) {
+    const response = await fetchHermesChat({ messages: [
+      ...(instructions ? [{ role: "system", content: instructions }] : []), { role: "user", content: input },
+    ], ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, schema } } } : {}) }, { environment, fetchImpl, signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) throw new Error(`Hermes 요청 실패 (${response.status})`);
+    const payload = await response.json();
+    if (payload?.error || payload?.hermes?.completed === false || payload?.choices?.[0]?.finish_reason !== "stop") throw new Error("Hermes 응답이 정상 완료되지 않았습니다.");
+    return { text: chatCompletionText(payload), model: "hermes-agent", generatedAt: new Date().toISOString() };
+  }
   const key = cleanText(apiKey, 500);
   const name = cleanText(model, 160);
   instructions = typeof instructions === "string" ? instructions : "";
@@ -497,19 +520,13 @@ async function generateLocalDraft(context, options, feedback) {
     if (feedback.previous) messages.push({ role: "assistant", content: feedback.previous });
     messages.push({ role: "user", content: retryFeedbackMessage(feedback) });
   }
-  const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
+  const response = await configuredLocalChat(options, {
       model,
       messages,
       stream: false,
       think: false,
       format: OUTPUT_SCHEMA,
       options: { temperature: 0 },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
   });
   if (!response.ok) throw new Error(`환자용 로컬 모델 요청 실패 (${response.status})`);
   const body = await response.json();
@@ -684,6 +701,7 @@ export function frontierStatus(environment = process.env) {
   return {
     configured,
     model,
+    ...(hermesSettings(environment).enabled ? { provider: "hermes" } : {}),
     api: frontierApiStyle(environment),
     endpoint: frontierEndpoint(environment),
     ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
@@ -694,7 +712,7 @@ export function frontierStatus(environment = process.env) {
 export function patientQuestionAssistantStatus(environment = process.env) {
   const local = patientLocalModel(environment);
   return {
-    local: { configured: Boolean(local.model), model: local.model },
+    local: { configured: !hermesSettings(environment).enabled && Boolean(local.model), model: hermesSettings(environment).enabled ? "" : local.model },
     frontier: frontierStatus(environment),
   };
 }
@@ -706,7 +724,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
   maxAttempts = 2,
 } = {}) {
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
-  if (provider === "frontier" && payload?.consent !== true) {
+  if ((provider === "frontier" || hermesSettings(environment).enabled) && payload?.consent !== true) {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }
   const credentials = frontierCredentials(environment);
@@ -726,6 +744,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
     }
     : {
       provider,
+      environment,
       ...patientLocalModel(environment),
       fetchImpl,
       timeoutMs,

@@ -1,5 +1,6 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { textCleaner } from "../src/text.js";
+import { hermesSettings, configuredLocalChat } from "./hermes-gateway.mjs";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -280,13 +281,7 @@ function clinicalCopilotGraph() {
           { role: "user", content: `이전 초안이 거부되었습니다: ${feedback.reason} 같은 JSON 스키마와 안전 규칙을 지켜 초안을 다시 작성하세요.` },
         ]
         : request.messages;
-      const response = await options.fetchImpl(`${options.baseUrl}/api/chat`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...request, messages }),
-        redirect: "error",
-        signal: AbortSignal.timeout(options.timeoutMs),
-      });
+      const response = await configuredLocalChat({ ...options, endpoint: options.baseUrl }, { ...request, messages });
       if (!response.ok) {
         let detail = "";
         try {
@@ -380,20 +375,27 @@ function clinicalCopilotGraph() {
 }
 
 export async function runClinicalCopilot(payload, {
+  environment = process.env,
   endpoint = process.env.POLICYCOMPASS_OLLAMA_URL ?? "http://127.0.0.1:11434",
   model = process.env.POLICYCOMPASS_OLLAMA_MODEL ?? "",
   fetchImpl = globalThis.fetch,
   timeoutMs = 45_000,
   maxAttempts = 2,
 } = {}) {
+  const hermes = hermesSettings(environment);
+  if (hermes.enabled) {
+    if (!hermes.configured) throw new Error(hermes.reason);
+    model = hermes.model;
+  }
   if (!cleanText(model)) throw new Error("POLICYCOMPASS_OLLAMA_MODEL이 설정되지 않았습니다.");
-  const baseUrl = loopbackEndpoint(endpoint);
+  const baseUrl = hermes.enabled ? hermes.baseUrl : loopbackEndpoint(endpoint);
   const request = buildClinicalCopilotRequest(payload, model);
   const events = safeEvents(payload?.patient);
   const safeBrief = safePatientBrief(payload?.patientBrief, payload?.patient);
   const state = await clinicalCopilotGraph().invoke({
     request,
     options: {
+      environment,
       baseUrl,
       fetchImpl,
       timeoutMs,
@@ -407,7 +409,7 @@ export async function runClinicalCopilot(payload, {
   return {
     id: `model-brief-${Date.now()}`,
     kind: "model",
-    label: `로컬 AI 초안 · ${state.modelMeta.model}`,
+    label: `${hermes.enabled ? "Hermes" : "로컬 AI"} 초안 · ${state.modelMeta.model}`,
     model: state.modelMeta.model,
     confirmed: false,
     generatedAt: state.modelMeta.generatedAt,

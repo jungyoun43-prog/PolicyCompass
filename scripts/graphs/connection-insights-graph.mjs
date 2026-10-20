@@ -1,9 +1,9 @@
 import { Annotation, END, Send, START, StateGraph } from "@langchain/langgraph";
+import { configuredLocalChat } from "../hermes-gateway.mjs";
 
 import {
   buildPatientQuestionContext,
   cleanText,
-  ollamaEndpoint,
   patientLocalModel,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
@@ -113,19 +113,13 @@ async function callVerifyModel(item, options, feedback) {
   if (feedback) {
     messages.push({ role: "user", content: `이전 응답이 거부되었습니다: ${feedback} 같은 JSON 스키마와 안전 규칙을 지켜 다시 작성하세요.` });
   }
-  const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
+  const response = await configuredLocalChat(options, {
       model: options.model,
       messages,
       stream: false,
       think: false,
       format: VERIFY_SCHEMA,
       options: { temperature: 0 },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
   });
   if (!response.ok) throw new Error(`관계 검증 모델 요청 실패 (${response.status})`);
   const body = await response.json();
@@ -207,6 +201,7 @@ export async function runConnectionInsights(payload = {}, {
   const state = await connectionGraph().invoke({
     context,
     options: {
+      environment,
       model: cleanText(local.model, 160),
       endpoint: local.endpoint,
       fetchImpl,

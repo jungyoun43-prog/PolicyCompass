@@ -67,7 +67,7 @@ export function MedicationCoverageOverview({ medication, policy, children }) {
       <h4><CoverageIcon />{foreign ? `${policy.country} · ${policy.payer} 보험 기준 원문` : "급여인정 기준 (요약)"}</h4>
       {!foreign && criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}>{criterion.replace(/^(?:[가-힣]\.|\d+[.)]|[-•])\s*/, "")}</li>)}</ol> : null}
       <details><summary>{foreign ? "검토에 사용한 기준 본문" : "상세 기준 보기"}</summary><pre>{notice}</pre></details>
-      <p className="coverage-provenance">{foreign ? policy.translation ? "Haiku 번역본으로 검토했습니다. 출처에서 공식 문서의 원문을 확인할 수 있습니다." : policy.edited ? "직접 수정한 기준 본문으로 검토했습니다. 출처 원문과 비교해 확인하세요." : "공식 문서에서 불러온 기준 본문으로 검토했습니다. 출처와 조회 시각은 위에 표시했습니다." : "프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다."}</p>
+      <p className="coverage-provenance">{foreign ? policy.translation ? "AI 번역본으로 검토했습니다. 출처에서 공식 문서의 원문을 확인할 수 있습니다." : policy.edited ? "직접 수정한 기준 본문으로 검토했습니다. 출처 원문과 비교해 확인하세요." : "공식 문서에서 불러온 기준 본문으로 검토했습니다. 출처와 조회 시각은 위에 표시했습니다." : "프로젝트에 등록된 검토용 기준입니다. 최신 공식 고시 확인이 필요합니다."}</p>
     </section>
   </>;
 }

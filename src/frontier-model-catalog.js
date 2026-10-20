@@ -30,5 +30,6 @@ export function isAllowedFrontierModel(id) {
 }
 
 export function frontierModelLabel(id) {
+  if (id === "hermes-agent") return "Hermes · 서버 기본 모델";
   return FRONTIER_MODEL_CHOICES.find((choice) => choice.id === id)?.label ?? id;
 }

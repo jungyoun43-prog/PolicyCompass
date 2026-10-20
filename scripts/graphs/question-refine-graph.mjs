@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { hermesSettings, configuredLocalChat } from "../hermes-gateway.mjs";
 
 import {
   Annotation,
@@ -14,7 +15,6 @@ import {
   callFrontierModel,
   cleanText,
   frontierCredentials,
-  ollamaEndpoint,
   patientLocalModel,
   safeGeneratedText,
   scrubDirectIdentifiers,
@@ -93,19 +93,13 @@ async function callLocalRefine(state, options, feedback) {
   if (feedback) {
     messages.push({ role: "user", content: `이전 응답이 거부되었습니다: ${feedback} 같은 JSON 스키마와 안전 규칙을 지켜 다시 작성하세요.` });
   }
-  const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
+  const response = await configuredLocalChat(options, {
       model: options.model,
       messages,
       stream: false,
       think: false,
       format: REFINE_SCHEMA,
       options: { temperature: 0 },
-    }),
-    redirect: "error",
-    signal: AbortSignal.timeout(options.timeoutMs),
   });
   if (!response.ok) throw new Error(`질문 다듬기 로컬 모델 요청 실패 (${response.status})`);
   const body = await response.json();
@@ -208,11 +202,11 @@ export async function runQuestionRefine(payload = {}, {
   maxAttempts = 2,
 } = {}) {
   const provider = payload?.provider === "frontier" ? "frontier" : "local";
-  if (provider === "frontier" && payload?.consent !== true) {
+  if ((provider === "frontier" || hermesSettings(environment).enabled) && payload?.consent !== true) {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }
   if (provider === "frontier"
-    && (!environment.OPENAI_API_KEY || environment.POLICYCOMPASS_FRONTIER_ENABLED !== "true")) {
+    && !frontierCredentials(environment).configured) {
     throw new Error("프론티어 모델은 서버에서 명시적으로 활성화되지 않았습니다.");
   }
   const instruction = scrubDirectIdentifiers(payload?.instruction, 500);
@@ -230,6 +224,7 @@ export async function runQuestionRefine(payload = {}, {
     }
     : {
       provider,
+      environment,
       endpoint: local.endpoint,
       model: cleanText(local.model, 160),
       fetchImpl,

@@ -265,6 +265,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const [expandedField, setExpandedField] = useState("");
   const [reviewModel, setReviewModel] = useState("");
   const [capability, setCapability] = useState({ checked: false, local: false, frontier: false, model: "" });
+  const activeReviewModel = capability.hermes ? capability.model : reviewModel || capability.model;
   const [coverageMedication, setCoverageMedication] = useState(null);
   const requestVersion = useRef(0);
   const [expandedSources, setExpandedSources] = useState(() => new Set());
@@ -302,6 +303,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           frontier: result?.frontier?.configured === true,
           model: String(result?.local?.model || result?.frontier?.model || ""),
           translation: result?.translation?.configured === true,
+          hermes: result?.frontier?.provider === "hermes",
         });
       } catch {
         if (!cancelled) setCapability({ checked: true, local: false, frontier: false, model: "" });
@@ -398,7 +400,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       noticeSource: null,
       dataText: medicationReviewPatientDataText(base),
       noticeText: medicationReviewNotice(medicationId),
-      promptText: reviewInstructionsFor(medicationId, REGISTERED_COVERAGE_POLICY, reviewModel || capability.model),
+      promptText: reviewInstructionsFor(medicationId, REGISTERED_COVERAGE_POLICY, activeReviewModel),
     };
     cancelTranslation();
     cancelPolicySource();
@@ -437,8 +439,8 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     cancelPolicySource();
     setTranslation(null);
     const next = switchMedicationCoveragePolicy(sourcePreview, policyId);
-    if (sourcePreview.promptText === reviewInstructionsFor(sourcePreview.medicationId, sourcePreview.policyId, reviewModel || capability.model)) {
-      next.promptText = reviewInstructionsFor(next.medicationId, policyId, reviewModel || capability.model);
+    if (sourcePreview.promptText === reviewInstructionsFor(sourcePreview.medicationId, sourcePreview.policyId, activeReviewModel)) {
+      next.promptText = reviewInstructionsFor(next.medicationId, policyId, activeReviewModel);
     }
     setReviewPreview(next);
     setReview(null);
@@ -514,7 +516,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
           noticeLanguage: language?.code === "en" && sourcePreview.noticeSource?.original && sourcePreview.noticeSource.text === source.noticeText ? "en" : undefined }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.code) throw new Error(result.message || "Haiku 번역에 연결하지 못했습니다.");
+      if (!response.ok || result.code) throw new Error(result.message || "AI 번역에 연결하지 못했습니다.");
       if (version !== translationVersion.current) return;
       if (!COVERAGE_TRANSLATION_FIELDS.every(key => typeof result.fields?.[key] === "string")
         || ![result.fields.dataText, result.fields.noticeText, result.fields.promptText].every(value => value.trim())) throw new Error("번역 결과가 완전하지 않습니다.");
@@ -549,7 +551,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
     requestAbort.current = controller;
     setSettingsOpen(false);
     setReview(null);
-    setPendingReview({ medicationId, name, model: requestedModelLabel, decision: isJevReviewModel(reviewModel || capability.model) });
+    setPendingReview({ medicationId, name, model: requestedModelLabel, decision: isJevReviewModel(activeReviewModel) });
     setReviewBusyId(medicationId);
     try {
       let activeProvider = provider;
@@ -566,7 +568,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
       const overrides = { patientData: dataText, notice: noticeText, instructions: promptText, policyId: input.policyId,
         treatmentPhase: input.treatmentPhase ?? "initial",
         ...(translatedView.active ? { criteriaSourceNotice: sourcePreview.noticeText } : {}) };
-      if (activeProvider === "frontier" && reviewModel) overrides.model = reviewModel;
+      if (activeProvider === "frontier" && reviewModel && !capability.hermes) overrides.model = reviewModel;
       const response = await fetch(MEDICATION_REVIEW_ENDPOINT, {
         signal: controller.signal,
         method: "POST",
@@ -642,7 +644,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   // The model named in the UI is the one this request actually uses: the
   // reviewer's pick before sending, and the id the server reports afterwards.
   const defaultModelLabel = capability.model ? frontierModelLabel(capability.model) : "";
-  const requestedModelLabel = provider === "frontier" && reviewModel
+  const requestedModelLabel = provider === "frontier" && reviewModel && !capability.hermes
     ? frontierModelLabel(reviewModel)
     : defaultModelLabel;
   const cloudLabelFor = (modelText) => (provider === "frontier"
@@ -653,11 +655,11 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
   const cloudLabel = cloudLabelFor(requestedModelLabel);
   const reviewedModelLabelFor = (model) => (model ? frontierModelLabel(model) : "AI");
   const reviewedModelLabel = review?.model ? frontierModelLabel(review.model) : "";
-  const selectedDecisionModel = provider === "frontier" && isJevReviewModel(reviewModel || capability.model);
+  const selectedDecisionModel = provider === "frontier" && !capability.hermes && isJevReviewModel(activeReviewModel);
 
   const changeReviewModel = (event) => {
     const nextModel = event.target.value;
-    const previousInstructions = reviewInstructionsFor(sourcePreview?.medicationId, sourcePreview?.policyId, reviewModel || capability.model);
+    const previousInstructions = reviewInstructionsFor(sourcePreview?.medicationId, sourcePreview?.policyId, activeReviewModel);
     setReviewModel(nextModel);
     setTranslation(null);
     setReviewPreview((current) => current && current.promptText === previousInstructions
@@ -989,9 +991,9 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
                   </select>
                 </label> : null}
                 <label className="review-preview__model">검토 모델
-                  <select id="reviewPreviewModel" name="reviewModel" value={reviewModel} onChange={changeReviewModel} disabled={!capability.frontier || translationBusy}>
+                  <select id="reviewPreviewModel" name="reviewModel" value={capability.hermes ? "" : reviewModel} onChange={changeReviewModel} disabled={!capability.frontier || translationBusy || capability.hermes}>
                     <option value="">서버 기본 · {defaultModelLabel || "미설정"}</option>
-                    {FRONTIER_MODEL_GROUPS.map((group) => (
+                    {(capability.hermes ? [] : FRONTIER_MODEL_GROUPS).map((group) => (
                       <optgroup key={group} label={group}>
                         {FRONTIER_MODEL_CHOICES.filter((choice) => choice.group === group).map((choice) => (
                           <option key={choice.id} value={choice.id}>{choice.label}</option>
@@ -1009,7 +1011,7 @@ export function PrescriptionDialog({ patient, encounter, editable, applyMutation
             </section>
             <section className="review-preview__section" data-expanded={expandedField === "noticeText" || undefined}>
               <header className="review-preview__field-header"><h4><label htmlFor="reviewPreviewNoticeText">{noticeLabel}</label></h4>{expandToggle("noticeText", noticeLabel)}</header>
-              <p className="review-preview__hint" id="reviewPreviewNoticeHint">{translatedView.active ? "Haiku 번역본입니다. 원문 보기를 눌러 공식 문서의 원래 문장과 비교할 수 있습니다." : foreignPolicy ? "공식 문서에서 불러온 원문입니다. 출처·확인 시각은 위에 별도로 표시하며, 아래 내용을 그대로 검토에 사용합니다." : "적용할 급여기준 원문을 확인하거나 붙여넣으세요."}</p>
+              <p className="review-preview__hint" id="reviewPreviewNoticeHint">{translatedView.active ? "AI 번역본입니다. 원문 보기를 눌러 공식 문서의 원래 문장과 비교할 수 있습니다." : foreignPolicy ? "공식 문서에서 불러온 원문입니다. 출처·확인 시각은 위에 별도로 표시하며, 아래 내용을 그대로 검토에 사용합니다." : "적용할 급여기준 원문을 확인하거나 붙여넣으세요."}</p>
               <textarea className="review-preview__code review-preview__code--notice" id="reviewPreviewNoticeText" name="notice" autoComplete="off" readOnly={translatedView.active || translationBusy || policySourceBusy} lang={foreignPolicy ? translationLanguage?.code : undefined} aria-invalid={missingReviewFields.noticeText || undefined} aria-describedby={`reviewPreviewNoticeHint${missingReviewFields.noticeText ? " reviewPreviewNoticeError" : ""}`} placeholder={policySourceBusy ? "공식 원문을 불러오고 있습니다…" : undefined} rows={12} value={reviewPreview.noticeText} onChange={editPreview("noticeText")} spellCheck={false} />
               {missingReviewFields.noticeText ? <p className="coverage-field-error" id="reviewPreviewNoticeError">고시정보를 입력해 주세요.</p> : null}
             </section>

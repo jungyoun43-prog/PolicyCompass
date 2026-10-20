@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const NEXT_CLI = fileURLToPath(new URL("../../node_modules/next/dist/bin/next", import.meta.url));
 
 const AI_ENV_BLANKS = {
+  POLICYCOMPASS_HERMES_BASE_URL: "",
+  POLICYCOMPASS_HERMES_API_KEY: "",
   OPENAI_API_KEY: "",
   OPENROUTER_API_KEY: "",
   POLICYCOMPASS_FRONTIER_MODEL: "",

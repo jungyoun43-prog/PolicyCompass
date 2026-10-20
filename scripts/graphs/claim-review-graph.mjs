@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { configuredLocalChat } from "../hermes-gateway.mjs";
 
 import {
   Annotation,
@@ -13,7 +14,6 @@ import {
 import {
   cleanText,
   clinicalLocalModel,
-  ollamaEndpoint,
   safeGeneratedText,
 } from "../patient-question-assistant.mjs";
 
@@ -102,19 +102,13 @@ async function modelDraft(evaluation, events, options, revisionNote) {
       if (feedback) {
         messages.push({ role: "user", content: `이전 초안이 거부되었습니다: ${feedback} 같은 JSON 스키마와 안전 규칙을 지켜 다시 작성하세요.` });
       }
-      const response = await options.fetchImpl(`${ollamaEndpoint(options.endpoint)}/api/chat`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const response = await configuredLocalChat(options, {
           model: options.model,
           messages,
           stream: false,
           think: false,
           format: DRAFT_SCHEMA,
           options: { temperature: 0 },
-        }),
-        redirect: "error",
-        signal: AbortSignal.timeout(options.timeoutMs),
       });
       if (!response.ok) throw new Error(`청구 검토 모델 요청 실패 (${response.status})`);
       const body = await response.json();
@@ -210,7 +204,7 @@ function sweepThreads(now = Date.now()) {
 
 function reviewOptions(environment, fetchImpl, timeoutMs) {
   const local = clinicalLocalModel(environment);
-  return { model: cleanText(local.model, 160), endpoint: local.endpoint, fetchImpl, timeoutMs };
+  return { model: cleanText(local.model, 160), endpoint: local.endpoint, environment, fetchImpl, timeoutMs };
 }
 
 function interruptedResponse(threadId, state) {

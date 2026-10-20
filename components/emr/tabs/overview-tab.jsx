@@ -141,7 +141,7 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
     setBusy(true);
     const controller = new AbortController();
     controllerRef.current = controller;
-    setStatus(ai.mode === "hermes" ? "규칙 기반 초안을 먼저 만들었습니다. 직접식별자·자유메모를 제외한 선택 환자의 구조화 차트를 Hermes의 모델 제공자에게 전송합니다." : "규칙 기반 초안을 먼저 만들었습니다. 선택 환자의 확정 구조화 차트만 이 기기의 로컬 AI에 전달합니다. 직접식별자·자유메모는 제외하고 외부로 전송하지 않습니다.");
+    setStatus(ai.mode === "openrouter" ? "규칙 기반 초안을 먼저 만들었습니다. 직접식별자·자유메모를 제외한 선택 환자의 구조화 차트를 OpenRouter의 모델 제공자에게 전송합니다." : ai.mode === "hermes" ? "규칙 기반 초안을 먼저 만들었습니다. 직접식별자·자유메모를 제외한 선택 환자의 구조화 차트를 Hermes의 모델 제공자에게 전송합니다." : "규칙 기반 초안을 먼저 만들었습니다. 선택 환자의 확정 구조화 차트만 이 기기의 로컬 AI에 전달합니다. 직접식별자·자유메모는 제외하고 외부로 전송하지 않습니다.");
     try {
       const request = createCopilotRequest(patient, evaluations, today(), {});
       const requestFingerprint = copilotRequestFingerprint(request);
@@ -156,7 +156,7 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
       if (result.kind !== "model") throw new Error("AI 초안 형식이 올바르지 않습니다.");
       const currentRequest = createCopilotRequest(patient, evaluations, today(), {});
       if (copilotRequestFingerprint(currentRequest) !== requestFingerprint) {
-        throw new Error(ai.mode === "hermes" ? "차트 또는 급여 기준이 변경되어 오래된 Hermes AI 초안을 폐기했습니다." : "차트 또는 급여 기준이 변경되어 오래된 로컬 AI 초안을 폐기했습니다.");
+        throw new Error(ai.mode === "openrouter" ? "차트 또는 급여 기준이 변경되어 오래된 OpenRouter AI 초안을 폐기했습니다." : ai.mode === "hermes" ? "차트 또는 급여 기준이 변경되어 오래된 Hermes AI 초안을 폐기했습니다." : "차트 또는 급여 기준이 변경되어 오래된 로컬 AI 초안을 폐기했습니다.");
       }
       setBriefByPatient((current) => new Map(current).set(
         patient.id,
@@ -238,9 +238,9 @@ export function OverviewTab({ patient, evaluations, ai, store, selectTab }) {
         <section className="clinical-card copilot-card" id="copilotPanel" aria-labelledby="copilotTitle">
           <div className="card-heading">
             <div><p className="rail-eyebrow">CLINICAL COPILOT</p><h3 id="copilotTitle">진료 준비 초안</h3></div>
-            <span className="source-badge source-badge--draft" id="copilotMode">{brief.kind === "model" ? ai.mode === "hermes" ? "Hermes" : "로컬 AI" : "규칙 기반"}</span>
+            <span className="source-badge source-badge--draft" id="copilotMode">{brief.kind === "model" ? ai.mode === "openrouter" ? "OpenRouter" : ai.mode === "hermes" ? "Hermes" : "로컬 AI" : "규칙 기반"}</span>
           </div>
-          <p className="draft-warning">의료진 검토 전 확정 기록 아님 · 선택 환자의 확정 구조화 차트만 사용 · {ai.mode === "hermes" ? "Hermes 모델 제공자에게 전송" : "의료진 AI는 로컬 실행"} · 진단·처방·인과 판단 아님</p>
+          <p className="draft-warning">의료진 검토 전 확정 기록 아님 · 선택 환자의 확정 구조화 차트만 사용 · {ai.mode === "openrouter" ? "OpenRouter 모델 제공자에게 전송" : ai.mode === "hermes" ? "Hermes 모델 제공자에게 전송" : "의료진 AI는 로컬 실행"} · 진단·처방·인과 판단 아님</p>
           <div id="copilotContent">
             <section className="copilot-section">
               <h4>기록 요약</h4>

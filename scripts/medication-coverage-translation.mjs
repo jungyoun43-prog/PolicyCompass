@@ -1,7 +1,7 @@
 import { callFrontierModel, frontierCredentials, frontierBaseUrl, frontierKeyMismatch } from "./patient-question-assistant.mjs";
 import { medicationCoveragePolicy } from "../src/medication-coverage-policies.js";
 import { COVERAGE_TRANSLATION_FIELDS, COVERAGE_TRANSLATION_MODEL, coverageTranslationLanguage } from "../src/medication-coverage-translation.js";
-import { hermesSettings } from "./hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected } from "./hermes-gateway.mjs";
 
 export function medicationCoverageTranslationStatus(environment = process.env) {
   const hermes = hermesSettings(environment);
@@ -10,7 +10,7 @@ export function medicationCoverageTranslationStatus(environment = process.env) {
   let openRouter = false;
   try { openRouter = new URL(frontierBaseUrl(environment)).hostname === "openrouter.ai"; } catch { /* unavailable */ }
   const configured = Boolean(apiKey && openRouter && environment.POLICYCOMPASS_FRONTIER_ENABLED !== "false" && !frontierKeyMismatch(environment));
-  return { configured, model: COVERAGE_TRANSLATION_MODEL,
+  return { configured, model: COVERAGE_TRANSLATION_MODEL, ...(openRouterSelected(environment) ? { provider: "openrouter" } : {}),
     reason: configured ? "" : "Haiku 번역을 사용하려면 서버의 OpenRouter 연결이 필요합니다." };
 }
 

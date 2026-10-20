@@ -1,9 +1,10 @@
 import { resumeClaimReview } from "../../../../scripts/graphs/claim-review-graph.mjs";
-import { assertSameOrigin, modelResponse, readJson, withApiErrors } from "../../../../lib/api.js";
+import { assertSameOrigin, assertCloudModelBudget, modelResponse, readJson, withApiErrors } from "../../../../lib/api.js";
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
   const payload = await readJson(request);
+  await assertCloudModelBudget(request);
   return modelResponse(() => resumeClaimReview(payload.threadId, { action: payload.action, note: payload.note }), {
     invalidCode: "INVALID_CLAIM_REVIEW",
     failureCode: "CLAIM_REVIEW_FAILED",

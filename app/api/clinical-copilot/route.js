@@ -1,19 +1,21 @@
 export const maxDuration = 60;
 
 import { ApiError, assertSameOrigin, assertFrontierRequestAllowed, assertFrontierDailyBudget, jsonResponse, readJson, withApiErrors } from "../../../lib/api.js";
-import { hermesSettings } from "../../../scripts/hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected } from "../../../scripts/hermes-gateway.mjs";
+
+import { frontierCredentials } from "../../../scripts/patient-question-assistant.mjs";
 
 export const POST = withApiErrors(async (request) => {
   assertSameOrigin(request);
   const payload = await readJson(request);
   const hermes = hermesSettings();
-  if (hermes.enabled ? !hermes.configured : !process.env.POLICYCOMPASS_OLLAMA_MODEL) {
+  if (openRouterSelected() ? !frontierCredentials().configured : hermes.enabled ? !hermes.configured : !process.env.POLICYCOMPASS_OLLAMA_MODEL) {
     return jsonResponse(503, { code: "AI_NOT_CONFIGURED", message: "규칙 기반 요약을 사용합니다." });
   }
   if (!payload.patient || !Array.isArray(payload.patient?.events)) {
     throw new ApiError(400, "INVALID_PAYLOAD", "구조화 환자 이벤트가 필요합니다.");
   }
-  if (hermes.enabled) {
+  if (hermes.enabled || openRouterSelected()) {
     assertFrontierRequestAllowed(request);
     await assertFrontierDailyBudget();
   }

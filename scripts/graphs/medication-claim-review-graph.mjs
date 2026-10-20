@@ -8,7 +8,7 @@ import { assertCriteriaSource, structuredMedicationRequest, validateMedicationCr
 import { assertModelContextAccepted, ModelContextError } from "../../lib/model-errors.js";
 import { isJevReviewModel } from "../../src/medication-review-decision.js";
 import { jevMedicationDraft } from "../medication-jev-review.mjs";
-import { hermesSettings, configuredLocalChat } from "../hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected, configuredLocalChat } from "../hermes-gateway.mjs";
 
 import {
   callFrontierModel,
@@ -351,7 +351,7 @@ function medicationClaimReviewGraph() {
 export function medicationClaimReviewStatus(environment = process.env) {
   const local = clinicalLocalModel(environment);
   return {
-    local: { configured: !hermesSettings(environment).enabled && Boolean(local.model), model: hermesSettings(environment).enabled ? "" : local.model },
+    local: { configured: !hermesSettings(environment).enabled && !openRouterSelected(environment) && Boolean(local.model), model: hermesSettings(environment).enabled ? "" : local.model },
     frontier: frontierStatus(environment),
   };
 }
@@ -364,7 +364,7 @@ export async function runMedicationClaimReview(payload = {}, {
   const comparison = sanitizeMedicationClaimComparison(payload);
   const overrides = sanitizeOverrides(payload?.overrides, comparison);
   if (hermesSettings(environment).enabled) delete overrides.model;
-  const provider = hermesSettings(environment).enabled || payload?.provider === "frontier" ? "frontier" : "local";
+  const provider = hermesSettings(environment).enabled || openRouterSelected(environment) || payload?.provider === "frontier" ? "frontier" : "local";
   const status = medicationClaimReviewStatus(environment);
   const criteriaProfile = medicationCriteriaProfile(comparison.medication.id, overrides.policyId, overrides.treatmentPhase);
   let sourceError = "";

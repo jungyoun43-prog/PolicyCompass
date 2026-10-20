@@ -60,11 +60,11 @@ export function EmrApp() {
           fetch("/api/medication-claim-review/status", { headers: { accept: "application/json" } }).then((res) => (res.ok ? res.json() : {})).catch(() => ({})),
         ]);
         if (cancelled) return;
-        const hermesConfigured = copilotResult.provider === "hermes" && copilotResult.configured === true;
+        const cloudConfigured = ["hermes", "openrouter"].includes(copilotResult.provider) && copilotResult.configured === true;
         const localConfigured = loopback && copilotResult.configured === true;
         const frontierConfigured = reviewResult.frontier?.configured === true;
-        setAi(hermesConfigured
-          ? { checked: true, configured: true, copilot: true, mode: "hermes", detail: frontierModelLabel(copilotResult.model) }
+        setAi(cloudConfigured
+          ? { checked: true, configured: true, copilot: true, mode: copilotResult.provider, detail: frontierModelLabel(copilotResult.model) }
           : localConfigured
           ? { checked: true, configured: true, copilot: true, mode: "local", detail: copilotResult.model }
           : frontierConfigured

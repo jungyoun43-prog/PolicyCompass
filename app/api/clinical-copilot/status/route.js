@@ -1,5 +1,7 @@
 import { jsonResponse, withApiErrors } from "../../../../lib/api.js";
-import { hermesSettings } from "../../../../scripts/hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected } from "../../../../scripts/hermes-gateway.mjs";
+
+import { frontierCredentials } from "../../../../scripts/patient-question-assistant.mjs";
 
 /**
  * Reports whether a loopback model is configured, exactly as the previous
@@ -7,11 +9,12 @@ import { hermesSettings } from "../../../../scripts/hermes-gateway.mjs";
  */
 export const GET = withApiErrors(async () => {
   const hermes = hermesSettings();
-  const model = hermes.enabled ? (hermes.configured ? hermes.model : "") : process.env.POLICYCOMPASS_OLLAMA_MODEL ?? "";
+  const cloud = openRouterSelected() ? { ...frontierCredentials(), provider: "openrouter" } : hermes;
+  const model = hermes.enabled || openRouterSelected() ? (cloud.configured ? cloud.model : "") : process.env.POLICYCOMPASS_OLLAMA_MODEL ?? "";
   return jsonResponse(200, {
     configured: Boolean(model),
-    mode: model ? (hermes.enabled ? "hermes" : "local-model") : "rule-based",
-    ...(hermes.enabled ? { provider: "hermes" } : {}),
+    mode: model ? (openRouterSelected() ? "openrouter" : hermes.enabled ? "hermes" : "local-model") : "rule-based",
+    ...(openRouterSelected() ? { provider: "openrouter" } : hermes.enabled ? { provider: "hermes" } : {}),
     model,
   });
 });

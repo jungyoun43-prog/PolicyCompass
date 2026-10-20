@@ -198,6 +198,7 @@ Vercel에 배포합니다. Next.js 프로젝트로 자동 감지되므로 별도
 
 | 환경변수 | 용도 |
 | --- | --- |
+| `POLICYCOMPASS_AI_PROVIDER=openrouter` | 이 EMR 서버만 OpenRouter로 고정합니다. 같은 환경에 Hermes 키가 남아 있어도 사용하지 않으며, OpenRouter 키가 없을 때 다른 제공자로 전환하지 않습니다 |
 | `POLICYCOMPASS_OLLAMA_MODEL` / `POLICYCOMPASS_OLLAMA_URL` | 루프백 Ollama 로컬 모델(개발 환경) |
 | `OPENROUTER_API_KEY` | OpenRouter 키. 이 하나로 게이트웨이 주소·API 형식·활성화가 함께 정해집니다 |
 | `POLICYCOMPASS_FRONTIER_MODEL` | 사용할 모델 ID. OpenRouter는 `제공자/모델` 형식 |
@@ -209,6 +210,8 @@ Vercel에 배포합니다. Next.js 프로젝트로 자동 감지되므로 별도
 환경변수를 설정하지 않으면 모든 AI 기능은 외부 호출 없이 규칙 기반으로 동작합니다.
 
 ### OpenRouter로 연결하기
+
+Hermes가 함께 설정된 서버에서 이 EMR만 OpenRouter를 사용하려면 `/opt/policycompass/app.env`에 `POLICYCOMPASS_AI_PROVIDER=openrouter`를 추가합니다. 기존 `OPENROUTER_API_KEY`와 `POLICYCOMPASS_FRONTIER_MODEL`을 사용하며, 다른 앱의 Hermes 게이트웨이나 설정은 변경하지 않습니다. 진료 요약·검토·질문 보조는 같은 OpenRouter 경로를 사용하고 번역은 기존 Haiku 모델을 유지합니다. 제공자 선택을 추가하지 않은 환경의 기존 Hermes/로컬 설정은 유지됩니다.
 
 두 개만 넣으면 됩니다.
 

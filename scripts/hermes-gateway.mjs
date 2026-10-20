@@ -1,5 +1,9 @@
+export function openRouterSelected(environment = process.env) {
+  return environment.POLICYCOMPASS_AI_PROVIDER?.trim().toLowerCase() === 'openrouter';
+}
+
 export function hermesSettings(environment = process.env) {
-  const enabled = Boolean(environment.POLICYCOMPASS_HERMES_BASE_URL || environment.POLICYCOMPASS_HERMES_API_KEY);
+  const enabled = !openRouterSelected(environment) && Boolean(environment.POLICYCOMPASS_HERMES_BASE_URL || environment.POLICYCOMPASS_HERMES_API_KEY);
   const apiKey = environment.POLICYCOMPASS_HERMES_API_KEY || '';
   let baseUrl = '';
   try {
@@ -28,6 +32,19 @@ export async function fetchHermesChat(body, { environment = process.env, fetchIm
 export async function configuredLocalChat(options, body) {
   const environment = options.environment ?? process.env;
   const signal = AbortSignal.timeout(options.timeoutMs ?? 45_000);
+  if (openRouterSelected(environment)) {
+    const { frontierCredentials, callFrontierModel } = await import('./patient-question-assistant.mjs');
+    const credentials = frontierCredentials(environment);
+    if (!credentials.configured) throw new Error(credentials.reason);
+    const result = await callFrontierModel({
+      apiKey: credentials.apiKey, model: credentials.model, messages: body.messages,
+      schemaName: 'clinical_output', schema: typeof body.format === 'object' ? body.format : undefined,
+      maxOutputTokens: body.options?.num_predict ?? 2000, temperature: body.options?.temperature ?? 0,
+      reasoning: null, providerRouting: { require_parameters: true }, requireCompleteOutput: true,
+      environment, fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs ?? 45000,
+    });
+    return new Response(JSON.stringify({ message: { role: 'assistant', content: result.text }, model: result.model, done: true, done_reason: 'stop', created_at: result.generatedAt }), { headers: { 'content-type': 'application/json' } });
+  }
   if (hermesSettings(environment).enabled) {
     const response = await fetchHermesChat(body, { environment, fetchImpl: options.fetchImpl, signal });
     if (!response.ok) return response;

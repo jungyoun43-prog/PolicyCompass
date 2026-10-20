@@ -1,6 +1,8 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { textCleaner } from "../src/text.js";
-import { hermesSettings, configuredLocalChat } from "./hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected, configuredLocalChat } from "./hermes-gateway.mjs";
+
+import { frontierCredentials, frontierBaseUrl } from "./patient-question-assistant.mjs";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -383,12 +385,14 @@ export async function runClinicalCopilot(payload, {
   maxAttempts = 2,
 } = {}) {
   const hermes = hermesSettings(environment);
-  if (hermes.enabled) {
-    if (!hermes.configured) throw new Error(hermes.reason);
-    model = hermes.model;
+  const openRouter = openRouterSelected(environment);
+  if (hermes.enabled || openRouter) {
+    const config = openRouter ? frontierCredentials(environment) : hermes;
+    if (!config.configured) throw new Error(config.reason);
+    model = config.model;
   }
   if (!cleanText(model)) throw new Error("POLICYCOMPASS_OLLAMA_MODEL이 설정되지 않았습니다.");
-  const baseUrl = hermes.enabled ? hermes.baseUrl : loopbackEndpoint(endpoint);
+  const baseUrl = openRouter ? frontierBaseUrl(environment) : hermes.enabled ? hermes.baseUrl : loopbackEndpoint(endpoint);
   const request = buildClinicalCopilotRequest(payload, model);
   const events = safeEvents(payload?.patient);
   const safeBrief = safePatientBrief(payload?.patientBrief, payload?.patient);
@@ -409,7 +413,7 @@ export async function runClinicalCopilot(payload, {
   return {
     id: `model-brief-${Date.now()}`,
     kind: "model",
-    label: `${hermes.enabled ? "Hermes" : "로컬 AI"} 초안 · ${state.modelMeta.model}`,
+    label: `${openRouter ? "OpenRouter" : hermes.enabled ? "Hermes" : "로컬 AI"} 초안 · ${state.modelMeta.model}`,
     model: state.modelMeta.model,
     confirmed: false,
     generatedAt: state.modelMeta.generatedAt,

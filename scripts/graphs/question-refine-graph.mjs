@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { hermesSettings, configuredLocalChat } from "../hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected, configuredLocalChat } from "../hermes-gateway.mjs";
 
 import {
   Annotation,
@@ -201,7 +201,7 @@ export async function runQuestionRefine(payload = {}, {
   timeoutMs = 45_000,
   maxAttempts = 2,
 } = {}) {
-  const provider = payload?.provider === "frontier" ? "frontier" : "local";
+  const provider = openRouterSelected(environment) || payload?.provider === "frontier" ? "frontier" : "local";
   if ((provider === "frontier" || hermesSettings(environment).enabled) && payload?.consent !== true) {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }

@@ -1,7 +1,7 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { textCleaner } from "../src/text.js";
 import { assertModelContextAccepted } from "../lib/model-errors.js";
-import { hermesSettings, fetchHermesChat, configuredLocalChat } from "./hermes-gateway.mjs";
+import { hermesSettings, openRouterSelected, fetchHermesChat, configuredLocalChat } from "./hermes-gateway.mjs";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -185,6 +185,10 @@ const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
 
 /** The clinician-side loopback model: one pair of variables, no fallback. */
 export function clinicalLocalModel(environment = process.env) {
+  if (openRouterSelected(environment)) {
+    const config = frontierCredentials(environment);
+    return { endpoint: frontierBaseUrl(environment), model: config.configured ? config.model : "", provider: "openrouter" };
+  }
   const hermes = hermesSettings(environment);
   if (hermes.enabled) return { endpoint: hermes.baseUrl, model: hermes.configured ? hermes.model : "", provider: "hermes" };
   return {
@@ -195,7 +199,7 @@ export function clinicalLocalModel(environment = process.env) {
 
 /** The patient-side model can be pinned separately and otherwise shares the clinician's. */
 export function patientLocalModel(environment = process.env) {
-  if (hermesSettings(environment).enabled) return clinicalLocalModel(environment);
+  if (hermesSettings(environment).enabled || openRouterSelected(environment)) return clinicalLocalModel(environment);
   return {
     endpoint: environment.POLICYCOMPASS_PATIENT_OLLAMA_URL
       ?? environment.POLICYCOMPASS_OLLAMA_URL
@@ -215,6 +219,7 @@ const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
  * overridable for other OpenAI-compatible gateways.
  */
 const FRONTIER_VARIABLE_NAMES = Object.freeze([
+  "POLICYCOMPASS_AI_PROVIDER",
   "POLICYCOMPASS_HERMES_BASE_URL",
   "POLICYCOMPASS_HERMES_API_KEY",
   "OPENROUTER_API_KEY",
@@ -242,7 +247,7 @@ export function frontierCredentials(environment = process.env) {
   if (hermes.enabled) return { ...hermes, viaOpenRouter: false, provider: "hermes" };
   const openRouterKey = cleanText(environment.OPENROUTER_API_KEY ?? "", 500);
   const openAiKey = cleanText(environment.OPENAI_API_KEY ?? "", 500);
-  const apiKey = openRouterKey || openAiKey;
+  const apiKey = openRouterSelected(environment) ? openRouterKey : openRouterKey || openAiKey;
   const enabled = openRouterKey
     ? environment.POLICYCOMPASS_FRONTIER_ENABLED !== "false"
     : environment.POLICYCOMPASS_FRONTIER_ENABLED === "true";
@@ -271,6 +276,7 @@ export function frontierCredentials(environment = process.env) {
  * context never leaves over an unencrypted hop.
  */
 export function frontierBaseUrl(environment = process.env) {
+  if (openRouterSelected(environment)) return OPENROUTER_BASE;
   const hermes = hermesSettings(environment);
   if (hermes.enabled) {
     if (!hermes.configured) throw new Error(hermes.reason);
@@ -307,6 +313,7 @@ export function frontierEndpoint(environment = process.env) {
 }
 
 export function frontierApiStyle(environment = process.env) {
+  if (openRouterSelected(environment)) return "chat";
   if (hermesSettings(environment).enabled) return "chat";
   const declared = cleanText(environment.POLICYCOMPASS_FRONTIER_API ?? "", 40).toLowerCase();
   if (declared === "chat" || declared === "responses") return declared;
@@ -366,6 +373,7 @@ export async function callFrontierModel({
   model,
   instructions,
   input,
+  messages,
   schemaName,
   schema,
   maxOutputTokens = 2_000,
@@ -380,7 +388,7 @@ export async function callFrontierModel({
 }) {
   if (hermesSettings(environment).enabled) {
     const response = await fetchHermesChat({ messages: [
-      ...(instructions ? [{ role: "system", content: instructions }] : []), { role: "user", content: input },
+      ...(messages ?? [...(instructions ? [{ role: "system", content: instructions }] : []), { role: "user", content: input }]),
     ], ...(schema ? { response_format: { type: "json_schema", json_schema: { name: schemaName, schema } } } : {}) }, { environment, fetchImpl, signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`Hermes 요청 실패 (${response.status})`);
     const payload = await response.json();
@@ -397,7 +405,7 @@ export async function callFrontierModel({
   const body = style === "chat"
     ? {
       model: name,
-      messages: [
+      messages: messages ?? [
         ...(instructions ? [{ role: "system", content: instructions }] : []),
         { role: "user", content: input },
       ],
@@ -701,7 +709,7 @@ export function frontierStatus(environment = process.env) {
   return {
     configured,
     model,
-    ...(hermesSettings(environment).enabled ? { provider: "hermes" } : {}),
+    ...(hermesSettings(environment).enabled ? { provider: "hermes" } : openRouterSelected(environment) ? { provider: "openrouter" } : {}),
     api: frontierApiStyle(environment),
     endpoint: frontierEndpoint(environment),
     ...(frontierKeyMismatch(environment) ? { warning: frontierKeyMismatch(environment) } : {}),
@@ -712,7 +720,7 @@ export function frontierStatus(environment = process.env) {
 export function patientQuestionAssistantStatus(environment = process.env) {
   const local = patientLocalModel(environment);
   return {
-    local: { configured: !hermesSettings(environment).enabled && Boolean(local.model), model: hermesSettings(environment).enabled ? "" : local.model },
+    local: { configured: !hermesSettings(environment).enabled && !openRouterSelected(environment) && Boolean(local.model), model: hermesSettings(environment).enabled ? "" : local.model },
     frontier: frontierStatus(environment),
   };
 }
@@ -723,7 +731,7 @@ export async function runPatientQuestionAssistant(payload = {}, {
   timeoutMs = 45_000,
   maxAttempts = 2,
 } = {}) {
-  const provider = payload?.provider === "frontier" ? "frontier" : "local";
+  const provider = openRouterSelected(environment) || payload?.provider === "frontier" ? "frontier" : "local";
   if ((provider === "frontier" || hermesSettings(environment).enabled) && payload?.consent !== true) {
     throw new TypeError("프론티어 모델로 정제 데이터를 보내려면 이번 실행에 동의해야 합니다.");
   }

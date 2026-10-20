@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   addPatient,
@@ -15,7 +15,6 @@ import { ClinicalHeader } from "./chrome.jsx";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { PatientRail } from "./patient-rail.jsx";
-import { PatientSummaryCard } from "./patient-summary.jsx";
 import { WorkspaceHeader } from "./workspace-header.jsx";
 import { DataUtilities } from "./data-utilities.jsx";
 import { CoverageQuickStart } from "./coverage-quick-start.jsx";
@@ -26,22 +25,6 @@ import { BodyTab } from "./tabs/body-tab.jsx";
 import { ClaimsTab } from "./tabs/claims-tab.jsx";
 import { JourneyTab } from "./tabs/journey-tab.jsx";
 import { DataTab } from "./tabs/data-tab.jsx";
-
-const compactQuery = "(max-width: 900px)";
-const subscribeLayout = (listener) => {
-  const query = window.matchMedia(compactQuery);
-  const onChange = () => {
-    const queue = document.getElementById("patientQueueRegion");
-    if (query.matches && queue?.dataset.open === "false" && queue.contains(document.activeElement)) {
-      document.getElementById("togglePatientQueue")?.focus();
-    }
-    listener();
-  };
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-};
-const compactLayoutSnapshot = () => window.matchMedia(compactQuery).matches;
-const desktopLayoutSnapshot = () => false;
 
 export function EmrApp() {
   const store = useEmrStore();
@@ -55,8 +38,6 @@ export function EmrApp() {
     return () => clearTimeout(timer);
   }, [status.message, status.tone, setStatus]);
   const [activeTab, setActiveTab] = useState("encounter");
-  const [queueOpen, setQueueOpen] = useState(false);
-  const compactLayout = useSyncExternalStore(subscribeLayout, compactLayoutSnapshot, desktopLayoutSnapshot);
   const [viewedEncounterId, setViewedEncounterId] = useState("");
   // Each 편집 click is a fresh request object, so the rail sees the same patient
   // edited twice in a row as two requests and needs no "consumed" hand-back.
@@ -149,14 +130,10 @@ export function EmrApp() {
       await replaceState((current) => selectPatient(current, patientId), { persist: !state.demo });
       setViewedEncounterId("");
       setActiveTab("encounter");
-      if (compactLayout) {
-        setQueueOpen(false);
-        requestAnimationFrame(() => document.getElementById("selectedPatientName")?.focus());
-      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "환자 선택을 저장하지 못했습니다.", "error");
     }
-  }, [state, blockClinicalContextChange, replaceState, setStatus, compactLayout]);
+  }, [state, blockClinicalContextChange, replaceState, setStatus]);
 
   const handleSavePatient = useCallback(async (mode, payload) => {
     if (mode !== "create" && mode !== state.selectedPatientId) {
@@ -225,11 +202,12 @@ export function EmrApp() {
   return (
     <>
       <a className="skip-link" href="#mainContent">본문으로 건너뛰기</a>
-      <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="automatic" orientation={compactLayout ? "horizontal" : "vertical"}>
+      <TabsPrimitive.Root asChild value={activeTab} onValueChange={(tab) => selectTab(tab)} activationMode="automatic">
       <div className="emr-frame">
-      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai} help={<CoverageQuickStart />}
+      <ClinicalHeader demo={state.demo} onExitDemo={handleExitDemo} utilities={<DataUtilities {...tabProps} />} ai={ai}
         nav={patient ? <WorkspaceHeader onSelectTab={selectTab} /> : null} />
       <main className="emr-shell" id="mainContent" inert={store.busy ? "" : undefined} aria-busy={store.busy || undefined}>
+        <CoverageQuickStart />
         {fhirReport ? (
           <details className="fhir-import-report" id="fhirImportReport">
             <summary><b>FHIR 가져오기 보고서</b><span id="fhirImportReportSummary">외부 미검증 · 지원 {fhirReport.supported}건 · 제외 {fhirReport.unsupported}건</span></summary>
@@ -247,35 +225,21 @@ export function EmrApp() {
         <p className={`workspace-status${status.tone ? " is-" + status.tone : ""}`} id="workspaceStatus" role="status" aria-live="polite" onClick={() => setStatus("")} title="클릭해서 닫기">{status.message}</p>
 
         <div className="clinical-layout">
-          <div className="patient-queue-region" id="patientQueueRegion" data-open={queueOpen} hidden={compactLayout && !queueOpen}>
           <PatientRail
             patients={state.patients}
             selectedPatientId={state.selectedPatientId}
+            demo={state.demo}
+            updatedAt={state.updatedAt}
+            onEditPatient={() => patient && setEditRequest({ patient })}
             onSelectPatient={handleSelectPatient}
             onLoadDemo={handleLoadDemo}
             onSavePatient={handleSavePatient}
             editRequest={editRequest}
             onFormStateChange={({ pending }) => { dirtyGuardsRef.current.patientForm = () => pending; }}
+            visitSlotRef={setVisitSlot}
           />
-          </div>
 
           <section className="patient-workspace" aria-label="선택 환자 차트">
-            <div className="patient-context">
-              <div className="patient-context__heading">
-                {patient ? <PatientSummaryCard patient={patient} demo={state.demo} updatedAt={state.updatedAt} onEditPatient={() => {
-                  setQueueOpen(true);
-                  setEditRequest({ patient });
-                  requestAnimationFrame(() => document.getElementById("patientName")?.focus());
-                }} /> : <h1>진료 워크스페이스</h1>}
-                <button className="clinical-button patient-queue-toggle" id="togglePatientQueue" type="button" aria-controls="patientQueueRegion" aria-expanded={queueOpen} onClick={() => {
-                  const next = !queueOpen;
-                  if (!next) document.getElementById("togglePatientQueue")?.focus();
-                  setQueueOpen(next);
-                  if (next) requestAnimationFrame(() => document.getElementById("patientSearch")?.focus());
-                }}>환자 대기열</button>
-              </div>
-              <div id="visitContextSlot" className="flow-visit-context" ref={setVisitSlot} />
-            </div>
             {!patient ? (
               <div className="workspace-empty" id="workspaceEmpty">
                 <img className="workspace-empty__mark" src="/assets/clinical-workspace-empty.png" width={176} height={176} alt="" aria-hidden="true" />

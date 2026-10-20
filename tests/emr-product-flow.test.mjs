@@ -6,7 +6,6 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 import { ClinicalHeader } from "../components/emr/chrome.jsx";
 import { DataUtilities } from "../components/emr/data-utilities.jsx";
 import { PatientRail } from "../components/emr/patient-rail.jsx";
-import { PatientSummaryCard } from "../components/emr/patient-summary.jsx";
 import { WorkspaceHeader } from "../components/emr/workspace-header.jsx";
 import { BodyTab } from "../components/emr/tabs/body-tab.jsx";
 import { ChartTab } from "../components/emr/tabs/chart-tab.jsx";
@@ -71,15 +70,17 @@ function renderWorkspace(workspaceState = state) {
   return [
     renderComponent(ClinicalHeader, { demo: workspaceState.demo, ai, utilities: createElement(DataUtilities, tabProps) }),
     renderComponent(tabs),
-    // Identity/safety belongs to the workspace, independently of the queue.
-    renderComponent(PatientSummaryCard, { patient: tabProps.patient, demo: workspaceState.demo, updatedAt: workspaceState.updatedAt, onEditPatient: () => {} }),
     renderComponent(PatientRail, {
       patients: workspaceState.patients,
       selectedPatientId: workspaceState.selectedPatientId,
+      demo: workspaceState.demo,
+      updatedAt: workspaceState.updatedAt,
       onSelectPatient: () => {},
       onLoadDemo: () => {},
       onSavePatient: () => {},
+      onEditPatient: () => {},
       editRequest: null,
+      visitSlotRef: null,
     }),
     ...[EncounterTab, OverviewTab, ChartTab, BodyTab, ClaimsTab, JourneyTab, DataTab].map((Tab) => renderComponent(Tab, { ...tabProps, active: false })),
   ].join("\n");

@@ -101,7 +101,7 @@ function WorkflowDisclosure({ name, title, titleId, summaryText, summaryTone, di
   return (
     <section className="clinical-card clinical-entry-card workflow-disclosure workflow-disclosure--static" aria-labelledby={titleId} data-workflow-disclosure={name}>
       <div className="workflow-disclosure__summary">
-        <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id={titleId} role="heading" aria-level={3} tabIndex={-1}>{title}</span></span>
+        <span className="workflow-disclosure__heading"><span className="workflow-disclosure__title" id={titleId} role="heading" aria-level={3}>{title}</span></span>
         <span className="workflow-disclosure__signals"><span className="entry-launcher-slot" id={`entryLauncher-${name}`} ref={setLauncherSlot}></span><span className="workflow-disclosure__meta" data-disclosure-summary={name} data-tone={summaryTone || undefined}>{summaryText}</span></span>
       </div>
       <div className="workflow-disclosure__body">{dialog(launcherSlot)}{children}</div>
@@ -150,7 +150,6 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
   const [signAck, setSignAck] = useState({ identity: null, fingerprint: "", checked: false });
   const [openDisclosures, setOpenDisclosures] = useState(() => new Map());
   const [railTab, setRailTab] = useState("notes");
-  const [activeSection, setActiveSection] = useState("record");
   const [trendRowId, setTrendRowId] = useState("");
   // Each entry dialog keeps its own dirty probe; the encounter is dirty when any
   // of them still holds unsubmitted input.
@@ -402,23 +401,7 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
     setActiveDialog,
   };
 
-  const navigateSection = (section, targetId) => {
-    const target = document.getElementById(targetId);
-    if (!target) return;
-    setActiveSection(section);
-    target.focus({ preventScroll: true });
-    const headerHeight = document.querySelector(".clinical-header")?.getBoundingClientRect().height ?? 0;
-    const patientHeight = document.querySelector(".patient-context")?.getBoundingClientRect().height ?? 0;
-    window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - headerHeight - patientHeight - 16), behavior: "instant" });
-  };
-
   return (
-    <>
-    <nav className="encounter-section-nav" aria-label="현재 진료 영역 이동">
-      {[["record", "기록", "soapTitle"], ["diagnoses", "진단", "diagnosisTitle"], ["prescriptions", "처방", "prescriptionTitle"], ["orders", "검사", "orderTitle"], ["completion", "완료", "encounterSignoffTitle"]].map(([section, label, targetId]) => (
-        <button key={section} type="button" data-flow-section={section} aria-controls={targetId} aria-current={activeSection === section ? "location" : undefined} onClick={() => navigateSection(section, targetId)}>{label}</button>
-      ))}
-    </nav>
     <div className="encounter-layout">
       <div className="encounter-main">
 
@@ -427,8 +410,17 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
           <section className="clinical-card soap-card workflow-disclosure workflow-disclosure--static" aria-labelledby="soapTitle" data-workflow-disclosure="soap">
             <div className="workflow-disclosure__summary">
               <span className="workflow-disclosure__heading">
-                <span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3} tabIndex={-1}>진료 기록</span>
+                <span className="workflow-disclosure__title" id="soapTitle" role="heading" aria-level={3}>진료 기록</span>
                 <span className="workflow-disclosure__meta" data-disclosure-summary="soap" data-tone={status === "completed" && soapCount < 4 ? "attention" : soapCount === 4 ? "ready" : undefined}>{status === "none" || status === "waiting" ? "진료 시작 후 입력" : `${soapCount}/4 작성`}</span>
+              </span>
+              <span className="workflow-disclosure__signals">
+                <div className="encounter-save-actions">
+                  <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
+                  <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
+                  <Button id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</Button>
+                  <Button variant="primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</Button>
+                  <Button variant="confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</Button>
+                </div>
               </span>
             </div>
             <div className="workflow-disclosure__body">
@@ -574,15 +566,9 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
           <Button className="context-open-button" type="button" onClick={() => selectTab("claims")}>전체 급여 보드 열기</Button>
         </section>
 
+        {/* The actions live in the 진료 기록 card header; this strip only carries the status line. */}
         <section className="encounter-save-bar" aria-labelledby="encounterSignoffTitle">
-          <h3 id="encounterSignoffTitle" tabIndex={-1}>진료 최종 검토 및 서명</h3>
-          <div className="encounter-save-actions">
-            <Button variant="danger" id="cancelEncounter" type="button" hidden={unverifiedBackup || !["waiting", "in-progress"].includes(status)} onClick={onCancel}>진료 취소</Button>
-            <Button id="reopenEncounter" type="button" hidden={!completed} onClick={onReopen}>서명 전 재개</Button>
-            <Button id="saveEncounterDraft" type="submit" form="encounterForm" hidden={!editable}>임시 저장</Button>
-            <Button variant="primary" id="completeEncounter" type="button" hidden={!editable} onClick={onComplete}>진료 완료</Button>
-            <Button variant="confirm" id="signEncounter" type="button" hidden={!completed} disabled={blockers.length > 0 || !acknowledged} title={blockers.length ? `서명 전 누락·충돌 ${blockers.length}건을 먼저 수정하세요.` : !acknowledged ? "현재 환자·Encounter와 전체 기록을 확인한 뒤 검토 완료를 선택하세요." : undefined} onClick={onSign}>검토 후 서명</Button>
-          </div>
+          <h3 className="visually-hidden" id="encounterSignoffTitle">진료 최종 검토 및 서명</h3>
           <p className="form-message" id="encounterFormMessage" role="status" aria-live="polite">{formMessageText}</p>
         </section>
       </div>
@@ -620,10 +606,10 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
       </>, visitSlot) : null}
 
       <aside className="encounter-context-rail" aria-label="환자 맥락과 진료 안전 정보">
-        <details className="clinical-card context-card context-card--stream patient-history" id="patientHistory" onToggle={(event) => {
-          if (!event.currentTarget.open && event.currentTarget.contains(document.activeElement)) event.currentTarget.querySelector("summary")?.focus();
-        }}>
-          <summary><span id="patientStreamTitle">과거 기록</span><span className="patient-history__hint">일지 · 검사 · 영상</span></summary>
+        <section className="clinical-card context-card context-card--stream" aria-labelledby="patientStreamTitle">
+          <div className="card-heading">
+            <div><p className="rail-eyebrow">PATIENT STREAM</p><h3 id="patientStreamTitle">환자 기록</h3></div>
+          </div>
           <div className="stream-tabs" role="group" aria-label="기록 스트림 선택">
             {[["notes", "일지"], ["labs", "검사"], ["imaging", "영상"]].map(([key, label]) => (
               <button key={key} type="button" className="stream-tab" aria-pressed={railTab === key} onClick={() => setRailTab(key)}>
@@ -718,10 +704,9 @@ export function EncounterTab({ patient, encounter, preflightEvaluations, store, 
             )}
           </div>
           <Button variant="text" type="button" onClick={() => selectTab("chart")}>전체 기록 보기</Button>
-        </details>
+        </section>
 
       </aside>
     </div>
-    </>
   );
 }

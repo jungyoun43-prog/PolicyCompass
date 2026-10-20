@@ -1,130 +1,21 @@
----
-name: PolicyCompass clinical UI
-description: Clinical visual tokens scoped to /emr; existing personal and product boundaries remain authoritative.
-colors:
-  clinical-nav: "#1c2d70"
-  clinical-nav-selected: "#354fb1"
-  clinical-accent: "#293f96"
-  clinical-accent-wash: "#edf1ff"
-  clinical-surface: "#f4f6fb"
-  clinical-surface-soft: "#eef2f8"
-  clinical-surface-raised: "#ffffff"
-  clinical-ink: "#1d2639"
-  clinical-muted: "#58647a"
-  clinical-line: "#dce2ec"
-  clinical-line-strong: "#b8c3d5"
-typography:
-  clinical-body:
-    fontFamily: "\"Pretendard Variable\", \"Noto Sans KR\", ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 400
-  clinical-title:
-    fontFamily: "\"Pretendard Variable\", \"Noto Sans KR\", ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 650
-  clinical-label:
-    fontFamily: "\"Pretendard Variable\", \"Noto Sans KR\", ui-sans-serif, system-ui, sans-serif"
-    fontSize: ".8125rem"
-    fontWeight: 500
-    lineHeight: "1.6"
-rounded:
-  clinical-control: "6px"
-  clinical-card: "8px"
-  clinical-queue: "10px"
-  clinical-panel: "12px"
-spacing:
-  clinical-xs: "4px"
-  clinical-sm: "8px"
-  clinical-field: "12px"
-  clinical-md: "16px"
-  clinical-work: "20px"
-  clinical-lg: "24px"
-components:
-  clinical-button-primary:
-    backgroundColor: "{colors.clinical-accent}"
-    textColor: "{colors.clinical-surface-raised}"
-    rounded: "{rounded.clinical-control}"
-    padding: "7px 12px"
-    height: "36px"
-  clinical-button-secondary:
-    backgroundColor: "{colors.clinical-surface-raised}"
-    textColor: "{colors.clinical-ink}"
-    rounded: "{rounded.clinical-control}"
-    padding: "7px 12px"
-    height: "36px"
-  clinical-nav-active:
-    backgroundColor: "{colors.clinical-nav-selected}"
-    textColor: "{colors.clinical-surface-raised}"
-    rounded: "{rounded.clinical-card}"
----
 # Design
 
 PolicyCompass 제품·UI·데이터 경계의 단일 설계 기준입니다.
 
-## Overview
+## Clinical UI refinement — 2026-10-15
 
-**Creative North Star: "진료 흐름 · 기록과 다음 조작"**
+The physician EMR, prescription composer, and reimbursement review use Operate mode: clear task hierarchy, restrained green accents, and readable clinical data. The implementation is scoped to `.emr-page` in `src/clinical-ui.css`; the personal app keeps its own visual language.
 
-선택 환자의 식별·안전 정보와 현재 Encounter 기록을 중심으로 구성한다. 남색 임상 탐색 영역, 밝은 기록면과 보이는 입력 라벨로 작업 위치를 구분한다. 이 절의 토큰은 /emr 의료진 화면에만 적용하며 개인용 앱의 시각 규칙과 아래 두 앱 데이터 경계는 보존한다.
-
-User-approved clinical flow, recorded from fresh desktop/390px output and implementation on 2026-10-19. The proposal image is a composition reference; its example facts are not a data contract.
-
-**Key Characteristics:**
-
-- 남색 임상 탐색과 밝은 기록면
-- 세로 SOAP와 자유로운 항목 이동
-- 목록을 접어도 남는 환자 식별·안전 정보
-- 명시적인 저장·완료·서명
-
-## Colors
-
-The primary clinical tokens name navigation, selected navigation and explicit action. Neutral tokens define the page, paper, text and control boundaries. Values are normative in the frontmatter. Existing safety and reimbursement colors keep their textual labels and domain meaning.
-
-**The 임상 범위 Rule.** 의료진 토큰을 개인용 앱이나 다른 프로젝트의 공통 테마로 확대하지 않는다.
-
-## Typography
-
-The inherited Korean UI font stack and normal body weight are recorded from computed styles. Work headings and controls provide hierarchy; operational labels remain compact. Phone inputs use 1rem. Native inputs/selects keep visible labels and counts use tabular numerals.
-
-## Layout
-
-Desktop uses an 88px navigation edge, a separate 240px patient queue and a fluid white worksheet. At 900px and below, navigation becomes horizontal and the queue can close without unmounting its form. Patient identity and safety stay above the work. At 1500px, supporting history may sit beside the worksheet; otherwise it follows as a disclosure.
-
-SOAP uses vertical labelled rows: labels beside editors on desktop and above them on compact screens. Record, diagnosis, prescription, order and completion remain free navigation targets. The header opens first-use help. Phone prescription uses available viewport height; results scroll separately from header/search and each drug's actions stay in normal form flow.
-
-## Elevation & Depth
-
-Work surfaces are flat at rest, using borders and tonal separation. Existing dialogs and the header-help overlay retain elevation; do not repeat overlay shadows on nested SOAP fields.
-
-## Shapes
-
-Controls use the clinical control radius, worksheet cards/navigation selection the card radius, and the queue its small panel radius. Keep space for Korean labels, values and native selection arrows.
-
-## Components
-
-### Buttons and fields
-
-Desktop controls use 36px height with 32px compact secondary actions. Phone/coarse-pointer primary targets use at least 44px. A 2px accent focus outline keeps keyboard position visible. Primary fill marks a committing action; entry launchers are secondary. Prescription labels remain visible in compact forms.
-
-### Navigation and disclosures
-
-Radix orientation follows the layout: vertical Up/Down on desktop and horizontal Left/Right on compact screens; Home/End remain available. Current-Encounter navigation focuses labelled headings without adding persisted clinical stages. Queue, help and history disclosure preserve drafts; dismissal returns focus to a usable launcher.
-
-**The 명시적 동작 Rule.** 항목 탐색은 위치와 초점만 옮긴다. 저장·완료·서명은 기존의 개별 동작으로 수행한다.
-
-### Reimbursement review
-
-Keep three full-width source editors, explicit provider/transmission notes, patient/Encounter context and persistent review actions. Phone source editors remain readable at 16px. Unconfigured providers, timeout and malformed output stay unfinished review. This visual change does not change server evidence validation or verdict authority.
-
-## Do's and Don'ts
-
-- Do keep patient identity and safety context visible when the queue closes.
-- Do preserve pending input during navigation and keep native field labels visible.
-- Do reserve primary fill for explicit committing actions.
-
-- Don't apply the clinical palette to the personal companion or other projects.
-- Don't make section navigation save, complete or sign.
-- Don't use color alone for safety or reimbursement states.
+- Desktop controls share a 36px height; compact secondary actions use 32px. Phone and coarse-pointer controls use at least 44px. The shared Button exposes `size="sm"` rather than a separate one-off button style.
+- Primary fill is reserved for committing a task, such as finishing an encounter or starting a review. Diagnosis, prescription, and order launchers use secondary buttons.
+- Navigation uses a flat tab strip. Worksheets use a single border without decorative shadows; nested SOAP fields use labels and plain editors instead of another card layer. A thin neutral separator groups source inputs and their actions.
+- Clinical input and body text use normal weight. Headings and controls provide the hierarchy; counts use tabular numerals. Color remains paired with the existing textual safety and verdict labels.
+- Prescription dose fields and actions share a baseline and height. Review data, notice, and instruction editors use three full-width stacked rows with equal heights; expansion controls remain compact rectangular buttons. No robot decoration or assistant persona heading is used.
+- The reimbursement header uses the existing green wash and a thin top rule. The selected medication sits below the page title, followed by patient and encounter context; the action area wraps below on phones.
+- The review start action, transmission note, and reference notice live in a persistent footer outside the scrolling panel, reserving their own space. Korean prose wraps at word boundaries with an emergency fallback for oversized tokens; raw clinical JSON retains its lines and scrolls horizontally.
+- The second skill pass limits coverage content to 72rem on wide screens, removes reserved hint space between vertically stacked editors, and keeps mobile prescription actions after dose inputs. Clinical text inputs use 16px on phones, with a 2px accent focus ring. Coverage scroll padding follows the actual sticky header height, and validation identifies and focuses the first missing source field.
+- Instructions: [Impeccable](https://skills.sh/pbakaus/impeccable/impeccable), especially its Distill and Operate guidance, and [Vercel Web Interface Guidelines](https://skills.sh/vercel-labs/agent-skills/web-design-guidelines). Both are installed in `.agents/skills`; `find-skills` is installed in the user's Codex skills folder.
+- Additional project skills: [Awesome Design](https://github.com/EagleFandel/awesome-design), using its IBM reference for restrained surfaces, consistent spacing, and semantic interaction states; [UI/UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), using its web guidance for error placement, focus visibility, and accessible labels. These references adapt to the existing Korean clinical interface and green palette; this document remains the product's design authority.
 
 ## 0. Canonical Two-App Product Architecture
 
@@ -420,7 +311,7 @@ Research date: 2026-07-17.
 ### Source of truth
 
 - Status: Active
-- Last refreshed: 2026-10-19 (clinical visual flow; existing product/data contracts retained)
+- Last refreshed: 2026-07-20
 - Primary product surface: `/emr`, a physician-centered local outpatient EMR workspace. `/patient` and its feature routes are the separate personal PolicyCompass companion; `/` is the stateless role gateway.
 - Evidence reviewed: `README.md`, all existing HTML routes, `src/data.js`, `src/patient-transfer.js`, `src/journey-model.js`, `src/insight-model.js`, shared shell and control styles, tests, and existing desktop/mobile baseline captures under `.omo/artifacts/baseline/`.
 
@@ -444,16 +335,16 @@ Research date: 2026-07-17.
 
 - Primary personas: outpatient clinician, nurse/care coordinator, and claims-review coordinator evaluating the product locally.
 - User jobs: manage today's waiting queue, open a patient, confirm identity and safety context, document a complete visit, review clinical relationships, resolve pre-claim documentation gaps, locally sign the encounter, and export a portable backup.
-- Key context: desktop-first clinical work, with compact layouts retaining the existing forms, explicit queue disclosure and a tall prescription composer.
+- Key context: desktop-first during chart review; tablet during rounds; compact mobile view for read-only triage and quick tasks.
 
 ### Information architecture
 
-- Primary navigation inside `/emr`: 오늘 진료, 환자 요약, 과거 기록, 신체 지도, 급여 보드, Journey, 감사·데이터.
+- Primary navigation inside `/emr`: 진료, 과거기록, PolicyCompass, 급여 점검, Journey, 데이터.
 - The default screen is not an analytics dashboard. It is a work queue and active Encounter workspace.
 - Desktop hierarchy:
-  1. Clinical navigation edge and a separate patient queue.
-  2. Selected-patient identity/safety above the current Encounter worksheet, with vertical SOAP and existing entry actions.
-  3. Supporting history disclosure, beside the worksheet only when the wide layout has room.
+  1. Left rail: today's waiting/in-progress/completed queue, patient search, and new-patient entry.
+  2. Center: active Encounter header, SOAP, diagnoses, prescriptions, orders, draft save, finish, and local sign.
+  3. Right rail: demographics summary, allergies/current medications, source-linked assistance, and encounter-specific pre-claim checks.
 - Secondary screens retain the selected patient and Encounter context. PolicyCompass, Journey, assistance, and reimbursement tasks never become disconnected copies of clinical facts.
 - The institution-wide reimbursement board remains available for billing review, while the active visit always exposes its unresolved risk count and a direct path to the relevant cards.
 
@@ -484,11 +375,11 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 
 ### Visual language
 
-- Color: the clinical frontmatter and stylesheet own physician interaction colors. The personal companion retains its green palette. Safety/reimbursement states retain existing textual meaning.
+- Color: use the shared forest-green interaction accent and pale-green surface scale with restrained cyan/lime/violet/amber data colors. Reimbursement states add semantic text and icons; red is reserved for hard safety/error states, never routine claim risk.
 - Typography: existing Noto/Pretendard stack; compact 12–14px operational metadata and 16–22px patient/work headings.
-- Spacing/layout rhythm: documented clinical navigation/queue widths and fluid worksheet on the existing 4px rhythm; boards retain their lane behavior.
-- Shape/radius/elevation: clinical frontmatter radii and flat bordered worksheets; overlay elevation stays with dialogs and help.
-- Motion: 150ms color/border feedback in clinical controls; retain reduced-motion handling and no automatic medical/financial state animation.
+- Spacing/layout rhythm: existing 4px scale; desktop cockpit uses a 280px patient rail plus fluid workspace; boards scroll horizontally without shrinking cards below 260px.
+- Shape/radius/elevation: reuse control and panel radii; reduce shadow depth inside dense clinical workspaces.
+- Motion: 140ms feedback only; no animated medical or financial state changes.
 - Imagery/iconography: no decorative clinical imagery inside EMR. Use CSS/SVG/data marks with text equivalents.
 
 ### Components
@@ -496,7 +387,7 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 - Existing components to reuse: app brand, skip link, buttons, chips, panels, detail lists, graph node semantics, Journey comparison, Visit Brief question cards.
 - New components: today's queue, patient demographic editor, patient safety header, Encounter header, four-part SOAP editor, KCD diagnosis list, prescription line editor, order list, draft/final/sign action bar, provenance badge, copilot draft panel, reimbursement summary, reimbursement rule card, Kanban lane, rule explanation drawer, audit event, and local data toolbar.
 - Variants and states: waiting/in-progress/completed, draft/finished/signed/reopened, primary/secondary diagnosis, documented/inferred, rule pass/warn/not-ready/unknown, empty/loading/error/saved, demo/private.
-- Token ownership: shared/personal primitives remain in foundation.css; clinical overrides live in clinical-ui.css, domain composition in emr.css, and composer layout in emr-dialog-responsive.css. Clinical overrides stay scoped to .emr-page.
+- Token ownership: shared visual tokens remain in `foundation.css`; EMR-only composition belongs to `emr.css`; domain state classes must not redefine shared shell primitives.
 
 ### Accessibility
 
@@ -509,9 +400,9 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 ### Responsive behavior
 
 - Supported: 390px, 768px, 1280px, and wide desktop.
-- Desktop: clinical navigation edge, separate queue, patient/safety context above the active worksheet, supporting history disclosure; full Kanban retains horizontal scroll.
-- Tablet/compact: primary navigation becomes horizontal and the queue is explicit disclosure; selected-patient safety context stays outside the hidden queue.
-- Mobile: closed queue leaves patient identity/safety and the worksheet first. Existing forms remain available; labelled prescription fields/actions use a tall composer. Supporting history follows the work.
+- Desktop: fixed queue rail, flexible Encounter editor, and compact safety/claim rail; full Kanban uses horizontal scroll.
+- Tablet: queue becomes a top worklist strip; the safety/claim rail moves below the Encounter editor.
+- Mobile: queue, patient identity, Encounter editor, and safety/claim summary stack in that order; tabs and lanes scroll; editing forms remain full-width; graph becomes text-first when space is constrained.
 - Mobile gateway: both role names and both role actions must appear within the first 844px viewport; supporting bullet lists may collapse so one long role card cannot hide the other choice.
 - Mobile EMR: patient and Encounter work precede transfer, FHIR, and backup utilities. Secondary data operations live in a labelled disclosure instead of occupying the full first viewport.
 - Touch/hover: all critical content available without hover; drag is never required.
@@ -541,7 +432,7 @@ The Encounter is the clinical unit of work. Diagnoses, prescriptions, procedures
 
 ### Implementation constraints
 
-- Framework: existing React/Next.js application and clinical components; this visual change adds no dependency or engine rewrite.
+- Framework: existing zero-dependency ES modules and generated Worker asset bundle.
 - Persistence: versioned browser `localStorage` JSON with Web Locks-serialized writes, revision conflict checks, anti-resurrection wipe tombstones, cross-tab in-memory/DOM purge on wipe, strict backup validation, corrupt-source recovery export, import/export, and wipe; no silent sample persistence. An unsigned backup never restores its local signatures, institution rules, or audit trail as trusted state: every restored clinical event, including drafts, becomes immutable external/unverified data. Restored records cannot be confirmed, changed, cancelled, or used for a local signature; restored Encounter drafts also cannot be continued, completed, signed, or reopened, but they do not block a new local Encounter. A clinician must create that new Encounter or manually re-enter and verify a fact. Restored events remain excluded from AI, reimbursement evidence, FHIR clinical export, and patient transfer. It is not an encrypted clinical database.
 - Clinical record: patient demographics and Encounter-owned SOAP, diagnoses, prescriptions, and orders are the local source of truth. Signed encounters cannot be reopened or edited; corrections require an explicit void/amendment workflow outside this sandbox.
 - FHIR: FHIR R4 is an exchange projection, not the application's reimbursement rule source. Import accepts only Bundles with exactly one Patient and explicit matching subject references; current facts require fail-closed lifecycle certainty, and unsupported resources plus reasons remain visible in the import report. Raw imported FHIR facts remain untrusted for finalized summaries, AI, reimbursement, and patient transfer, while an explicit institutional FHIR export may losslessly re-emit supported facts with their original `meta.source` and source identifier. Re-emission preserves exchange provenance and is not clinician attestation. Exported resources preserve the Encounter link where the supported subset allows it.

@@ -7,8 +7,8 @@
 .emr-page .rx-dialog[data-embedded] { max-width: 100%; }
 #prescriptionDialog:not([data-embedded]) {
   width: min(1000px, calc(100dvw - 24px));
-  height: min(640px, calc(100dvh - 48px));
-  max-height: calc(100dvh - 48px);
+  height: min(460px, 90dvh);
+  max-height: 90dvh;
 }
 .rx-dialog .rx-dialog__panel {
   --rx-fluid-text: clamp(.875rem, .78rem + .3cqi, 1rem);
@@ -49,47 +49,67 @@
 .rx-dialog .rx-dialog__header { gap: var(--rx-fluid-gap); }
 .rx-dialog :is(.prescription-form-grid, .order-form-grid) { gap: var(--rx-fluid-gap); }
 
-/* Prescription fields are labelled in the visible composer. The result list
-   owns scrolling; the header and search remain in normal flex layout. */
-#prescriptionDialog .rx-dialog__panel { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; scrollbar-gutter: auto; }
-#prescriptionDialog .rx-dialog__header { position: static; flex: 0 0 auto; margin: 0; }
-#prescriptionDialog .rx-search { display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: flex-end; gap: 8px; margin: 0; padding: 0 20px; }
-#prescriptionDialog .rx-search__field { flex: 1 1 auto; min-width: 0; }
-#prescriptionDialog .rx-search > .clinical-button { flex: 0 0 auto; width: auto; }
-#prescriptionDialog .rx-prescription-search { display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 20px 12px; }
-#prescriptionDialog .rx-results { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
-#prescriptionDialog .rx-section-title { flex: 0 0 auto; margin: 0; padding: 8px 0; }
-#prescriptionDialog .rx-result-list { flex: 1 1 auto; align-items: stretch; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-block: 12px; padding: 4px; gap: 0; }
-#prescriptionDialog .rx-result--compact { display: block; flex: 0 0 auto; width: auto; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; overflow: visible; }
-#prescriptionDialog .rx-result--compact:is(.is-selected, .is-reviewing) { background: var(--accent-wash); box-shadow: inset 0 0 0 1px var(--accent); }
-#prescriptionDialog .rx-result--compact .rx-form { width: 100%; min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; overflow: visible; }
-#prescriptionDialog .rx-result--compact .rx-order-line,
-#prescriptionDialog .rx-result--compact .rx-order-line[data-infusion] { display: grid; grid-template-columns: 6rem 6rem minmax(10rem, 1fr) 8rem max-content; align-items: end; min-width: 0; max-width: 100%; gap: 10px; padding: 16px 0; border: 0; background: transparent; }
-#prescriptionDialog .rx-result--compact .rx-order-line__product { grid-column: 1 / -1; grid-row: auto; font-size: .9375rem; line-height: 1.5; white-space: normal; overflow-wrap: break-word; }
-#prescriptionDialog .rx-order-line label { display: grid; gap: 6px; min-width: 0; margin: 0; }
-#prescriptionDialog .rx-dose-field { grid-column: 1; }
-#prescriptionDialog .rx-unit-field { grid-column: 2; }
-#prescriptionDialog .rx-frequency-field { grid-column: 3 / 5; }
-#prescriptionDialog [data-infusion] .rx-frequency-field { grid-column: 3; }
-#prescriptionDialog .rx-infusion-field { grid-column: 4; }
-#prescriptionDialog .rx-order-field-label { position: static; width: auto; height: auto; margin: 0; padding: 0; overflow: visible; clip-path: none; white-space: normal; color: var(--muted); font-size: .8125rem; line-height: 1.4; }
-#prescriptionDialog .rx-order-line__actions { grid-column: 5; grid-row: auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; min-width: 0; gap: 8px; }
-#prescriptionDialog .rx-order-line__actions button { min-width: 44px; white-space: nowrap; }
-
-@container emr-dialog (max-width: 48rem) {
-  #prescriptionDialog .rx-result--compact .rx-order-line,
-  #prescriptionDialog .rx-result--compact .rx-order-line[data-infusion] { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  #prescriptionDialog .rx-result--compact .rx-order-line__product { grid-column: 1 / -1; }
-  #prescriptionDialog .rx-frequency-field,
-  #prescriptionDialog [data-infusion] .rx-frequency-field,
-  #prescriptionDialog .rx-infusion-field { grid-column: 1 / -1; }
-  #prescriptionDialog .rx-order-line__actions { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--line); }
+#prescriptionDialog .rx-order-line {
+  grid-template-columns: minmax(10rem, 1fr) 4.5rem 4.5rem minmax(9rem, 13rem) auto;
+  gap: var(--rx-fluid-gap);
+  padding: var(--rx-fluid-gap);
 }
-
-@media (max-width: 620px) {
-  #prescriptionDialog:not([data-embedded]) { inset: 8px; width: calc(100dvw - 16px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); transform: none; }
-  #prescriptionDialog .rx-search { padding-inline: 12px; }
-  #prescriptionDialog .rx-prescription-search { padding-inline: 12px; }
+#prescriptionDialog .rx-order-line[data-infusion] {
+  grid-template-columns: minmax(10rem, 1fr) 4.5rem 4.5rem minmax(8rem, 10rem) 8.5rem auto;
+}
+#prescriptionDialog .rx-order-line__product { font-size: var(--rx-fluid-product); white-space: nowrap; }
+#prescriptionDialog .rx-order-line label { font-size: var(--rx-fluid-small); }
+#prescriptionDialog .rx-result--compact .rx-result__label { font-size: var(--rx-fluid-text); }
+#prescriptionDialog .rx-result--compact button { font-size: var(--rx-fluid-small); }
+#prescriptionDialog .rx-result--compact { padding-block: .25rem; gap: var(--rx-fluid-gap); }
+#prescriptionDialog .rx-result--compact { display: block; padding: 0; }
+#prescriptionDialog .rx-result--compact .rx-form { width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; }
+/* Reserve the optional infusion column so every medicine shares the same
+   product, dose, unit, frequency, and action alignment. */
+#prescriptionDialog .rx-result--compact .rx-order-line,
+#prescriptionDialog .rx-result--compact .rx-order-line[data-infusion] {
+  grid-template-columns: minmax(0, 1fr) 3.5rem 4.75rem minmax(8rem, 12.5rem) minmax(6rem, 8.5rem) max-content;
+  min-width: 0;
+  border: 0;
+}
+#prescriptionDialog .rx-result-list { overflow-x: hidden; }
+#prescriptionDialog .rx-result--compact { min-width: 0; }
+#prescriptionDialog .rx-result--compact .rx-order-line__product { grid-column: auto; }
+#prescriptionDialog .rx-result--compact .rx-form { overflow: visible; }
+#prescriptionDialog .rx-result--compact .rx-order-details { margin-top: 0; padding: 0 .375rem .125rem; }
+#prescriptionDialog .rx-result--compact .rx-order-details > summary { padding: .125rem 0; font-size: .75rem; line-height: 1.3; }
+#prescriptionDialog .rx-result--compact .rx-order-line {
+  gap: .25rem;
+  padding: .25rem .375rem;
+}
+#prescriptionDialog .rx-result--compact .rx-order-line__product {
+  font-size: clamp(.8125rem, .75rem + .15cqi, .875rem);
+  line-height: 1.3;
+}
+#prescriptionDialog .rx-result--compact .rx-order-line label { display: block; margin: 0; }
+#prescriptionDialog .rx-order-line__actions { grid-column: 6; display: flex; justify-content: flex-end; align-items: center; gap: .25rem; }
+#prescriptionDialog .rx-order-line__actions button { white-space: nowrap; }
+#prescriptionDialog .rx-order-line__actions { min-width: max-content; }
+#prescriptionDialog .rx-dialog__header { flex: 0 0 auto; }
+/* Preserve accessible field names without adding a separate heading row. */
+#prescriptionDialog .rx-order-field-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line :is(input:not([type="hidden"]), select, button) {
+  font-size: clamp(.75rem, .7rem + .15cqi, .8125rem);
+  line-height: 1.3;
+  height: 1.75rem;
+  min-height: 1.75rem;
+  padding: .125rem .3125rem;
+  border-radius: 2px;
 }
 
 #medicationCoverageDialog :is(.coverage-intro p, .coverage-criteria ol, .coverage-summary p, .coverage-risk p, .rx-model-report__table, .coverage-patient-table, .rx-review__progress-text) {
@@ -190,6 +210,30 @@
   #medicationCoverageDialog .rx-dialog__header-actions { justify-self: end; }
 }
 
+@container emr-dialog (max-width: 58rem) {
+  #prescriptionDialog .rx-result--compact .rx-order-line, #prescriptionDialog .rx-result--compact .rx-order-line[data-infusion] {
+    grid-template-columns: minmax(3.5rem, .65fr) minmax(4.75rem, .8fr) minmax(8rem, 1.7fr);
+    gap: .375rem;
+    padding: .5rem;
+  }
+  #prescriptionDialog .rx-result--compact .rx-order-line__product { grid-column: 1 / -1; grid-row: 1; white-space: normal; overflow-wrap: anywhere; }
+  #prescriptionDialog .rx-order-line__actions { grid-column: 1 / -1; grid-row: 4; }
+  #prescriptionDialog .rx-order-line > label:nth-child(2) { grid-column: 1; grid-row: 2; }
+  #prescriptionDialog .rx-order-line > label:nth-child(3) { grid-column: 2; grid-row: 2; }
+  #prescriptionDialog .rx-order-line > label:nth-child(4) { grid-column: 3; grid-row: 2; }
+  #prescriptionDialog .rx-order-line > label:nth-child(5) { grid-column: 1 / -1; grid-row: 3; }
+  #prescriptionDialog .rx-order-line > span[aria-hidden] { display: none; }
+}
+@container emr-dialog (max-width: 24rem) {
+  #prescriptionDialog .rx-result--compact .rx-order-line,
+  #prescriptionDialog .rx-result--compact .rx-order-line[data-infusion] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #prescriptionDialog .rx-result--compact .rx-order-line__product { grid-column: 1 / -1; }
+  #prescriptionDialog .rx-order-line__actions { grid-column: 1 / -1; grid-row: 2; }
+  #prescriptionDialog .rx-order-line > label:nth-child(2) { grid-column: 1; grid-row: 3; }
+  #prescriptionDialog .rx-order-line > label:nth-child(3) { grid-column: 2; grid-row: 3; }
+  #prescriptionDialog .rx-order-line > label:nth-child(4) { grid-column: 1 / -1; grid-row: 4; }
+  #prescriptionDialog .rx-order-line > label:nth-child(5) { grid-column: 1 / -1; grid-row: 5; }
+}
 @container emr-dialog (max-width: 30rem) {
   .rx-dialog .rx-dialog__header { flex-wrap: wrap; }
   .rx-dialog :is(.prescription-form-grid, .order-form-grid) { grid-template-columns: minmax(0, 1fr); }
@@ -197,6 +241,14 @@
   #medicationCoverageDialog .coverage-intro p { flex-basis: calc(100% - 4rem); }
   #medicationCoverageDialog .coverage-tools { margin-left: auto; }
   #medicationCoverageDialog :is(.rx-model-report__table td, .rx-model-report__table th, .coverage-patient-table td, .coverage-patient-table th) { padding: .25rem; }
+}
+
+/* The review action remains beside prescribing, with a full touch target. */
+.rx-dialog#prescriptionDialog .rx-result--compact .rx-order-line .rx-order-line__actions button {
+  height: auto;
+  min-height: 2.75rem;
+  padding: .5rem .625rem;
+  font-size: .82rem;
 }
 
 /* Source headings and editors share baselines in both initial and repeat review. */

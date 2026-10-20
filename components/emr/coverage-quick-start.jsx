@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button.jsx";
 import { createDemoEmrState } from "../../src/emr-demo-state.js";
 import { findMedicationInCatalog } from "../../src/medication-catalog.js";
 import { currentEncounterFor } from "../../lib/emr/selectors.js";
 import { openCoverageWindow } from "./coverage-window.js";
 
+const SEEN_KEY = "policycompass-coverage-guide-seen";
+
 export function CoverageQuickStart() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try { setOpen(localStorage.getItem(SEEN_KEY) !== "1"); }
+      catch { setOpen(true); }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const launchSample = () => {
     const demo = createDemoEmrState();
@@ -23,11 +32,11 @@ export function CoverageQuickStart() {
     <details className="coverage-quick-start" id="coverageQuickStart" open={open} onToggle={(event) => {
       const expanded = event.currentTarget.open;
       setOpen(expanded);
+      if (!expanded) { try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* The guide still closes when storage is unavailable. */ } }
     }}>
-      <summary><span>사용 안내</span><span className="visually-hidden">{open ? "안내 접기" : "안내 펼치기"}</span></summary>
+      <summary><h2>처음이라면, 예시로 급여 확인해 보세요</h2><span>{open ? "안내 접기" : "안내 펼치기"}</span></summary>
       <div className="coverage-quick-start__body">
         <div>
-          <h2>처음이라면, 예시로 급여 확인해 보세요</h2>
           <p>예시 환자 김비타와 벤라리주맙으로 실제 검토 화면을 열어 봅니다. 저장된 환자 기록은 바뀌지 않습니다.</p>
           <ol>
             <li>고시정보·진료데이터·검토 지시문을 확인하거나 직접 입력합니다.</li>
@@ -40,8 +49,8 @@ export function CoverageQuickStart() {
           <Button variant="primary" id="startCoverageSample" onClick={launchSample} aria-haspopup="dialog">예시 급여 검토 열기</Button>
           <small>예시 자료에 대한 참고용 검토입니다.</small>
         </div>
-        {error ? <p className="coverage-quick-start__error" role="alert">{error}</p> : null}
       </div>
+      {error ? <p className="coverage-quick-start__error" role="alert">{error}</p> : null}
     </details>
   );
 }

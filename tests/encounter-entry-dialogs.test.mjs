@@ -248,7 +248,8 @@ test("급여 검토는 진료데이터·고시정보·프롬프트를 확인한 
   assert.match(rx, /setSettingsOpen\(true\)/);
   assert.match(rx, /dataText: medicationReviewPatientDataText\(base\)/);
   assert.match(rx, /noticeText: medicationReviewNotice\(medicationId\)/);
-  assert.match(rx, /promptText: reviewInstructionsFor\(medicationId, REGISTERED_COVERAGE_POLICY, reviewModel \|\| capability\.model\)/);
+  assert.match(rx, /activeReviewModel = capability\.hermes \? capability\.model : reviewModel \|\| capability\.model/);
+  assert.match(rx, /promptText: reviewInstructionsFor\(medicationId, REGISTERED_COVERAGE_POLICY, activeReviewModel\)/);
   assert.match(rx, /coverage-settings--prepare/);
   assert.match(rx, /진료데이터/);
   assert.match(rx, /고시정보/);

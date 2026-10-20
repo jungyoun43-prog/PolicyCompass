@@ -107,7 +107,7 @@ Preserve dates, doses, units, inequalities, percentages, clinical codes, patient
     reasoning: { enabled: false }, providerRouting: { sort: "throughput" }, temperature: null,
     fetchImpl, timeoutMs, environment: { ...environment, POLICYCOMPASS_FRONTIER_API: "chat" },
     });
-    if (status.provider === "hermes" ? result.model !== status.model : !/haiku/i.test(result.model)) throw new Error("지정한 AI 번역 모델의 응답이 아닙니다.");
+    if (status.provider === "hermes" ? result.model !== status.model : !/haiku/i.test(result.model)) throw new Error(status.provider === "hermes" ? "지정한 Hermes 번역 모델의 응답이 아닙니다." : "지정한 Haiku 번역 모델의 응답이 아닙니다.");
     let translated;
     try { translated = JSON.parse(result.text).translations; } catch { throw new Error("AI가 완전한 번역 JSON을 반환하지 않았습니다."); }
     const ids = new Set(items.map(item => item.id));
